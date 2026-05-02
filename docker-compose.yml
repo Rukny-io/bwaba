@@ -142,17 +142,17 @@ services:
     networks:
       - rukny_network
 
-  # ─── Next.js Web App ───
-  web:
+  # ─── Next.js App (Main) ───
+  app:
     build:
-      context: ./apps/web
+      context: ./apps/app
       dockerfile: Dockerfile
       args:
         - API_BACKEND_URL=http://api:3001
         - NEXT_PUBLIC_API_EXTERNAL_URL=${NEXT_PUBLIC_API_EXTERNAL_URL:-https://api.rukny.io/api/v1}
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
-    container_name: rukny_web
+    container_name: rukny_app
     restart: always
     ports:
       - "127.0.0.1:3000:3000"
@@ -262,7 +262,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - web
+      - app
       - api
       - admin
       - business

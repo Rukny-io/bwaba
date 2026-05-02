@@ -49,8 +49,7 @@ services:
         && npx prisma db push --accept-data-loss --config prisma/prisma.config.ts
         && node dist/main
     env_file:
-      - ./.env
-      - ./.env.rukny-dev
+      - ./.env.dev
     ports:
       - "0.0.0.0:3001:3001"
     depends_on:
@@ -73,7 +72,9 @@ services:
       AUTH_FRONTEND_URL: http://localhost:3000
       AUTH_BASE_URL: http://localhost:3001
       COOKIE_DOMAIN: ""
-      COOKIE_SECURE: false
+      COOKIE_SECURE: "false"
+      COOKIE_HTTPONLY: "true"
+      COOKIE_SAMESITE: "Lax"
       GOOGLE_CALLBACK_URL: http://localhost:3001/api/v1/auth/google/callback
       LINKEDIN_CALLBACK_URL: http://localhost:3001/api/v1/auth/linkedin/callback
       LINKEDIN_INTEGRATION_CALLBACK_URL: http://localhost:3001/api/v1/integrations/linkedin/callback
@@ -85,19 +86,19 @@ services:
     networks:
       - rukny_dev_network
 
-  web:
+  app:
     build:
-      context: ./apps/web
+      context: ./apps/app
       dockerfile: Dockerfile
       args:
         API_BACKEND_URL: http://api:3001
         NEXT_PUBLIC_API_EXTERNAL_URL: http://localhost:3001/api/v1
         NEXT_PUBLIC_APP_URL: http://localhost:3000
         NEXT_PUBLIC_ROOT_DOMAIN: ""
+        NEXT_PUBLIC_APP_ENV: development
     restart: always
     env_file:
-      - ./.env
-      - ./.env.rukny-dev
+      - ./.env.dev
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -109,6 +110,7 @@ services:
       NEXT_PUBLIC_API_EXTERNAL_URL: http://localhost:3001/api/v1
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_ROOT_DOMAIN: ""
+      NEXT_PUBLIC_APP_ENV: development
     networks:
       - rukny_dev_network
 

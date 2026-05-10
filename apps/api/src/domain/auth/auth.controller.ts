@@ -13,6 +13,7 @@ import { RedisOAuthCodeService } from './redis-oauth-code.service';
 import { WebSocketTokenService } from './websocket-token.service';
 import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { PendingTwoFactorService } from './pending-two-factor.service';
+import { AccountLinkingService } from './account-linking.service';
 import { Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
 import { 
@@ -48,6 +49,7 @@ export class AuthController {
     private webSocketTokenService: WebSocketTokenService,
     private securityLogService: SecurityLogService,
     private pendingTwoFactorService: PendingTwoFactorService,
+    private accountLinkingService: AccountLinkingService,
     private prisma: PrismaService,
     private storageService: StorageService,
     private storesService: StoresService,
@@ -446,6 +448,34 @@ export class AuthController {
   async googleAuthCallback(@Req() req: any, @Res() res: Response) {
     const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip || req.socket.remoteAddress;
+
+    const stateStr = req.query?.state as string;
+    let origin = stateStr;
+    let linkToken = null;
+
+    if (stateStr && !stateStr.startsWith('http')) {
+      try {
+        const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
+        origin = decoded.o;
+        linkToken = decoded.l;
+      } catch (e) {}
+    }
+
+    if (linkToken) {
+      await this.accountLinkingService.completeLinking(
+        linkToken,
+        {
+          providerId: req.user.googleId,
+          email: req.user.email,
+          name: req.user.name,
+          avatar: req.user.avatar,
+        },
+        ipAddress,
+        userAgent,
+      );
+      const base = this.resolveRedirectBase(origin);
+      return res.redirect(`${base}/settings/security?linked=google`);
+    }
     
     const result = await this.authService.googleLogin(req.user, userAgent, ipAddress);
     
@@ -463,7 +493,7 @@ export class AuthController {
       challengeReasons: result.challengeReasons,
     }, ipAddress);
 
-    const base = this.resolveRedirectBase(req.query?.state);
+    const base = this.resolveRedirectBase(origin);
     const redirectUrl = `${base}/callback?code=${code}`;
     res.redirect(redirectUrl);
   }
@@ -555,6 +585,34 @@ export class AuthController {
   async linkedinAuthCallback(@Req() req: any, @Res() res: Response) {
     const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip || req.socket.remoteAddress;
+
+    const stateStr = req.query?.state as string;
+    let origin = stateStr;
+    let linkToken = null;
+
+    if (stateStr && !stateStr.startsWith('http')) {
+      try {
+        const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
+        origin = decoded.o;
+        linkToken = decoded.l;
+      } catch (e) {}
+    }
+
+    if (linkToken) {
+      await this.accountLinkingService.completeLinking(
+        linkToken,
+        {
+          providerId: req.user.linkedinId,
+          email: req.user.email,
+          name: req.user.name,
+          avatar: req.user.avatar,
+        },
+        ipAddress,
+        userAgent,
+      );
+      const base = this.resolveRedirectBase(origin);
+      return res.redirect(`${base}/settings/security?linked=linkedin`);
+    }
     
     const result = await this.authService.linkedinLogin(req.user, userAgent, ipAddress);
 
@@ -571,7 +629,7 @@ export class AuthController {
       challengeReasons: result.challengeReasons,
     }, ipAddress);
 
-    const base = this.resolveRedirectBase(req.query?.state);
+    const base = this.resolveRedirectBase(origin);
     const redirectUrl = `${base}/callback?code=${code}`;
     res.redirect(redirectUrl);
   }

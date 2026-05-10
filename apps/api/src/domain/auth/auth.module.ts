@@ -14,6 +14,10 @@ import { TwoFactorController } from './two-factor.controller';
 import { PendingTwoFactorService } from './pending-two-factor.service';
 import { AccountLockoutService } from './account-lockout.service';
 import { AccountLockoutController } from './account-lockout.controller';
+import { AccountLinkingService } from './account-linking.service';
+import { AccountLinkingController } from './account-linking.controller';
+import { IdentityVerificationService } from './identity-verification.service';
+import { IdentityVerificationController } from './identity-verification.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { LinkedInStrategy } from './strategies/linkedin.strategy';
@@ -53,6 +57,8 @@ import { StoresModule } from '../stores/stores.module';
     QuickSignController,
     TwoFactorController,
     AccountLockoutController,
+    AccountLinkingController,
+    IdentityVerificationController,
   ],
   providers: [
     AuthService,
@@ -63,6 +69,8 @@ import { StoresModule } from '../stores/stores.module';
     TwoFactorService,
     PendingTwoFactorService,
     AccountLockoutService,
+    AccountLinkingService,
+    IdentityVerificationService,
     JwtStrategy,
     GoogleStrategy,
     LinkedInStrategy,
@@ -77,6 +85,8 @@ import { StoresModule } from '../stores/stores.module';
     TwoFactorService,
     PendingTwoFactorService,
     AccountLockoutService,
+    AccountLinkingService,
+    IdentityVerificationService,
   ],
 })
 export class AuthModule {}

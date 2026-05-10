@@ -13,8 +13,10 @@ import { VerificationController } from './verification/verification.controller';
 import { WallpapersController } from './wallpapers/wallpapers.controller';
 import { PublicWallpapersController } from './wallpapers/public-wallpapers.controller';
 import { WallpapersService } from './wallpapers/wallpapers.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
+  imports: [AuthModule],
   controllers: [
     DashboardController,
     UsersController,

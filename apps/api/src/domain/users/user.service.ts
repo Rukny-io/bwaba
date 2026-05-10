@@ -177,8 +177,8 @@ export class UserService {
       throw new BadRequestException('2FA setup not initiated');
     }
 
-    // Verify code using otplib
-    const result = verifySync({ token: code, secret: user.twoFactorSecret });
+    // Verify code using otplib (window:1 allows ±30s clock skew)
+    const result = verifySync({ token: code, secret: user.twoFactorSecret, window: 1 } as any);
 
     if (!result.valid) {
       // Log failed 2FA verification

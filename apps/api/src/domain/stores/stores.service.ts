@@ -94,10 +94,71 @@ export class StoresService {
   }
 
   /**
+  /**
+   * 🔒 Fix #10: إنشاء متجر بعد إتمام ملف OAuth الشخصي
+   * مستقل عن auth controller — يجمع منطق إنشاء المتجر في مكانه الصحيح
+   */
+  async createForOAuthProfile(opts: {
+    userId: string;
+    email: string;
+    username: string;
+    name: string;
+    storeCategory?: string;
+    storeDescription?: string;
+    employeesCount?: string;
+    storeCountry?: string;
+    storeCity?: string;
+    storeAddress?: string;
+    storeLatitude?: number;
+    storeLongitude?: number;
+  }): Promise<{ slug: string; id: string } | null> {
+    const existing = await this.prisma.store.findFirst({ where: { userId: opts.userId } });
+    if (existing) return { slug: existing.slug, id: existing.id };
+
+    let resolvedCategoryId: string | null = null;
+    if (opts.storeCategory) {
+      const cat = await this.prisma.store_categories.findFirst({
+        where: { slug: opts.storeCategory, isActive: true },
+        select: { id: true },
+      });
+      resolvedCategoryId = cat?.id ?? null;
+    }
+
+    const storeSlug =
+      opts.username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || `store-${uuidv4().slice(0, 8)}`;
+
+    const store = await this.prisma.store.create({
+      data: {
+        userId: opts.userId,
+        name: opts.name || 'متجري',
+        slug: storeSlug,
+        description: opts.storeDescription ?? null,
+        category: opts.storeCategory ?? null,
+        categoryId: resolvedCategoryId,
+        employeesCount: opts.employeesCount ?? null,
+        contactEmail: opts.email,
+        country: opts.storeCountry || 'Iraq',
+        city: opts.storeCity ?? null,
+        address: opts.storeAddress ?? null,
+        latitude: opts.storeLatitude ?? null,
+        longitude: opts.storeLongitude ?? null,
+      },
+      select: { slug: true, id: true },
+    });
+
+    return store;
+  }
+
+  /**
    * Get user's store
    * ⚡ Performance: Cached for 5 minutes
    * 🏪 Auto-creates store if user doesn't have one (e.g., OAuth registration)
    */
+
   async getMyStore(userId: string) {
     const cacheKey = CacheKeys.storeByUserId(userId);
 
@@ -429,6 +490,49 @@ export class StoresService {
       totalOrders: orderStats._count || 0,
       totalRevenue: Number(orderStats._sum?.total || 0),
     };
+  }
+
+  /**
+   * Get weekly sales data (last 7 days, grouped by day)
+   */
+  async getWeeklySales(userId: string) {
+    const store = await this.prisma.store.findFirst({ where: { userId } });
+    if (!store) {
+      return { days: [] };
+    }
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const orders = await this.prisma.orders.findMany({
+      where: {
+        storeId: store.id,
+        createdAt: { gte: sevenDaysAgo },
+        status: { not: 'CANCELLED' },
+      },
+      select: { createdAt: true, total: true },
+    });
+
+    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayMap: Record<string, { day: string; sales: number; orders: number }> = {};
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dayMap[key] = { day: dayNames[d.getDay()], sales: 0, orders: 0 };
+    }
+
+    for (const order of orders) {
+      const key = order.createdAt.toISOString().slice(0, 10);
+      if (dayMap[key]) {
+        dayMap[key].sales += Number(order.total);
+        dayMap[key].orders += 1;
+      }
+    }
+
+    return { days: Object.values(dayMap) };
   }
 
   /**

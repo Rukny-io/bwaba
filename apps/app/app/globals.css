@@ -1,145 +1,26 @@
 @import "tailwindcss";
-@import "@heroui/styles/css";
 
-@theme {
-  /* ── Brand: Black ── */
-  --color-brand-black-300: #121212;
-  --color-brand-black-200: #201F23;
-
-  /* ── Brand: Grey ── */
-  --color-brand-grey-300: #45515C;
-  --color-brand-grey-200: #596269;
-
-  /* ── Brand: White ── */
-  --color-brand-white: #FFFFFF;
-
-  /* ── Brand: Purple ── */
-  --color-brand-purple-300: #595D75;
-  --color-brand-purple-200: #B8BED5;
-  --color-brand-purple-100: #E3E4EA;
-
-  /* ── Brand: Tosca ── */
-  --color-brand-tosca: #C1D8DA;
-
-  /* ── Brand: Red ── */
-  --color-brand-red: #98140B;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-:root,
-.light,
-.default,
-[data-theme="light"],
-[data-theme="default"] {
-  /* ── Core ── */
-  --background: #FFFFFF;
-  --foreground: #121212;         /* brand-black-300 */
-  --muted: #596269;              /* brand-grey-200 */
-  --border: #E3E4EA;             /* brand-purple-100 */
-  --separator: #E3E4EA;
-
-  /* ── Accent / Primary (brand purple) ── */
-  --accent: #595D75;             /* brand-purple-300 */
-  --accent-foreground: #FFFFFF;
-
-  /* ── Surfaces ── */
-  --surface: #FFFFFF;
-  --surface-foreground: #121212;
-  --surface-secondary: #E3E4EA; /* brand-purple-100 */
-  --surface-secondary-foreground: #121212;
-  --surface-tertiary: #F4F4F7;
-  --surface-tertiary-foreground: #121212;
-
-  /* ── Overlay ── */
-  --overlay: #FFFFFF;
-  --overlay-foreground: #121212;
-
-  /* ── Fields ── */
-  --field-background: #FFFFFF;
-  --field-foreground: #121212;
-  --field-placeholder: #596269;
-
-  /* ── Semantic ── */
-  --danger: oklch(59.40% 0.1967 354.17);
-  --danger-foreground: #FFFFFF;
-  --success: oklch(73.29% 0.1935 120.35);
-  --success-foreground: #121212;
-  --warning: oklch(78.19% 0.1585 41.87);
-  --warning-foreground: #121212;
-
-  /* ── Misc ── */
-  --default: #E3E4EA;
-  --default-foreground: #121212;
-  --focus: #595D75;
-  --scrollbar: #B8BED5;
-  --segment: #FFFFFF;
-  --segment-foreground: #121212;
-
-  --radius: 0.5rem;
-  --field-radius: 1rem;
-  --font-sans: var(--font-ibm-plex-arabic), var(--font-geist-sans);
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-/* Fix iOS auto-zoom on input focus (font-size must be >= 16px) */
-@media screen and (max-width: 768px) {
-  input, textarea, select {
-    font-size: 16px !important;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
-}
-
-.dark,
-[data-theme="dark"] {
-  color-scheme: dark;
-
-  /* ── Core ── */
-  --background: #121212;         /* brand-black-300 */
-  --foreground: #FFFFFF;
-  --muted: #45515C;              /* brand-grey-300 */
-  --border: #201F23;             /* brand-black-200 */
-  --separator: #201F23;
-
-  /* ── Accent / Primary (lighter purple for dark bg) ── */
-  --accent: #B8BED5;             /* brand-purple-200 */
-  --accent-foreground: #121212;
-
-  /* ── Surfaces ── */
-  --surface: #201F23;            /* brand-black-200 */
-  --surface-foreground: #FFFFFF;
-  --surface-secondary: #2A292E;
-  --surface-secondary-foreground: #FFFFFF;
-  --surface-tertiary: #323137;
-  --surface-tertiary-foreground: #FFFFFF;
-
-  /* ── Overlay ── */
-  --overlay: #201F23;
-  --overlay-foreground: #FFFFFF;
-
-  /* ── Fields ── */
-  --field-background: #201F23;
-  --field-foreground: #FFFFFF;
-  --field-placeholder: #45515C;
-
-  /* ── Semantic ── */
-  --danger: oklch(59.40% 0.1967 354.17);
-  --danger-foreground: #FFFFFF;
-  --success: oklch(73.29% 0.1935 120.35);
-  --success-foreground: #121212;
-  --warning: oklch(82.03% 0.1388 45.88);
-  --warning-foreground: #121212;
-
-  /* ── Misc ── */
-  --default: #2A292E;
-  --default-foreground: #FFFFFF;
-  --focus: #B8BED5;
-  --scrollbar: #45515C;
-  --segment: #2A292E;
-  --segment-foreground: #FFFFFF;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-@theme inline {
-  --font-mono: var(--font-geist-mono);
+  font-family: Arial, Helvetica, sans-serif;
 }

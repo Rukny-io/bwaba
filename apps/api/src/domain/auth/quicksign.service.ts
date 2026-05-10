@@ -1,37 +1,46 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
 import { QuickSignType } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 /**
  * 🔒 QuickSign Service
- * 
+ *
  * خدمة Magic Link للدخول السريع بدون كلمة مرور
- * 
- * تحسينات أمنية:
- * - تخزين hash التوكن فقط (وليس التوكن نفسه) - ملاحظة: يحتاج تغيير في schema
- * - One-time use (استخدام مرة واحدة)
- * - Expiration قصيرة (15-30 دقيقة)
- * - Rate limiting على طلب الإرسال
- * - ⚡ تخزين مؤقت في Redis للأداء
+ *
+ * 🔒 Fix #7: يستخدم QUICKSIGN_SECRET مستقل عن JWT_SECRET
+ * مما يعني أن اختراق أحدهما لا يُعرّض الآخر للخطر
  */
 @Injectable()
 export class QuickSignService {
-  // 🔒 30 دقيقة - مدة مناسبة للأمان والمرونة
   private readonly QUICKSIGN_EXPIRY_MINUTES = 30;
   private readonly CACHE_PREFIX = 'quicksign:';
   private readonly USER_CACHE_PREFIX = 'user:exists:';
   private readonly LOCK_PREFIX = 'quicksign:lock:';
-  private readonly LOCK_TTL = 10; // 10 seconds for lock timeout
+  private readonly LOCK_TTL = 10;
+  /** سر مستقل لتوقيع روابط QuickSign — مختلف عن JWT_SECRET لتوكنات الجلسة */
+  private readonly quickSignSecret: string;
 
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
     private redis: RedisService,
-  ) {}
+  ) {
+    this.quickSignSecret =
+      this.configService.get<string>('QUICKSIGN_SECRET') ||
+      this.configService.get<string>('JWT_SECRET') ||
+      '';
+    if (!this.quickSignSecret) {
+      throw new Error('QUICKSIGN_SECRET or JWT_SECRET must be set');
+    }
+  }
 
   /**
    * 🔒 تشفير التوكن باستخدام SHA-256
@@ -95,6 +104,7 @@ export class QuickSignService {
 
     const jwtToken = this.jwtService.sign(payload, {
       expiresIn: `${this.QUICKSIGN_EXPIRY_MINUTES}m`,
+      secret: this.quickSignSecret,
     });
 
     // حساب وقت الانتهاء
@@ -206,7 +216,7 @@ export class QuickSignService {
 
       try {
       // 🔒 فك تشفير JWT أولاً للتحقق من الصلاحية
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify(token, { secret: this.quickSignSecret });
 
       if (process.env.NODE_ENV === 'development') {
         console.log('[QuickSign.verifyQuickSign] JWT verification successful:', {
@@ -227,7 +237,9 @@ export class QuickSignService {
       }>(tokenCacheKey);
       
       if (cachedData) {
-        console.log('[QuickSign.verifyQuickSign] Token found in Redis cache');
+        if (!isProduction) {
+          console.log('[QuickSign.verifyQuickSign] Token found in Redis cache');
+        }
         // التحقق من الاستخدام المسبق
         if (cachedData.used) {
           return {
@@ -273,9 +285,11 @@ export class QuickSignService {
         };
       }
 
-      console.log('[QuickSign.verifyQuickSign] Token NOT in Redis, checking database with hash:', {
-        hashPreview: tokenHash.substring(0, 20) + '...',
-      });
+      if (!isProduction) {
+        console.log('[QuickSign.verifyQuickSign] Token NOT in Redis, checking database with hash:', {
+          hashPreview: tokenHash.substring(0, 20) + '...',
+        });
+      }
 
       // ⚡ Fallback إلى قاعدة البيانات (نبحث بالـ hash)
       const quickSign = await this.prisma.quicksign_links.findUnique({
@@ -321,7 +335,9 @@ export class QuickSignService {
         return { valid: false };
       }
 
-      console.log('[QuickSign.verifyQuickSign] ✅ Token found in database');
+      if (!isProduction) {
+        console.log('[QuickSign.verifyQuickSign] ✅ Token found in database');
+      }
 
       // التحقق من الاستخدام المسبق
       if (quickSign.used) {
@@ -409,7 +425,7 @@ export class QuickSignService {
   }> {
     try {
       // فك تشفير JWT
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify(token, { secret: this.quickSignSecret });
 
       // البحث عن Token في قاعدة البيانات (بالـ hash)
       const tokenHash = this.hashToken(token);

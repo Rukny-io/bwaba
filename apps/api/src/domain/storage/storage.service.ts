@@ -4,7 +4,7 @@ import { S3Service } from '../../shared/services/s3.service';
 import { FileCategory } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
-import { fileTypeFromBuffer } from 'file-type';
+import { fromBuffer as fileTypeFromBuffer } from 'file-type';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { Readable } from 'stream';

@@ -71,6 +71,7 @@ DO $$ BEGIN
   ) THEN
     RAISE EXCEPTION 'Cannot backfill developerAppId for all developer_whatsapp_accounts';
   END IF;
+EXCEPTION WHEN undefined_column THEN NULL;
 END $$;
 
 DO $$ BEGIN
@@ -82,12 +83,26 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE "developer_whatsapp_accounts" ALTER COLUMN "developerAppId" SET NOT NULL;
+-- Only set NOT NULL if the column is currently nullable
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'developer_whatsapp_accounts'
+      AND column_name = 'developerAppId'
+      AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE "developer_whatsapp_accounts" ALTER COLUMN "developerAppId" SET NOT NULL;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS "developer_whatsapp_accounts_developerAppId_idx" ON "developer_whatsapp_accounts"("developerAppId");
 
--- 3. Extend wallet transaction enum
+-- 3. Extend wallet transaction enum (if it exists)
 DO $$ BEGIN
-  ALTER TYPE "WalletTransactionType" ADD VALUE IF NOT EXISTS 'APP_ALLOCATION';
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'WalletTransactionType') THEN
+    BEGIN
+      ALTER TYPE "WalletTransactionType" ADD VALUE IF NOT EXISTS 'APP_ALLOCATION';
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END;
+  END IF;
 END $$;

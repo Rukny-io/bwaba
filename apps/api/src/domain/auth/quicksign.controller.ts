@@ -464,8 +464,8 @@ export class QuickSignController {
     // 🔒 استخدام نفس نظام OAuth - إنشاء one-time code وredirect
     // هذا يحل مشكلة cross-origin cookies
     const code = await this.oauthCodeService.generate({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
+      userId: user.id,
+      email: user.email,
       user: {
         id: user.id,
         email: user.email,
@@ -475,6 +475,8 @@ export class QuickSignController {
         profileCompleted: user.profileCompleted,
       },
       needsProfileCompletion: !user.profileCompleted,
+      userAgent,
+      ipAddress,
     }, ipAddress);
 
     // Redirect مع code فقط - نفس نظام OAuth

@@ -24,6 +24,8 @@ import { PendingTwoFactorService } from './pending-two-factor.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { SecurityDetectorService } from '../../infrastructure/security/detector.service';
+import { BruteForceService } from '../../infrastructure/security/brute-force.service';
+import { RedisService } from '../../core/cache/redis.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
 import { Throttle } from '@nestjs/throttler';
@@ -48,21 +50,11 @@ import {
 } from './dto/two-factor.dto';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const VERIFY_IDENTITY_WINDOW_MINUTES = 10;
+const VERIFY_IDENTITY_WINDOW_SECONDS = 10 * 60; // 10 دقائق
 const VERIFY_IDENTITY_MAX_ATTEMPTS = 6;
 const GENERIC_VERIFY_IDENTITY_MESSAGE =
   'تعذر استخدام هذه الطريقة الآن. استخدم البريد الإلكتروني أو حاول لاحقاً.';
 
-/**
- * 🔐 Two-Factor Authentication Controller
- *
- * إدارة المصادقة الثنائية (2FA)
- * - إعداد 2FA مع QR Code
- * - التحقق وتفعيل 2FA
- * - إلغاء تفعيل 2FA
- * - إدارة الرموز الاحتياطية
- * - التحقق عند تسجيل الدخول
- */
 @ApiTags('Two-Factor Authentication')
 @Controller('auth/2fa')
 export class TwoFactorController {
@@ -73,6 +65,8 @@ export class TwoFactorController {
     private prisma: PrismaService,
     private securityLogService: SecurityLogService,
     private securityDetectorService: SecurityDetectorService,
+    private bruteForceService: BruteForceService,
+    private redis: RedisService,
   ) {}
 
   /**
@@ -181,33 +175,47 @@ export class TwoFactorController {
     };
   }
 
+  /**
+   * 🔒 Fix #5: Rate limiting عبر Redis بدلاً من DB COUNT
+   * يستخدم INCR/EXPIRE لعداد سريع لكل بريد و IP بشكل منفصل
+   */
   private async isVerifyIdentityRateLimited(
     email: string,
     ipAddress: string,
   ): Promise<boolean> {
-    const windowStart = new Date(Date.now() - VERIFY_IDENTITY_WINDOW_MINUTES * 60 * 1000);
+    const emailKey = `vi_rl:email:${email}`;
+    const ipKey = `vi_rl:ip:${ipAddress}`;
 
-    const [emailAttempts, ipAttempts] = await Promise.all([
-      this.prisma.loginAttempt.count({
-        where: {
-          email,
-          reason: 'VERIFY_IDENTITY_START',
-          createdAt: { gte: windowStart },
-        },
-      }),
-      this.prisma.loginAttempt.count({
-        where: {
-          ipAddress,
-          reason: 'VERIFY_IDENTITY_START',
-          createdAt: { gte: windowStart },
-        },
-      }),
+    // نزيد العدادين بشكل متوازٍ ونضبط الـ TTL عند أول استخدام
+    const [emailCount, ipCount] = await Promise.all([
+      this.incrementRateLimitCounter(emailKey),
+      this.incrementRateLimitCounter(ipKey),
     ]);
 
     return (
-      emailAttempts >= VERIFY_IDENTITY_MAX_ATTEMPTS ||
-      ipAttempts >= VERIFY_IDENTITY_MAX_ATTEMPTS * 2
+      emailCount > VERIFY_IDENTITY_MAX_ATTEMPTS ||
+      ipCount > VERIFY_IDENTITY_MAX_ATTEMPTS * 2
     );
+  }
+
+  private async incrementRateLimitCounter(key: string): Promise<number> {
+    try {
+      // setNX لإنشاء المفتاح مع TTL إذا لم يكن موجوداً
+      const created = await this.redis.setNX(key, '0', VERIFY_IDENTITY_WINDOW_SECONDS);
+      // إذا كان موجوداً بالفعل، نزيده فقط
+      if (!created) {
+        // نستخدم get ثم set بدلاً من INCR لأن RedisService لا يُعرّض INCR مباشرة
+        const current = await this.redis.get<string>(key);
+        const newVal = (parseInt(current ?? '0', 10) + 1).toString();
+        await this.redis.set(key, newVal, VERIFY_IDENTITY_WINDOW_SECONDS);
+        return parseInt(newVal, 10);
+      }
+      await this.redis.set(key, '1', VERIFY_IDENTITY_WINDOW_SECONDS);
+      return 1;
+    } catch {
+      // إذا فشل Redis، نسمح بالمرور (fail open) لتجنب حجب المستخدمين الشرعيين
+      return 0;
+    }
   }
 
   /**
@@ -437,6 +445,28 @@ export class TwoFactorController {
       };
     }
 
+    // 🔒 حماية من هجمات القوة الغاشمة على OTP
+    const otpBruteCheck = await this.bruteForceService.recordOtpAttempt(
+      pendingSession.userId,
+      ipAddress,
+    );
+    if (otpBruteCheck.blocked) {
+      await this.securityLogService.createLog({
+        userId: pendingSession.userId,
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        description: `تم حظر محاولات 2FA مؤقتاً — محاولات فاشلة كثيرة`,
+        ipAddress,
+        userAgent: req.headers['user-agent'],
+      });
+
+      return {
+        success: false,
+        error: 'تم حظر المحاولات مؤقتاً. يرجى المحاولة لاحقاً.',
+        blocked: true,
+      };
+    }
+
     // التحقق من الرمز
     const verification = await this.twoFactorService.verifyToken(
       pendingSession.userId,
@@ -451,14 +481,18 @@ export class TwoFactorController {
         status: 'FAILED',
         description: 'محاولة فاشلة للتحقق من 2FA',
         ipAddress,
-        userAgent,
+        userAgent: req.headers['user-agent'],
       });
 
       return {
         success: false,
         error: 'رمز التحقق غير صحيح',
+        attemptsLeft: otpBruteCheck.attemptsLeft,
       };
     }
+
+    // ✅ نجاح — إعادة تعيين عداد المحاولات
+    await this.bruteForceService.resetOtpAttempts(pendingSession.userId);
 
     // حذف الجلسة المعلقة
     await this.deletePendingTwoFactorSession(dto.pendingSessionId);

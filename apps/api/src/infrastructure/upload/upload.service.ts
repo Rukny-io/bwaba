@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
-import { fileTypeFromBuffer } from 'file-type';
+import { fromBuffer as fileTypeFromBuffer } from 'file-type';
 import { Readable } from 'stream';
 import { S3Service } from '../../services/s3.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';

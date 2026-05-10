@@ -8,8 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 type CodePayload = {
-  access_token: string;
-  refresh_token: string;
+  userId: string;
+  email: string;
   user: {
     id: string;
     name?: string;
@@ -17,8 +17,22 @@ type CodePayload = {
     role?: any;
     avatar?: string | null;
     profileCompleted?: boolean;
+    username?: string;
   };
   needsProfileCompletion?: boolean;
+  /** IP + User-Agent para crear la sesión en /oauth/exchange */
+  userAgent?: string;
+  ipAddress?: string;
+  /**
+   * true si se encontró una cuenta con el mismo correo pero sin vincular este proveedor.
+   * En este caso NO se debe crear sesión hasta que el usuario confirme.
+   */
+  requiresLinking?: boolean;
+  /**
+   * true if anomaly detection flagged this login as suspicious and requires additional verification
+   */
+  requiresChallenge?: boolean;
+  challengeReasons?: string[];
 };
 
 /**
@@ -144,10 +158,15 @@ export class RedisOAuthCodeService implements OnModuleInit, OnModuleDestroy {
       }
 
       return {
-        access_token: record.access_token,
-        refresh_token: record.refresh_token,
+        userId: record.userId,
+        email: record.email,
         user: record.user,
         needsProfileCompletion: record.needsProfileCompletion,
+        userAgent: record.userAgent,
+        ipAddress: record.ipAddress,
+        requiresLinking: record.requiresLinking,
+        requiresChallenge: record.requiresChallenge,
+        challengeReasons: record.challengeReasons,
       };
     } catch (error) {
       if (error instanceof BadRequestException) {

@@ -1,0 +1,135 @@
+@import "tailwindcss";
+@import "@heroui/styles/css";
+@source "./components/react/src/**/*.{js,ts,jsx,tsx}";
+
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  /* ── Core ── */
+  --background: #ffffff;
+  --foreground: #09090b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --separator: #e4e4e7;
+
+  /* ── Primary & Secondary (Buttons) ── */
+  --primary: oklch(60% 0.15 196.63);
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  /* ── Accent ── */
+  --accent: oklch(60% 0.15 196.63);
+  --accent-foreground: #ffffff;
+
+  /* ── Surfaces ── */
+  --surface: #ffffff;
+  --surface-foreground: #09090b;
+  --surface-secondary: #f4f4f5;
+  --surface-secondary-foreground: #09090b;
+  --surface-tertiary: #fafafa;
+  --surface-tertiary-foreground: #09090b;
+
+  /* ── Overlay ── */
+  --overlay: #ffffff;
+  --overlay-foreground: #09090b;
+
+  /* ── Fields ── */
+  --field-background: #ffffff;
+  --field-foreground: #09090b;
+  --field-placeholder: #a1a1aa;
+
+  /* ── Semantic ── */
+  --danger: oklch(59.40% 0.1967 354.17);
+  --danger-foreground: #ffffff;
+  --success: oklch(73.29% 0.1935 120.35);
+  --success-foreground: #09090b;
+  --warning: oklch(78.19% 0.1585 41.87);
+  --warning-foreground: #09090b;
+
+  /* ── Misc ── */
+  --default: #e4e4e7;
+  --default-foreground: #09090b;
+  --focus: oklch(60% 0.15 196.63);
+  --scrollbar: #d4d4d8;
+  --segment: #ffffff;
+  --segment-foreground: #09090b;
+
+  /* ── Geometry & Typography ── */
+  --radius: 1rem;
+  --field-radius: 1rem;
+  --font-sans: var(--font-geist-sans), sans-serif;
+}
+
+/* Fix iOS auto-zoom on input focus (font-size must be >= 16px) */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ── Core ── */
+  --background: #09090b;
+  --foreground: #fafafa;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --separator: #27272a;
+
+  /* ── Primary & Secondary (Buttons) ── */
+  --primary: oklch(70% 0.15 196.63);
+  --primary-foreground: #09090b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  /* ── Accent ── */
+  --accent: oklch(70% 0.15 196.63);
+  --accent-foreground: #09090b;
+
+  /* ── Surfaces ── */
+  --surface: #18181b;
+  --surface-foreground: #fafafa;
+  --surface-secondary: #27272a;
+  --surface-secondary-foreground: #fafafa;
+  --surface-tertiary: #3f3f46;
+  --surface-tertiary-foreground: #fafafa;
+
+  /* ── Overlay ── */
+  --overlay: #18181b;
+  --overlay-foreground: #fafafa;
+
+  /* ── Fields ── */
+  --field-background: #18181b;
+  --field-foreground: #fafafa;
+  --field-placeholder: #a1a1aa;
+
+  /* ── Semantic ── */
+  --danger: oklch(59.40% 0.1967 354.17);
+  --danger-foreground: #ffffff;
+  --success: oklch(73.29% 0.1935 120.35);
+  --success-foreground: #09090b;
+  --warning: oklch(82.03% 0.1388 45.88);
+  --warning-foreground: #09090b;
+
+  /* ── Misc ── */
+  --default: #27272a;
+  --default-foreground: #fafafa;
+  --focus: oklch(70% 0.15 196.63);
+  --scrollbar: #52525b;
+  --segment: #27272a;
+  --segment-foreground: #fafafa;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@theme inline {
+  --font-mono: var(--font-geist-mono);
+}

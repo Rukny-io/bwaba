@@ -1,5 +1,5 @@
 -- CreateTable PushSubscription
-CREATE TABLE "PushSubscription" (
+CREATE TABLE IF NOT EXISTS "PushSubscription" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "endpoint" TEXT NOT NULL,

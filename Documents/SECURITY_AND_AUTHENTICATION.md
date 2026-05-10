@@ -1,6 +1,6 @@
 # Rukny.io — Security & Authentication System
 
-> **Last Updated:** 30 March 2026
+> **Last Updated:** 25 April 2026
 > **Security Rating:** 9.5 / 10
 > **Architecture:** NestJS API + Next.js 16 Web + Next.js Admin Panel
 
@@ -26,6 +26,7 @@
 16. [Security Audit & Improvements](#16-security-audit--improvements)
 17. [Security Rating Breakdown](#17-security-rating-breakdown)
 18. [Remaining Improvement Opportunities](#18-remaining-improvement-opportunities)
+19. [Auth Reform Plan](#19-auth-reform-plan)
 
 ---
 
@@ -874,6 +875,132 @@ app.use((req, res, next) => {
 3. **Horizontal-safe activity cache** — The `lastActivityUpdateCache` in `jwt.strategy.ts` is in-process `Map()`. For multi-instance deployments, a Redis-based throttle would ensure consistent idle timeout enforcement.
 
 4. **Audit log retention policy** — Security logs grow indefinitely. Implement a retention/archival policy.
+
+---
+
+## 19. Auth Reform Plan
+
+This section describes the architectural reform required before implementing the next full iteration of authentication features. The goal is not to add more auth behavior on top of the current structure, but to consolidate the existing flows into one coherent model.
+
+### 19.1 Reform Goals
+
+1. Create one canonical authentication API surface.
+2. Move all session issuance and refresh logic into one backend service.
+3. Standardize the web app on one cookie-first auth client.
+4. Replace route-specific pending auth states with one challenge-based flow.
+5. Remove duplicated endpoints and compatibility layers that can drift.
+
+### 19.2 Current Structural Problems
+
+| Problem | Current Shape | Risk |
+|---------|---------------|------|
+| Duplicate auth endpoints | Sessions and 2FA exist under both `auth/*` and `user/*` controllers | Contract drift and inconsistent behavior |
+| Duplicate session creation | `auth.service.ts` and `token.service.ts` both create sessions | Security logic diverges over time |
+| Multiple frontend auth clients | `lib/api/auth.ts`, deprecated `lib/auth/*`, and server actions overlap | Old code paths bypass current security model |
+| Mixed auth state handling | OAuth callback, QuickSign, profile completion, verify-identity, and 2FA each manage their own transition logic | Hard-to-reason-about edge cases |
+| Partial security migration | Some legacy web code still builds `Authorization: Bearer ...` manually | Cookie-based model is not consistently enforced |
+
+### 19.3 Target End State
+
+At the end of the reform, the authentication system should have the following shape:
+
+- One backend auth boundary for login start, OAuth callback handoff, QuickSign verification, profile completion transition, challenge verification, refresh, logout, and session management.
+- One backend session engine responsible for token issuance, refresh rotation, revocation, device metadata, idle timeout, and fingerprint binding.
+- One frontend browser auth client that uses credentials and httpOnly cookies only.
+- One explicit auth-state model shared across OAuth, QuickSign, identity verification, and 2FA.
+
+### 19.4 Canonical Auth State Model
+
+The implementation should move toward these states:
+
+| State | Meaning | Next States |
+|-------|---------|-------------|
+| `UNAUTHENTICATED` | No valid login in progress | `PENDING_OAUTH_EXCHANGE`, `PENDING_MAGIC_LINK`, `AUTHENTICATED` |
+| `PENDING_OAUTH_EXCHANGE` | Provider callback returned, code not yet exchanged into cookies | `PENDING_PROFILE_COMPLETION`, `PENDING_2FA`, `AUTHENTICATED` |
+| `PENDING_MAGIC_LINK` | QuickSign link validated but account flow not yet finalized | `PENDING_PROFILE_COMPLETION`, `PENDING_2FA`, `AUTHENTICATED` |
+| `PENDING_PROFILE_COMPLETION` | User identity is established, but required onboarding data is incomplete | `PENDING_2FA`, `AUTHENTICATED` |
+| `PENDING_2FA` | User identity is established, but second-factor challenge is incomplete | `AUTHENTICATED` |
+| `AUTHENTICATED` | Full session issued and active | `UNAUTHENTICATED` |
+
+### 19.5 Reform Phases
+
+#### Phase 0: Freeze the Contract
+
+- Choose the canonical endpoints for sessions, logout, 2FA, profile completion, and refresh.
+- Mark duplicated endpoints as deprecated immediately.
+- Block new code from using deprecated auth routes.
+
+**Expected output:** one documented contract for the web app and all future auth work.
+
+#### Phase 1: Frontend Surface Consolidation
+
+- Standardize on the cookie-based client in `apps/web/lib/api/*`.
+- Remove or quarantine deprecated compatibility exports in `apps/web/lib/auth/*`.
+- Replace all remaining manual `Authorization` header usage in the web app for normal authenticated requests.
+- Keep server actions only where they are intentionally part of the server-rendering model.
+
+**Expected output:** one browser auth client, one refresh mechanism, one source of truth for auth state.
+
+#### Phase 2: Session Engine Consolidation
+
+- Move session creation to one service only.
+- Make that service the only place allowed to create access tokens, refresh tokens, session records, device metadata, and refresh rotation state.
+- Route OAuth login, QuickSign login, and 2FA login completion through that same service.
+
+**Expected output:** consistent issuance, rotation, revocation, and telemetry for every session.
+
+#### Phase 3: Unified Challenge Layer
+
+- Introduce a generalized auth challenge entity or service for incomplete authentication states.
+- Use that model for OAuth handoff, QuickSign pending signup, alternative identity verification, trusted-device decisions, and pending 2FA.
+- Track status, expiry, consumption, redirect target, origin binding, and metadata in one place.
+
+**Expected output:** all transitional auth flows use the same lifecycle rules instead of ad hoc route logic.
+
+#### Phase 4: Provider and Flow Hardening
+
+- Apply state protection consistently across OAuth providers.
+- Remove QuickSign account-enumeration signals.
+- Either enforce origin or IP binding for OAuth exchange codes or remove unused metadata.
+- Normalize trusted-device bypass so it is policy-driven, not controller-specific branching.
+
+**Expected output:** Google, LinkedIn, QuickSign, and 2FA all follow the same security posture.
+
+#### Phase 5: Cleanup and Cutover
+
+- Remove duplicate `user/*` auth endpoints once callers are migrated.
+- Delete legacy frontend auth helpers and stale compatibility wrappers.
+- Update documentation, threat model notes, and operational runbooks.
+
+**Expected output:** only one supported implementation path remains.
+
+### 19.6 Recommended First Implementation Slice
+
+The first slice should reduce architectural risk before adding new behavior:
+
+1. Remove QuickSign response data that reveals whether an email already exists.
+2. Stop using deprecated web auth helpers that treat non-access-token data like bearer credentials.
+3. Choose the canonical API namespace for sessions and 2FA, then migrate callers.
+4. Centralize session issuance behind one backend service.
+
+This slice is small enough to validate quickly, but it removes the highest-risk sources of future drift.
+
+### 19.7 Guardrails During Reform
+
+- Do not add new auth features on deprecated endpoints.
+- Do not keep both bearer-token and cookie-based browser auth active for the same flows.
+- Do not add more route-specific pending-state logic in pages or controllers.
+- Do not duplicate token issuance logic for convenience.
+
+### 19.8 Definition of Done
+
+The reform is complete when all of the following are true:
+
+1. The web app has one supported browser auth client.
+2. The backend has one supported session issuance and refresh implementation.
+3. There is one canonical sessions and 2FA API surface.
+4. Transitional auth states are represented by a unified challenge model.
+5. Deprecated auth clients and duplicate endpoints are removed, not just ignored.
 
 ---
 

@@ -1,4 +1,4 @@
-const IQD_CURRENCY_LABEL = "دينار عراقي";
+const IQD_CURRENCY_LABEL = "IQD";
 
 function toNumber(value: number | string | null | undefined): number {
   if (typeof value === "number") {

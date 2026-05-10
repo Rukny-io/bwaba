@@ -1,5 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res, Delete, Param, Query, ForbiddenException, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { SecurityAction, SecurityStatus } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { ExchangeCodeDto, UpdateOAuthProfileDto } from './dto';
@@ -11,6 +12,7 @@ import { Request, Response } from 'express';
 import { RedisOAuthCodeService } from './redis-oauth-code.service';
 import { WebSocketTokenService } from './websocket-token.service';
 import { SecurityLogService } from '../../infrastructure/security/log.service';
+import { PendingTwoFactorService } from './pending-two-factor.service';
 import { Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
 import { 
@@ -26,6 +28,7 @@ import {
 } from './cookie.config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { StoresService } from '../stores/stores.service';
 
 // Throttle policies:
 // - Production: strict
@@ -44,8 +47,10 @@ export class AuthController {
     private oauthCodeService: RedisOAuthCodeService, // Use Redis implementation
     private webSocketTokenService: WebSocketTokenService,
     private securityLogService: SecurityLogService,
+    private pendingTwoFactorService: PendingTwoFactorService,
     private prisma: PrismaService,
     private storageService: StorageService,
+    private storesService: StoresService,
   ) {}
 
   @Get('me')
@@ -113,78 +118,56 @@ export class AuthController {
       throw new ConflictException('اسم المستخدم محجوز بالفعل');
     }
 
-    // Update user and profile
-    const updated = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        profileCompleted: true,
-        phoneNumber: dto.phone || null,
-        lastLoginAt: new Date(),
-        profile: {
-          upsert: {
-            create: {
-              id: randomUUID(),
-              username: dto.username,
-              name: dto.name,
-            },
-            update: {
-              username: dto.username,
-              name: dto.name,
+    let updated;
+    try {
+      updated = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          profileCompleted: true,
+          phoneNumber: dto.phone || null,
+          lastLoginAt: new Date(),
+          profile: {
+            upsert: {
+              create: {
+                id: randomUUID(),
+                username: dto.username,
+                name: dto.name,
+              },
+              update: {
+                username: dto.username,
+                name: dto.name,
+              },
             },
           },
         },
-      },
-      include: {
-        profile: true,
-      },
-    });
-
-    // 🏪 إنشاء المتجر تلقائياً
-    let store: any = null;
-    try {
-      // تحقق من عدم وجود متجر سابق
-      const existingStore = await this.prisma.store.findFirst({
-        where: { userId: user.id },
+        include: {
+          profile: true,
+        },
       });
-
-      if (!existingStore) {
-        const storeSlug = dto.username
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, '-')
-          .replace(/-+/g, '-')
-          .slice(0, 40)
-          || `store-${randomUUID().slice(0, 8)}`;
-
-        // 🔗 ربط التصنيف بالـ categoryId من جدول store_categories
-        let resolvedCategoryId: string | null = null;
-        if (dto.storeCategory) {
-          const storeCategory = await this.prisma.store_categories.findFirst({
-            where: { slug: dto.storeCategory, isActive: true },
-            select: { id: true },
-          });
-          resolvedCategoryId = storeCategory?.id || null;
-        }
-
-        store = await this.prisma.store.create({
-          data: {
-            userId: user.id,
-            name: dto.name || 'متجري',
-            slug: storeSlug,
-            description: dto.storeDescription || null,
-            category: dto.storeCategory || null,
-            categoryId: resolvedCategoryId,
-            employeesCount: dto.employeesCount || null,
-            contactEmail: updated.email,
-            country: dto.storeCountry || 'Iraq',
-            city: dto.storeCity || null,
-            address: dto.storeAddress || null,
-            latitude: dto.storeLatitude || null,
-            longitude: dto.storeLongitude || null,
-          },
-        });
-      } else {
-        store = existingStore;
+    } catch (error: any) {
+      if (error.code === 'P2002' && error.meta?.target?.includes('phoneNumber')) {
+        throw new ConflictException('رقم الهاتف مستخدم بالفعل بحساب آخر');
       }
+      throw error;
+    }
+
+    // 🏪 Fix #10: إنشاء المتجر عبر StoresService (business logic في مكانه الصحيح)
+    let store: { slug: string; id: string } | null = null;
+    try {
+      store = await this.storesService.createForOAuthProfile({
+        userId: user.id,
+        email: updated.email,
+        username: dto.username,
+        name: dto.name,
+        storeCategory: dto.storeCategory,
+        storeDescription: dto.storeDescription,
+        employeesCount: dto.employeesCount,
+        storeCountry: dto.storeCountry,
+        storeCity: dto.storeCity,
+        storeAddress: dto.storeAddress,
+        storeLatitude: dto.storeLatitude,
+        storeLongitude: dto.storeLongitude,
+      });
     } catch (storeErr) {
       console.error('[updateOAuthProfile] Failed to create store:', storeErr);
       // لا تُفشل العملية بسبب فشل إنشاء المتجر
@@ -193,8 +176,8 @@ export class AuthController {
     // Log the update
     await this.securityLogService.createLog({
       userId: user.id,
-      action: 'PROFILE_UPDATE' as any,
-      status: 'SUCCESS' as any,
+      action: SecurityAction.PROFILE_UPDATE,
+      status: SecurityStatus.SUCCESS,
       description: 'تم تحديث الملف الشخصي وإنشاء المتجر (OAuth user)',
       ipAddress: req.ip || req.socket.remoteAddress,
       userAgent: req.headers['user-agent'],
@@ -236,7 +219,7 @@ export class AuthController {
       userId: user.id,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
-      action: action as any,
+      action: action as SecurityAction,
     });
   }
 
@@ -379,8 +362,8 @@ export class AuthController {
     const ipAddress = req.ip || req.socket.remoteAddress;
     await this.securityLogService.createLog({
       userId: user.id,
-      action: 'LOGOUT_ALL_DEVICES' as any,
-      status: 'SUCCESS' as any,
+      action: SecurityAction.SESSION_DELETED_ALL,
+      status: SecurityStatus.SUCCESS,
       description: `تسجيل الخروج من جميع الأجهزة (${count} جلسات)`,
       ipAddress,
       userAgent,
@@ -466,18 +449,20 @@ export class AuthController {
     
     const result = await this.authService.googleLogin(req.user, userAgent, ipAddress);
     
-    // 🔒 لا نضع Cookie هنا - سيُضبط في /oauth/exchange
+    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
     // السبب: redirect من port 3001 إلى 3000 يُعتبر cross-origin
-
-    // Generate one-time code with Access Token AND Refresh Token
     const code = await this.oauthCodeService.generate({
-      access_token: result.access_token,
-      refresh_token: result.refresh_token, // ✅ أضفنا refresh_token
+      userId: result.user.id,
+      email: result.user.email,
       user: result.user,
       needsProfileCompletion: result.needsProfileCompletion,
+      userAgent,
+      ipAddress,
+      requiresLinking: result.requiresLinking,
+      requiresChallenge: result.requiresChallenge,
+      challengeReasons: result.challengeReasons,
     }, ipAddress);
 
-    // Redirect — use state (from redirect_origin) if valid, else fallback
     const base = this.resolveRedirectBase(req.query?.state);
     const redirectUrl = `${base}/callback?code=${code}`;
     res.redirect(redirectUrl);
@@ -488,8 +473,8 @@ export class AuthController {
   @Throttle(process.env.NODE_ENV === 'production'
     ? { default: { limit: 10, ttl: 60000 } }   // 🔒 10/min in production
     : { default: { limit: 50, ttl: 60000 } })   // 50/min in development
-  @ApiOperation({ summary: 'Exchange one-time OAuth code for access token' })
-  @ApiResponse({ status: 200, description: 'Access token returned in body, refresh token in cookie' })
+  @ApiOperation({ summary: 'Exchange one-time OAuth code for session cookies' })
+  @ApiResponse({ status: 200, description: 'Session created, tokens stored in httpOnly cookies' })
   @ApiResponse({ status: 400, description: 'Invalid or expired code' })
   async exchangeOAuthCode(
     @Body() body: ExchangeCodeDto,
@@ -502,39 +487,57 @@ export class AuthController {
       throw new ForbiddenException(`CSRF validation failed: ${csrfCheck.reason}`);
     }
 
-    try {
-      const exchanged = await this.oauthCodeService.exchange(body.code);
+    const exchanged = await this.oauthCodeService.exchange(body.code);
+    const { userId, email, user, needsProfileCompletion, userAgent, ipAddress, requiresLinking, requiresChallenge, challengeReasons } = exchanged;
 
-      const { access_token, refresh_token, user, needsProfileCompletion } = exchanged;
-    
-      // 🔒 Access Token في httpOnly Cookie
-      if (access_token) {
-        setAccessTokenCookie(res, access_token);
-      }
-      
-      // 🔒 Refresh Token في httpOnly Cookie
-      if (refresh_token) {
-        setRefreshTokenCookie(res, refresh_token);
-      }
-
-      // 🔒 توليد CSRF Token
-      const csrfToken = generateCsrfToken();
-      setCsrfTokenCookie(res, csrfToken);
-      
-      // 🔒 Response - لا نُرسل التوكنات في الـ body
-      const response = { 
-        success: true,
-        csrf_token: csrfToken,
-        expires_in: 30 * 60, // 30 minutes - matches access token JWT and cookie
-        user,
-        needsProfileCompletion,
-        message: 'Tokens stored in httpOnly cookies',
+    // 🔒 Fix 3: إذا كان يتطلب ربط حساب — لا نُنشئ جلسة حتى يؤكد المستخدم
+    if (requiresLinking) {
+      return {
+        success: false,
+        requiresLinking: true,
+        message: 'يوجد حساب مسجل بهذا البريد الإلكتروني. سجل الدخول بالطريقة المعتادة ثم اربط الحساب من الإعدادات.',
       };
-
-      return response;
-    } catch (error) {
-      throw error;
     }
+
+    // 🔒 إذا اكتشف نظام كشف الشذوذ نشاطاً مشبوهاً — يتطلب تحقق إضافي
+    if (requiresChallenge) {
+      // إنشاء جلسة 2FA معلقة للتحقق
+      const pendingSessionId = await this.pendingTwoFactorService.create(userId, email);
+
+      return {
+        success: false,
+        requiresChallenge: true,
+        requires2FA: true,
+        pendingSessionId,
+        challengeReasons: challengeReasons || [],
+        message: 'تم اكتشاف نشاط غير اعتيادي. يرجى التحقق من هويتك.',
+      };
+    }
+
+    // 🔒 Fix 1+2: إنشاء الجلسة هنا عبر TokenService (يطبق enforceMaxActiveSessions)
+    const { tokens } = await this.tokenService.generateTokenPair(userId, email, {
+      userId,
+      userAgent: userAgent || req.headers['user-agent'],
+      ipAddress: ipAddress || req.ip || req.socket.remoteAddress,
+    });
+
+    // 🔒 Access Token في httpOnly Cookie
+    setAccessTokenCookie(res, tokens.accessToken);
+    // 🔒 Refresh Token في httpOnly Cookie
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // 🔒 توليد CSRF Token
+    const csrfToken = generateCsrfToken();
+    setCsrfTokenCookie(res, csrfToken);
+
+    return {
+      success: true,
+      csrf_token: csrfToken,
+      expires_in: 30 * 60,
+      user,
+      needsProfileCompletion,
+      message: 'Tokens stored in httpOnly cookies',
+    };
   }
 
   @Get('linkedin')
@@ -555,18 +558,19 @@ export class AuthController {
     
     const result = await this.authService.linkedinLogin(req.user, userAgent, ipAddress);
 
-    // 🔒 لا نضع Cookie هنا - سيُضبط في /oauth/exchange
-    // السبب: redirect من port 3001 إلى 3000 يُعتبر cross-origin
-
-    // Generate one-time code with Access Token AND Refresh Token
+    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
     const code = await this.oauthCodeService.generate({
-      access_token: result.access_token,
-      refresh_token: result.refresh_token, // ✅ أضفنا refresh_token
+      userId: result.user.id,
+      email: result.user.email,
       user: result.user,
       needsProfileCompletion: result.needsProfileCompletion,
+      userAgent,
+      ipAddress,
+      requiresLinking: result.requiresLinking,
+      requiresChallenge: result.requiresChallenge,
+      challengeReasons: result.challengeReasons,
     }, ipAddress);
 
-    // Redirect — use state (from redirect_origin) if valid, else fallback
     const base = this.resolveRedirectBase(req.query?.state);
     const redirectUrl = `${base}/callback?code=${code}`;
     res.redirect(redirectUrl);

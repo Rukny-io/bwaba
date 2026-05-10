@@ -19,19 +19,39 @@ export class PendingTwoFactorService {
 
   /**
    * إنشاء جلسة معلقة جديدة
+   * 🔒 Fix #6: تحديد الحد الأقصى بـ 3 جلسات نشطة لكل مستخدم (منع تضخم DB)
    */
   async create(userId: string, email: string): Promise<string> {
-    const id = randomUUID();
     const now = new Date();
+
+    // حذف الجلسات المنتهية أولاً
+    await this.prisma.pendingTwoFactorSession.deleteMany({
+      where: { userId, expiresAt: { lt: now } },
+    });
+
+    // التحقق من الحد الأقصى للجلسات النشطة
+    const MAX_PENDING = 3;
+    const activePending = await this.prisma.pendingTwoFactorSession.count({
+      where: { userId, expiresAt: { gte: now } },
+    });
+
+    if (activePending >= MAX_PENDING) {
+      // حذف الأقدم وإنشاء جديدة بدلاً من رفض الطلب
+      const oldest = await this.prisma.pendingTwoFactorSession.findFirst({
+        where: { userId, expiresAt: { gte: now } },
+        orderBy: { expiresAt: 'asc' },
+        select: { id: true },
+      });
+      if (oldest) {
+        await this.prisma.pendingTwoFactorSession.delete({ where: { id: oldest.id } });
+      }
+    }
+
+    const id = randomUUID();
     const expiresAt = new Date(now.getTime() + this.SESSION_EXPIRY_MINUTES * 60 * 1000);
 
     await this.prisma.pendingTwoFactorSession.create({
-      data: {
-        id,
-        userId,
-        email,
-        expiresAt,
-      },
+      data: { id, userId, email, expiresAt },
     });
 
     return id;

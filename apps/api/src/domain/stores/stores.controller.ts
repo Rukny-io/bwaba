@@ -67,6 +67,16 @@ export class StoresController {
     return this.storesService.getStoreStats(req.user.id);
   }
 
+  @Get('stats/weekly-sales')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get weekly sales data for charts' })
+  @ApiResponse({ status: 200, description: 'Weekly sales retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getWeeklySales(@Request() req) {
+    return this.storesService.getWeeklySales(req.user.id);
+  }
+
   @Get('check-slug/:slug')
   @ApiOperation({ summary: 'Check if store slug is available' })
   @ApiResponse({ status: 200, description: 'Slug is taken' })

@@ -3,12 +3,13 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { SecurityDetectorService } from '../../infrastructure/security/detector.service';
+import { AnomalyDetectionService } from '../../infrastructure/security/anomaly-detection.service';
+import { ThreatAlertService } from '../../infrastructure/security/threat-alert.service';
 import * as crypto from 'crypto';
 import { UAParser } from 'ua-parser-js';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { AccountLockoutService } from './account-lockout.service';
 import { IpVerificationService } from './ip-verification.service';
-import { SessionFingerprintService } from '../../infrastructure/security/session-fingerprint.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 /**
@@ -16,6 +17,10 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
  *
  * خدمة المصادقة الرئيسية
  * تتعامل مع OAuth (Google/LinkedIn) وإدارة الجلسات
+ *
+ * ملاحظة أمنية:
+ * - إنشاء الجلسات يتم في TokenService.generateTokenPair() فقط
+ * - لا يتم ربط OAuth بحساب موجود تلقائياً عبر البريد — يتطلب تأكيد المستخدم
  */
 
 export interface AuthResult {
@@ -27,9 +32,17 @@ export interface AuthResult {
     username?: string;
     avatar?: string;
   };
-  access_token: string;
-  refresh_token?: string;
   needsProfileCompletion: boolean;
+  /**
+   * true إذا وُجد حساب بنفس البريد بدون ربط OAuth.
+   * في هذه الحالة لا يتم إنشاء جلسة — المستخدم يحتاج لتأكيد الربط.
+   */
+  requiresLinking?: boolean;
+  /**
+   * true إذا اكتشف نظام كشف الشذوذ نشاطاً مشبوهاً يتطلب تحقق إضافي
+   */
+  requiresChallenge?: boolean;
+  challengeReasons?: string[];
 }
 
 @Injectable()
@@ -39,109 +52,13 @@ export class AuthService {
     private jwtService: JwtService,
     private securityLogService: SecurityLogService,
     private securityDetectorService: SecurityDetectorService,
+    private anomalyDetectionService: AnomalyDetectionService,
+    private threatAlertService: ThreatAlertService,
     private notificationsGateway: NotificationsGateway,
     private accountLockoutService: AccountLockoutService,
     private ipVerificationService: IpVerificationService,
-    private sessionFingerprintService: SessionFingerprintService,
     private subscriptionsService: SubscriptionsService,
   ) {}
-
-  /**
-   * 🔒 تشفير التوكن باستخدام SHA-256
-   */
-  private hashToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-  }
-
-  /**
-   * 🔒 إنشاء Refresh Token آمن
-   */
-  private generateSecureRefreshToken(): string {
-    return crypto.randomBytes(64).toString('hex');
-  }
-
-  /**
-   * 🔒 إنشاء جلسة جديدة مع Access و Refresh tokens
-   *
-   * ملاحظة: Access Token يحتوي على sid (Session ID) للربط بالجلسة
-   * لا نخزن Access Token hash - نستخدم JWT Stateless
-   */
-  private async createSession(
-    userId: string,
-    email: string,
-    userAgent?: string,
-    ipAddress?: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    // Parse user agent
-    const parser = new UAParser(userAgent);
-    const result = parser.getResult();
-
-    // 1. إنشاء Session ID
-    const sessionId = crypto.randomUUID();
-
-    // 2. إنشاء Access Token مع sid (30 دقيقة)
-    const accessToken = this.jwtService.sign(
-      { sub: userId, sid: sessionId, email, type: 'access' },
-      { expiresIn: '30m' },
-    );
-
-    // 3. إنشاء Refresh Token (7 أيام)
-    const refreshToken = this.generateSecureRefreshToken();
-
-    // 4. حساب أوقات الانتهاء
-    const sessionExpiresAt = new Date();
-    sessionExpiresAt.setMinutes(sessionExpiresAt.getMinutes() + 30);
-
-    const refreshExpiresAt = new Date();
-    // 🔒 7 أيام - موحد مع token.service.ts و cookie.config.ts
-    refreshExpiresAt.setDate(refreshExpiresAt.getDate() + 7);
-
-    // 5. حفظ الجلسة في قاعدة البيانات
-    // ⚠️ لا نخزن Access Token - نستخدم sessionId في JWT
-    try {
-      await this.prisma.session.create({
-        data: {
-          id: sessionId,
-          user: { connect: { id: userId } }, // استخدام العلاقة بدلاً من userId مباشرة
-          // 🔒 فقط Refresh Token Hash
-          refreshTokenHash: this.hashToken(refreshToken),
-          deviceName: result.device.model || 'Unknown Device',
-          deviceType: result.device.type || 'desktop',
-          browser: result.browser.name || 'Unknown',
-          os: result.os.name || 'Unknown',
-          ipAddress,
-          userAgent,
-          expiresAt: sessionExpiresAt,
-          refreshExpiresAt,
-          rotationCount: 0,
-        },
-      });
-    } catch (error) {
-      // 🔒 Session creation failure should fail the login process
-      // Returning tokens without a session would create orphaned tokens
-      throw new Error(
-        `Failed to create session: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-
-    // 🔒 Bind session fingerprint for theft detection
-    if (userAgent) {
-      try {
-        const fingerprint = this.sessionFingerprintService.generateSimpleFingerprint({
-          'user-agent': userAgent,
-        });
-        await this.sessionFingerprintService.bindFingerprintToSession(
-          sessionId,
-          fingerprint,
-          userId,
-        );
-      } catch {
-        // Non-critical — don't fail login for fingerprint storage
-      }
-    }
-
-    return { accessToken, refreshToken };
-  }
 
   async validateUser(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -174,6 +91,11 @@ export class AuthService {
 
   /**
    * 🔒 Shared OAuth login logic for all providers
+   *
+   * 🔒 الأمان:
+   * - البحث يتم أولاً بـ providerId فقط
+   * - إذا وُجد حساب بنفس البريد بدون ربط: لا نربط تلقائياً — نُعيد requiresLinking: true
+   * - إنشاء الجلسة يتم لاحقاً في /oauth/exchange عبر TokenService (لضمان enforceMaxActiveSessions)
    */
   private async oauthLogin(
     provider: 'google' | 'linkedin',
@@ -183,20 +105,49 @@ export class AuthService {
   ): Promise<AuthResult> {
     const { providerId, email, name, avatar } = providerUser;
     const providerIdField = provider === 'google' ? 'googleId' : 'linkedinId';
+    const providerLabel = provider === 'google' ? 'Google' : 'LinkedIn';
 
-    // Prioritize lookup by provider ID, then fall back to email
+    // 1. البحث بـ providerId أولاً (الأسلوب الآمن الوحيد)
     let user = await this.prisma.user.findFirst({
       where: { [providerIdField]: providerId },
       include: { profile: true },
     });
 
+    // 2. إذا لم يوجد بالـ provider ID — تحقق من البريد الإلكتروني
     if (!user) {
-      user = await this.prisma.user.findFirst({
+      const emailUser = await this.prisma.user.findFirst({
         where: { email },
         include: { profile: true },
       });
+
+      if (emailUser) {
+        // 🔒 وُجد حساب بنفس البريد لكن بدون ربط هذا الـ provider
+        // لا نربط تلقائياً — نُعيد علامة تطلب تأكيد المستخدم
+        await this.securityLogService.createLog({
+          userId: emailUser.id,
+          action: 'SUSPICIOUS_ACTIVITY',
+          status: 'WARNING',
+          description: `محاولة ربط ${providerLabel} بحساب موجود عبر البريد بدون تأكيد المستخدم`,
+          ipAddress,
+          userAgent,
+        });
+
+        return {
+          user: {
+            id: emailUser.id,
+            email: emailUser.email,
+            role: emailUser.role,
+            name: emailUser.profile?.name,
+            username: emailUser.profile?.username,
+            avatar: emailUser.profile?.avatar,
+          },
+          needsProfileCompletion: !emailUser.profileCompleted,
+          requiresLinking: true,
+        };
+      }
     }
 
+    // 3. إنشاء مستخدم جديد إذا لم يوجد
     if (!user) {
       user = await this.prisma.user.create({
         data: {
@@ -211,7 +162,7 @@ export class AuthService {
               username:
                 email.split('@')[0] +
                 '_' +
-                Math.random().toString(36).substring(2, 6),
+                crypto.randomBytes(3).toString('hex'),
               name,
               avatar,
             },
@@ -222,59 +173,98 @@ export class AuthService {
 
       // إنشاء اشتراك مجاني للمستخدم الجديد
       await this.subscriptionsService.createFreeSubscription(user.id);
-    } else if (!user[providerIdField]) {
-      // Link existing user account with this provider
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          [providerIdField]: providerId,
-          emailVerified: true,
-          profile: user.profile
-            ? { update: { avatar: avatar || user.profile.avatar } }
-            : {
-                create: {
-                  id: crypto.randomUUID(),
-                  username:
-                    email.split('@')[0] +
-                    '_' +
-                    Math.random().toString(36).substring(2, 6),
-                  name,
-                  avatar,
-                },
-              },
-        },
-        include: { profile: true },
-      });
     }
 
-    const { accessToken, refreshToken } = await this.createSession(
-      user.id,
-      user.email,
-      userAgent,
-      ipAddress,
-    );
-
+    // 4. 🔍 تحليل تسجيل الدخول للكشف عن الأنشطة المشبوهة
     const parser = new UAParser(userAgent);
-    const result = parser.getResult();
+    const deviceInfo = parser.getResult();
 
-    const providerLabel = provider === 'google' ? 'Google' : 'LinkedIn';
+    const anomaly = await this.anomalyDetectionService.analyzeLogin(user.id, {
+      ipAddress: ipAddress || 'unknown',
+      userAgent,
+      deviceFingerprint: `${deviceInfo.browser.name}:${deviceInfo.os.name}:${deviceInfo.device.type || 'desktop'}`,
+    });
 
+    // 🚨 إرسال تنبيهات فورية للتهديدات عالية الخطورة
+    if (anomaly.suspicious && anomaly.riskScore >= 40) {
+      await this.threatAlertService.alertSuspiciousLogin(
+        user.id,
+        anomaly.reasons,
+        anomaly.riskScore,
+        ipAddress,
+      );
+    }
+
+    // 🔒 إذا كان النشاط مشبوهاً جداً — يتطلب تحقق إضافي (2FA إجباري)
+    if (anomaly.action === 'challenge') {
+      await this.securityLogService.createLog({
+        userId: user.id,
+        action: 'SUSPICIOUS_ACTIVITY',
+        status: 'WARNING',
+        description: `تسجيل دخول مشبوه (خطورة: ${anomaly.riskScore}%) — يتطلب تحقق إضافي: ${anomaly.reasons.join('، ')}`,
+        ipAddress,
+        userAgent,
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.profile?.name,
+          username: user.profile?.username,
+          avatar: user.profile?.avatar,
+        },
+        needsProfileCompletion: !user.profileCompleted,
+        requiresChallenge: true,
+        challengeReasons: anomaly.reasons,
+      };
+    }
+
+    // 🔒 إذا كان مستوى الخطر عالٍ جداً — حظر تسجيل الدخول
+    if (anomaly.action === 'block') {
+      await this.securityLogService.createLog({
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        description: `تم حظر تسجيل الدخول — نشاط مشبوه (خطورة: ${anomaly.riskScore}%): ${anomaly.reasons.join('، ')}`,
+        ipAddress,
+        userAgent,
+      });
+
+      // لا نُعيد خطأ صريح — نُعيد كما لو يتطلب تحقق
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.profile?.name,
+          username: user.profile?.username,
+          avatar: user.profile?.avatar,
+        },
+        needsProfileCompletion: !user.profileCompleted,
+        requiresChallenge: true,
+        challengeReasons: ['تم اكتشاف نشاط غير اعتيادي. يرجى التحقق من هويتك.'],
+      };
+    }
+
+    // 5. تسجيل الدخول الناجح + إشعارات (بدون إنشاء جلسة — يتم في /oauth/exchange)
     await this.securityLogService.createLog({
       userId: user.id,
       action: 'LOGIN_SUCCESS',
       status: 'SUCCESS',
       description: `تسجيل دخول ناجح عبر ${providerLabel}`,
       ipAddress,
-      deviceType: result.device.type || 'desktop',
-      browser: result.browser.name || 'Unknown',
-      os: result.os.name || 'Unknown',
+      deviceType: deviceInfo.device.type || 'desktop',
+      browser: deviceInfo.browser.name || 'Unknown',
+      os: deviceInfo.os.name || 'Unknown',
       userAgent,
     });
 
     await this.securityDetectorService.checkNewDevice(user.id, {
-      browser: result.browser.name,
-      os: result.os.name,
-      deviceType: result.device.type || 'desktop',
+      browser: deviceInfo.browser.name,
+      os: deviceInfo.os.name,
+      deviceType: deviceInfo.device.type || 'desktop',
       ipAddress,
       userAgent,
     });
@@ -284,11 +274,11 @@ export class AuthService {
         userId: user.id,
         type: 'NEW_LOGIN' as any,
         title: 'تسجيل دخول جديد',
-        message: `تم تسجيل الدخول إلى حسابك من ${result.browser.name || 'متصفح غير معروف'} على ${result.os.name || 'جهاز غير معروف'}`,
+        message: `تم تسجيل الدخول إلى حسابك من ${deviceInfo.browser.name || 'متصفح غير معروف'} على ${deviceInfo.os.name || 'جهاز غير معروف'}`,
         data: {
-          browser: result.browser.name || 'Unknown',
-          os: result.os.name || 'Unknown',
-          deviceType: result.device.type || 'desktop',
+          browser: deviceInfo.browser.name || 'Unknown',
+          os: deviceInfo.os.name || 'Unknown',
+          deviceType: deviceInfo.device.type || 'desktop',
         },
       });
     } catch {
@@ -306,8 +296,6 @@ export class AuthService {
         username: user.profile?.username,
         avatar: user.profile?.avatar,
       },
-      access_token: accessToken,
-      refresh_token: refreshToken,
       needsProfileCompletion: !user.profileCompleted,
     };
   }

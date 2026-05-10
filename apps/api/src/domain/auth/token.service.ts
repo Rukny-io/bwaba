@@ -6,6 +6,8 @@ import * as crypto from 'crypto';
 import { UAParser } from 'ua-parser-js';
 import { updateSessionActivityThrottled } from './utils/session-activity.util';
 import { SessionFingerprintService } from '../../infrastructure/security/session-fingerprint.service';
+import { ThreatAlertService } from '../../infrastructure/security/threat-alert.service';
+import { RedisService } from '../../core/cache/redis.service';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -45,19 +47,24 @@ export interface SessionInfo {
 @Injectable()
 export class TokenService {
   // 🔒 إعدادات الأمان
-  private readonly ACCESS_TOKEN_EXPIRY = '30m'; // 30 دقيقة
-  private readonly REFRESH_TOKEN_EXPIRY_DAYS = 7; // 7 أيام - تقليل من 14 يوم لتقليل نافذة الهجوم
-  private readonly MAX_ROTATION_COUNT = 100; // الحد الأقصى للتدوير قبل إجبار إعادة تسجيل الدخول
-  private readonly GRACE_PERIOD_MS = 5000; // 5 ثواني سماح لاستخدام token قديم (race condition) - تقليل من 30 ثانية
-  /** تقييد عدد الجلسات النشطة لكل مستخدم (أمان بدون تعقيد كبير) */
+  private readonly ACCESS_TOKEN_EXPIRY = '30m';
+  private readonly REFRESH_TOKEN_EXPIRY_DAYS = 7;
+  private readonly MAX_ROTATION_COUNT = 100;
+  private readonly GRACE_PERIOD_MS = 5000;
+  /** تقييد عدد الجلسات النشطة لكل مستخدم */
   private readonly MAX_ACTIVE_SESSIONS =
     this.configService.get<number>('MAX_ACTIVE_SESSIONS') ?? 5;
+  /** مفتاح قفل Redis لمنع التدوير المتزامن (Fix #4) */
+  private readonly REFRESH_LOCK_PREFIX = 'refresh:lock:';
+  private readonly REFRESH_LOCK_TTL = 10; // ثوانٍ
 
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
     private prisma: PrismaService,
     private sessionFingerprintService: SessionFingerprintService,
+    private threatAlertService: ThreatAlertService,
+    private redis: RedisService,
   ) {}
 
   /**
@@ -177,7 +184,7 @@ export class TokenService {
   /**
    * 🔒 تجديد التوكنز (مع التدوير)
    *
-   * يتم إنشاء توكنز جديدة وإبطال القديمة
+   * يستخدم Redis lock لمنع التدوير المتزامن لنفس الجلسة (Fix #4)
    */
   async refreshTokens(
     refreshToken: string,
@@ -191,7 +198,6 @@ export class TokenService {
     timings.hash = Date.now() - startTime;
 
     // 1. البحث عن الجلسة بواسطة refreshTokenHash الحالي
-    // ⚡ Performance: حد أدنى من الحقول + فهرس refreshTokenHash
     const sessionQueryStart = Date.now();
     const session = await this.prisma.session.findUnique({
       where: { refreshTokenHash },
@@ -212,7 +218,6 @@ export class TokenService {
     });
     timings.sessionQuery = Date.now() - sessionQueryStart;
     
-    // ⚡ Log slow queries (> 500ms)
     if (timings.sessionQuery > 500) {
       console.warn(`[TokenService] ⚠️ Slow session query: ${timings.sessionQuery}ms`);
     }
@@ -220,73 +225,63 @@ export class TokenService {
     // 2. إذا لم نجد الجلسة بـ hash الحالي، نبحث عن سرقة محتملة أو فترة سماح
     if (!session) {
       if (!isProduction) {
-        console.log(
-          '[TokenService] Session not found with current refresh token hash',
-        );
+        console.log('[TokenService] Session not found with current refresh token hash');
       }
 
-      // 🔍 Reuse Detection: هل هذا token قديم تم تدويره؟
-      const tokenTheftCheck = await this.detectTokenTheft(
-        refreshToken,
-        refreshTokenHash,
-      );
+      const tokenTheftCheck = await this.detectTokenTheft(refreshToken, refreshTokenHash);
 
-      // ✅ فترة السماح - إعادة استخدام Token خلال 30 ثانية من التدوير
-      // 🔒 نعيد نفس الـ session الحالي بدلاً من إنشاء tokens جديدة (تجنب race condition)
+      // ✅ فترة السماح — نُصدر access token جديداً فقط، بدون تدوير refresh token ثانية
       if (tokenTheftCheck.isGracePeriod && tokenTheftCheck.session) {
         if (!isProduction) {
-          console.log(
-            '[TokenService] ✅ Grace period hit - fetching current session tokens',
-          );
+          console.log('[TokenService] ✅ Grace period hit - issuing new access token only');
         }
         const gracePeriodSession = tokenTheftCheck.session;
 
-        // 🔒 نحتاج جلب الـ session الحالي مع الـ refresh token hash الجديد
-        // ثم نعيد access token جديد فقط (الـ refresh token الحالي صالح)
-        const currentSession = await this.prisma.session.findUnique({
-          where: { id: gracePeriodSession.id },
-          select: {
-            id: true,
-            userId: true,
-            refreshTokenHash: true,
-            user: { select: { email: true } },
-          },
-        });
+        // 🔒 Fix #4: قفل Redis على الجلسة لمنع تدوير متزامن آخر
+        const lockKey = `${this.REFRESH_LOCK_PREFIX}${gracePeriodSession.id}`;
+        const lockAcquired = await this.redis.setNX(lockKey, '1', this.REFRESH_LOCK_TTL);
 
-        if (!currentSession) {
-          throw new UnauthorizedException('Session not found during grace period');
+        if (!lockAcquired) {
+          // تدوير آخر قيد التنفيذ — أخبر العميل بإعادة المحاولة بعد ثانية
+          throw new UnauthorizedException('TOKEN_REFRESH_IN_PROGRESS');
         }
 
-        // نُنشئ access token جديد فقط
-        const newAccessPayload: TokenPayload = {
-          sub: currentSession.userId,
-          sid: currentSession.id,
-          email: currentSession.user.email,
-          type: 'access',
-        };
-        const newAccessToken = this.jwtService.sign(newAccessPayload, {
-          expiresIn: this.ACCESS_TOKEN_EXPIRY,
-        });
+        try {
+          const currentSession = await this.prisma.session.findUnique({
+            where: { id: gracePeriodSession.id },
+            select: { id: true, userId: true, user: { select: { email: true } } },
+          });
 
-        // 🔒 نُعيد الـ refresh token الحالي (الذي تم تدويره مؤخراً)
-        // نحتاج لإرجاع الـ token الأصلي، لكننا لا نخزنه - فقط الـ hash
-        // لذا نُنشئ refresh token جديد ونُحدّث الـ hash
-        const newRefreshToken = this.generateSecureRefreshToken();
+          if (!currentSession) {
+            throw new UnauthorizedException('Session not found during grace period');
+          }
 
-        // تحديث الـ hash - بدون تغيير previousRefreshTokenHash لتجنب الـ cascade
-        await this.prisma.session.update({
-          where: { id: currentSession.id },
-          data: {
-            refreshTokenHash: this.hashToken(newRefreshToken),
-            lastActivity: new Date(),
-            // 🔒 لا نُحدّث lastRotatedAt لتجنب تمديد grace period
-          },
-        });
+          // نُصدر access token جديد فقط — refresh token يبقى كما هو
+          const newAccessPayload: TokenPayload = {
+            sub: currentSession.userId,
+            sid: currentSession.id,
+            email: currentSession.user.email,
+            type: 'access',
+          };
+          const newAccessToken = this.jwtService.sign(newAccessPayload, {
+            expiresIn: this.ACCESS_TOKEN_EXPIRY,
+          });
 
-        return {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-        };
+          // نُنشئ refresh token جديد (لا يمكننا إرجاع القديم — مخزون كـ hash فقط)
+          const newRefreshToken = this.generateSecureRefreshToken();
+          await this.prisma.session.update({
+            where: { id: currentSession.id },
+            data: {
+              refreshTokenHash: this.hashToken(newRefreshToken),
+              lastActivity: new Date(),
+              // 🔒 لا نُحدّث lastRotatedAt لمنع تمديد grace period بشكل متسلسل
+            },
+          });
+
+          return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+        } finally {
+          await this.redis.del(lockKey);
+        }
       }
 
       if (tokenTheftCheck.isTheft) {
@@ -310,6 +305,17 @@ export class TokenService {
           details:
             'Old rotated refresh token was reused. All sessions revoked.',
         });
+
+        // 🚨 إرسال تنبيه فوري عبر جميع القنوات (Telegram/Slack/Discord)
+        await this.threatAlertService.sendThreatAlert({
+          type: 'ACCOUNT_TAKEOVER',
+          severity: 'CRITICAL',
+          title: 'Token Theft Detected',
+          description: `Rotated refresh token reused for user ${tokenTheftCheck.userId}. All sessions revoked.`,
+          userId: tokenTheftCheck.userId,
+          ipAddress,
+          metadata: { userAgent, sessionId: tokenTheftCheck.sessionId },
+        }).catch(() => { /* non-critical */ });
 
         throw new UnauthorizedException(
           'تم اكتشاف نشاط مشبوه. تم تسجيل خروجك من جميع الأجهزة لحماية حسابك',
@@ -390,10 +396,18 @@ export class TokenService {
       console.log('[TokenService] ✅ Rotating tokens for session:', session.id);
     }
 
+    // 🔒 Fix #4: قفل Redis لمنع التدوير المتزامن لنفس الجلسة
+    const rotationLockKey = `${this.REFRESH_LOCK_PREFIX}${session.id}`;
+    const rotationLockAcquired = await this.redis.setNX(rotationLockKey, '1', this.REFRESH_LOCK_TTL);
+    if (!rotationLockAcquired) {
+      throw new UnauthorizedException('TOKEN_REFRESH_IN_PROGRESS');
+    }
+
+    try {
     // 6. إنشاء توكنز جديدة
     const newAccessPayload: TokenPayload = {
       sub: session.userId,
-      sid: session.id, // 🔒 نفس Session ID
+      sid: session.id,
       email: session.user.email,
       type: 'access',
     };
@@ -405,16 +419,13 @@ export class TokenService {
 
     // 7. حساب أوقات انتهاء جديدة
     const newSessionExpiresAt = new Date();
-    newSessionExpiresAt.setMinutes(newSessionExpiresAt.getMinutes() + 30); // ✅ مطابق لـ ACCESS_TOKEN_EXPIRY
+    newSessionExpiresAt.setMinutes(newSessionExpiresAt.getMinutes() + 30);
 
     // 8. تحديث الجلسة (Rotation) - فقط Refresh Token Hash الجديد
-    // ⚠️ بعد هذه النقطة، أي استخدام للـ token القديم = سرقة محتملة
     const updateStart = Date.now();
     await this.prisma.session.update({
       where: { id: session.id },
       data: {
-        // 🔒 Hash جديد فقط - القديم يصبح غير صالح فوراً
-        // 🔒 حفظ Hash الحالي كـ previous قبل التدوير
         previousRefreshTokenHash: session.refreshTokenHash,
         refreshTokenHash: this.hashToken(newRefreshToken),
         expiresAt: newSessionExpiresAt,
@@ -427,7 +438,6 @@ export class TokenService {
     });
     timings.sessionUpdate = Date.now() - updateStart;
     
-    // ⚡ Log total refresh time (warn if > 1s)
     const totalTime = Date.now() - startTime;
     if (totalTime > 1000 || !isProduction) {
       console.log(`[TokenService] Refresh completed in ${totalTime}ms`, {
@@ -441,6 +451,9 @@ export class TokenService {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
+    } finally {
+      await this.redis.del(rotationLockKey);
+    }
   }
 
   /**

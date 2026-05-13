@@ -32,7 +32,11 @@ export function middleware(request: NextRequest) {
   // Protected routes → redirect to login
   const isProtected = PROTECTED_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
   if (isProtected && !hasSession) {
-    return NextResponse.redirect(new URL('/login?session=expired', request.url));
+    const accountsUrl = process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
+    const loginUrl = new URL('/login', accountsUrl);
+    loginUrl.searchParams.set('next', request.url);
+    loginUrl.searchParams.set('session', 'expired');
+    return NextResponse.redirect(loginUrl);
   }
 
   // Auth pages → redirect to dashboard if authenticated

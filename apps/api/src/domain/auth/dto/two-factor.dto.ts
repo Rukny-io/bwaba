@@ -112,6 +112,7 @@ export class StartVerifyIdentityResponseDto {
     email: boolean;
     authenticator: boolean;
     recovery: boolean;
+    whatsapp?: boolean;
   };
 
   @ApiProperty({ required: false, nullable: true, example: 'uuid-session-id' })

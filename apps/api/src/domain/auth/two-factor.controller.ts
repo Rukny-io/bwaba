@@ -26,6 +26,7 @@ import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { SecurityDetectorService } from '../../infrastructure/security/detector.service';
 import { BruteForceService } from '../../infrastructure/security/brute-force.service';
 import { RedisService } from '../../core/cache/redis.service';
+import { WhatsappService } from '../../integrations/whatsapp/whatsapp.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
 import { Throttle } from '@nestjs/throttler';
@@ -67,6 +68,7 @@ export class TwoFactorController {
     private securityDetectorService: SecurityDetectorService,
     private bruteForceService: BruteForceService,
     private redis: RedisService,
+    private whatsappService: WhatsappService,
   ) {}
 
   /**
@@ -110,9 +112,12 @@ export class TwoFactorController {
       select: {
         id: true,
         email: true,
+        role: true,
         twoFactorEnabled: true,
       },
     });
+
+    const isSubscribed = user && ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
 
     // استجابة آمنة: لا تكشف صراحةً وجود الحساب من عدمه
     if (!user || !user.twoFactorEnabled) {
@@ -133,6 +138,7 @@ export class TwoFactorController {
           email: true,
           authenticator: false,
           recovery: false,
+          whatsapp: isSubscribed ? true : false,
         },
         pendingSessionId: null,
         message: GENERIC_VERIFY_IDENTITY_MESSAGE,
@@ -170,6 +176,7 @@ export class TwoFactorController {
         email: true,
         authenticator: true,
         recovery: true,
+        whatsapp: isSubscribed ? true : false,
       },
       pendingSessionId,
     };
@@ -410,6 +417,52 @@ export class TwoFactorController {
   }
 
   /**
+   * 🟢 إرسال رمز OTP عبر الواتساب
+   */
+  @Post('whatsapp/send-otp')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({ summary: 'إرسال رمز التحقق عبر الواتساب' })
+  async sendWhatsappOtp(
+    @Body('pendingSessionId') pendingSessionId: string,
+  ) {
+    if (!pendingSessionId) {
+      return { success: false, message: 'معرف الجلسة مطلوب' };
+    }
+
+    const pendingSession = await this.getPendingTwoFactorSession(pendingSessionId);
+    if (!pendingSession) {
+      return { success: false, message: 'انتهت صلاحية الجلسة' };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: pendingSession.userId },
+      select: { phone: true, phoneNumber: true, role: true },
+    });
+
+    const phone = user?.phone || user?.phoneNumber;
+    if (!phone) {
+      return { success: false, message: 'لا يوجد رقم هاتف مسجل لهذا الحساب' };
+    }
+
+    const isSubscribed = user && ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
+    if (!isSubscribed) {
+      return { success: false, message: 'هذه الخدمة متاحة للمشتركين فقط' };
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const redisKey = `whatsapp_otp:${pendingSessionId}`;
+    await this.redis.set(redisKey, otpCode, 300);
+
+    try {
+      await this.whatsappService.sendOtpMessage(phone, otpCode);
+      return { success: true, message: 'تم إرسال الرمز بنجاح' };
+    } catch (e) {
+      return { success: false, message: 'فشل إرسال الرمز عبر الواتساب' };
+    }
+  }
+
+  /**
    * �🔓 التحقق من 2FA عند تسجيل الدخول
    *
    * يُستخدم بعد التحقق الأولي (QuickSign/OAuth) إذا كان 2FA مفعلاً
@@ -467,11 +520,31 @@ export class TwoFactorController {
       };
     }
 
+    // التحقق مما إذا كان الرمز المُدخل هو رمز واتساب
+    const redisKey = `whatsapp_otp:${dto.pendingSessionId}`;
+    const savedOtp = await this.redis.get<string>(redisKey);
+    let isWhatsappOtpValid = false;
+
+    if (savedOtp && savedOtp === dto.token.trim()) {
+      isWhatsappOtpValid = true;
+      await this.redis.del(redisKey);
+    }
+
     // التحقق من الرمز
-    const verification = await this.twoFactorService.verifyToken(
-      pendingSession.userId,
-      dto.token,
-    );
+    let verification: { valid: boolean; usedBackupCode?: boolean } = { valid: false };
+    
+    if (isWhatsappOtpValid) {
+      verification.valid = true;
+    } else {
+      try {
+        verification = await this.twoFactorService.verifyToken(
+          pendingSession.userId,
+          dto.token,
+        );
+      } catch (e) {
+        // سيتم التعامل مع الفشل بالأسفل
+      }
+    }
 
     if (!verification.valid) {
       // تسجيل المحاولة الفاشلة

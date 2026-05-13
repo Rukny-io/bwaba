@@ -452,12 +452,14 @@ export class AuthController {
     const stateStr = req.query?.state as string;
     let origin = stateStr;
     let linkToken = null;
+    let nextUrl = null;
 
     if (stateStr && !stateStr.startsWith('http')) {
       try {
         const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
         origin = decoded.o;
         linkToken = decoded.l;
+        nextUrl = decoded.n;
       } catch (e) {}
     }
 
@@ -494,7 +496,10 @@ export class AuthController {
     }, ipAddress);
 
     const base = this.resolveRedirectBase(origin);
-    const redirectUrl = `${base}/callback?code=${code}`;
+    let redirectUrl = `${base}/callback?code=${code}`;
+    if (nextUrl) {
+      redirectUrl += `&next=${encodeURIComponent(nextUrl)}`;
+    }
     res.redirect(redirectUrl);
   }
 
@@ -589,12 +594,14 @@ export class AuthController {
     const stateStr = req.query?.state as string;
     let origin = stateStr;
     let linkToken = null;
+    let nextUrl = null;
 
     if (stateStr && !stateStr.startsWith('http')) {
       try {
         const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
         origin = decoded.o;
         linkToken = decoded.l;
+        nextUrl = decoded.n;
       } catch (e) {}
     }
 
@@ -630,7 +637,10 @@ export class AuthController {
     }, ipAddress);
 
     const base = this.resolveRedirectBase(origin);
-    const redirectUrl = `${base}/callback?code=${code}`;
+    let redirectUrl = `${base}/callback?code=${code}`;
+    if (nextUrl) {
+      redirectUrl += `&next=${encodeURIComponent(nextUrl)}`;
+    }
     res.redirect(redirectUrl);
   }
 
@@ -654,6 +664,8 @@ export class AuthController {
       'https://localhost:3000',
       'https://localhost:3003',
       'https://localhost:3004',
+      'http://localhost:3005',
+      'https://localhost:3005',
       'https://rukny.io',
       'https://www.rukny.io',
       'https://app.rukny.io',

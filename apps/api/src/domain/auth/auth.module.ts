@@ -30,6 +30,8 @@ import { StorageModule } from '../storage/storage.module';
 import { RedisModule } from '../../core/cache/redis.module';
 import { StoresModule } from '../stores/stores.module';
 
+import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
+
 @Module({
   imports: [
     PrismaModule,
@@ -39,6 +41,7 @@ import { StoresModule } from '../stores/stores.module';
     StorageModule,
     RedisModule,
     StoresModule,
+    WhatsappModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -56,6 +56,8 @@ const ALLOWED_ORIGINS: string[] = [
   'http://127.0.0.1:3004',
   'https://localhost:3004',
   'https://127.0.0.1:3004',
+  'http://localhost:3005',
+  'http://127.0.0.1:3005',
   // Local network IPs are handled dynamically in validateCsrfOrigin()
 ].filter(Boolean) as string[];
 

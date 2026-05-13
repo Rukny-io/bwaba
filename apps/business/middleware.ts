@@ -12,8 +12,12 @@ export function middleware(request: NextRequest) {
   // Protected routes: redirect to login if no session
   const isProtected = PROTECTED_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
   if (isProtected && !hasSession) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('session', 'expired');
+    const accountsUrl = process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
+    const loginUrl = new URL('/login', accountsUrl);
+    loginUrl.searchParams.set('next', request.url);
+    if (request.nextUrl.searchParams.get('session') === 'expired') {
+      loginUrl.searchParams.set('session', 'expired');
+    }
     return NextResponse.redirect(loginUrl);
   }
 

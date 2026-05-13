@@ -205,11 +205,55 @@ export class QuickSignController {
     };
   }
 
+  @Get('verify/:token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'صفحة وسيطة لمنع استهلاك الرابط بواسطة البريد' })
+  async verifyQuickSignPage(@Param('token') token: string, @Res() res: Response) {
+    const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="utf-8">
+      <title>جاري التحقق...</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+        body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f9fafb; margin: 0; color: #111827; }
+        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center; max-width: 400px; width: 90%; }
+        .btn { background: #000; color: #fff; border: none; padding: 12px 24px; border-radius: 9999px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 1.5rem; font-weight: 500; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.8; }
+        .loader { width: 40px; height: 40px; border: 3px solid #f3f4f6; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="loader" id="loader"></div>
+        <h2 style="margin: 0 0 0.5rem;">جاري تسجيل الدخول</h2>
+        <p style="color: #6b7280; margin: 0; font-size: 0.9rem;">يرجى الانتظار لحظات...</p>
+        
+        <form id="verifyForm" action="/api/v1/auth/quicksign/verify/${token}" method="POST">
+          <noscript>
+            <p style="margin-top: 1.5rem; color: #b91c1c;">يجب تفعيل الجافاسكربت أو النقر على الزر أدناه</p>
+            <button class="btn" type="submit">المتابعة لتسجيل الدخول</button>
+          </noscript>
+        </form>
+      </div>
+      <script>
+        // إرسال النموذج تلقائياً بشكل فوري
+        document.getElementById('verifyForm').submit();
+      </script>
+    </body>
+    </html>
+    `;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  }
+
   /**
    * التحقق من QuickSign token
-   * GET /auth/quicksign/verify/:token
+   * POST /auth/quicksign/verify/:token
    */
-  @Get('verify/:token')
+  @Post('verify/:token')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 🔒 5 attempts per minute to prevent brute force
   @ApiOperation({ summary: 'التحقق من صلاحية QuickSign token' })
@@ -382,8 +426,9 @@ export class QuickSignController {
 
       // ملاحظة: markQuickSignAsUsed تم استدعاؤها في verifyAndConsumeQuickSign
       
-      // Redirect لصفحة 2FA
-      const redirectUrl = `${frontendUrl}/auth/verify-2fa?sessionId=${pendingSessionId}`;
+      // Redirect لصفحة اختيار طريقة التحقق (2FA Method Chooser)
+      const redirectUrl = `${frontendUrl}/choose-method?sessionId=${pendingSessionId}&email=${encodeURIComponent(verification.email)}`;
+      if (!isProduction) console.log('🔄 Redirecting to choose-method (2FA):', redirectUrl);
       return res.redirect(redirectUrl);
     }
 

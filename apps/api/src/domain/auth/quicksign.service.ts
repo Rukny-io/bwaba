@@ -177,7 +177,7 @@ export class QuickSignService {
    * 🔒 التحقق من صلاحية QuickSign token
    * ⚡ محسّن للأداء - يتحقق من Redis أولاً
    */
-  async verifyQuickSign(token: string): Promise<{
+  async verifyQuickSign(token: string, skipLock = false): Promise<{
     valid: boolean;
     email?: string;
     type?: QuickSignType;
@@ -187,31 +187,14 @@ export class QuickSignService {
     profileCompleted?: boolean;
   }> {
     try {
-      // 🔒 Debug: Log incoming token
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[QuickSign.verifyQuickSign] Starting verification with token:', {
-          tokenType: typeof token,
-          tokenLength: token?.length,
-          tokenPreview: token?.substring(0, 30) + '...',
-          hasDots: (token?.match(/\./g) || []).length,
-        });
-      }
-
       const tokenHash = this.hashToken(token);
 
-      // 🔒 Debug: Log hash
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[QuickSign.verifyQuickSign] Token hash computed:', {
-          hashPreview: tokenHash.substring(0, 20) + '...',
-          hashLength: tokenHash.length,
-        });
-      }
-
-      // 🔒 Acquire distributed lock to prevent race condition (concurrent verify requests)
-      const lockAcquired = await this.acquireTokenLock(tokenHash);
-      if (!lockAcquired) {
-        // Another request is already verifying this token
-        return { valid: false, used: true };
+      // 🔒 Acquire distributed lock unless skipped
+      if (!skipLock) {
+        const lockAcquired = await this.acquireTokenLock(tokenHash);
+        if (!lockAcquired) {
+          return { valid: false, used: true };
+        }
       }
 
       try {
@@ -405,9 +388,11 @@ export class QuickSignService {
       return { valid: false };
     }
     } finally {
-      // 🔒 Release the distributed lock
-      const tokenHash = this.hashToken(token);
-      await this.releaseTokenLock(tokenHash).catch(() => {});
+      // 🔒 Release the distributed lock unless skipped
+      if (!skipLock) {
+        const tokenHash = this.hashToken(token);
+        await this.releaseTokenLock(tokenHash).catch(() => {});
+      }
     }
   }
 
@@ -603,8 +588,8 @@ export class QuickSignService {
     }
 
     try {
-      // التحقق من التوكن
-      const verification = await this.verifyQuickSign(token);
+      // التحقق من التوكن (تخطي القفل لأنه مأخوذ بالفعل هنا)
+      const verification = await this.verifyQuickSign(token, true);
       
       if (!verification.valid) {
         return verification;

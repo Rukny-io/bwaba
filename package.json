@@ -19,6 +19,7 @@
     "docker:rukny-dev:logs": "docker-compose -f docker-compose.rukny-dev.yml logs -f web api",
     "dev:app": "npm run dev --workspace=apps/app -- -p 3000",
     "dev:forms": "npm run dev --workspace=apps/forms -- -p 3005",
+    "dev:accounts": "npm run dev --workspace=apps/accounts -- -p 3005",
     "dev:admin": "npm run dev --workspace=apps/admin",
     "dev:business": "npm run dev --workspace=apps/business -- -p 3003",
     "dev:developers": "npm run dev --workspace=apps/developers -- -p 3004",

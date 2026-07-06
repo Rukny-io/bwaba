@@ -15,15 +15,15 @@ import {
 export class InputLengthPipe implements PipeTransform {
   // الحدود الافتراضية لكل نوع
   private readonly DEFAULT_LIMITS = {
-    string: 10000,        // 10KB للنصوص العادية
-    shortString: 255,     // للحقول القصيرة مثل الاسم
-    longText: 50000,      // 50KB للنصوص الطويلة مثل الوصف
-    email: 320,           // الحد الأقصى RFC للبريد
-    url: 2048,            // الحد الأقصى لـ URL
-    phone: 20,            // رقم الهاتف
-    array: 100,           // عدد عناصر المصفوفة
-    objectKeys: 50,       // عدد مفاتيح الكائن
-    nestedDepth: 10,      // عمق التداخل
+    string: 10000, // 10KB للنصوص العادية
+    shortString: 255, // للحقول القصيرة مثل الاسم
+    longText: 50000, // 50KB للنصوص الطويلة مثل الوصف
+    email: 320, // الحد الأقصى RFC للبريد
+    url: 2048, // الحد الأقصى لـ URL
+    phone: 20, // رقم الهاتف
+    array: 100, // عدد عناصر المصفوفة
+    objectKeys: 50, // عدد مفاتيح الكائن
+    nestedDepth: 10, // عمق التداخل
   };
 
   // حقول لها حدود خاصة
@@ -65,16 +65,10 @@ export class InputLengthPipe implements PipeTransform {
   /**
    * التحقق من القيمة بشكل متكرر
    */
-  private validateValue(
-    value: any,
-    fieldName: string,
-    depth: number,
-  ): void {
+  private validateValue(value: any, fieldName: string, depth: number): void {
     // منع التداخل العميق
     if (depth > this.DEFAULT_LIMITS.nestedDepth) {
-      throw new BadRequestException(
-        `Input nesting too deep at "${fieldName}"`,
-      );
+      throw new BadRequestException(`Input nesting too deep at "${fieldName}"`);
     }
 
     if (typeof value === 'string') {
@@ -91,7 +85,7 @@ export class InputLengthPipe implements PipeTransform {
    */
   private validateString(value: string, fieldName: string): void {
     const normalizedField = fieldName.toLowerCase().replace(/[_-]/g, '');
-    
+
     // البحث عن حد مخصص
     const customLimit = this.customLimits?.[normalizedField];
     if (customLimit !== undefined) {
@@ -125,11 +119,7 @@ export class InputLengthPipe implements PipeTransform {
   /**
    * التحقق من المصفوفة
    */
-  private validateArray(
-    value: any[],
-    fieldName: string,
-    depth: number,
-  ): void {
+  private validateArray(value: any[], fieldName: string, depth: number): void {
     if (value.length > this.DEFAULT_LIMITS.array) {
       throw new BadRequestException(
         `Array "${fieldName}" exceeds maximum of ${this.DEFAULT_LIMITS.array} items`,

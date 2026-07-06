@@ -25,34 +25,52 @@ export class TemplatesController {
   @RequireScopes('templates:write')
   @ApiOperation({ summary: 'إنشاء قالب رسالة' })
   create(@Req() req: any, @Body() dto: CreateTemplateDto) {
-    return this.templatesService.create(req.userId, req.apiKey?.developerAppId, dto);
+    return this.templatesService.create(
+      req.userId,
+      req.apiKey?.developerAppId,
+      dto,
+    );
   }
 
   @Get()
   @RequireScopes('templates:read')
   @ApiOperation({ summary: 'قائمة القوالب' })
   findAll(@Req() req: any) {
-    return this.templatesService.findAll(req.userId, req.apiKey?.developerAppId);
+    return this.templatesService.findAll(
+      req.userId,
+      req.apiKey?.developerAppId,
+    );
   }
 
   @Get(':name')
   @RequireScopes('templates:read')
   @ApiOperation({ summary: 'تفاصيل قالب' })
   findOne(@Req() req: any, @Param('name') name: string) {
-    return this.templatesService.findOne(req.userId, req.apiKey?.developerAppId, name);
+    return this.templatesService.findOne(
+      req.userId,
+      req.apiKey?.developerAppId,
+      name,
+    );
   }
 
   @Delete(':name')
   @RequireScopes('templates:write')
   @ApiOperation({ summary: 'حذف قالب' })
   remove(@Req() req: any, @Param('name') name: string) {
-    return this.templatesService.remove(req.userId, req.apiKey?.developerAppId, name);
+    return this.templatesService.remove(
+      req.userId,
+      req.apiKey?.developerAppId,
+      name,
+    );
   }
 
   @Post('sync')
   @RequireScopes('templates:read')
   @ApiOperation({ summary: 'مزامنة القوالب مع Meta' })
   sync(@Req() req: any) {
-    return this.templatesService.syncTemplates(req.userId, req.apiKey?.developerAppId);
+    return this.templatesService.syncTemplates(
+      req.userId,
+      req.apiKey?.developerAppId,
+    );
   }
 }

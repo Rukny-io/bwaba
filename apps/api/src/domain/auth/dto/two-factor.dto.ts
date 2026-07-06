@@ -118,7 +118,10 @@ export class StartVerifyIdentityResponseDto {
   @ApiProperty({ required: false, nullable: true, example: 'uuid-session-id' })
   pendingSessionId?: string | null;
 
-  @ApiProperty({ required: false, example: 'يمكنك المتابعة عبر البريد الإلكتروني فقط' })
+  @ApiProperty({
+    required: false,
+    example: 'يمكنك المتابعة عبر البريد الإلكتروني فقط',
+  })
   message?: string;
 }
 

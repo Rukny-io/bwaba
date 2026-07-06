@@ -33,19 +33,25 @@ export class FileValidationException extends UploadException {
 
 export class FileTooLargeException extends FileValidationException {
   constructor(maxSizeMB: number, actualSizeMB: number) {
-    super(`File size exceeds ${maxSizeMB}MB limit (actual: ${actualSizeMB.toFixed(2)}MB)`, {
-      maxSizeMB,
-      actualSizeMB,
-    });
+    super(
+      `File size exceeds ${maxSizeMB}MB limit (actual: ${actualSizeMB.toFixed(2)}MB)`,
+      {
+        maxSizeMB,
+        actualSizeMB,
+      },
+    );
   }
 }
 
 export class InvalidFileTypeException extends FileValidationException {
   constructor(providedType: string, allowedTypes: string[]) {
-    super(`Invalid file type: ${providedType}. Allowed: ${allowedTypes.join(', ')}`, {
-      providedType,
-      allowedTypes,
-    });
+    super(
+      `Invalid file type: ${providedType}. Allowed: ${allowedTypes.join(', ')}`,
+      {
+        providedType,
+        allowedTypes,
+      },
+    );
   }
 }
 
@@ -100,9 +106,14 @@ export class S3Exception extends UploadException {
 
 export class S3BucketNotFoundException extends S3Exception {
   constructor(bucket: string) {
-    super(`S3 bucket does not exist: ${bucket}`, HttpStatus.NOT_FOUND, 'S3_BUCKET_NOT_FOUND', {
-      bucket,
-    });
+    super(
+      `S3 bucket does not exist: ${bucket}`,
+      HttpStatus.NOT_FOUND,
+      'S3_BUCKET_NOT_FOUND',
+      {
+        bucket,
+      },
+    );
   }
 }
 
@@ -166,7 +177,12 @@ export class S3PresignFailedException extends S3Exception {
  */
 export class ImageProcessingException extends UploadException {
   constructor(message: string, details?: Record<string, any>) {
-    super(message, HttpStatus.UNPROCESSABLE_ENTITY, 'IMAGE_PROCESSING_ERROR', details);
+    super(
+      message,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'IMAGE_PROCESSING_ERROR',
+      details,
+    );
   }
 }
 
@@ -218,7 +234,11 @@ export class UploadRateLimitException extends UploadException {
 /**
  * Helper function to convert AWS S3 errors to custom exceptions
  */
-export function mapS3Error(error: any, bucket: string, key?: string): S3Exception {
+export function mapS3Error(
+  error: any,
+  bucket: string,
+  key?: string,
+): S3Exception {
   const errorName = error?.name || error?.code || '';
   const errorMessage = error?.message || String(error);
 

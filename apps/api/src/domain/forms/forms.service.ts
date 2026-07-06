@@ -17,14 +17,32 @@ import { ConditionalLogicService } from './services/conditional-logic.service';
 import { WebhookService } from './services/webhook.service';
 import { SecureIds } from '../../core/common/utils/secure-id.util';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { NotificationType, FileCategory } from '@prisma/client';
+import { SubscriptionPlan, NotificationType, FileCategory } from '@prisma/client';
 import { GoogleSheetsService } from '../../integrations/google-sheets/google-sheets.service';
 import { GoogleDriveService } from '../../integrations/google-drive/google-drive.service';
 import { RedisService } from '../../core/cache/redis.service';
 import { CacheManager } from '../../core/cache/cache.manager';
-import { CacheKeys, CACHE_TTL, CACHE_TAGS } from '../../core/cache/cache.constants';
+import {
+  CacheKeys,
+  CACHE_TTL,
+  CACHE_TAGS,
+} from '../../core/cache/cache.constants';
 import { S3Service } from '../../services/s3.service';
-import { v4 as uuidv4 } from 'uuid';
+import { mapFormFieldData } from './utils/form-field.mapper';
+import {
+  collectFieldResponseCounts,
+  getSubmissionFieldValue,
+} from './utils/submission-field-data.util';
+import { duplicateFormStructure } from './utils/duplicate-form.helper';
+import {
+  buildFormCoverS3Key,
+  decodeCoverImageDataUrl,
+  resolveExistingCoverImageKey,
+  validateFormCoverImageBuffer,
+} from './utils/form-cover-image.util';
+import { assertFormFieldsVerificationAllowed } from './utils/form-field-verification-plan.util';
+import { FormsSubmissionService } from './services/forms-submission.service';
+import { FormTeamAccessService } from './form-team/form-team-access.service';
 
 @Injectable()
 export class FormsService {
@@ -51,32 +69,42 @@ export class FormsService {
     private readonly redisService: RedisService,
     private readonly cacheManager: CacheManager,
     private readonly s3Service: S3Service,
+    private readonly formsSubmissionService: FormsSubmissionService,
+    private readonly formTeamAccess: FormTeamAccessService,
   ) {}
 
-  /**
-   * Extract S3 key from a presigned URL
-   * Example: https://bucket.s3.region.amazonaws.com/users/xxx/forms/yyy/cover/zzz.webp?X-Amz-... 
-   * Returns: users/xxx/forms/yyy/cover/zzz.webp
-   */
-  private extractS3KeyFromUrl(url: string): string | null {
-    try {
-      const urlObj = new URL(url);
-      // Remove leading slash and return the path without query params
-      const path = urlObj.pathname.replace(/^\//, '');
-      // Validate it looks like an S3 key for forms
-      if (path.startsWith('users/') || path.startsWith('forms/')) {
-        return path;
-      }
-      return null;
-    } catch {
-      return null;
+  private async resolveUserPlan(userId: string): Promise<SubscriptionPlan> {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+      select: { plan: true },
+    });
+    return sub?.plan ?? SubscriptionPlan.FREE;
+  }
+
+  private collectFieldsForVerificationCheck(
+    fields: unknown[] | undefined,
+    steps: Array<{ fields?: unknown[] }> | undefined,
+  ): Array<{ type: string; validationRules?: unknown }> {
+    const collected: Array<{ type: string; validationRules?: unknown }> = [];
+    if (Array.isArray(fields)) {
+      collected.push(...(fields as Array<{ type: string; validationRules?: unknown }>));
     }
+    if (Array.isArray(steps)) {
+      for (const step of steps) {
+        if (Array.isArray(step.fields)) {
+          collected.push(
+            ...(step.fields as Array<{ type: string; validationRules?: unknown }>),
+          );
+        }
+      }
+    }
+    return collected;
   }
 
   /**
    * Process and upload cover image to S3
-   * Accepts base64 data URL or returns existing S3 key/URL unchanged
-   * Includes timeout protection to prevent request aborts
+   * Accepts base64 data URL or an existing S3 key / presigned URL in our bucket.
    */
   private async processCoverImage(
     coverImage: string | undefined,
@@ -85,60 +113,13 @@ export class FormsService {
   ): Promise<string | undefined> {
     if (!coverImage) return undefined;
 
-    // If it's already an S3 key (not base64 or URL), return as-is
-    if (
-      coverImage.startsWith('users/') ||
-      coverImage.startsWith('forms/')
-    ) {
-      return coverImage;
-    }
-
-    // If it's a presigned URL, extract the S3 key
-    if (coverImage.startsWith('http')) {
-      const s3Key = this.extractS3KeyFromUrl(coverImage);
-      if (s3Key) {
-        return s3Key;
-      }
-      // If we can't extract the key, log warning and return undefined
-      this.logger.warn(`Could not extract S3 key from URL: ${coverImage.substring(0, 100)}...`);
-      return undefined;
-    }
-
-    // Normalize the cover image - handle cases where 'data:' was stripped by sanitizer
-    let normalizedCoverImage = coverImage;
-    if (coverImage.startsWith('image/') && coverImage.includes(';base64,')) {
-      normalizedCoverImage = 'data:' + coverImage;
-    }
-
-    // Check if it's a base64 data URL
-    if (!normalizedCoverImage.startsWith('data:image/')) {
-      return coverImage; // Return unchanged if not recognizable format
-    }
+    const existingKey = resolveExistingCoverImageKey(coverImage, userId, formId);
+    if (existingKey) return existingKey;
 
     try {
-      // Extract mime type and base64 data
-      // Support various image formats including webp, svg+xml, jpeg, png, gif
-      // Handle both "data:image/png;base64," and "data:image/pngbase64," formats
-      const matches = normalizedCoverImage.match(
-        /^data:image\/([\w+\-]+)(?:;)?base64,(.+)$/is,
-      );
-      if (!matches) {
-        // Log the format for debugging
-        const preview = normalizedCoverImage.substring(0, 100);
-        console.warn(`Invalid image format detected: ${preview}...`);
-        throw new BadRequestException('Invalid image data format');
-      }
+      const buffer = decodeCoverImageDataUrl(coverImage);
+      await validateFormCoverImageBuffer(buffer);
 
-      const [, imageType, base64Data] = matches;
-      const buffer = Buffer.from(base64Data, 'base64');
-
-      // Validate size
-      if (buffer.length > this.MAX_COVER_SIZE) {
-        throw new BadRequestException('Cover image exceeds 5MB limit');
-      }
-
-      // Process image with sharp (resize and convert to webp)
-      // Wrap in Promise.race with timeout to prevent request aborts
       const sharp = await import('sharp');
       const processImageWithTimeout = Promise.race([
         sharp
@@ -149,18 +130,18 @@ export class FormsService {
           })
           .webp({ quality: 85 })
           .toBuffer(),
-        new Promise<Buffer>((_, reject) =>
-          setTimeout(() => reject(new Error('Image processing timeout')), 30000) // 30s timeout
+        new Promise<Buffer>(
+          (_, reject) =>
+            setTimeout(
+              () => reject(new Error('Image processing timeout')),
+              30000,
+            ),
         ),
       ]);
 
       const processedBuffer = await processImageWithTimeout;
+      const s3Key = buildFormCoverS3Key(userId, formId);
 
-      // Generate S3 key
-      const fileName = `${uuidv4()}.webp`;
-      const s3Key = `users/${userId}/forms/${formId}/cover/${fileName}`;
-
-      // Upload to S3 with built-in retry logic
       await this.s3Service.uploadBuffer(
         this.bucket,
         s3Key,
@@ -205,7 +186,7 @@ export class FormsService {
           'Failed to upload cover image: S3 access denied. Please check AWS credentials.',
         );
       }
-      
+
       this.logger.error('Failed to process cover image:', error);
       // Return generic error to user
       throw new BadRequestException(
@@ -310,10 +291,8 @@ export class FormsService {
       ...formData
     } = createFormDto;
 
-    // Log integration settings for future use
-    // TODO: After form creation, automatically setup Google Sheets integration if enableGoogleSheets is true
     if (enableGoogleSheets) {
-      this.logger.log(`Form will be created with Google Sheets integration enabled`);
+      this.logger.log('Google Sheets integration requested for new form');
     }
     if (storageProvider) {
       this.logger.log(`Form will use storage provider: ${storageProvider}`);
@@ -322,154 +301,154 @@ export class FormsService {
     // Determine if it's a multi-step form
     const isMultiStep = formData.isMultiStep || (steps && steps.length > 0);
 
+    const fieldsToVerify = this.collectFieldsForVerificationCheck(fields, steps);
+    if (fieldsToVerify.length > 0) {
+      const plan = await this.resolveUserPlan(userId);
+      assertFormFieldsVerificationAllowed(plan, fieldsToVerify);
+    }
+
     // Create form with transaction to handle steps and fields properly
     // ⚠️ IMPORTANT: Image processing can take up to 30 seconds, so extend transaction timeout
     const form = await this.prisma.$transaction(
       async (tx) => {
         const formId = SecureIds.form();
 
-      // Process cover image (upload to S3 if base64)
-      let coverImageKey: string | undefined;
-      if (coverImage) {
-        coverImageKey = await this.processCoverImage(
-          coverImage,
-          userId,
-          formId,
-        );
-      }
-
-      // Process banner images (upload to S3 if base64)
-      let bannerImageKeys: string[] = [];
-      if (bannerImages && bannerImages.length > 0) {
-        bannerImageKeys = await this.processBannerImages(
-          bannerImages,
-          userId,
-          formId,
-        );
-        // Use first banner as cover image if no cover image provided
-        if (!coverImageKey && bannerImageKeys.length > 0) {
-          coverImageKey = bannerImageKeys[0];
+        // Process cover image (upload to S3 if base64)
+        let coverImageKey: string | undefined;
+        if (coverImage) {
+          coverImageKey = await this.processCoverImage(
+            coverImage,
+            userId,
+            formId,
+          );
         }
-      }
 
-      // Create the form first
-      const createdForm = await tx.form.create({
-        data: {
-          id: formId,
-          ...formData,
-          slug: uniqueSlug, // Use the generated unique slug
-          coverImage: coverImageKey,
-          bannerImages: bannerImageKeys,
-          bannerDisplayMode: bannerDisplayMode || 'single',
-          userId,
-          status: formData.status || 'DRAFT',
-          isMultiStep: isMultiStep || false,
-        },
-      });
+        // Process banner images (upload to S3 if base64)
+        let bannerImageKeys: string[] = [];
+        if (bannerImages && bannerImages.length > 0) {
+          bannerImageKeys = await this.processBannerImages(
+            bannerImages,
+            userId,
+            formId,
+          );
+          // Use first banner as cover image if no cover image provided
+          if (!coverImageKey && bannerImageKeys.length > 0) {
+            coverImageKey = bannerImageKeys[0];
+          }
+        }
 
-      // Handle multi-step forms
-      if (isMultiStep && steps && steps.length > 0) {
-        // Create steps and their fields
-        for (const step of steps) {
-          const stepId = SecureIds.generic();
+        // Create the form first
+        const createdForm = await tx.form.create({
+          data: {
+            id: formId,
+            ...formData,
+            slug: uniqueSlug, // Use the generated unique slug
+            coverImage: coverImageKey,
+            bannerImages: bannerImageKeys,
+            bannerDisplayMode: bannerDisplayMode || 'single',
+            userId,
+            status: formData.status || 'DRAFT',
+            isMultiStep: isMultiStep || false,
+          },
+        });
 
-          await tx.form_steps.create({
-            data: {
-              id: stepId,
-              formId: formId,
-              title: step.title,
-              description: step.description,
-              order: step.order,
-              updatedAt: new Date(),
-            },
-          });
+        // Handle multi-step forms
+        if (isMultiStep && steps && steps.length > 0) {
+          // Create steps and their fields
+          for (const step of steps) {
+            const stepId = SecureIds.generic();
 
-          // Create fields for this step - support both step.fields and step.fieldIds (⚡ createMany to avoid N+1)
-          if (step.fields && Array.isArray(step.fields) && step.fields.length > 0) {
-            await tx.formField.createMany({
-              data: step.fields.map((field: any) => this.buildFormFieldRow(field, formId, stepId)),
+            await tx.form_steps.create({
+              data: {
+                id: stepId,
+                formId: formId,
+                title: step.title,
+                description: step.description,
+                order: step.order,
+                updatedAt: new Date(),
+              },
             });
-          } else if (step.fieldIds && fields?.length) {
-            const stepFields = fields.filter((f) =>
-              step.fieldIds?.includes(f.stepId || ''),
-            );
-            if (stepFields.length > 0) {
+
+            // Create fields for this step - support both step.fields and step.fieldIds (⚡ createMany to avoid N+1)
+            if (
+              step.fields &&
+              Array.isArray(step.fields) &&
+              step.fields.length > 0
+            ) {
               await tx.formField.createMany({
-                data: stepFields.map((field: any) => this.buildFormFieldRow(field, formId, stepId)),
+                data: step.fields.map((field: any) =>
+                  this.buildFormFieldRow(field, formId, stepId),
+                ),
+              });
+            } else if (step.fieldIds && fields?.length) {
+              const stepFields = fields.filter((f) =>
+                step.fieldIds?.includes(f.stepId || ''),
+              );
+              if (stepFields.length > 0) {
+                await tx.formField.createMany({
+                  data: stepFields.map((field: any) =>
+                    this.buildFormFieldRow(field, formId, stepId),
+                  ),
+                });
+              }
+            }
+          }
+
+          // Create any remaining fields not assigned to steps (⚡ createMany to avoid N+1)
+          if (fields?.length) {
+            const unassignedFields = fields.filter((f) => !f.stepId);
+            if (unassignedFields.length > 0) {
+              await tx.formField.createMany({
+                data: unassignedFields.map((field: any) =>
+                  this.buildFormFieldRow(field, formId),
+                ),
               });
             }
           }
-        }
-
-        // Create any remaining fields not assigned to steps (⚡ createMany to avoid N+1)
-        if (fields?.length) {
-          const unassignedFields = fields.filter((f) => !f.stepId);
-          if (unassignedFields.length > 0) {
+        } else {
+          // Non-multi-step form - create all fields directly (⚡ createMany to avoid N+1)
+          if (fields?.length) {
             await tx.formField.createMany({
-              data: unassignedFields.map((field: any) => this.buildFormFieldRow(field, formId)),
+              data: fields.map((field: any) =>
+                this.buildFormFieldRow(field, formId),
+              ),
             });
           }
         }
-      } else {
-        // Non-multi-step form - create all fields directly (⚡ createMany to avoid N+1)
-        if (fields?.length) {
-          await tx.formField.createMany({
-            data: fields.map((field: any) => this.buildFormFieldRow(field, formId)),
-          });
-        }
-      }
 
-      // Return the complete form with relations
-      return tx.form.findUnique({
-        where: { id: formId },
-        include: {
-          fields: {
-            orderBy: { order: 'asc' },
-          },
-          steps: {
-            orderBy: { order: 'asc' },
-            include: {
-              form_fields: {
-                orderBy: { order: 'asc' },
+        // Return the complete form with relations
+        return tx.form.findUnique({
+          where: { id: formId },
+          include: {
+            fields: {
+              orderBy: { order: 'asc' },
+            },
+            steps: {
+              orderBy: { order: 'asc' },
+              include: {
+                form_fields: {
+                  orderBy: { order: 'asc' },
+                },
               },
             },
-          },
-          _count: {
-            select: {
-              submissions: true,
+            _count: {
+              select: {
+                submissions: true,
+              },
+            },
+            user: {
+              include: { profile: true },
             },
           },
-          user: {
-            include: { profile: true },
-          },
-        },
-      });
-    },
-    {
-      timeout: 30000, // 30 ثانية (من 5000ms الافتراضي)
-      isolationLevel: 'ReadCommitted', // أفضل performance
-    }
+        });
+      },
+      {
+        timeout: 30000, // 30 ثانية (من 5000ms الافتراضي)
+        isolationLevel: 'ReadCommitted', // أفضل performance
+      },
     );
 
-    // Send form created notification email with QR code
-    if (form.user?.email) {
-      try {
-        const userName =
-          form.user.profile?.name || form.user.email.split('@')[0] || 'User';
-        await this.emailService.sendFormCreatedNotification(
-          form.user.email,
-          userName,
-          {
-            formTitle: form.title,
-            formSlug: form.slug,
-            formId: form.id,
-          },
-        );
-      } catch (emailError) {
-        console.error('Error sending form created notification:', emailError);
-        // Don't throw - email failure shouldn't break form creation
-      }
-    }
+    // Send form created notification email is now handled in updateStatus() when the form is published
 
     // ⚡ Invalidate caches for form owner
     try {
@@ -480,7 +459,19 @@ export class FormsService {
         );
       }
     } catch (err) {
-      this.logger.warn(`Cache invalidation error (form create): ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidation error (form create): ${err?.message || err}`,
+      );
+    }
+
+    if (enableGoogleSheets && form?.id) {
+      void this.googleSheetsService
+        .createSpreadsheet(form.id, userId)
+        .catch((e) =>
+          this.logger.warn(
+            `Auto Google Sheets setup failed: ${e?.message || e}`,
+          ),
+        );
     }
 
     // Return form with integration preferences for frontend to handle OAuth
@@ -497,24 +488,12 @@ export class FormsService {
   /**
    * ⚡ Performance: بناء صف واحد لـ createMany (تجنب N+1)
    */
-  private buildFormFieldRow(field: any, formId: string, stepId?: string | null) {
-    return {
-      id: SecureIds.field(),
-      formId,
-      ...(stepId != null && { stepId }),
-      label: field.label,
-      description: field.description ?? null,
-      type: field.type,
-      order: field.order,
-      required: field.required ?? false,
-      placeholder: field.placeholder ?? null,
-      options: field.options ?? null,
-      minValue: field.minValue ?? null,
-      maxValue: field.maxValue ?? null,
-      allowedFileTypes: field.allowedFileTypes || [],
-      maxFileSize: field.maxFileSize ?? null,
-      maxFiles: field.maxFiles ?? null,
-    } as any;
+  private buildFormFieldRow(
+    field: Record<string, unknown>,
+    formId: string,
+    stepId?: string | null,
+  ) {
+    return mapFormFieldData(field, formId, stepId, { preserveId: true });
   }
 
   async findAll(filters?: {
@@ -657,7 +636,8 @@ export class FormsService {
         });
 
         // Find featured form (first one or one with coverImage)
-        const featured = forms.find((f: any) => f.coverImage) || forms[0] || null;
+        const featured =
+          forms.find((f: any) => f.coverImage) || forms[0] || null;
 
         // Convert coverImage keys to presigned URLs for private S3 bucket
         const transformedForms = await Promise.all(
@@ -793,7 +773,13 @@ export class FormsService {
             orderBy: { order: 'asc' },
             include: { form_fields: { orderBy: { order: 'asc' } } },
           },
-          user: { select: { id: true, email: true, profile: { select: { name: true } } } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              profile: { select: { name: true } },
+            },
+          },
           events: { select: { id: true, title: true, slug: true } },
           _count: { select: { submissions: true } },
         },
@@ -805,8 +791,12 @@ export class FormsService {
     }
 
     // التحقق من الملكية إذا تم تمرير userId
-    if (userId && form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to access this form');
+    if (userId) {
+      await this.formTeamAccess.assertFormReadAccess(
+        form,
+        userId,
+        'Not authorized to access this form',
+      );
     }
 
     // Convert coverImage S3 key to presigned URL
@@ -1013,9 +1003,7 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to update this form');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     // Check slug uniqueness if updating
     if (updateFormDto.slug && updateFormDto.slug !== form.slug) {
@@ -1044,6 +1032,17 @@ export class FormsService {
     // Determine if it's a multi-step form
     const isMultiStep = formData.isMultiStep || (steps && steps.length > 0);
 
+    if (fields !== undefined || steps !== undefined) {
+      const fieldsToVerify = this.collectFieldsForVerificationCheck(
+        fields,
+        steps,
+      );
+      if (fieldsToVerify.length > 0) {
+        const plan = await this.resolveUserPlan(userId);
+        assertFormFieldsVerificationAllowed(plan, fieldsToVerify);
+      }
+    }
+
     // Process cover image if provided (upload to S3 if base64)
     let coverImageKey: string | undefined;
     if (coverImage !== undefined) {
@@ -1067,7 +1066,7 @@ export class FormsService {
         }
       } else {
         // coverImage is empty/null - remove existing
-        coverImageKey = null as any;
+        coverImageKey = null;
         if (
           form.coverImage &&
           (form.coverImage.startsWith('forms/') ||
@@ -1171,9 +1170,15 @@ export class FormsService {
           });
 
           // Create fields for this step (⚡ createMany to avoid N+1)
-          if (step.fields && Array.isArray(step.fields) && step.fields.length > 0) {
+          if (
+            step.fields &&
+            Array.isArray(step.fields) &&
+            step.fields.length > 0
+          ) {
             await tx.formField.createMany({
-              data: step.fields.map((field: any) => this.buildFormFieldRow(field, formId, stepId)),
+              data: step.fields.map((field: any) =>
+                this.buildFormFieldRow(field, formId, stepId),
+              ),
             });
           }
         }
@@ -1183,7 +1188,9 @@ export class FormsService {
         await tx.formField.deleteMany({ where: { formId } });
         if (fields.length > 0) {
           await tx.formField.createMany({
-            data: fields.map((field: any) => this.buildFormFieldRow(field, formId)),
+            data: fields.map((field: any) =>
+              this.buildFormFieldRow(field, formId),
+            ),
           });
         }
       }
@@ -1227,11 +1234,15 @@ export class FormsService {
           select: { username: true },
         });
         if (profile?.username) {
-          await this.cacheManager.invalidate(CacheKeys.publicFormsByUsername(profile.username));
+          await this.cacheManager.invalidate(
+            CacheKeys.publicFormsByUsername(profile.username),
+          );
         }
       }
     } catch (err) {
-      this.logger.warn(`Cache invalidation error (form update): ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidation error (form update): ${err?.message || err}`,
+      );
     }
 
     // Convert coverImage S3 key to presigned URL
@@ -1264,14 +1275,14 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to update this form');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'publish_form');
 
     const updated = await this.prisma.form.update({
       where: { id: formId },
       data: { status },
     });
+
+    // Published notification email is sent from FormsCommandsService.updateStatus()
 
     // ⚡ Invalidate caches for form owner
     try {
@@ -1284,7 +1295,9 @@ export class FormsService {
         );
       }
     } catch (err) {
-      this.logger.warn(`Cache invalidation error (form updateStatus): ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidation error (form updateStatus): ${err?.message || err}`,
+      );
     }
 
     return updated;
@@ -1301,9 +1314,7 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to access this form');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     return this.prisma.form_steps.findMany({
       where: { formId },
@@ -1325,9 +1336,7 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to update this form');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     return this.prisma.$transaction(async (tx) => {
       // Delete existing steps and fields
@@ -1361,9 +1370,15 @@ export class FormsService {
         });
 
         // Create fields for this step (⚡ createMany to avoid N+1)
-        if (step.fields && Array.isArray(step.fields) && step.fields.length > 0) {
+        if (
+          step.fields &&
+          Array.isArray(step.fields) &&
+          step.fields.length > 0
+        ) {
           await tx.formField.createMany({
-            data: step.fields.map((field: any) => this.buildFormFieldRow(field, formId, stepId)),
+            data: step.fields.map((field: any) =>
+              this.buildFormFieldRow(field, formId, stepId),
+            ),
           });
         }
       }
@@ -1390,9 +1405,7 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to delete this form');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'delete_form');
 
     await this.prisma.form.delete({
       where: { id: formId },
@@ -1413,11 +1426,15 @@ export class FormsService {
           select: { username: true },
         });
         if (profile?.username) {
-          await this.cacheManager.invalidate(CacheKeys.publicFormsByUsername(profile.username));
+          await this.cacheManager.invalidate(
+            CacheKeys.publicFormsByUsername(profile.username),
+          );
         }
       }
     } catch (err) {
-      this.logger.warn(`Cache invalidation error (form delete): ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidation error (form delete): ${err?.message || err}`,
+      );
     }
 
     // Return nothing for NO_CONTENT response
@@ -1429,229 +1446,7 @@ export class FormsService {
     submitFormDto: SubmitFormDto,
     userId?: string,
   ) {
-    const form = await this.prisma.form.findUnique({
-      where: { id: formId },
-      include: {
-        fields: true,
-      },
-    });
-
-    if (!form) {
-      throw new NotFoundException('Form not found');
-    }
-
-    // Validate form status
-    if (form.status !== 'PUBLISHED') {
-      throw new BadRequestException('Form is not accepting submissions');
-    }
-
-    // Check if form is open
-    const now = new Date();
-    if (form.opensAt && now < form.opensAt) {
-      throw new BadRequestException('Form is not open yet');
-    }
-    if (form.closesAt && now > form.closesAt) {
-      throw new BadRequestException('Form is closed');
-    }
-
-    // Check authentication requirement
-    if (form.requiresAuthentication && !userId) {
-      throw new BadRequestException(
-        'Authentication required to submit this form',
-      );
-    }
-
-    // Check submission limit
-    if (form.maxSubmissions) {
-      const submissionCount = await this.prisma.form_submissions.count({
-        where: { formId },
-      });
-      if (submissionCount >= form.maxSubmissions) {
-        throw new BadRequestException('Form has reached maximum submissions');
-      }
-    }
-
-    // Check multiple submissions
-    if (!form.allowMultipleSubmissions && userId) {
-      const existingSubmission = await this.prisma.form_submissions.findFirst({
-        where: { formId, userId },
-      });
-      if (existingSubmission) {
-        throw new BadRequestException('You have already submitted this form');
-      }
-    }
-
-    // Check oneResponsePerUser (requires authentication)
-    if (form.oneResponsePerUser && userId) {
-      const existingSubmission = await this.prisma.form_submissions.findFirst({
-        where: { formId, userId },
-      });
-      if (existingSubmission) {
-        throw new BadRequestException('You can only submit this form once');
-      }
-    }
-
-    // Apply conditional logic to determine visible/required fields
-    const { visibleFieldIds, requiredFieldIds } =
-      this.conditionalLogicService.getVisibleFields(
-        form.fields,
-        submitFormDto.data,
-      );
-
-    // Filter fields to only validate visible ones
-    const fieldsToValidate = form.fields.filter((field) =>
-      visibleFieldIds.includes(field.id),
-    );
-
-    // Update required status based on conditional logic
-    const fieldsWithConditionalRequirements = fieldsToValidate.map((field) => ({
-      ...field,
-      required: requiredFieldIds.includes(field.id) || field.required,
-    }));
-
-    // Comprehensive field validation using ValidationService
-    const validationResult = this.validationService.validateFormSubmission(
-      fieldsWithConditionalRequirements,
-      submitFormDto.data,
-    );
-
-    if (!validationResult.isValid) {
-      const errorMessages = this.validationService.flattenErrors(
-        validationResult.errors,
-      );
-      throw new BadRequestException({
-        message: 'Form validation failed',
-        errors: validationResult.errors,
-        errorMessages,
-      });
-    }
-
-    // Generate submission ID early for file naming
-    const submissionId = SecureIds.submission();
-
-    // Process signatures and files - upload to Google Drive if connected
-    const processedData = await this.processSubmissionData(
-      formId,
-      form.fields,
-      submitFormDto.data,
-      submissionId,
-    );
-
-    // Create submission with processed data
-    const submission = await this.prisma.form_submissions.create({
-      data: {
-        id: submissionId,
-        formId,
-        userId,
-        data: processedData,
-        ipAddress: submitFormDto.ipAddress,
-        userAgent: submitFormDto.userAgent,
-        timeToComplete: submitFormDto.timeToComplete,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Update form submission count
-    await this.prisma.form.update({
-      where: { id: formId },
-      data: { submissionCount: { increment: 1 } },
-    });
-
-    // Send email notifications
-    if (form.notifyOnSubmission && form.notificationEmail) {
-      await this.emailService.sendFormSubmissionNotification(
-        form.notificationEmail,
-        form.title,
-        submitFormDto.data,
-        formId,
-      ).catch((error) => {
-        console.error('Failed to send notification email:', error);
-        // Don't throw error - email failure shouldn't block submission
-      });
-    }
-
-    // Send real-time notification to form owner
-    try {
-      await this.notificationsGateway.sendNotification({
-        userId: form.userId,
-        type: NotificationType.FORM_SUBMISSION,
-        title: 'استجابة نموذج جديدة',
-        message: `تم استلام استجابة جديدة على النموذج "${form.title}"`,
-        data: {
-          formId: form.id,
-          formTitle: form.title,
-          formSlug: form.slug,
-          submissionId: submission.id,
-          responseCount: (form.submissionCount || 0) + 1,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to send real-time notification:', error);
-      // Don't throw error - notification failure shouldn't block submission
-    }
-
-    // Send auto-response to user
-    if (form.autoResponseEnabled && form.autoResponseMessage && userId) {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true },
-      });
-
-      if (user?.email) {
-        await this.emailService.sendAutoResponse(
-          user.email,
-          form.title,
-          form.autoResponseMessage,
-        ).catch((error) => {
-          console.error('Failed to send auto-response email:', error);
-          // Don't throw error
-        });
-      }
-    }
-
-    // Send webhook notification if enabled
-    // @ts-ignore - Webhook fields will be available after migration
-    if (form.webhookEnabled && form.webhookUrl) {
-      await this.webhookService
-        .notifyFormSubmission(
-          // @ts-ignore
-          form.webhookUrl,
-          // @ts-ignore
-          form.webhookSecret,
-          formId,
-          form.slug,
-          submission.id,
-          submitFormDto.data,
-        )
-        .catch((error) => {
-          console.error('Failed to send webhook:', error);
-          // Don't throw error - webhook failure shouldn't block submission
-        });
-    }
-
-    // Auto-sync to Google Sheets if enabled
-    try {
-      await this.googleSheetsService.addSubmissionToSheet(
-        formId,
-        submission.id,
-      );
-    } catch (error) {
-      console.error('Failed to sync to Google Sheets:', error);
-      // Don't throw error - Google Sheets sync failure shouldn't block submission
-    }
-
-    // ⚡ Invalidate caches for form owner (submission affects stats)
-    try {
-      if (form.userId) {
-        await this.cacheManager.invalidate(
-          CacheKeys.dashboardStats(form.userId),
-        );
-      }
-    } catch (err) {
-      this.logger.warn(`Cache invalidation error (form submit): ${err?.message || err}`);
-    }
-
-    return submission;
+    return this.formsSubmissionService.submitForm(formId, submitFormDto, userId);
   }
 
   async getFormSubmissions(
@@ -1668,9 +1463,11 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to view submissions');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'view_submissions',
+    );
 
     const skip = (page - 1) * limit;
 
@@ -1720,25 +1517,37 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to view submissions');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'view_submissions',
+    );
 
     const submissions = await this.prisma.form_submissions.findMany({
       where: { formId },
       orderBy: { completedAt: 'desc' },
     });
 
-    const decorativeTypes = ['HEADING', 'PARAGRAPH', 'DIVIDER', 'TITLE', 'LABEL', 'IMAGE', 'VIDEO', 'AUDIO', 'EMBED'];
+    const decorativeTypes = [
+      'HEADING',
+      'PARAGRAPH',
+      'DIVIDER',
+      'TITLE',
+      'LABEL',
+      'IMAGE',
+      'VIDEO',
+      'AUDIO',
+      'EMBED',
+    ];
 
     const fieldSummaries = form.fields
-      .filter(field => !decorativeTypes.includes(field.type))
-      .map(field => {
+      .filter((field) => !decorativeTypes.includes(field.type))
+      .map((field) => {
         const values: any[] = [];
         for (const sub of submissions) {
           const data = sub.data as Record<string, any>;
-          const val = data[field.label] ?? data[field.id];
-          if (val !== undefined && val !== null && val !== '') {
+          const val = getSubmissionFieldValue(data, field);
+          if (val !== undefined) {
             values.push(val);
           }
         }
@@ -1763,15 +1572,28 @@ export class FormsService {
               counts[String(val)] = (counts[String(val)] || 0) + 1;
             }
           }
-          summary.distribution = Object.entries(counts).map(([name, count]) => ({
-            name,
-            count,
-            percentage: values.length > 0 ? Math.round((count / values.length) * 100) : 0,
-          }));
-        } else if (field.type === 'RATING' || field.type === 'SCALE' || field.type === 'NUMBER') {
-          const nums = values.map(Number).filter(n => !isNaN(n));
+          summary.distribution = Object.entries(counts).map(
+            ([name, count]) => ({
+              name,
+              count,
+              percentage:
+                values.length > 0
+                  ? Math.round((count / values.length) * 100)
+                  : 0,
+            }),
+          );
+        } else if (
+          field.type === 'RATING' ||
+          field.type === 'SCALE' ||
+          field.type === 'NPS' ||
+          field.type === 'NUMBER'
+        ) {
+          const nums = values.map(Number).filter((n) => !isNaN(n));
           if (nums.length > 0) {
-            summary.average = Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100;
+            summary.average =
+              Math.round(
+                (nums.reduce((a, b) => a + b, 0) / nums.length) * 100,
+              ) / 100;
             summary.min = Math.min(...nums);
             summary.max = Math.max(...nums);
           }
@@ -1784,15 +1606,36 @@ export class FormsService {
             .map(([name, count]) => ({
               name,
               count,
-              percentage: nums.length > 0 ? Math.round((count / nums.length) * 100) : 0,
+              percentage:
+                nums.length > 0 ? Math.round((count / nums.length) * 100) : 0,
             }));
         } else if (field.type === 'TOGGLE') {
-          const trueCount = values.filter(v => v === true || v === 'true' || v === 'نعم').length;
+          const trueCount = values.filter(
+            (v) => v === true || v === 'true' || v === 'نعم',
+          ).length;
           const falseCount = values.length - trueCount;
           summary.distribution = [
-            { name: 'نعم', count: trueCount, percentage: values.length > 0 ? Math.round((trueCount / values.length) * 100) : 0 },
-            { name: 'لا', count: falseCount, percentage: values.length > 0 ? Math.round((falseCount / values.length) * 100) : 0 },
+            {
+              name: 'نعم',
+              count: trueCount,
+              percentage:
+                values.length > 0
+                  ? Math.round((trueCount / values.length) * 100)
+                  : 0,
+            },
+            {
+              name: 'لا',
+              count: falseCount,
+              percentage:
+                values.length > 0
+                  ? Math.round((falseCount / values.length) * 100)
+                  : 0,
+            },
           ];
+        } else if (field.type === 'SIGNATURE') {
+          summary.signatureResponses = values.slice(0, 100);
+        } else if (field.type === 'FILE') {
+          summary.fileResponses = values.slice(0, 100);
         } else {
           summary.textResponses = values.map(String).slice(0, 100);
         }
@@ -1808,6 +1651,36 @@ export class FormsService {
     };
   }
 
+  async getFieldResponseCounts(userId: string, formId: string) {
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      include: {
+        fields: { orderBy: { order: 'asc' } },
+      },
+    });
+
+    if (!form) {
+      throw new NotFoundException('Form not found');
+    }
+
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'edit_form',
+    );
+
+    const submissions = await this.prisma.form_submissions.findMany({
+      where: { formId },
+      select: { data: true },
+    });
+
+    return {
+      formId,
+      totalSubmissions: submissions.length,
+      counts: collectFieldResponseCounts(submissions, form.fields),
+    };
+  }
+
   async deleteSubmission(userId: string, formId: string, submissionId: string) {
     // First check if form belongs to user
     const form = await this.prisma.form.findUnique({
@@ -1818,9 +1691,7 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to delete submissions');
-    }
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     // Check if submission exists and belongs to this form
     const submission = await this.prisma.form_submissions.findFirst({
@@ -1863,9 +1734,11 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to export submissions');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'export_submissions',
+    );
 
     // Get all submissions
     const submissions = await this.prisma.form_submissions.findMany({
@@ -1984,9 +1857,11 @@ export class FormsService {
       throw new NotFoundException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to view analytics');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'view_analytics',
+    );
 
     const submissions = await this.prisma.form_submissions.findMany({
       where: { formId },
@@ -2015,9 +1890,17 @@ export class FormsService {
         ['SELECT', 'RADIO', 'CHECKBOX'].includes(field.type) &&
         field.options
       ) {
+        const nestedOptions =
+          typeof field.options === 'object' &&
+          field.options !== null &&
+          !Array.isArray(field.options) &&
+          'options' in field.options &&
+          Array.isArray((field.options as { options?: unknown }).options)
+            ? ((field.options as { options?: unknown[] }).options ?? [])
+            : [];
         const options = Array.isArray(field.options)
           ? field.options
-          : (field.options as any).options || [];
+          : nestedOptions;
         responseDistribution = options.map((option: any) => {
           const optionValue =
             typeof option === 'string' ? option : option.value;
@@ -2069,14 +1952,11 @@ export class FormsService {
     });
 
     // Group submissions by date
-    const submissionsByDate = recentSubmissions.reduce(
-      (acc, sub) => {
-        const date = sub.completedAt.toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const submissionsByDate = recentSubmissions.reduce((acc, sub) => {
+      const date = sub.completedAt.toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {});
 
     const submissionsOverTime = Object.entries(submissionsByDate).map(
       ([date, count]) => ({
@@ -2120,9 +2000,6 @@ export class FormsService {
   async duplicateForm(userId: string, formId: string) {
     const originalForm = await this.prisma.form.findUnique({
       where: { id: formId },
-      include: {
-        fields: true,
-      },
     });
 
     if (!originalForm) {
@@ -2133,7 +2010,6 @@ export class FormsService {
       throw new ForbiddenException('Not authorized to duplicate this form');
     }
 
-    // Generate unique slug
     const baseSlug = `${originalForm.slug}-copy`;
     let slug = baseSlug;
     let counter = 1;
@@ -2142,36 +2018,41 @@ export class FormsService {
       counter++;
     }
 
-    // Create duplicate
+    const newFormId = SecureIds.form();
     const {
-      id,
-      createdAt,
-      updatedAt,
-      viewCount,
-      submissionCount,
+      id: _id,
+      createdAt: _c,
+      updatedAt: _u,
+      viewCount: _v,
+      submissionCount: _s,
       ...formData
     } = originalForm;
 
-    return this.prisma.form.create({
-      data: {
-        ...formData,
-        title: `${originalForm.title} (Copy)`,
-        slug,
-        status: 'DRAFT',
-        viewCount: 0,
-        submissionCount: 0,
-        fields: {
-          create: originalForm.fields.map((field) => {
-            const { id, formId, createdAt, updatedAt, ...fieldData } = field;
-            return fieldData;
-          }),
+    return this.prisma.$transaction(async (tx) => {
+      await tx.form.create({
+        data: {
+          id: newFormId,
+          ...formData,
+          title: `${originalForm.title} (Copy)`,
+          slug,
+          status: 'DRAFT',
+          viewCount: 0,
+          submissionCount: 0,
         },
-      },
-      include: {
-        fields: {
-          orderBy: { order: 'asc' },
+      });
+
+      await duplicateFormStructure(tx, formId, newFormId);
+
+      return tx.form.findUnique({
+        where: { id: newFormId },
+        include: {
+          fields: { orderBy: { order: 'asc' } },
+          steps: {
+            orderBy: { order: 'asc' },
+            include: { form_fields: { orderBy: { order: 'asc' } } },
+          },
         },
-      },
+      });
     });
   }
 

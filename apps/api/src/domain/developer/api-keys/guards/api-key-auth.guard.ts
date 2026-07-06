@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeysService } from '../api-keys.service';
+import { getClientIp } from '../../../../core/common/utils/client-ip.util';
 
 /**
  * 🔐 API Key Authentication Guard
@@ -31,10 +32,13 @@ export class ApiKeyAuthGuard implements CanActivate {
 
     // استخراج API Key من Header
     const apiKey =
-      request.headers['x-api-key'] || request.headers['authorization']?.replace('Bearer ', '');
+      request.headers['x-api-key'] ||
+      request.headers['authorization']?.replace('Bearer ', '');
 
     if (!apiKey) {
-      throw new UnauthorizedException('API key is required. Use X-API-Key header.');
+      throw new UnauthorizedException(
+        'API key is required. Use X-API-Key header.',
+      );
     }
 
     // التحقق من صيغة المفتاح
@@ -51,12 +55,14 @@ export class ApiKeyAuthGuard implements CanActivate {
 
     // التحقق من IP allowlist
     if (keyData.ipAllowlist.length > 0) {
-      const clientIp = request.ip || request.connection?.remoteAddress;
+      const clientIp = getClientIp(request);
       if (!keyData.ipAllowlist.includes(clientIp)) {
         this.logger.warn(
           `IP ${clientIp} not in allowlist for API key ${keyData.id}`,
         );
-        throw new ForbiddenException('IP address not allowed for this API key.');
+        throw new ForbiddenException(
+          'IP address not allowed for this API key.',
+        );
       }
     }
 

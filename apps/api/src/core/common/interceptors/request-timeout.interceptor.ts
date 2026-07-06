@@ -24,7 +24,11 @@ export class RequestTimeoutInterceptor implements NestInterceptor {
    */
   private getTimeoutForEndpoint(path: string): number {
     // Image processing and file uploads need more time
-    if (path.includes('/upload') || path.includes('/image') || path.includes('/cover')) {
+    if (
+      path.includes('/upload') ||
+      path.includes('/image') ||
+      path.includes('/cover')
+    ) {
       return QUERY_TIMEOUTS.IMAGE_PROCESSING + 5000; // 35 seconds
     }
 
@@ -50,9 +54,9 @@ export class RequestTimeoutInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const { method, path } = request;
-    
+
     const timeoutMs = this.getTimeoutForEndpoint(path);
-    
+
     this.logger.debug(
       `Request timeout set to ${timeoutMs}ms for ${method} ${path}`,
     );

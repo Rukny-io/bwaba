@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { AuthLayout } from "@/components/auth/auth-layout"
 import { AuthFooter } from "@/components/auth/auth-footer"
 import { MethodChooser, type VerificationMethod } from "@/components/auth/method-chooser"
@@ -15,6 +16,7 @@ function ChooseMethodContent() {
   const [has2FA, setHas2FA] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const t = useTranslations("Auth")
 
   useEffect(() => {
     // الأولوية للقيم في الرابط (تأتي من QuickSign)
@@ -113,10 +115,7 @@ function ChooseMethodContent() {
   if (!email) return null
 
   return (
-    <AuthLayout
-      title="اختيار طريقة التحقق"
-      description="يرجى اختيار الطريقة التي تفضلها لتسجيل الدخول"
-    >
+    <AuthLayout>
       <div className="space-y-6">
         <MethodChooser
           onSelect={handleSelect}
@@ -133,7 +132,13 @@ function ChooseMethodContent() {
 
 export default function ChooseMethodPage() {
   return (
-    <React.Suspense fallback={<div>جاري التحميل...</div>}>
+    <React.Suspense fallback={
+      <AuthLayout>
+        <div className="w-full text-center py-12">
+          <div className="size-10 mx-auto rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      </AuthLayout>
+    }>
       <ChooseMethodContent />
     </React.Suspense>
   )

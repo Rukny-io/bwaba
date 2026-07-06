@@ -293,7 +293,7 @@
  * Element: close-trigger - the optional x icon button to close the modal
  */
 .alert-dialog__close-trigger {
-  @apply absolute top-4 right-4;
+  @apply absolute top-4 end-4;
 }
 
 /**

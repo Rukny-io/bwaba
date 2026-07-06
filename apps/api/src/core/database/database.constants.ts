@@ -133,13 +133,15 @@ export const DB_PERFORMANCE = {
    * Queries slower than this will trigger warnings
    * Indicates potential performance issues
    */
-  VERY_SLOW_QUERY_THRESHOLD: process.env.NODE_ENV === 'production' ? 1000 : 5000,
+  VERY_SLOW_QUERY_THRESHOLD:
+    process.env.NODE_ENV === 'production' ? 1000 : 5000,
 
   /**
    * Critical slow query threshold (ms)
    * Queries slower than this need immediate attention
    */
-  CRITICAL_SLOW_QUERY_THRESHOLD: process.env.NODE_ENV === 'production' ? 5000 : 15000,
+  CRITICAL_SLOW_QUERY_THRESHOLD:
+    process.env.NODE_ENV === 'production' ? 5000 : 15000,
 
   /**
    * Maximum results per page for pagination
@@ -162,7 +164,10 @@ export function buildDatabaseUrl(baseUrl: string): string {
   // Add connection pool parameters optimized for Neon
   url.searchParams.set('connection_limit', String(DB_POOL.CONNECTION_LIMIT));
   url.searchParams.set('pool_timeout', String(DB_POOL.POOL_TIMEOUT / 1000)); // Convert to seconds
-  url.searchParams.set('connect_timeout', String(DB_POOL.CONNECT_TIMEOUT / 1000));
+  url.searchParams.set(
+    'connect_timeout',
+    String(DB_POOL.CONNECT_TIMEOUT / 1000),
+  );
   url.searchParams.set('statement_timeout', String(DB_POOL.STATEMENT_TIMEOUT));
   url.searchParams.set('max_lifetime', String(DB_POOL.MAX_LIFETIME / 1000));
 

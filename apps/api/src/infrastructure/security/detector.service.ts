@@ -12,7 +12,10 @@ function hashIpAddress(ip: string | undefined): string {
   if (!ip) return 'unknown';
   // استخدام salt ثابت للاتساق في البحث
   const salt = process.env.IP_HASH_SALT || 'rukny-security-salt';
-  return createHash('sha256').update(`${salt}:${ip}`).digest('hex').substring(0, 16);
+  return createHash('sha256')
+    .update(`${salt}:${ip}`)
+    .digest('hex')
+    .substring(0, 16);
 }
 
 @Injectable()
@@ -419,7 +422,10 @@ export class SecurityDetectorService {
   /**
    * التحقق من جهاز موثوق بالمعرف (للتخطي الآمن لـ 2FA)
    */
-  async findTrustedDeviceById(deviceId: string, userId: string): Promise<{ id: string } | null> {
+  async findTrustedDeviceById(
+    deviceId: string,
+    userId: string,
+  ): Promise<{ id: string } | null> {
     const device = await this.prisma.trusted_devices.findFirst({
       where: {
         id: deviceId,

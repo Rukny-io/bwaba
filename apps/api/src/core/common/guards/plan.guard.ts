@@ -15,7 +15,10 @@ import {
   REQUIRE_PLAN_KEY,
   CHECK_LIMIT_KEY,
   CHECK_FEATURE_KEY,
+  CHECK_FEATURE_TIER_KEY,
+  type FeatureTierRequirement,
 } from '../decorators/auth/plan.decorator';
+import { hasMinFeatureTier } from '../../../domain/subscriptions/form-feature-tier.util';
 
 /**
  * 🔒 PlanGuard — يتحقق من باقة المستخدم
@@ -102,6 +105,26 @@ export class PlanGuard implements CanActivate {
           message: `هذه الميزة غير متاحة في باقتك الحالية. قم بالترقية لتفعيلها.`,
           code: 'FEATURE_UNAVAILABLE',
           featureKey,
+          currentPlan: userPlan,
+        });
+      }
+    }
+
+    // 4. فحص مستوى ميزة متدرجة @CheckFeatureTier()
+    const featureTier = this.reflector.getAllAndOverride<FeatureTierRequirement>(
+      CHECK_FEATURE_TIER_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (featureTier) {
+      const limits = await this.subscriptionsService.getUserLimits(user.id);
+      if (!hasMinFeatureTier(limits, featureTier.feature, featureTier.minTier)) {
+        const userPlan = await this.subscriptionsService.getUserPlan(user.id);
+        throw new ForbiddenException({
+          message: `هذه الميزة تتطلب مستوى ${featureTier.minTier} أو أعلى في باقتك.`,
+          code: 'FEATURE_TIER_REQUIRED',
+          featureKey: featureTier.feature,
+          minTier: featureTier.minTier,
           currentPlan: userPlan,
         });
       }

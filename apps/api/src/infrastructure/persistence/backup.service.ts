@@ -82,7 +82,12 @@ export class BackupService {
 
       // رفع إلى S3
       const s3Key = `${this.BACKUP_PREFIX}${backupId}.json.gz`;
-      await this.s3.uploadBuffer(this.bucket, s3Key, compressed, 'application/gzip');
+      await this.s3.uploadBuffer(
+        this.bucket,
+        s3Key,
+        compressed,
+        'application/gzip',
+      );
 
       this.activeBackup.size = compressed.length;
       this.activeBackup.s3Key = s3Key;
@@ -122,7 +127,9 @@ export class BackupService {
       for (const [table, data] of Object.entries(backup.data)) {
         await this.importTable(table, data as any[]);
         restored.push(table);
-        this.logger.debug(`Restored ${table}: ${(data as any[]).length} records`);
+        this.logger.debug(
+          `Restored ${table}: ${(data as any[]).length} records`,
+        );
       }
 
       this.logger.log(`Restore completed from ${backupId}`);
@@ -145,9 +152,14 @@ export class BackupService {
       return backups;
     } catch {
       // إذا لم يكن هناك جدول، جلب من S3
-      const objects = await this.s3.listObjects(this.bucket, this.BACKUP_PREFIX);
+      const objects = await this.s3.listObjects(
+        this.bucket,
+        this.BACKUP_PREFIX,
+      );
       return objects.map((obj) => ({
-        id: obj.Key?.replace(this.BACKUP_PREFIX, '').replace('.json.gz', '') || '',
+        id:
+          obj.Key?.replace(this.BACKUP_PREFIX, '').replace('.json.gz', '') ||
+          '',
         timestamp: obj.LastModified || new Date(),
         size: obj.Size || 0,
         type: 'full' as const,
@@ -212,9 +224,7 @@ export class BackupService {
         throw new Error(`Invalid table name: ${tableName}`);
       }
 
-      return await this.prisma.$queryRawUnsafe(
-        `SELECT * FROM "${tableName}"`,
-      );
+      return await this.prisma.$queryRawUnsafe(`SELECT * FROM "${tableName}"`);
     } catch (error) {
       this.logger.warn(`Failed to export ${tableName}: ${error.message}`);
       return [];
@@ -237,7 +247,8 @@ export class BackupService {
         const val = row[col];
         if (val === null) return 'NULL';
         if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-        if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+        if (typeof val === 'object')
+          return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
         return val;
       });
 
@@ -254,9 +265,9 @@ export class BackupService {
     const tables = await this.prisma.$queryRaw<any[]>`
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `;
-    return tables.map((t) => t.tablename).filter(
-      (name) => !name.startsWith('_') && name !== 'Backup',
-    );
+    return tables
+      .map((t) => t.tablename)
+      .filter((name) => !name.startsWith('_') && name !== 'Backup');
   }
 
   /**

@@ -88,7 +88,7 @@ async function cleanupExpiredSessions() {
         console.log(`     Last Activity: ${timeSinceActivity} minutes ago`);
         console.log(`     Rotation Count: ${session.rotationCount}`);
         console.log(
-          `     Expires At: ${session.refreshExpiresAt?.toLocaleString('ar-IQ')}`,
+          `     Expires At: ${session.refreshExpiresAt?.toLocaleString('en-US')}`,
         );
       });
     }

@@ -1,15 +1,24 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { randomBytes, createHmac } from 'crypto';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
-import { DEVELOPER_PLAN_LIMITS } from '../subscriptions/dev-plan-limits.config';
+import { resolveLimitValue } from '../subscriptions/dev-plan-limits.config';
+import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 
 @Injectable()
 export class DevWebhooksService {
   private readonly logger = new Logger(DevWebhooksService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private devSubscriptions: DevSubscriptionsService,
+  ) {}
 
   /**
    * إنشاء webhook جديد
@@ -136,7 +145,10 @@ export class DevWebhooksService {
       },
     };
 
-    const signature = this.signPayload(JSON.stringify(testPayload), webhook.secret);
+    const signature = this.signPayload(
+      JSON.stringify(testPayload),
+      webhook.secret,
+    );
 
     try {
       const response = await fetch(webhook.url, {
@@ -153,7 +165,9 @@ export class DevWebhooksService {
       return {
         success: response.ok,
         statusCode: response.status,
-        message: response.ok ? 'Webhook test successful' : 'Webhook returned non-2xx status',
+        message: response.ok
+          ? 'Webhook test successful'
+          : 'Webhook returned non-2xx status',
       };
     } catch (error) {
       return {
@@ -188,21 +202,15 @@ export class DevWebhooksService {
    * التحقق من حدود webhooks
    */
   private async checkWebhookLimit(userId: string) {
-    const subscription = await this.prisma.developerSubscription.findUnique({
-      where: { userId },
-      select: { plan: true },
-    });
-
-    const plan = subscription?.plan || 'FREE';
-    const limits = DEVELOPER_PLAN_LIMITS[plan];
-
-    const currentCount = await this.prisma.developerWebhook.count({
-      where: { userId, status: { not: 'AUTO_DISABLED' } },
-    });
-
-    if (currentCount >= limits.maxWebhooks) {
+    const allowed = await this.devSubscriptions.checkResourceLimit(
+      userId,
+      'webhooks',
+    );
+    if (!allowed) {
+      const limits = await this.devSubscriptions.getPlanLimits(userId);
+      const max = resolveLimitValue(limits.maxWebhooks);
       throw new ForbiddenException(
-        `Webhook limit reached (${limits.maxWebhooks}). Upgrade your plan for more.`,
+        `Webhook limit reached (${max}). Upgrade to Pro for more.`,
       );
     }
   }

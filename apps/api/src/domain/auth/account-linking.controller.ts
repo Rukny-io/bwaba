@@ -1,8 +1,29 @@
-import { Controller, Get, Post, Delete, Param, UseGuards, Req, Res, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AccountLinkingService, OAuthProvider } from './account-linking.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  UseGuards,
+  Req,
+  Res,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  AccountLinkingService,
+  OAuthProvider,
+} from './account-linking.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
-import { CurrentUser, AuthenticatedUser } from '../../core/common/decorators/auth/current-user.decorator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../core/common/decorators/auth/current-user.decorator';
 import { Request, Response } from 'express';
 
 @ApiTags('Auth - Account Linking')
@@ -14,7 +35,10 @@ export class AccountLinkingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current linked providers status' })
-  @ApiResponse({ status: 200, description: 'Linked providers status retrieved' })
+  @ApiResponse({
+    status: 200,
+    description: 'Linked providers status retrieved',
+  })
   async getStatus(@CurrentUser() user: AuthenticatedUser) {
     return this.accountLinkingService.getLinkedProviders(user.id);
   }
@@ -28,9 +52,16 @@ export class AccountLinkingController {
     @Query('redirect_origin') redirectOrigin: string,
     @Res() res: Response,
   ) {
-    const linkToken = await this.accountLinkingService.initiateLinking(user.id, 'google');
-    const originParam = redirectOrigin ? `&redirect_origin=${encodeURIComponent(redirectOrigin)}` : '';
-    return res.redirect(`/api/v1/auth/google?link_token=${linkToken}${originParam}`);
+    const linkToken = await this.accountLinkingService.initiateLinking(
+      user.id,
+      'google',
+    );
+    const originParam = redirectOrigin
+      ? `&redirect_origin=${encodeURIComponent(redirectOrigin)}`
+      : '';
+    return res.redirect(
+      `/api/v1/auth/google?link_token=${linkToken}${originParam}`,
+    );
   }
 
   @Get('linkedin')
@@ -42,9 +73,37 @@ export class AccountLinkingController {
     @Query('redirect_origin') redirectOrigin: string,
     @Res() res: Response,
   ) {
-    const linkToken = await this.accountLinkingService.initiateLinking(user.id, 'linkedin');
-    const originParam = redirectOrigin ? `&redirect_origin=${encodeURIComponent(redirectOrigin)}` : '';
-    return res.redirect(`/api/v1/auth/linkedin?link_token=${linkToken}${originParam}`);
+    const linkToken = await this.accountLinkingService.initiateLinking(
+      user.id,
+      'linkedin',
+    );
+    const originParam = redirectOrigin
+      ? `&redirect_origin=${encodeURIComponent(redirectOrigin)}`
+      : '';
+    return res.redirect(
+      `/api/v1/auth/linkedin?link_token=${linkToken}${originParam}`,
+    );
+  }
+
+  @Get('facebook')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Initiate Facebook account linking' })
+  async linkFacebook(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('redirect_origin') redirectOrigin: string,
+    @Res() res: Response,
+  ) {
+    const linkToken = await this.accountLinkingService.initiateLinking(
+      user.id,
+      'facebook',
+    );
+    const originParam = redirectOrigin
+      ? `&redirect_origin=${encodeURIComponent(redirectOrigin)}`
+      : '';
+    return res.redirect(
+      `/api/v1/auth/facebook?link_token=${linkToken}${originParam}`,
+    );
   }
 
   @Delete(':provider')
@@ -59,6 +118,11 @@ export class AccountLinkingController {
   ) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
-    return this.accountLinkingService.unlinkProvider(user.id, provider, ipAddress, userAgent);
+    return this.accountLinkingService.unlinkProvider(
+      user.id,
+      provider,
+      ipAddress,
+      userAgent,
+    );
   }
 }

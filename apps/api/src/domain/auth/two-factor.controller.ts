@@ -30,12 +30,12 @@ import { WhatsappService } from '../../integrations/whatsapp/whatsapp.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
 import { Throttle } from '@nestjs/throttler';
-import { 
+import {
   setAccessTokenCookie,
   setRefreshTokenCookie,
   setCsrfTokenCookie,
   generateCsrfToken,
-  setTrustedDeviceCookie,
+  setDeviceIdCookie,
 } from './cookie.config';
 import { UAParser } from 'ua-parser-js';
 import {
@@ -80,7 +80,9 @@ export class TwoFactorController {
   @Post('start-verify-identity')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'بدء تدفق التحقق البديل (Authenticator / Recovery / Email)' })
+  @ApiOperation({
+    summary: 'بدء تدفق التحقق البديل (Authenticator / Recovery / Email)',
+  })
   @ApiResponse({
     status: 200,
     description: 'حالة الطرق المتاحة ومعرف جلسة 2FA عند توفرها',
@@ -93,7 +95,10 @@ export class TwoFactorController {
     const email = dto.email.trim().toLowerCase();
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
 
-    const tooManyAttempts = await this.isVerifyIdentityRateLimited(email, ipAddress);
+    const tooManyAttempts = await this.isVerifyIdentityRateLimited(
+      email,
+      ipAddress,
+    );
     if (tooManyAttempts) {
       return {
         success: true,
@@ -117,7 +122,9 @@ export class TwoFactorController {
       },
     });
 
-    const isSubscribed = user && ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
+    const isSubscribed =
+      user &&
+      ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
 
     // استجابة آمنة: لا تكشف صراحةً وجود الحساب من عدمه
     if (!user || !user.twoFactorEnabled) {
@@ -208,7 +215,11 @@ export class TwoFactorController {
   private async incrementRateLimitCounter(key: string): Promise<number> {
     try {
       // setNX لإنشاء المفتاح مع TTL إذا لم يكن موجوداً
-      const created = await this.redis.setNX(key, '0', VERIFY_IDENTITY_WINDOW_SECONDS);
+      const created = await this.redis.setNX(
+        key,
+        '0',
+        VERIFY_IDENTITY_WINDOW_SECONDS,
+      );
       // إذا كان موجوداً بالفعل، نزيده فقط
       if (!created) {
         // نستخدم get ثم set بدلاً من INCR لأن RedisService لا يُعرّض INCR مباشرة
@@ -404,12 +415,12 @@ export class TwoFactorController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'التحقق من رمز OTP للمستخدم المسجل' })
   @ApiResponse({ status: 200, description: 'نتيجة التحقق' })
-  async verifyToken(
-    @CurrentUser() user: any,
-    @Body() dto: Verify2FADto,
-  ) {
+  async verifyToken(@CurrentUser() user: any, @Body() dto: Verify2FADto) {
     try {
-      const result = await this.twoFactorService.verifyToken(user.id, dto.token);
+      const result = await this.twoFactorService.verifyToken(
+        user.id,
+        dto.token,
+      );
       return { valid: result.valid };
     } catch {
       return { valid: false, message: 'رمز التحقق غير صحيح' };
@@ -423,14 +434,13 @@ export class TwoFactorController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'إرسال رمز التحقق عبر الواتساب' })
-  async sendWhatsappOtp(
-    @Body('pendingSessionId') pendingSessionId: string,
-  ) {
+  async sendWhatsappOtp(@Body('pendingSessionId') pendingSessionId: string) {
     if (!pendingSessionId) {
       return { success: false, message: 'معرف الجلسة مطلوب' };
     }
 
-    const pendingSession = await this.getPendingTwoFactorSession(pendingSessionId);
+    const pendingSession =
+      await this.getPendingTwoFactorSession(pendingSessionId);
     if (!pendingSession) {
       return { success: false, message: 'انتهت صلاحية الجلسة' };
     }
@@ -445,7 +455,9 @@ export class TwoFactorController {
       return { success: false, message: 'لا يوجد رقم هاتف مسجل لهذا الحساب' };
     }
 
-    const isSubscribed = user && ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
+    const isSubscribed =
+      user &&
+      ['PREMIUM', 'STORE_OWNER', 'DEVELOPER', 'ADMIN'].includes(user.role);
     if (!isSubscribed) {
       return { success: false, message: 'هذه الخدمة متاحة للمشتركين فقط' };
     }
@@ -490,7 +502,7 @@ export class TwoFactorController {
     if (!pendingSession) {
       // 🔒 مسح أي جلسة منتهية من قاعدة البيانات
       await this.deletePendingTwoFactorSession(dto.pendingSessionId);
-      
+
       return {
         success: false,
         error: 'انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى',
@@ -531,8 +543,10 @@ export class TwoFactorController {
     }
 
     // التحقق من الرمز
-    let verification: { valid: boolean; usedBackupCode?: boolean } = { valid: false };
-    
+    let verification: { valid: boolean; usedBackupCode?: boolean } = {
+      valid: false,
+    };
+
     if (isWhatsappOtpValid) {
       verification.valid = true;
     } else {
@@ -595,7 +609,7 @@ export class TwoFactorController {
 
     // 🔒 إعداد Access Token في httpOnly Cookie
     setAccessTokenCookie(res, tokens.accessToken);
-    
+
     // 🔒 إعداد Refresh Token Cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -609,14 +623,17 @@ export class TwoFactorController {
 
     // تذكر هذا الجهاز: إنشاء جهاز موثوق وتفعيل الكوكي
     if (dto.rememberDevice) {
-      const deviceId = await this.securityDetectorService.rememberDeviceFor2FA(user.id, {
-        browser: result.browser.name,
-        os: result.os.name,
-        deviceType: result.device.type || 'desktop',
-        ipAddress,
-        userAgent,
-      });
-      setTrustedDeviceCookie(res, deviceId);
+      const deviceId = await this.securityDetectorService.rememberDeviceFor2FA(
+        user.id,
+        {
+          browser: result.browser.name,
+          os: result.os.name,
+          deviceType: result.device.type || 'desktop',
+          ipAddress,
+          userAgent,
+        },
+      );
+      setDeviceIdCookie(res, deviceId);
     }
 
     // تسجيل النجاح
@@ -696,7 +713,7 @@ export class TwoFactorController {
     const now = new Date();
     const expiresAt = new Date(pending.expiresAt);
     const timeUntilExpiry = expiresAt.getTime() - now.getTime();
-    
+
     if (timeUntilExpiry <= 0) {
       if (!isProduction) {
         console.log('[2FA] Session expired:', {

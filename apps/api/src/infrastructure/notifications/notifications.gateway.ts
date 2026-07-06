@@ -52,7 +52,7 @@ export class NotificationsGateway
     if (!this.userSockets.has(userId)) {
       this.userSockets.set(userId, new Set());
     }
-    this.userSockets.get(userId)!.add(client.id);
+    this.userSockets.get(userId).add(client.id);
 
     // الانضمام لغرفة المستخدم
     client.join(`user:${userId}`);
@@ -68,9 +68,9 @@ export class NotificationsGateway
     const userId = (client as any).userId;
 
     if (userId && this.userSockets.has(userId)) {
-      this.userSockets.get(userId)!.delete(client.id);
+      this.userSockets.get(userId).delete(client.id);
 
-      if (this.userSockets.get(userId)!.size === 0) {
+      if (this.userSockets.get(userId).size === 0) {
         this.userSockets.delete(userId);
       }
     }
@@ -144,7 +144,9 @@ export class NotificationsGateway
    * التحقق من اتصال مستخدم
    */
   isUserConnected(userId: string): boolean {
-    return this.userSockets.has(userId) && this.userSockets.get(userId)!.size > 0;
+    return (
+      this.userSockets.has(userId) && this.userSockets.get(userId).size > 0
+    );
   }
 
   // ==================== Private Methods ====================

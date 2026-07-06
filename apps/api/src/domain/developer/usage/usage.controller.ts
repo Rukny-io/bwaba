@@ -23,7 +23,10 @@ export class UsageController {
     @CurrentUser('id') userId: string,
     @Query('days') days?: string,
   ) {
-    return this.usageService.getDailyUsage(userId, days ? parseInt(days, 10) : 30);
+    return this.usageService.getDailyUsage(
+      userId,
+      days ? parseInt(days, 10) : 30,
+    );
   }
 
   @Get('messages')

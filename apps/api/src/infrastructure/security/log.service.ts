@@ -281,7 +281,7 @@ export class SecurityLogService {
           doc
             .fontSize(10)
             .font('Helvetica')
-            .text(`Generated: ${new Date().toLocaleString()}`, {
+            .text(`Generated: ${new Date().toLocaleString('en-US')}`, {
               align: 'center',
             })
             .moveDown(2);
@@ -299,7 +299,7 @@ export class SecurityLogService {
               .fontSize(10)
               .font('Helvetica')
               .text(`Status: ${log.status}`, { indent: 20 })
-              .text(`Time: ${log.createdAt.toLocaleString()}`, { indent: 20 });
+              .text(`Time: ${log.createdAt.toLocaleString('en-US')}`, { indent: 20 });
 
             if (log.description) {
               doc.text(`Description: ${log.description}`, { indent: 20 });

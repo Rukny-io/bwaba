@@ -200,7 +200,9 @@ export class OrderTrackingService {
       await this.whatsappBusiness.sendOtp(phoneNumber, otpCode);
       this.logger.log(`✅ Tracking OTP sent to ${phoneNumber}`);
     } catch (error) {
-      this.logger.error(`Failed to send tracking OTP to ${phoneNumber}: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to send tracking OTP to ${phoneNumber}: ${(error as Error).message}`,
+      );
       throw new BadRequestException({
         message: 'فشل في إرسال رمز التحقق. يرجى المحاولة لاحقاً.',
         code: 'OTP_SEND_FAILED',
@@ -394,20 +396,23 @@ export class OrderTrackingService {
         phone: order.stores?.contactPhone,
         logo: order.stores?.logo,
       },
-      items: await Promise.all(order.order_items.map(async (item: any) => {
-        let image: string | undefined = item.products?.product_images?.[0]?.imagePath;
-        if (image && !image.startsWith('http')) {
-          image = `/api/media/${image}`;
-        }
-        return {
-          name: item.productName,
-          nameAr: item.productNameAr || item.products?.nameAr,
-          price: Number(item.price),
-          quantity: item.quantity,
-          subtotal: Number(item.subtotal),
-          image,
-        };
-      })),
+      items: await Promise.all(
+        order.order_items.map(async (item: any) => {
+          let image: string | undefined =
+            item.products?.product_images?.[0]?.imagePath;
+          if (image && !image.startsWith('http')) {
+            image = `/api/media/${image}`;
+          }
+          return {
+            name: item.productName,
+            nameAr: item.productNameAr || item.products?.nameAr,
+            price: Number(item.price),
+            quantity: item.quantity,
+            subtotal: Number(item.subtotal),
+            image,
+          };
+        }),
+      ),
       address: {
         fullName: order.addresses?.fullName || '',
         city: order.addresses?.city || '',

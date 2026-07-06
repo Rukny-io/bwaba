@@ -13,6 +13,13 @@ export class SubmitFormDto {
   @IsObject()
   data: Record<string, any>;
 
+  @ApiPropertyOptional({
+    description: 'Cloudflare Turnstile token when form requires bot verification',
+  })
+  @IsString()
+  @IsOptional()
+  turnstileToken?: string;
+
   @ApiPropertyOptional({ example: '127.0.0.1' })
   @IsString()
   @IsOptional()

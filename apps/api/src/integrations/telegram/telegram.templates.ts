@@ -146,7 +146,7 @@ ${details?.device ? `📱 <b>الجهاز:</b> ${details.device}` : ''}
     return `
 <b>📊 ملخص نشاط اليوم</b>
 
-📅 ${new Date().toLocaleDateString('ar-SA')}
+📅 ${new Date().toLocaleDateString('en-US')}
 
 ${stats.totalLogins ? `✅ <b>تسجيلات دخول:</b> ${stats.totalLogins}` : ''}
 ${stats.newDevices ? `📱 <b>أجهزة جديدة:</b> ${stats.newDevices}` : ''}

@@ -13,10 +13,26 @@ import { VerificationController } from './verification/verification.controller';
 import { WallpapersController } from './wallpapers/wallpapers.controller';
 import { PublicWallpapersController } from './wallpapers/public-wallpapers.controller';
 import { WallpapersService } from './wallpapers/wallpapers.service';
+import { AdminFormsController } from './forms/forms.controller';
+import { AdminFormsService } from './forms/forms.service';
+import { AnalyticsController } from './analytics/analytics.controller';
+import { AnalyticsService } from './analytics/analytics.service';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailModule } from '../../integrations/email/email.module';
+import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
+import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/whatsapp-business.module';
+import { SecurityModule } from '../../infrastructure/security/security.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [
+    AuthModule,
+    NotificationsModule,
+    EmailModule,
+    WhatsappModule,
+    WhatsAppBusinessModule,
+    SecurityModule,
+  ],
   controllers: [
     DashboardController,
     UsersController,
@@ -26,6 +42,8 @@ import { AuthModule } from '../auth/auth.module';
     VerificationController,
     WallpapersController,
     PublicWallpapersController,
+    AdminFormsController,
+    AnalyticsController,
   ],
   providers: [
     DashboardService,
@@ -34,6 +52,8 @@ import { AuthModule } from '../auth/auth.module';
     ProductsService,
     OrdersService,
     WallpapersService,
+    AdminFormsService,
+    AnalyticsService,
   ],
 })
 export class AdminModule {}

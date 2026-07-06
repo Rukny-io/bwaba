@@ -17,14 +17,19 @@ export class EmailService {
   constructor(private configService: ConfigService) {
     // First, check for Resend API (preferred)
     const resendApiKey = this.configService.get('RESEND_API_KEY');
-    
+
     if (resendApiKey) {
       this.resend = new Resend(resendApiKey);
       this.emailEnabled = true;
       this.useResend = true;
-      this.fromEmail = this.configService.get('RESEND_FROM_EMAIL', 'notifications@rukny.store');
+      this.fromEmail = this.configService.get(
+        'RESEND_FROM_EMAIL',
+        'notifications@rukny.store',
+      );
       this.fromName = this.configService.get('SMTP_FROM_NAME', 'Rukny');
-      console.log(`✅ Email service enabled via Resend API - From: ${this.fromEmail}`);
+      console.log(
+        `✅ Email service enabled via Resend API - From: ${this.fromEmail}`,
+      );
     } else {
       // Fallback to SMTP if no Resend
       const smtpHost =
@@ -40,9 +45,13 @@ export class EmailService {
 
       if (smtpHost && smtpUser && smtpPassword) {
         this.emailEnabled = true;
-        const port = parseInt(this.configService.get('MAIL_PORT') || this.configService.get('SMTP_PORT') || '587');
+        const port = parseInt(
+          this.configService.get('MAIL_PORT') ||
+            this.configService.get('SMTP_PORT') ||
+            '587',
+        );
         const secure = this.configService.get('MAIL_SECURE') === 'true';
-        
+
         this.transporter = nodemailer.createTransport({
           host: smtpHost,
           port: port,
@@ -58,10 +67,15 @@ export class EmailService {
           maxConnections: 5,
           maxMessages: 100,
         } as nodemailer.TransportOptions);
-        
-        this.fromEmail = this.configService.get('SMTP_FROM_EMAIL', 'notifications@rukny.store');
+
+        this.fromEmail = this.configService.get(
+          'SMTP_FROM_EMAIL',
+          'notifications@rukny.store',
+        );
         this.fromName = this.configService.get('SMTP_FROM_NAME', 'Rukny');
-        console.log(`✅ Email service enabled via SMTP - Host: ${smtpHost}:${port}`);
+        console.log(
+          `✅ Email service enabled via SMTP - Host: ${smtpHost}:${port}`,
+        );
       } else {
         console.warn(
           '⚠️  Email service disabled - Missing RESEND_API_KEY or SMTP credentials',
@@ -82,7 +96,9 @@ export class EmailService {
     from?: string;
   }): Promise<boolean> {
     if (!this.emailEnabled) {
-      console.log(`📧 [SIMULATED] Email would be sent to ${options.to}: ${options.subject}`);
+      console.log(
+        `📧 [SIMULATED] Email would be sent to ${options.to}: ${options.subject}`,
+      );
       return false;
     }
 
@@ -97,11 +113,11 @@ export class EmailService {
           subject: options.subject,
           html: options.html,
         });
-        
+
         if (result.error) {
           throw new Error(result.error.message);
         }
-        
+
         console.log(`✅ Email sent via Resend to ${options.to}`);
         return true;
       } else if (this.transporter) {
@@ -112,11 +128,11 @@ export class EmailService {
           subject: options.subject,
           html: options.html,
         });
-        
+
         console.log(`✅ Email sent via SMTP to ${options.to}`);
         return true;
       }
-      
+
       return false;
     } catch (error: any) {
       console.error(`❌ Failed to send email to ${options.to}:`, error.message);
@@ -128,7 +144,22 @@ export class EmailService {
    * Get the frontend URL from config
    */
   private getFrontendUrl(): string {
-    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    return this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+  }
+
+  /** Main site base for public form URLs: https://rukny.io/f/{slug} */
+  private getFormPublicBaseUrl(): string {
+    const base =
+      this.configService.get<string>('FORM_PUBLIC_BASE_URL') ||
+      this.getFrontendUrl();
+    return base.replace(/\/$/, '');
+  }
+
+  private getPublicFormUrl(slug: string): string {
+    return `${this.getFormPublicBaseUrl()}/f/${encodeURIComponent(slug)}`;
   }
 
   async sendSecurityAlert(
@@ -621,6 +652,45 @@ export class EmailService {
     }
   }
 
+  async sendFormTeamInvitation(
+    to: string,
+    data: {
+      inviterName: string;
+      role: string;
+      workspaceName: string;
+    },
+  ) {
+    const formsUrl = this.configService.get(
+      'FORMS_APP_URL',
+      'https://forms.rukny.io',
+    );
+
+    const html = `
+          <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+            <h2>دعوة للانضمام لفريق النماذج</h2>
+            <p>مرحباً،</p>
+            <p><strong>${data.inviterName}</strong> دعاك للانضمام إلى فريق النماذج في <strong>${data.workspaceName}</strong> بدور <strong>${data.role}</strong>.</p>
+            <p>
+              <a href="${formsUrl}/app/team" style="display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
+                عرض الدعوة
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">إذا لم تتوقع هذه الدعوة، يمكنك تجاهل هذا البريد.</p>
+          </div>
+        `;
+
+    try {
+      await this.sendEmail({
+        to,
+        subject: '👥 دعوة للانضمام لفريق النماذج',
+        html,
+        from: `"${this.fromName} Forms" <${this.fromEmail}>`,
+      });
+    } catch (error) {
+      console.error('Failed to send form team invitation:', error);
+    }
+  }
+
   /**
    * إرسال دعوة للانضمام لمساحة عمل
    */
@@ -842,7 +912,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>تفاصيل النشاط:</strong></div>
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
         ${data.ipAddress ? `<div>العنوان: ${data.ipAddress}</div>` : ''}
         ${data.browser || data.os ? `<div>الجهاز: ${data.browser || ''} - ${data.os || ''}</div>` : ''}
       </div>
@@ -903,7 +973,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>تفاصيل المحاولة:</strong></div>
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
         ${data.ipAddress ? `<div>العنوان: ${data.ipAddress}</div>` : ''}
         ${data.browser || data.os ? `<div>الجهاز: ${data.browser || ''} - ${data.os || ''}</div>` : ''}
       </div>
@@ -957,7 +1027,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>تفاصيل التغيير:</strong></div>
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
         ${data.ipAddress ? `<div>العنوان: ${data.ipAddress}</div>` : ''}
         ${data.browser ? `<div>المتصفح: ${data.browser}</div>` : ''}
       </div>
@@ -984,7 +1054,7 @@ export class EmailService {
         ${data.deviceType ? `<div>النوع: ${data.deviceType === 'mobile' ? 'هاتف' : data.deviceType === 'tablet' ? 'لوحي' : 'كمبيوتر'}</div>` : ''}
         ${data.browser || data.os ? `<div>المتصفح: ${data.browser || ''} - ${data.os || ''}</div>` : ''}
         ${data.ipAddress ? `<div>العنوان: ${data.ipAddress}</div>` : ''}
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
       </div>
       <p style="font-size: 14px; color: #666; margin-top: 20px;">إذا لم تكن أنت، يرجى تأمين حسابك فوراً.</p>
     `;
@@ -1039,7 +1109,7 @@ export class EmailService {
       
       <div class="info-row">
         <span class="info-label">آخر محاولة:</span>
-        <span class="info-value">${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'long' })}</span>
+        <span class="info-value">${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'long' })}</span>
       </div>
       
       ${
@@ -1095,7 +1165,7 @@ export class EmailService {
         <div><strong>التغيير:</strong></div>
         <div>من: ${oldEmail}</div>
         <div>إلى: ${newEmail}</div>
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
         ${data.ipAddress ? `<div>العنوان: ${data.ipAddress}</div>` : ''}
       </div>
       <p style="font-size: 14px; color: #666; margin-top: 20px;">إذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل معنا فوراً.</p>
@@ -1114,7 +1184,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>البريد الجديد:</strong> ${newEmail}</div>
-        <div>الوقت: ${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <div>الوقت: ${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>
       </div>
       <p style="font-size: 14px; color: #666; margin-top: 20px;">يمكنك الآن استخدام هذا البريد لتسجيل الدخول.</p>
     `;
@@ -1128,7 +1198,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>الفعالية:</strong> ${data.eventName}</div>
-        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
+        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
         ${data.location ? `<div>المكان: ${data.location}</div>` : ''}
         ${data.ticketNumber ? `<div>رقم التذكرة: ${data.ticketNumber}</div>` : ''}
       </div>
@@ -1144,7 +1214,7 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>الفعالية:</strong> ${data.eventName}</div>
-        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
+        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
         ${data.location ? `<div>المكان: ${data.location}</div>` : ''}
         ${data.timeUntilEvent ? `<div>المتبقي: ${data.timeUntilEvent}</div>` : ''}
       </div>
@@ -1174,8 +1244,8 @@ export class EmailService {
       </div>
       <div class="info-box">
         <div><strong>الفعالية:</strong> ${data.eventName}</div>
-        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
-        ${data.expiresAt ? `<div>أكد حضورك قبل: ${new Date(data.expiresAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>` : ''}
+        ${data.eventDate ? `<div>التاريخ: ${new Date(data.eventDate).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</div>` : ''}
+        ${data.expiresAt ? `<div>أكد حضورك قبل: ${new Date(data.expiresAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</div>` : ''}
       </div>
       <p style="font-size: 14px; color: #666; margin-top: 20px;">يرجى تأكيد حضورك في أقرب وقت.</p>
     `;
@@ -1369,7 +1439,7 @@ export class EmailService {
       
       <div class="info-row">
         <span class="info-label">الوقت:</span>
-        <span class="info-value">${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'long' })}</span>
+        <span class="info-value">${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'long' })}</span>
       </div>
       
       ${data.ipAddress ? `
@@ -1460,7 +1530,7 @@ export class EmailService {
       
       <div class="info-row">
         <span class="info-label">الوقت:</span>
-        <span class="info-value">${new Date(data.timestamp).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'long' })}</span>
+        <span class="info-value">${new Date(data.timestamp).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'long' })}</span>
       </div>
       
       
@@ -1488,7 +1558,7 @@ export class EmailService {
 
   private getEventRegistrationTemplate(userName: string, data: any): string {
     const eventTitle = data.eventTitleAr || data.eventTitle;
-    const startDate = new Date(data.startDate).toLocaleString('ar-EG', { 
+    const startDate = new Date(data.startDate).toLocaleString('en-US', { 
       dateStyle: 'full', 
       timeStyle: 'short' 
     });
@@ -1542,7 +1612,7 @@ export class EmailService {
 
   private getEventReminderTemplate(userName: string, data: any): string {
     const eventTitle = data.eventTitleAr || data.eventTitle;
-    const startDate = new Date(data.startDate).toLocaleString('ar-EG', { 
+    const startDate = new Date(data.startDate).toLocaleString('en-US', { 
       dateStyle: 'full', 
       timeStyle: 'short' 
     });
@@ -1595,7 +1665,7 @@ export class EmailService {
 
   private getWaitlistTemplate(userName: string, data: any): string {
     const eventTitle = data.eventTitleAr || data.eventTitle;
-    const startDate = new Date(data.startDate).toLocaleString('ar-EG', { 
+    const startDate = new Date(data.startDate).toLocaleString('en-US', { 
       dateStyle: 'full', 
       timeStyle: 'short' 
     });
@@ -1647,11 +1717,11 @@ export class EmailService {
 
   private getWaitlistPromotionTemplate(userName: string, data: any): string {
     const eventTitle = data.eventTitleAr || data.eventTitle;
-    const startDate = new Date(data.startDate).toLocaleString('ar-EG', { 
+    const startDate = new Date(data.startDate).toLocaleString('en-US', { 
       dateStyle: 'full', 
       timeStyle: 'short' 
     });
-    const expiresAt = new Date(data.expiresAt).toLocaleString('ar-EG', { 
+    const expiresAt = new Date(data.expiresAt).toLocaleString('en-US', { 
       dateStyle: 'medium', 
       timeStyle: 'short' 
     });
@@ -2164,7 +2234,7 @@ export class EmailService {
         .replace(/{{os}}/g, deviceInfo.os || 'غير معروف')
         .replace(
           /{{timestamp}}/g,
-          new Date().toLocaleString('ar-EG', {
+          new Date().toLocaleString('en-US', {
             dateStyle: 'full',
             timeStyle: 'long',
           }),
@@ -2232,7 +2302,7 @@ export class EmailService {
         .replace(/{{deviceType}}/g, ipInfo.deviceType || 'غير معروف')
         .replace(
           /{{timestamp}}/g,
-          new Date().toLocaleString('ar-EG', {
+          new Date().toLocaleString('en-US', {
             dateStyle: 'full',
             timeStyle: 'long',
           }),
@@ -2271,17 +2341,22 @@ export class EmailService {
     try {
       const frontendUrl = this.getFrontendUrl();
       const formUrl = `${frontendUrl}/app/forms/${formId}/responses`;
-      
+
       // Build submission summary (limit to first 5 fields)
       const entries = Object.entries(submissionData || {}).slice(0, 5);
-      const submissionHtml = entries.length > 0
-        ? entries.map(([key, value]) => `
+      const submissionHtml =
+        entries.length > 0
+          ? entries
+              .map(
+                ([key, value]) => `
           <tr>
             <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; width: 40%;">${key}</td>
             <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #1a1a1a;">${String(value || '-').substring(0, 100)}</td>
           </tr>
-        `).join('')
-        : '<tr><td colspan="2" style="padding: 12px; text-align: center; color: #9ca3af;">No data submitted</td></tr>';
+        `,
+              )
+              .join('')
+          : '<tr><td colspan="2" style="padding: 12px; text-align: center; color: #9ca3af;">No data submitted</td></tr>';
 
       const html = `
 <!DOCTYPE html>
@@ -2363,11 +2438,7 @@ export class EmailService {
   /**
    * Send auto-response email to form submitter
    */
-  async sendAutoResponse(
-    to: string,
-    formTitle: string,
-    customMessage: string,
-  ) {
+  async sendAutoResponse(to: string, formTitle: string, customMessage: string) {
     try {
       const html = `
 <!DOCTYPE html>
@@ -2458,8 +2529,7 @@ export class EmailService {
     },
   ) {
     try {
-      const frontendUrl = this.getFrontendUrl();
-      const formUrl = `${frontendUrl}/f/${formData.formSlug}`;
+      const formUrl = this.getPublicFormUrl(formData.formSlug);
       // Generate QR code as base64 using Google Charts API (works in emails)
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(formUrl)}`;
 

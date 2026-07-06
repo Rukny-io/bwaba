@@ -128,8 +128,10 @@ export class RequestIdInterceptor implements NestInterceptor {
     duration: number,
     error?: string,
   ): void {
-    const statusEmoji = statusCode < 400 ? '✅' : statusCode < 500 ? '⚠️' : '❌';
-    const durationStr = duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(2)}s`;
+    const statusEmoji =
+      statusCode < 400 ? '✅' : statusCode < 500 ? '⚠️' : '❌';
+    const durationStr =
+      duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(2)}s`;
 
     let message = `[${requestId}] <-- ${statusEmoji} ${statusCode} ${method} ${url} - ${durationStr}`;
 

@@ -76,7 +76,9 @@ export class CleanupProcessor {
         await this.prisma.userFile.delete({ where: { id: file.id } });
         deleted++;
       } catch (error) {
-        this.logger.warn(`Failed to delete temp file ${file.key}: ${error.message}`);
+        this.logger.warn(
+          `Failed to delete temp file ${file.key}: ${error.message}`,
+        );
       }
     }
 
@@ -87,7 +89,9 @@ export class CleanupProcessor {
   @Process('old-security-logs')
   async handleOldSecurityLogs(job: Job<{ daysToKeep?: number }>) {
     const daysToKeep = job.data.daysToKeep || 90;
-    this.logger.log(`Starting security logs cleanup (keeping ${daysToKeep} days)...`);
+    this.logger.log(
+      `Starting security logs cleanup (keeping ${daysToKeep} days)...`,
+    );
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
@@ -158,8 +162,6 @@ export class CleanupProcessor {
 
   @OnQueueFailed()
   onFailed(job: Job, error: Error) {
-    this.logger.error(
-      `Cleanup job ${job.name} failed: ${error.message}`,
-    );
+    this.logger.error(`Cleanup job ${job.name} failed: ${error.message}`);
   }
 }

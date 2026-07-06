@@ -31,7 +31,9 @@ export class SocialLinksService {
       select: { username: true },
     });
     if (profile?.username) {
-      await this.cacheManager.invalidate(`profile:username:${profile.username}`);
+      await this.cacheManager.invalidate(
+        `profile:username:${profile.username}`,
+      );
     }
   }
 

@@ -37,24 +37,36 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : { message: 'خطأ داخلي في الخادم' };
 
-    const message =
+    const responseObj =
       typeof exceptionResponse === 'string'
-        ? exceptionResponse
-        : (exceptionResponse as any)?.message || 'حدث خطأ';
+        ? { message: exceptionResponse }
+        : (exceptionResponse as Record<string, unknown>);
 
-    // 🔒 في Production، إرجاع رسائل عامة فقط
+    const rawMessage = responseObj.message ?? 'حدث خطأ';
+    const message: string | string[] =
+      typeof rawMessage === 'string'
+        ? rawMessage
+        : Array.isArray(rawMessage)
+          ? rawMessage.map((item) => String(item))
+          : String(rawMessage);
+    const businessCode =
+      typeof responseObj.code === 'string' ? responseObj.code : undefined;
+
+    // 🔒 في Production، إرجاع رسائل عامة فقط (مع استثناء أخطاء الباقة/الحدود)
     const safeMessage = this.isProduction
-      ? this.getSafeMessage(status, message)
+      ? this.getSafeMessage(status, message, businessCode)
       : message;
 
     // بناء response آمن
-    const requestId = (request as any).requestId || request.headers['x-request-id'];
+    const requestId =
+      (request as any).requestId || request.headers['x-request-id'];
     const errorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
       message: Array.isArray(safeMessage) ? safeMessage : [safeMessage],
+      ...(businessCode ? { code: businessCode } : {}),
       // 🔒 Request ID للتتبع والدعم الفني
       requestId,
       // 🔒 في Development فقط، إضافة تفاصيل إضافية
@@ -126,12 +138,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
   private getSafeMessage(
     status: number,
     originalMessage: string | string[],
+    code?: string,
   ): string | string[] {
     // رسائل التحقق من الصحة يمكن عرضها
     if (
       status === HttpStatus.BAD_REQUEST ||
       status === HttpStatus.UNPROCESSABLE_ENTITY
     ) {
+      return originalMessage;
+    }
+
+    const passthroughCodes = new Set([
+      'PLAN_REQUIRED',
+      'FEATURE_UNAVAILABLE',
+      'LIMIT_REACHED',
+      'FEATURE_TIER_REQUIRED',
+      'INSUFFICIENT_PERMISSION',
+    ]);
+    if (code && passthroughCodes.has(code)) {
       return originalMessage;
     }
 

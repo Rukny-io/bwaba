@@ -6,7 +6,7 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -14,9 +14,9 @@ import {
   NotificationsService,
   CreateNotificationDto,
 } from './notifications.service';
-import { NotificationType } from '@prisma/client';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Redis } from 'ioredis';
+import { PushSubscriptionService } from '../../integrations/push-notifications/push-subscription.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -43,6 +43,7 @@ export class NotificationsGateway
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    @Optional() private readonly pushService?: PushSubscriptionService,
   ) {}
 
   /**
@@ -115,6 +116,14 @@ export class NotificationsGateway
   }
 
   /**
+   * Emit updated unread count to all sockets for a user (e.g. after REST mutations).
+   */
+  async emitUnreadCount(userId: string): Promise<void> {
+    const count = await this.notificationsService.getUnreadCount(userId);
+    this.server.to(`user:${userId}`).emit('unread-count', { count });
+  }
+
+  /**
    * Send notification to a user (saves to DB and emits via WebSocket)
    */
   async sendNotification(dto: CreateNotificationDto): Promise<void> {
@@ -134,6 +143,24 @@ export class NotificationsGateway
       this.server
         .to(`user:${dto.userId}`)
         .emit('unread-count', { count: unreadCount });
+
+      if (this.pushService) {
+        void this.pushService
+          .sendPushToUser(dto.userId, {
+            title: dto.title,
+            body: dto.message,
+            tag: notification.id,
+            data: {
+              notificationId: notification.id,
+              type: dto.type,
+            },
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Push notification skipped for user ${dto.userId}: ${err?.message || err}`,
+            ),
+          );
+      }
 
       this.logger.log(`Notification sent to user ${dto.userId}: ${dto.type}`);
     } catch (error) {

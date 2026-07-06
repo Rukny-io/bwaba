@@ -43,12 +43,16 @@ export class PendingTwoFactorService {
         select: { id: true },
       });
       if (oldest) {
-        await this.prisma.pendingTwoFactorSession.delete({ where: { id: oldest.id } });
+        await this.prisma.pendingTwoFactorSession.delete({
+          where: { id: oldest.id },
+        });
       }
     }
 
     const id = randomUUID();
-    const expiresAt = new Date(now.getTime() + this.SESSION_EXPIRY_MINUTES * 60 * 1000);
+    const expiresAt = new Date(
+      now.getTime() + this.SESSION_EXPIRY_MINUTES * 60 * 1000,
+    );
 
     await this.prisma.pendingTwoFactorSession.create({
       data: { id, userId, email, expiresAt },

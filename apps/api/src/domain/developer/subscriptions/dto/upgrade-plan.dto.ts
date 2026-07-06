@@ -2,7 +2,7 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class UpgradePlanDto {
   @IsString()
-  @IsIn(['STARTER', 'GROWTH', 'ENTERPRISE'])
+  @IsIn(['PRO'])
   plan: string;
 
   @IsOptional()

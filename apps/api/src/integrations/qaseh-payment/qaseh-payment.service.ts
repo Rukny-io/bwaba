@@ -27,7 +27,10 @@ export class QasehPaymentService {
   private readonly webhookUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.apiUrl = this.config.get<string>('QASEH_API_URL', 'https://api-test.alqaseh.com/v1');
+    this.apiUrl = this.config.get<string>(
+      'QASEH_API_URL',
+      'https://api-test.alqaseh.com/v1',
+    );
     this.clientId = this.config.get<string>('QASEH_CLIENT_ID', '');
     this.clientSecret = this.config.get<string>('QASEH_CLIENT_SECRET', '');
     this.redirectUrl = this.config.get<string>('QASEH_REDIRECT_URL', '');
@@ -38,7 +41,9 @@ export class QasehPaymentService {
    * Get Basic Auth header value
    */
   private getAuthHeader(): string {
-    const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+    const credentials = Buffer.from(
+      `${this.clientId}:${this.clientSecret}`,
+    ).toString('base64');
     return `Basic ${credentials}`;
   }
 
@@ -107,7 +112,9 @@ export class QasehPaymentService {
   /**
    * Get full payment context details by payment ID
    */
-  async getPaymentContext(paymentId: string): Promise<QasehPaymentContextResponse> {
+  async getPaymentContext(
+    paymentId: string,
+  ): Promise<QasehPaymentContextResponse> {
     return this.request<QasehPaymentContextResponse>(
       'GET',
       `/egw/payments/${paymentId}`,

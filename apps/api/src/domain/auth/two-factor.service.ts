@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../../core/cache/redis.service';
 import { generateSecret, generateURI, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
@@ -44,10 +45,11 @@ export class TwoFactorService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private redis: RedisService,
   ) {
     // 🔒 مفتاح التشفير للأسرار (يجب أن يكون 32 bytes = 64 hex characters)
     const key = this.configService.get<string>('TWO_FACTOR_ENCRYPTION_KEY');
-    
+
     if (!key) {
       throw new Error(
         '❌ TWO_FACTOR_ENCRYPTION_KEY is required. ' +
@@ -100,7 +102,7 @@ export class TwoFactorService {
     }
 
     const parts = encryptedText.split(':');
-    
+
     // إذا كان التنسيق القديم (base32 مباشر بدون تشفير)
     // base32 عادة يحتوي فقط على A-Z و 2-7
     if (parts.length !== 3) {
@@ -189,7 +191,11 @@ export class TwoFactorService {
 
     // إنشاء مفتاح سري جديد باستخدام otplib
     const secret = generateSecret(); // توليد مفتاح base32
-    const otpauthUrl = generateURI({ issuer: this.APP_NAME, label: user.email, secret });
+    const otpauthUrl = generateURI({
+      issuer: this.APP_NAME,
+      label: user.email,
+      secret,
+    });
 
     // توليد QR Code
     const qrCodeUrl = await QRCode.toDataURL(otpauthUrl);
@@ -211,6 +217,9 @@ export class TwoFactorService {
 
     // حفظ الرموز الاحتياطية المشفرة
     await this.saveBackupCodes(userId, backupCodes);
+
+    // احتفاظ مؤقت بالرموز الأصلية حتى يُفعّل المستخدم 2FA
+    await this.cachePendingBackupCodes(userId, backupCodes);
 
     return {
       secret: secret,
@@ -270,8 +279,8 @@ export class TwoFactorService {
       select: { id: true, twoFactorEnabled: true },
     });
 
-    // استرجاع الرموز الاحتياطية
-    const backupCodes = await this.getBackupCodes(userId);
+    // استرجاع الرموز الاحتياطية الأصلية (مرة واحدة بعد التفعيل)
+    const backupCodes = await this.takePendingBackupCodes(userId);
 
     return {
       success: true,
@@ -308,7 +317,9 @@ export class TwoFactorService {
     }
 
     if (!user.twoFactorSecret) {
-      throw new BadRequestException('المفتاح السري غير موجود. يرجى إعادة إعداد المصادقة الثنائية');
+      throw new BadRequestException(
+        'المفتاح السري غير موجود. يرجى إعادة إعداد المصادقة الثنائية',
+      );
     }
 
     // فك تشفير المفتاح
@@ -459,18 +470,21 @@ export class TwoFactorService {
     return false;
   }
 
-  /**
-   * 📋 استرجاع الرموز الاحتياطية المتبقية (للعرض فقط عند الإعداد)
-   */
-  private async getBackupCodes(userId: string): Promise<string[]> {
-    // ملاحظة: لا يمكن استرجاع الرموز الأصلية لأنها مشفرة
-    // هذا يُستخدم فقط مباشرة بعد الإنشاء
-    const codes = await this.prisma.twoFactorBackupCode.findMany({
-      where: { userId, used: false },
-      select: { id: true },
-    });
+  private pendingBackupKey(userId: string): string {
+    return `2fa:pending-backup:${userId}`;
+  }
 
-    return codes.map(() => '********'); // placeholder
+  private async cachePendingBackupCodes(
+    userId: string,
+    codes: string[],
+  ): Promise<void> {
+    await this.redis.set(this.pendingBackupKey(userId), codes, 1800);
+  }
+
+  private async takePendingBackupCodes(userId: string): Promise<string[]> {
+    const codes = await this.redis.get<string[]>(this.pendingBackupKey(userId));
+    await this.redis.del(this.pendingBackupKey(userId));
+    return codes ?? [];
   }
 
   /**

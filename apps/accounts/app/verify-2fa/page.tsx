@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { AuthLayout } from "@/components/auth/auth-layout"
 import { AuthFooter } from "@/components/auth/auth-footer"
 import { TotpForm } from "@/components/auth/totp-form"
@@ -15,6 +16,7 @@ function Verify2FAContent() {
   const [method, setMethod] = useState<"authenticator" | "backup-code" | "whatsapp">("authenticator")
   const [sessionId, setSessionId] = useState("")
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false)
+  const t = useTranslations("Auth")
 
   const handleSendWhatsappOtp = async (sid: string) => {
     setIsSendingWhatsapp(true)
@@ -55,7 +57,7 @@ function Verify2FAContent() {
         router.replace("/login")
         return
       }
-      throw new Error(result.error || "رمز غير صحيح")
+      throw new Error(result.error || t("invalid_code"))
     }
 
     // تنظيف

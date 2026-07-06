@@ -132,7 +132,10 @@ export class ProductsService {
         );
 
         // Auto-set product quantity = sum of variant stocks
-        const totalVariantStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+        const totalVariantStock = variants.reduce(
+          (sum, v) => sum + (v.stock || 0),
+          0,
+        );
         await tx.products.update({
           where: { id: newProduct.id },
           data: { quantity: totalVariantStock },
@@ -248,7 +251,9 @@ export class ProductsService {
   /**
    * Resolve product_images imagePath to stable proxy URLs (no expiration)
    */
-  private async resolveProductImageUrls<T extends { product_images: { imagePath: string }[] }>(product: T): Promise<T> {
+  private async resolveProductImageUrls<
+    T extends { product_images: { imagePath: string }[] },
+  >(product: T): Promise<T> {
     const imagesWithUrls = product.product_images.map((img) => {
       let url = img.imagePath;
       if (!img.imagePath.startsWith('http')) {
@@ -480,7 +485,10 @@ export class ProductsService {
         });
 
         // Update hasVariants flag + auto-set quantity = sum of variant stocks
-        const totalVariantStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+        const totalVariantStock = variants.reduce(
+          (sum, v) => sum + (v.stock || 0),
+          0,
+        );
         await this.prisma.products.update({
           where: { id },
           data: { hasVariants: true, quantity: totalVariantStock },
@@ -545,7 +553,9 @@ export class ProductsService {
           data: { status: PrismaProductStatus.DISCONTINUED, quantity: 0 },
         }),
       ]);
-      this.logger.log(`Soft-deleted product ${id} (has ${orderItemsCount} order items)`);
+      this.logger.log(
+        `Soft-deleted product ${id} (has ${orderItemsCount} order items)`,
+      );
     } else {
       // Hard delete: no order references, safe to remove entirely
       // Delete S3 images first
@@ -676,22 +686,22 @@ export class ProductsService {
 
     // Generate stable proxy URLs for images
     const productsWithUrls = products.map((product) => {
-        let imageUrl = product.product_images[0]?.imagePath || null;
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = `/api/media/${imageUrl}`;
-        }
+      let imageUrl = product.product_images[0]?.imagePath || null;
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `/api/media/${imageUrl}`;
+      }
 
-        return {
-          id: product.id,
-          name: product.name,
-          nameAr: product.nameAr,
-          price: product.price,
-          image: imageUrl,
-          ordersCount: product._count.order_items,
-          reviewsCount: product._count.reviews,
-          status: product.status,
-        };
-      });
+      return {
+        id: product.id,
+        name: product.name,
+        nameAr: product.nameAr,
+        price: product.price,
+        image: imageUrl,
+        ordersCount: product._count.order_items,
+        reviewsCount: product._count.reviews,
+        status: product.status,
+      };
+    });
 
     return { data: productsWithUrls };
   }

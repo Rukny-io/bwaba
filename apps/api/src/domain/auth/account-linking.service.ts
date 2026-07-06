@@ -13,28 +13,34 @@ import * as crypto from 'crypto';
 /**
  * 🔗 Account Linking Service
  *
- * يدير ربط وإلغاء ربط حسابات OAuth (Google/LinkedIn) بالحساب الحالي.
- *
- * التدفق:
- * 1. المستخدم مسجل دخول → يطلب ربط provider جديد
- * 2. يتم إنشاء state token في Redis مع userId
- * 3. يُوجَّه لـ OAuth provider
- * 4. بعد العودة، يتم ربط providerId بالحساب الحالي
- *
- * الحمايات:
- * - لا يمكن ربط providerId مستخدم بحساب آخر
- * - لا يمكن إلغاء آخر طريقة تسجيل دخول
- * - كل عملية تُسجَّل في SecurityLog
+ * يدير ربط وإلغاء ربط حسابات OAuth (Google/LinkedIn/Facebook) بالحساب الحالي.
  */
 
-export type OAuthProvider = 'google' | 'linkedin';
+export type OAuthProvider = 'google' | 'linkedin' | 'facebook';
+
+const PROVIDER_LABELS: Record<OAuthProvider, string> = {
+  google: 'Google',
+  linkedin: 'LinkedIn',
+  facebook: 'Facebook',
+};
+
+const PROVIDER_ID_FIELDS: Record<
+  OAuthProvider,
+  'googleId' | 'linkedinId' | 'facebookId'
+> = {
+  google: 'googleId',
+  linkedin: 'linkedinId',
+  facebook: 'facebookId',
+};
 
 export interface LinkedProvidersResult {
   google: { linked: boolean; email?: string };
   linkedin: { linked: boolean; email?: string };
+  facebook: { linked: boolean; email?: string };
   quicksign: { available: boolean; email: string };
   canUnlinkGoogle: boolean;
   canUnlinkLinkedin: boolean;
+  canUnlinkFacebook: boolean;
 }
 
 export interface LinkingStatePayload {
@@ -55,9 +61,6 @@ export class AccountLinkingService {
     private redis: RedisService,
   ) {}
 
-  /**
-   * 📋 عرض الـ providers المربوطة للمستخدم
-   */
   async getLinkedProviders(userId: string): Promise<LinkedProvidersResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -65,6 +68,7 @@ export class AccountLinkingService {
         email: true,
         googleId: true,
         linkedinId: true,
+        facebookId: true,
         emailVerified: true,
       },
     });
@@ -73,7 +77,6 @@ export class AccountLinkingService {
       throw new BadRequestException('المستخدم غير موجود');
     }
 
-    const linkedCount = [user.googleId, user.linkedinId].filter(Boolean).length;
     const hasQuickSign = user.emailVerified;
 
     return {
@@ -85,42 +88,46 @@ export class AccountLinkingService {
         linked: !!user.linkedinId,
         email: user.linkedinId ? user.email : undefined,
       },
+      facebook: {
+        linked: !!user.facebookId,
+        email: user.facebookId ? user.email : undefined,
+      },
       quicksign: {
         available: hasQuickSign,
         email: user.email,
       },
-      // يمكن إلغاء الربط فقط إذا بقيت طريقة أخرى
-      canUnlinkGoogle: !!user.googleId && (!!user.linkedinId || hasQuickSign),
-      canUnlinkLinkedin: !!user.linkedinId && (!!user.googleId || hasQuickSign),
+      canUnlinkGoogle:
+        !!user.googleId &&
+        (!!user.linkedinId || !!user.facebookId || hasQuickSign),
+      canUnlinkLinkedin:
+        !!user.linkedinId &&
+        (!!user.googleId || !!user.facebookId || hasQuickSign),
+      canUnlinkFacebook:
+        !!user.facebookId &&
+        (!!user.googleId || !!user.linkedinId || hasQuickSign),
     };
   }
 
-  /**
-   * 🔗 بدء عملية ربط provider — إنشاء state token في Redis
-   */
   async initiateLinking(
     userId: string,
     provider: OAuthProvider,
   ): Promise<string> {
-    // التحقق من أن المستخدم موجود وأن الـ provider غير مربوط
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { googleId: true, linkedinId: true },
+      select: { googleId: true, linkedinId: true, facebookId: true },
     });
 
     if (!user) {
       throw new BadRequestException('المستخدم غير موجود');
     }
 
-    if (provider === 'google' && user.googleId) {
-      throw new ConflictException('حساب Google مربوط بالفعل');
+    const idField = PROVIDER_ID_FIELDS[provider];
+    if (user[idField]) {
+      throw new ConflictException(
+        `حساب ${PROVIDER_LABELS[provider]} مربوط بالفعل`,
+      );
     }
 
-    if (provider === 'linkedin' && user.linkedinId) {
-      throw new ConflictException('حساب LinkedIn مربوط بالفعل');
-    }
-
-    // إنشاء state token فريد
     const stateToken = crypto.randomBytes(32).toString('hex');
     const key = `${this.LINKING_STATE_PREFIX}${stateToken}`;
 
@@ -130,14 +137,15 @@ export class AccountLinkingService {
       createdAt: Date.now(),
     };
 
-    await this.redis.setex(key, this.LINKING_STATE_TTL, JSON.stringify(payload));
+    await this.redis.setex(
+      key,
+      this.LINKING_STATE_TTL,
+      JSON.stringify(payload),
+    );
 
     return stateToken;
   }
 
-  /**
-   * ✅ إتمام الربط بعد OAuth callback
-   */
   async completeLinking(
     stateToken: string,
     providerData: {
@@ -149,7 +157,6 @@ export class AccountLinkingService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<{ success: boolean; provider: OAuthProvider }> {
-    // 1. استرجاع state من Redis
     const key = `${this.LINKING_STATE_PREFIX}${stateToken}`;
     const rawPayload = await this.redis.get<string>(key);
 
@@ -159,13 +166,12 @@ export class AccountLinkingService {
       );
     }
 
-    // حذف فوري (single-use)
     await this.redis.del(key);
 
     const payload: LinkingStatePayload = JSON.parse(rawPayload);
     const { userId, provider } = payload;
+    const providerLabel = PROVIDER_LABELS[provider];
 
-    // 2. التحقق من أن الـ providerId ليس مستخدم بحساب آخر
     const existingUser = await this.findUserByProviderId(
       provider,
       providerData.providerId,
@@ -173,30 +179,22 @@ export class AccountLinkingService {
 
     if (existingUser && existingUser.id !== userId) {
       throw new ConflictException(
-        `حساب ${provider === 'google' ? 'Google' : 'LinkedIn'} هذا مربوط بحساب آخر بالفعل.`,
+        `حساب ${providerLabel} هذا مربوط بحساب آخر بالفعل.`,
       );
     }
 
-    // 3. ربط الـ provider بالحساب
-    const updateData: Record<string, string> = {};
-    if (provider === 'google') {
-      updateData.googleId = providerData.providerId;
-    } else {
-      updateData.linkedinId = providerData.providerId;
-    }
-
+    const idField = PROVIDER_ID_FIELDS[provider];
     await this.prisma.user.update({
       where: { id: userId },
-      data: updateData,
+      data: { [idField]: providerData.providerId },
       select: { id: true },
     });
 
-    // 4. تسجيل SecurityLog
     await this.securityLogService.createLog({
       userId,
       action: 'PROVIDER_LINKED' as any,
       status: 'SUCCESS',
-      description: `تم ربط حساب ${provider === 'google' ? 'Google' : 'LinkedIn'} بنجاح`,
+      description: `تم ربط حساب ${providerLabel} بنجاح`,
       ipAddress,
       userAgent,
       metadata: { provider, providerEmail: providerData.email },
@@ -205,16 +203,12 @@ export class AccountLinkingService {
     return { success: true, provider };
   }
 
-  /**
-   * ❌ إلغاء ربط provider
-   */
   async unlinkProvider(
     userId: string,
     provider: OAuthProvider,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<{ success: boolean }> {
-    // 1. التحقق من إمكانية إلغاء الربط
     const canUnlink = await this.canUnlink(userId, provider);
     if (!canUnlink) {
       throw new ForbiddenException(
@@ -222,43 +216,33 @@ export class AccountLinkingService {
       );
     }
 
-    // 2. التحقق من أن الـ provider مربوط فعلاً
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { googleId: true, linkedinId: true },
+      select: { googleId: true, linkedinId: true, facebookId: true },
     });
 
     if (!user) {
       throw new BadRequestException('المستخدم غير موجود');
     }
 
-    if (provider === 'google' && !user.googleId) {
-      throw new BadRequestException('حساب Google غير مربوط');
-    }
-    if (provider === 'linkedin' && !user.linkedinId) {
-      throw new BadRequestException('حساب LinkedIn غير مربوط');
-    }
-
-    // 3. إلغاء الربط
-    const updateData: Record<string, null> = {};
-    if (provider === 'google') {
-      updateData.googleId = null;
-    } else {
-      updateData.linkedinId = null;
+    const idField = PROVIDER_ID_FIELDS[provider];
+    if (!user[idField]) {
+      throw new BadRequestException(
+        `حساب ${PROVIDER_LABELS[provider]} غير مربوط`,
+      );
     }
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: updateData,
+      data: { [idField]: null },
       select: { id: true },
     });
 
-    // 4. تسجيل SecurityLog
     await this.securityLogService.createLog({
       userId,
       action: 'PROVIDER_UNLINKED' as any,
       status: 'WARNING',
-      description: `تم إلغاء ربط حساب ${provider === 'google' ? 'Google' : 'LinkedIn'}`,
+      description: `تم إلغاء ربط حساب ${PROVIDER_LABELS[provider]}`,
       ipAddress,
       userAgent,
       metadata: { provider },
@@ -267,29 +251,17 @@ export class AccountLinkingService {
     return { success: true };
   }
 
-  /**
-   * 🔍 البحث عن مستخدم بـ providerId
-   */
   private async findUserByProviderId(
     provider: OAuthProvider,
     providerId: string,
   ): Promise<{ id: string } | null> {
-    if (provider === 'google') {
-      return this.prisma.user.findUnique({
-        where: { googleId: providerId },
-        select: { id: true },
-      });
-    }
+    const idField = PROVIDER_ID_FIELDS[provider];
     return this.prisma.user.findUnique({
-      where: { linkedinId: providerId },
+      where: { [idField]: providerId } as any,
       select: { id: true },
     });
   }
 
-  /**
-   * 🔒 التحقق من إمكانية إلغاء الربط
-   * يجب أن تبقى طريقة تسجيل دخول واحدة على الأقل
-   */
   private async canUnlink(
     userId: string,
     provider: OAuthProvider,
@@ -299,25 +271,22 @@ export class AccountLinkingService {
       select: {
         googleId: true,
         linkedinId: true,
+        facebookId: true,
         emailVerified: true,
       },
     });
 
     if (!user) return false;
 
-    // عدّ طرق تسجيل الدخول المتاحة
     let methodCount = 0;
     if (user.googleId) methodCount++;
     if (user.linkedinId) methodCount++;
-    if (user.emailVerified) methodCount++; // QuickSign
+    if (user.facebookId) methodCount++;
+    if (user.emailVerified) methodCount++;
 
-    // يمكن الإلغاء فقط إذا بقيت طريقة أخرى بعد الإلغاء
     return methodCount > 1;
   }
 
-  /**
-   * 🔍 التحقق من صلاحية state token (للـ callback)
-   */
   async validateLinkingState(
     stateToken: string,
   ): Promise<LinkingStatePayload | null> {

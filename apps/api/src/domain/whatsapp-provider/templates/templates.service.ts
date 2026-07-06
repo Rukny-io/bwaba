@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
@@ -32,16 +37,22 @@ export class TemplatesService {
    */
   async create(userId: string, appId: string, dto: CreateTemplateDto) {
     const account = await this.getActiveAccount(userId, appId, dto.accountId);
-    const accessToken = this.tokenEncryption.decrypt(account.accessTokenEncrypted!);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
 
     // إرسال لـ Meta
     try {
-      const result = await this.metaApi.createTemplate(account.wabaId, accessToken, {
-        name: dto.name,
-        language: dto.language,
-        category: dto.category,
-        components: dto.components,
-      });
+      const result = await this.metaApi.createTemplate(
+        account.wabaId,
+        accessToken,
+        {
+          name: dto.name,
+          language: dto.language,
+          category: dto.category,
+          components: dto.components,
+        },
+      );
 
       // تخزين القالب محلياً
       const template = await this.prisma.developerWhatsappTemplate.create({
@@ -85,9 +96,8 @@ export class TemplatesService {
     const accountIds = accounts.map((a) => a.id);
 
     // If a specific account is requested, validate it belongs to this user
-    const filterIds = accountId && accountIds.includes(accountId)
-      ? [accountId]
-      : accountIds;
+    const filterIds =
+      accountId && accountIds.includes(accountId) ? [accountId] : accountIds;
 
     return this.prisma.developerWhatsappTemplate.findMany({
       where: { accountId: { in: filterIds } },
@@ -130,10 +140,16 @@ export class TemplatesService {
    */
   async remove(userId: string, appId: string, templateName: string) {
     const account = await this.getActiveAccount(userId, appId);
-    const accessToken = this.tokenEncryption.decrypt(account.accessTokenEncrypted!);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
 
     try {
-      await this.metaApi.deleteTemplate(account.wabaId, accessToken, templateName);
+      await this.metaApi.deleteTemplate(
+        account.wabaId,
+        accessToken,
+        templateName,
+      );
     } catch (error) {
       this.logger.warn(`Failed to delete template from Meta: ${error.message}`);
     }
@@ -150,9 +166,14 @@ export class TemplatesService {
    */
   async syncTemplates(userId: string, appId: string, accountId?: string) {
     const account = await this.getActiveAccount(userId, appId, accountId);
-    const accessToken = this.tokenEncryption.decrypt(account.accessTokenEncrypted!);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
 
-    const metaTemplates = await this.metaApi.listTemplates(account.wabaId, accessToken);
+    const metaTemplates = await this.metaApi.listTemplates(
+      account.wabaId,
+      accessToken,
+    );
 
     for (const mt of metaTemplates.data || []) {
       await this.prisma.developerWhatsappTemplate.upsert({
@@ -167,7 +188,7 @@ export class TemplatesService {
           metaTemplateId: mt.id,
           status: this.mapTemplateStatus(mt.status),
           components: mt.components,
-          category: mt.category as any,
+          category: mt.category,
           rejectedReason: mt.rejected_reason,
           qualityScore: mt.quality_score,
           lastSyncedAt: new Date(),
@@ -177,7 +198,7 @@ export class TemplatesService {
           metaTemplateId: mt.id,
           name: mt.name,
           language: mt.language,
-          category: mt.category as any,
+          category: mt.category,
           status: this.mapTemplateStatus(mt.status),
           components: mt.components,
           rejectedReason: mt.rejected_reason,
@@ -193,7 +214,11 @@ export class TemplatesService {
   /**
    * الحصول على أول حساب WABA نشط
    */
-  private async getActiveAccount(userId: string, appId: string, accountId?: string) {
+  private async getActiveAccount(
+    userId: string,
+    appId: string,
+    accountId?: string,
+  ) {
     const developerAppId = await this.resolveDeveloperAppId(userId, appId);
 
     const where: any = {
@@ -206,10 +231,14 @@ export class TemplatesService {
       where.id = accountId;
     }
 
-    const account = await this.prisma.developerWhatsappAccount.findFirst({ where });
+    const account = await this.prisma.developerWhatsappAccount.findFirst({
+      where,
+    });
 
     if (!account || !account.accessTokenEncrypted) {
-      throw new BadRequestException('No active WhatsApp Business Account found');
+      throw new BadRequestException(
+        'No active WhatsApp Business Account found',
+      );
     }
 
     return account;

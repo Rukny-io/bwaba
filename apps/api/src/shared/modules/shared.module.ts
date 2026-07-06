@@ -39,7 +39,17 @@ import { UploadProgressService } from '../services/upload-progress.service';
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [S3Service, ImageProcessorService, VideoProcessorService, UploadProgressService],
-  exports: [S3Service, ImageProcessorService, VideoProcessorService, UploadProgressService],
+  providers: [
+    S3Service,
+    ImageProcessorService,
+    VideoProcessorService,
+    UploadProgressService,
+  ],
+  exports: [
+    S3Service,
+    ImageProcessorService,
+    VideoProcessorService,
+    UploadProgressService,
+  ],
 })
 export class SharedModule {}

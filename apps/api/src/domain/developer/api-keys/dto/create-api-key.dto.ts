@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsArray, IsIn, MaxLength, MinLength, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsIn,
+  MaxLength,
+  MinLength,
+  IsDateString,
+} from 'class-validator';
+import { IsIpv4AddressArray } from './is-ipv4.validator';
 
 export class CreateApiKeyDto {
   @IsString()
@@ -22,6 +31,9 @@ export class CreateApiKeyDto {
       'contacts:write',
       'webhooks:manage',
       'media:upload',
+      'forms:read',
+      'forms:write',
+      'forms:webhooks',
     ],
     { each: true },
   )
@@ -34,6 +46,7 @@ export class CreateApiKeyDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @IsIpv4AddressArray()
   ipAllowlist?: string[];
 
   @IsOptional()

@@ -23,7 +23,10 @@ export class GoogleCalendarController {
     private readonly googleCalendarService: GoogleCalendarService,
     private readonly configService: ConfigService,
   ) {
-    this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || this.configService.get<string>('FRONTEND_URL_DEV') || 'http://localhost:3000';
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      this.configService.get<string>('FRONTEND_URL_DEV') ||
+      'http://localhost:3000';
   }
 
   /**

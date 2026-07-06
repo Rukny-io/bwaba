@@ -17,6 +17,10 @@ import {
   PLAN_ORDER,
   PlanLimits,
 } from './plan-limits.config';
+import {
+  resolveEffectiveSubscriptionPlan,
+  shouldExpireActiveSubscription,
+} from './subscription-effective-plan.util';
 
 @Injectable()
 export class SubscriptionsService {
@@ -44,29 +48,16 @@ export class SubscriptionsService {
       select: { plan: true, status: true, currentPeriodEnd: true },
     });
 
-    let plan: SubscriptionPlan = 'FREE';
-
-    if (subscription) {
-      // تحقق من انتهاء الصلاحية
-      if (
-        subscription.status === 'ACTIVE' &&
-        (!subscription.currentPeriodEnd ||
-          subscription.currentPeriodEnd > new Date())
-      ) {
-        plan = subscription.plan;
-      } else if (
-        subscription.currentPeriodEnd &&
-        subscription.currentPeriodEnd <= new Date() &&
-        subscription.status === 'ACTIVE'
-      ) {
-        // الاشتراك انتهى — حدّث الحالة
-        await this.prisma.subscription.update({
-          where: { userId },
-          data: { status: 'EXPIRED' },
-        });
-        plan = 'FREE';
-      }
+    if (subscription && shouldExpireActiveSubscription(subscription)) {
+      await this.prisma.subscription.update({
+        where: { userId },
+        data: { status: 'EXPIRED' },
+      });
+      subscription.status = 'EXPIRED';
+      await this.invalidateCache(userId);
     }
+
+    const plan = resolveEffectiveSubscriptionPlan(subscription);
 
     // 3. خزّن في الكاش
     await this.redis
@@ -92,11 +83,20 @@ export class SubscriptionsService {
       where: { userId },
     });
 
-    const plan = subscription?.plan ?? 'FREE';
-    const limits = PLAN_LIMITS[plan];
+    if (subscription && shouldExpireActiveSubscription(subscription)) {
+      await this.prisma.subscription.update({
+        where: { userId },
+        data: { status: 'EXPIRED' },
+      });
+      subscription.status = 'EXPIRED';
+      await this.invalidateCache(userId);
+    }
+
+    const effectivePlan = resolveEffectiveSubscriptionPlan(subscription);
+    const limits = PLAN_LIMITS[effectivePlan];
 
     return {
-      plan,
+      plan: effectivePlan,
       status: subscription?.status ?? 'ACTIVE',
       billingCycle: subscription?.billingCycle ?? null,
       currentPeriodStart: subscription?.currentPeriodStart ?? null,
@@ -202,7 +202,11 @@ export class SubscriptionsService {
     userId: string,
     limitKey: keyof PlanLimits,
     currentCount?: number,
-  ): Promise<{ allowed: boolean; current: number; limit: number | boolean | string }> {
+  ): Promise<{
+    allowed: boolean;
+    current: number;
+    limit: number | boolean | string;
+  }> {
     const limits = await this.getUserLimits(userId);
     const limitValue = limits[limitKey];
 
@@ -227,7 +231,8 @@ export class SubscriptionsService {
       }
 
       // إذا لم يُمرر العدد الحالي، احسبه
-      const count = currentCount ?? (await this.countResource(userId, limitKey));
+      const count =
+        currentCount ?? (await this.countResource(userId, limitKey));
       return {
         allowed: count < limitValue,
         current: count,
@@ -288,6 +293,13 @@ export class SubscriptionsService {
           },
         });
       }
+      case 'teamMembers':
+        return this.prisma.formTeamMember.count({
+          where: {
+            workspaceId: userId,
+            status: { in: ['PENDING', 'ACCEPTED'] },
+          },
+        });
       default:
         return 0;
     }
@@ -328,8 +340,7 @@ export class SubscriptionsService {
     }
 
     const price = PLAN_PRICES[newPlan];
-    const amount =
-      billingCycle === 'YEARLY' ? price.yearly : price.monthly;
+    const amount = billingCycle === 'YEARLY' ? price.yearly : price.monthly;
 
     const now = new Date();
     const periodEnd = new Date(now);
@@ -471,6 +482,53 @@ export class SubscriptionsService {
   }
 
   /**
+   * Admin: subscription + payment history for a user
+   */
+  async getAdminUserBilling(userId: string) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { userId },
+      include: {
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        },
+      },
+    });
+
+    const plan = subscription?.plan ?? SubscriptionPlan.FREE;
+    const limits = PLAN_LIMITS[plan];
+
+    return {
+      subscription: subscription
+        ? {
+            plan: subscription.plan,
+            status: subscription.status,
+            billingCycle: subscription.billingCycle,
+            currentPeriodStart:
+              subscription.currentPeriodStart?.toISOString() ?? null,
+            currentPeriodEnd:
+              subscription.currentPeriodEnd?.toISOString() ?? null,
+            cancelledAt: subscription.cancelledAt?.toISOString() ?? null,
+          }
+        : null,
+      limits: {
+        storageBytes: limits.storageBytes,
+        forms: limits.forms,
+        links: limits.links,
+      },
+      payments: (subscription?.payments ?? []).map((payment) => ({
+        id: payment.id,
+        amount: payment.amount,
+        billingCycle: payment.billingCycle,
+        status: payment.status,
+        paidAt: payment.paidAt?.toISOString() ?? null,
+        createdAt: payment.createdAt.toISOString(),
+        receiptUrl: payment.receiptUrl ?? null,
+      })),
+    };
+  }
+
+  /**
    * جلب جميع الباقات مع الأسعار (للعرض العام)
    */
   getPlansOverview() {
@@ -512,8 +570,6 @@ export class SubscriptionsService {
    * مسح كاش الاشتراك
    */
   private async invalidateCache(userId: string) {
-    await this.redis
-      .del(`${this.CACHE_PREFIX}${userId}`)
-      .catch(() => {});
+    await this.redis.del(`${this.CACHE_PREFIX}${userId}`).catch(() => {});
   }
 }

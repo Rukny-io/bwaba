@@ -97,10 +97,12 @@ export class UploadProgressService {
     if (!this.userUploads.has(userId)) {
       this.userUploads.set(userId, new Set());
     }
-    this.userUploads.get(userId)!.add(uploadId);
+    this.userUploads.get(userId).add(uploadId);
 
     this.emit('progress', upload);
-    this.logger.debug(`Started tracking upload: ${uploadId} for user ${userId}`);
+    this.logger.debug(
+      `Started tracking upload: ${uploadId} for user ${userId}`,
+    );
 
     return upload;
   }
@@ -310,14 +312,18 @@ export class UploadProgressService {
 
     // Update batch statistics
     const uploads = Array.from(batch.uploads.values());
-    batch.completedFiles = uploads.filter((u) => u.status === 'completed').length;
+    batch.completedFiles = uploads.filter(
+      (u) => u.status === 'completed',
+    ).length;
     batch.failedFiles = uploads.filter((u) => u.status === 'failed').length;
     batch.updatedAt = new Date();
 
     // Update batch status
     if (batch.completedFiles + batch.failedFiles === batch.totalFiles) {
       batch.status = batch.failedFiles === 0 ? 'completed' : 'failed';
-    } else if (uploads.some((u) => u.status === 'uploading' || u.status === 'processing')) {
+    } else if (
+      uploads.some((u) => u.status === 'uploading' || u.status === 'processing')
+    ) {
       batch.status = 'uploading';
     }
   }
@@ -349,7 +355,10 @@ export class UploadProgressService {
     return () => this.eventEmitter.off('upload', handler);
   }
 
-  private emit(type: UploadProgressEvent['type'], upload: UploadProgress): void {
+  private emit(
+    type: UploadProgressEvent['type'],
+    upload: UploadProgress,
+  ): void {
     this.eventEmitter.emit('upload', { type, upload });
   }
 
@@ -416,9 +425,7 @@ export class UploadProgressService {
     ).length;
 
     const activeBatches = Array.from(this.batches.values()).filter(
-      (b) =>
-        b.status === 'pending' ||
-        b.status === 'uploading',
+      (b) => b.status === 'pending' || b.status === 'uploading',
     ).length;
 
     return {

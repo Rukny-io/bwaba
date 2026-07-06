@@ -3,7 +3,7 @@ import { PrismaService } from '../../core/database/prisma/prisma.service';
 import PDFDocument from 'pdfkit';
 
 // Use require for exceljs to avoid ESM issues
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const ExcelJS = require('exceljs');
 
 export interface AuditExportOptions {
@@ -243,10 +243,14 @@ export class AuditExportService {
         doc.moveDown(0.5);
         doc.fontSize(10).text(`Total Records: ${logs.length}`);
 
-        const statusCounts = logs.reduce((acc, log) => {
-          acc[log.status || 'UNKNOWN'] = (acc[log.status || 'UNKNOWN'] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+        const statusCounts = logs.reduce(
+          (acc, log) => {
+            acc[log.status || 'UNKNOWN'] =
+              (acc[log.status || 'UNKNOWN'] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
 
         Object.entries(statusCounts).forEach(([status, count]) => {
           doc.text(`${status}: ${count}`);
@@ -269,7 +273,9 @@ export class AuditExportService {
           });
           doc.text(`   Description: ${log.description || 'N/A'}`);
           doc.text(`   User: ${log.user?.email || 'N/A'}`);
-          doc.text(`   IP: ${log.ipAddress || 'N/A'} - Location: ${log.location || 'N/A'}`);
+          doc.text(
+            `   IP: ${log.ipAddress || 'N/A'} - Location: ${log.location || 'N/A'}`,
+          );
           doc.text(`   Time: ${log.createdAt?.toISOString() || 'N/A'}`);
           doc.moveDown(0.5);
         });

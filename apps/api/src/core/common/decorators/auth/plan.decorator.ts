@@ -36,3 +36,18 @@ export const CheckLimit = (limitKey: keyof PlanLimits) =>
 export const CHECK_FEATURE_KEY = 'check_feature';
 export const CheckFeature = (featureKey: keyof PlanLimits) =>
   SetMetadata(CHECK_FEATURE_KEY, featureKey);
+
+/**
+ * 📊 فحص مستوى ميزة متدرجة (formAnalytics, conditionalLogic)
+ *
+ * @CheckFeatureTier('formAnalytics', 'advanced')
+ */
+export const CHECK_FEATURE_TIER_KEY = 'check_feature_tier';
+export interface FeatureTierRequirement {
+  feature: 'formAnalytics' | 'conditionalLogic';
+  minTier: 'basic' | 'advanced' | 'full';
+}
+export const CheckFeatureTier = (
+  feature: FeatureTierRequirement['feature'],
+  minTier: FeatureTierRequirement['minTier'],
+) => SetMetadata(CHECK_FEATURE_TIER_KEY, { feature, minTier } satisfies FeatureTierRequirement);

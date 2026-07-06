@@ -67,8 +67,11 @@ export class FileValidationPipe implements PipeTransform {
     }
 
     // 2. Get buffer (works for both memoryStorage and diskStorage)
-    const buffer = normalizeBinaryInput(file.buffer)
-      || (file.path ? normalizeBinaryInput(require('fs').readFileSync(file.path)) : null);
+    const buffer =
+      normalizeBinaryInput(file.buffer) ||
+      (file.path
+        ? normalizeBinaryInput(require('fs').readFileSync(file.path))
+        : null);
 
     if (!buffer || buffer.length === 0) {
       throw new BadRequestException('Invalid file: empty or unreadable');
@@ -82,7 +85,11 @@ export class FileValidationPipe implements PipeTransform {
     const textTypes = ['text/plain', 'text/csv'];
     const isTextType = textTypes.includes(file.mimetype);
 
-    if (!detectedType && isTextType && this.allowedTypes.some((t) => textTypes.includes(t))) {
+    if (
+      !detectedType &&
+      isTextType &&
+      this.allowedTypes.some((t) => textTypes.includes(t))
+    ) {
       // Text file — can't verify magic bytes, but it's allowed by config
       return;
     }

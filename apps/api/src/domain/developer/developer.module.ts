@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
@@ -9,6 +9,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ApiKeysController } from './api-keys/api-keys.controller';
 import { ApiKeysService } from './api-keys/api-keys.service';
 import { ApiKeyAuthGuard } from './api-keys/guards/api-key-auth.guard';
+import { JwtOrApiKeyGuard } from './api-keys/guards/jwt-or-api-key.guard';
 
 // Subscriptions
 import { DevSubscriptionsController } from './subscriptions/dev-subscriptions.controller';
@@ -35,6 +36,16 @@ import { UsageService } from './usage/usage.service';
 // Apps
 import { AppsController } from './apps/apps.controller';
 import { AppsService } from './apps/apps.service';
+import { AppsUploadService } from './apps/apps-upload.service';
+
+// Forms integration
+import { DevFormsController } from './forms/dev-forms.controller';
+import { DevFormsService } from './forms/dev-forms.service';
+import { FormsModule } from '../forms/forms.module';
+
+// Products
+import { DevProductsController } from './products/dev-products.controller';
+import { DevProductsService } from './products/dev-products.service';
 
 /**
  * 🔧 Developer Module
@@ -52,6 +63,7 @@ import { AppsService } from './apps/apps.service';
     PrismaModule,
     RedisModule,
     AuthModule,
+    forwardRef(() => FormsModule),
     // Webhook delivery queue
     BullModule.registerQueueAsync({
       name: 'webhook-delivery',
@@ -82,11 +94,17 @@ import { AppsService } from './apps/apps.service';
     DevWebhooksController,
     ContactsController,
     UsageController,
+    DevFormsController,
+    DevProductsController,
   ],
   providers: [
     AppsService,
+    AppsUploadService,
+    DevFormsService,
+    DevProductsService,
     ApiKeysService,
     ApiKeyAuthGuard,
+    JwtOrApiKeyGuard,
     DevSubscriptionsService,
     WalletService,
     DevWebhooksService,
@@ -99,10 +117,13 @@ import { AppsService } from './apps/apps.service';
     AppsService,
     ApiKeysService,
     ApiKeyAuthGuard,
+    JwtOrApiKeyGuard,
     DevSubscriptionsService,
     WalletService,
     WebhookDeliveryService,
     UsageService,
+    DevFormsService,
+    DevProductsService,
   ],
 })
 export class DeveloperModule {}

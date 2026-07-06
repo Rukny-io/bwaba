@@ -119,7 +119,10 @@ export class VideoProcessorService implements OnModuleInit {
       DEFAULT_MAX_VIDEO_DURATION_SECONDS,
     );
     this.ffmpegPath = this.configService.get<string>('FFMPEG_PATH', 'ffmpeg');
-    this.ffprobePath = this.configService.get<string>('FFPROBE_PATH', 'ffprobe');
+    this.ffprobePath = this.configService.get<string>(
+      'FFPROBE_PATH',
+      'ffprobe',
+    );
   }
 
   async onModuleInit(): Promise<void> {
@@ -242,7 +245,9 @@ export class VideoProcessorService implements OnModuleInit {
    */
   async getMetadata(buffer: Buffer): Promise<VideoMetadata> {
     if (!this.isFFmpegAvailable) {
-      throw new BadRequestException('FFmpeg is not available for video processing');
+      throw new BadRequestException(
+        'FFmpeg is not available for video processing',
+      );
     }
 
     const tempId = uuidv4();
@@ -271,8 +276,10 @@ export class VideoProcessorService implements OnModuleInit {
   private runFFprobe(inputPath: string): Promise<Omit<VideoMetadata, 'size'>> {
     return new Promise((resolve, reject) => {
       const args = [
-        '-v', 'quiet',
-        '-print_format', 'json',
+        '-v',
+        'quiet',
+        '-print_format',
+        'json',
         '-show_format',
         '-show_streams',
         inputPath,
@@ -293,8 +300,12 @@ export class VideoProcessorService implements OnModuleInit {
 
         try {
           const info = JSON.parse(stdout);
-          const videoStream = info.streams?.find((s: any) => s.codec_type === 'video');
-          const audioStream = info.streams?.find((s: any) => s.codec_type === 'audio');
+          const videoStream = info.streams?.find(
+            (s: any) => s.codec_type === 'video',
+          );
+          const audioStream = info.streams?.find(
+            (s: any) => s.codec_type === 'audio',
+          );
 
           if (!videoStream) {
             reject(new Error('No video stream found'));
@@ -482,25 +493,36 @@ export class VideoProcessorService implements OnModuleInit {
     return new Promise((resolve, reject) => {
       const args: string[] = [
         '-y', // Overwrite output
-        '-i', inputPath,
-        '-t', String(options.maxDuration), // Limit duration
-        '-vf', `scale=${options.width}:${options.height}`,
-        '-crf', String(options.quality),
+        '-i',
+        inputPath,
+        '-t',
+        String(options.maxDuration), // Limit duration
+        '-vf',
+        `scale=${options.width}:${options.height}`,
+        '-crf',
+        String(options.quality),
       ];
 
       // Format-specific options
       if (options.format === 'mp4') {
         args.push(
-          '-c:v', 'libx264',
-          '-preset', 'medium',
-          '-profile:v', 'main',
-          '-pix_fmt', 'yuv420p',
-          '-movflags', '+faststart', // Web optimization
+          '-c:v',
+          'libx264',
+          '-preset',
+          'medium',
+          '-profile:v',
+          'main',
+          '-pix_fmt',
+          'yuv420p',
+          '-movflags',
+          '+faststart', // Web optimization
         );
       } else if (options.format === 'webm') {
         args.push(
-          '-c:v', 'libvpx-vp9',
-          '-b:v', '0', // Use CRF mode
+          '-c:v',
+          'libvpx-vp9',
+          '-b:v',
+          '0', // Use CRF mode
         );
       }
 
@@ -546,10 +568,14 @@ export class VideoProcessorService implements OnModuleInit {
     return new Promise((resolve, reject) => {
       const args = [
         '-y',
-        '-ss', String(timeSeconds),
-        '-i', inputPath,
-        '-vframes', '1',
-        '-q:v', '5',
+        '-ss',
+        String(timeSeconds),
+        '-i',
+        inputPath,
+        '-vframes',
+        '1',
+        '-q:v',
+        '5',
         outputPath,
       ];
 
@@ -560,7 +586,9 @@ export class VideoProcessorService implements OnModuleInit {
 
       process.on('close', (code) => {
         if (code !== 0) {
-          reject(new Error(`Thumbnail extraction failed: ${stderr.slice(-500)}`));
+          reject(
+            new Error(`Thumbnail extraction failed: ${stderr.slice(-500)}`),
+          );
         } else {
           resolve();
         }
@@ -599,11 +627,16 @@ export class VideoProcessorService implements OnModuleInit {
 
       const args = [
         '-y',
-        '-ss', String(timeSeconds),
-        '-i', inputPath,
-        '-vframes', '1',
-        '-vf', scale,
-        '-q:v', '5',
+        '-ss',
+        String(timeSeconds),
+        '-i',
+        inputPath,
+        '-vframes',
+        '1',
+        '-vf',
+        scale,
+        '-q:v',
+        '5',
         outputPath,
       ];
 

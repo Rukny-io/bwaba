@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
@@ -97,7 +103,9 @@ export class MessagingService {
     if (!account.accessTokenEncrypted) {
       throw new BadRequestException('WABA account token is not available');
     }
-    const accessToken = this.tokenEncryption.decrypt(account.accessTokenEncrypted);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
 
     // 4. تسجيل الرسالة (حالة ACCEPTED)
     const messageLog = await this.prisma.whatsappMessageLog.create({

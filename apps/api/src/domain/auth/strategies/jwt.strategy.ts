@@ -47,7 +47,7 @@ const bearerExtractor = (req: any): string | null => {
 function isLocalhostContext(value?: string | string[] | null): boolean {
   if (!value) return false;
   const normalized = Array.isArray(value) ? value.join(' ') : value;
-  return /localhost|127\.0\.0\.1|0\.0\.0\.0|::1|rukny\.io/i.test(normalized);
+  return /localhost|127\.0\.0\.1|0\.0\.0\.0|::1/i.test(normalized);
 }
 
 @Injectable()
@@ -70,7 +70,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(req: any, payload: any) {
     // 🔒 التحقق من نوع التوكن (يجب أن يكون access وليس refresh)
     if (payload.type !== 'access') {
-      throw new UnauthorizedException('Invalid token type: expected access token');
+      throw new UnauthorizedException(
+        'Invalid token type: expected access token',
+      );
     }
 
     // 🔒 التحقق من وجود sid في JWT
@@ -91,6 +93,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             phone: true,
             bannerUrls: true,
             profileCompleted: true,
+            isRuknyVerified: true,
+            verifiedDisplayName: true,
+            verifiedCategory: true,
             profile: {
               select: {
                 name: true,
@@ -151,13 +156,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // 🔒 Session fingerprint verification — detect stolen sessions
     // Must match the headers used at login time (auth.service.ts) — only user-agent
-    const currentFingerprint = this.sessionFingerprintService.generateSimpleFingerprint({
-      'user-agent': req.headers?.['user-agent'],
-    });
-    const fpResult = await this.sessionFingerprintService.verifySessionFingerprint(
-      session.id,
-      currentFingerprint,
-    );
+    const currentFingerprint =
+      this.sessionFingerprintService.generateSimpleFingerprint({
+        'user-agent': req.headers?.['user-agent'],
+      });
+    const fpResult =
+      await this.sessionFingerprintService.verifySessionFingerprint(
+        session.id,
+        currentFingerprint,
+      );
     if (fpResult.mismatch && !fpResult.valid) {
       const isLocalhostRequest = [
         req.headers?.origin,
@@ -227,6 +234,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       phone: session.user.phone,
       bannerUrls: session.user.bannerUrls || [],
       profileCompleted: session.user.profileCompleted ?? false,
+      isRuknyVerified: session.user.isRuknyVerified ?? false,
+      verifiedDisplayName: session.user.verifiedDisplayName ?? null,
+      verifiedCategory: session.user.verifiedCategory ?? null,
       sessionId: session.id, // 🔒 Session ID للاستخدام لاحقاً
       subscriptionPlan,
     };

@@ -31,10 +31,12 @@ export class MetaWebhookController {
     @Query('hub.verify_token') token: string,
     @Query('hub.challenge') challenge: string,
   ) {
-    const verifyToken = this.configService.get<string>('META_WEBHOOK_VERIFY_TOKEN');
+    const verifyToken =
+      this.configService.get<string>('META_WEBHOOK_VERIFY_TOKEN') ||
+      this.configService.get<string>('WHATSAPP_VERIFY_TOKEN');
 
-    if (mode === 'subscribe' && token === verifyToken) {
-      return Number(challenge);
+    if (mode === 'subscribe' && verifyToken && token === verifyToken) {
+      return challenge;
     }
 
     throw new ForbiddenException('Verification failed');
@@ -43,10 +45,7 @@ export class MetaWebhookController {
   @Post()
   @HttpCode(HttpStatus.OK)
   @ApiExcludeEndpoint()
-  async receive(
-    @Req() req: RawBodyRequest<Request>,
-    @Body() body: any,
-  ) {
+  async receive(@Req() req: RawBodyRequest<Request>, @Body() body: any) {
     this.verifySignature(req);
     await this.metaWebhookService.handleWebhook(body);
     return { status: 'ok' };
@@ -69,7 +68,12 @@ export class MetaWebhookController {
       'sha256=' +
       crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    if (
+      !crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature),
+      )
+    ) {
       throw new ForbiddenException('Invalid signature');
     }
   }

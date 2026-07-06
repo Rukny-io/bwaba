@@ -89,9 +89,27 @@ export class DigitalAssetsService {
   /**
    * بناء مفتاح S3 للملف الرقمي
    */
-  private buildDigitalFileKey(storeId: string, productId: string, originalName: string): string {
+  private buildDigitalFileKey(
+    storeId: string,
+    productId: string,
+    originalName: string,
+  ): string {
     // 🔒 Use UUID filename with validated extension only
-    const SAFE_EXTENSIONS = ['.pdf', '.epub', '.zip', '.mp3', '.wav', '.mp4', '.docx', '.xlsx', '.pptx', '.jpg', '.jpeg', '.png', '.webp'];
+    const SAFE_EXTENSIONS = [
+      '.pdf',
+      '.epub',
+      '.zip',
+      '.mp3',
+      '.wav',
+      '.mp4',
+      '.docx',
+      '.xlsx',
+      '.pptx',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.webp',
+    ];
     const ext = extname(originalName).toLowerCase();
     const safeExt = SAFE_EXTENSIONS.includes(ext) ? ext : '.bin';
     const uuid = uuidv4();
@@ -110,7 +128,11 @@ export class DigitalAssetsService {
     }
     const buffer = readFileSync(filePath);
     // Cleanup temp file
-    try { unlinkSync(filePath); } catch { /* ignore cleanup errors */ }
+    try {
+      unlinkSync(filePath);
+    } catch {
+      /* ignore cleanup errors */
+    }
     return buffer;
   }
 
@@ -127,7 +149,9 @@ export class DigitalAssetsService {
 
     // تحقق أن المنتج رقمي
     if (!product.isDigital) {
-      throw new BadRequestException('هذا المنتج ليس رقمياً. قم بتفعيل خيار "منتج رقمي" أولاً');
+      throw new BadRequestException(
+        'هذا المنتج ليس رقمياً. قم بتفعيل خيار "منتج رقمي" أولاً',
+      );
     }
 
     // حذف الملف القديم إن وجد (ملف واحد فقط لكل منتج)
@@ -141,7 +165,11 @@ export class DigitalAssetsService {
     }
 
     // رفع الملف الجديد
-    const fileKey = this.buildDigitalFileKey(product.storeId, productId, file.originalname);
+    const fileKey = this.buildDigitalFileKey(
+      product.storeId,
+      productId,
+      file.originalname,
+    );
 
     // 🔒 Read from disk and cleanup temp file
     const buffer = this.readAndCleanupTempFile(file);
@@ -257,13 +285,20 @@ export class DigitalAssetsService {
 
     if (!asset?.previewKey) return null;
 
-    return this.s3Service.getPresignedGetUrl(this.bucket, asset.previewKey, 3600); // 1 ساعة
+    return this.s3Service.getPresignedGetUrl(
+      this.bucket,
+      asset.previewKey,
+      3600,
+    ); // 1 ساعة
   }
 
   /**
    * إنشاء رمز تحميل بعد الشراء
    */
-  async createDownloadToken(orderItemId: string, maxDownloads = 5): Promise<string> {
+  async createDownloadToken(
+    orderItemId: string,
+    maxDownloads = 5,
+  ): Promise<string> {
     const token = uuidv4();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 يوم
@@ -284,7 +319,9 @@ export class DigitalAssetsService {
    * تحميل الملف عبر رمز التحميل
    * يتحقق من: صحة الرمز، عدم انتهاء الصلاحية، عدد التحميلات
    */
-  async getDownloadUrl(token: string): Promise<{ url: string; fileName: string }> {
+  async getDownloadUrl(
+    token: string,
+  ): Promise<{ url: string; fileName: string }> {
     const downloadToken = await this.prisma.download_tokens.findUnique({
       where: { token },
       include: {

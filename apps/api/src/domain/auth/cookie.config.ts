@@ -1,535 +1,482 @@
-import { Response, Request } from 'express';
-
 /**
- * 🔒 Secure Cookie Configuration
+ * 🔐 Cookie Configuration - Shared Authentication Cookies
  *
- * نظام الأمان (كلا التوكنين في httpOnly Cookies):
- * - Access Token في httpOnly Cookie (30 دقيقة)
- * - Refresh Token في httpOnly Cookie (14 يوم)
- *
- * الحماية:
- * - httpOnly: يمنع XSS من قراءة التوكنات
- * - SameSite=Lax لجميع الكوكيز: دعم OAuth/QuickSign مع حماية CSRF عبر Origin/Referer
- * - CSRF Token إضافي للعمليات الحساسة
+ * Centralized cookie configuration for cross-domain SSO authentication.
+ * Supports production (.rukny.io) and development (localhost) environments.
  */
 
-// تحديد بيئة العمل
+import { randomBytes, timingSafeEqual } from 'crypto';
+import type { CookieOptions, Response, Request } from 'express';
+
+// ============================================================================
+// Environment Configuration
+// ============================================================================
+
 const isProduction = process.env.NODE_ENV === 'production';
-// Allow override to force non-secure cookies in local dev if NODE_ENV is mis-set
-// COOKIE_SECURE explicitly set to 'false' takes priority over NODE_ENV
-const cookieSecure = process.env.COOKIE_SECURE === 'false' ? false : (process.env.COOKIE_SECURE === 'true') || isProduction;
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-// 🔒 Domain للكوكيز (مهم للـ cross-origin)
-// ⚠️ في بيئة التطوير، نستخدم undefined (لا domain) للسماح بمشاركة الكوكيز بين ports مختلفة
-// domain: 'localhost' لا يعمل بشكل صحيح مع ports مختلفة في بعض المتصفحات
-// (Frontend على 3000، API على 3001)
-//
-// 🔒 في الإنتاج مع subdomains (مثل accounts.rukny.io + rukny.io):
-//    اضبط COOKIE_DOMAIN=rukny.io (بدون نقطة في البداية)
-//    هذا يسمح لجميع الـ subdomains بمشاركة الكوكيز
-//    إذا تركته undefined، الكوكي سيكون host-only على accounts.rukny.io فقط
-const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+/**
+ * Secure flag — true only on HTTPS production.
+ * docker-compose.rukny-dev sets COOKIE_SECURE=false for http://localhost.
+ */
+export const COOKIE_SECURE =
+  isProduction &&
+  process.env.COOKIE_SECURE !== 'false' &&
+  process.env.COOKIE_SECURE !== '0';
 
-// 🔒 Warn if COOKIE_DOMAIN is missing in production (cookies won't be shared across subdomains)
-if (isProduction && !cookieDomain) {
-  console.error(
-    '⚠️  COOKIE_DOMAIN is not set! Cookies will be host-only and NOT shared across subdomains. ' +
-    'Set COOKIE_DOMAIN=rukny.io in environment variables.',
-  );
-}
+/**
+ * __Secure- / __Host- prefixes require the Secure attribute (browser will drop them on http://localhost).
+ * Use prefixed names only when cookies are actually Secure.
+ */
+const usePrefixedCookieNames = isProduction && COOKIE_SECURE;
 
-// 🔒 Origins المسموحة للـ CSRF validation
-// إضافة دعم للشبكة المحلية في بيئة التطوير
-// ⚠️ تأكد من إضافة جميع النطاقات المستخدمة (www و non-www)
-const ALLOWED_ORIGINS: string[] = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
-  process.env.FRONTEND_URL_ALT, // e.g. https://www.rukny.io if FRONTEND_URL is https://rukny.io
-  process.env.APP_FRONTEND_URL,
-  process.env.AUTH_FRONTEND_URL,
-  process.env.BUSINESS_FRONTEND_URL, // Business app (e.g. https://business.rukny.io)
-  process.env.DEVELOPERS_FRONTEND_URL, // Developers app (e.g. https://developers.rukny.io)
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://localhost:3003',
-  'http://127.0.0.1:3003',
-  'http://localhost:3004',
-  'http://127.0.0.1:3004',
-  'https://localhost:3004',
-  'https://127.0.0.1:3004',
-  'http://localhost:3005',
-  'http://127.0.0.1:3005',
-  // Local network IPs are handled dynamically in validateCsrfOrigin()
-].filter(Boolean) as string[];
+/**
+ * Cookie Domain Configuration
+ * - Production: .rukny.io (shared across all subdomains)
+ * - Development: undefined (localhost, no domain)
+ */
+export const COOKIE_DOMAIN = isProduction
+  ? process.env.COOKIE_DOMAIN === ''
+    ? undefined
+    : process.env.COOKIE_DOMAIN || '.rukny.io'
+  : undefined;
+const isHostOnlyCookieConfig = usePrefixedCookieNames && !COOKIE_DOMAIN;
 
-// أسماء الكوكيز
-// 🔒 نستخدم __Secure- prefix فقط عندما تكون الكوكيز آمنة (secure=true)
+/**
+ * SameSite policy
+ * - lax: allows cross-site GET requests (needed for OAuth redirects)
+ * - strict: most secure but breaks OAuth
+ * - none: requires secure=true and is less safe
+ */
+export const COOKIE_SAME_SITE: 'strict' | 'lax' | 'none' = 'lax';
+
+/**
+ * Cookie names — prefixed only when Secure cookies are enabled
+ */
 export const COOKIE_NAMES = {
-  ACCESS_TOKEN: cookieSecure ? '__Secure-access_token' : 'access_token',
-  REFRESH_TOKEN: cookieSecure ? '__Secure-refresh_token' : 'refresh_token',
-  CSRF_TOKEN: cookieSecure ? '__Secure-csrf_token' : 'csrf_token',
-  /** تذكر هذا الجهاز (2FA) - يُستخدم للتحقق من الجهاز الموثوق */
-  TRUSTED_DEVICE: cookieSecure ? '__Secure-trusted_device_id' : 'trusted_device_id',
+  accessToken: usePrefixedCookieNames
+    ? '__Secure-access_token'
+    : 'access_token',
+  refreshToken: usePrefixedCookieNames
+    ? '__Secure-refresh_token'
+    : 'refresh_token',
+  // __Host- cookies require no Domain attribute, so only use them on host-only setups.
+  csrfToken: isHostOnlyCookieConfig
+    ? '__Host-csrf_token'
+    : usePrefixedCookieNames
+      ? '__Secure-csrf_token'
+      : 'csrf_token',
+  deviceId: isHostOnlyCookieConfig
+    ? '__Host-device_id'
+    : usePrefixedCookieNames
+      ? '__Secure-device_id'
+      : 'device_id',
 } as const;
 
-// إعدادات الأمان للكوكيز
-interface CookieOptions {
-  httpOnly: boolean;
-  secure: boolean;
-  sameSite: 'strict' | 'lax' | 'none';
-  path: string;
-  maxAge: number;
-  domain?: string;
-}
+/**
+ * Token expiration times (in seconds)
+ */
+export const TOKEN_EXPIRY = {
+  accessToken: 30 * 60, // 30 minutes
+  refreshToken: 7 * 24 * 60 * 60, // 7 days
+  csrfToken: 30 * 60, // 30 minutes
+  deviceId: 365 * 24 * 60 * 60, // 1 year
+} as const;
+
+// ============================================================================
+// Base Cookie Options
+// ============================================================================
 
 /**
- * 🔒 تحديد إعدادات SameSite
- * 
- * ⚠️ نستخدم 'lax' بدلاً من 'strict' لأن:
- * - strict يمنع إرسال الكوكي عند العودة من OAuth (Google/LinkedIn)
- * - strict يمنع فتح الروابط من البريد/تطبيقات خارجية
- * 
- * 'lax' يسمح بإرسال الكوكي في:
- * - Top-level navigations (GET requests)
- * - لكن ليس في cross-site POST/iframe/AJAX
- * 
- * الحماية الإضافية:
- * - Origin header validation في /auth/refresh
- * - Rate limiting
+ * Base cookie options shared across all auth cookies
  */
-const getSameSite = (): 'strict' | 'lax' | 'none' => {
-  return 'lax'; // آمن مع OAuth + حماية CSRF إضافية
-};
-
-/** نفس صيغة Domain المستخدمة في Set-Cookie (بنقطة في البداية) لضمان مسح الكوكي. */
-function getCookieDomainForClear(): string | undefined {
-  if (!cookieDomain) return undefined;
-  return cookieDomain.startsWith('.') ? cookieDomain : `.${cookieDomain}`;
-}
-
-/**
- * 🔒 إعدادات Access Token Cookie
- * 
- * - httpOnly: true → لا يمكن قراءته من JavaScript (XSS protection)
- * - secure: true → HTTPS فقط في الإنتاج
- * - sameSite: lax → حماية CSRF مع دعم OAuth/QuickSign redirects
- * - path: / → متاح لجميع المسارات (الـ proxy يستخدم /api/v1)
- * - صلاحية: 30 دقيقة (يجب أن تطابق JWT expiresIn: '30m' حتى لا يُحذف الكوكي قبل انتهاء التوكن)
- *   وكان 15 دقيقة سابقاً فكان المتصفح يحذف الكوكي بعد 15 دقيقة ويُسجّل المستخدم خروجاً عند أول 401
- *   بينما التمديد التلقائي (proactive refresh) يعمل كل 25 دقيقة.
- */
-export const ACCESS_TOKEN_OPTIONS: CookieOptions = {
-  httpOnly: true,
-  secure: cookieSecure,
-  sameSite: 'lax', // 🔒 Lax لدعم OAuth/QuickSign redirects
-  path: '/',  // 🔒 متاح لجميع المسارات (للتوافق مع proxy)
-  maxAge: 30 * 60 * 1000, // 30 دقيقة - مطابق لـ JWT access token expiry
-  ...(cookieDomain && { domain: cookieDomain }),
-};
-
-/**
- * 🔒 إعدادات Refresh Token Cookie
- * 
- * - httpOnly: true → لا يمكن قراءته من JavaScript (XSS protection)
- * - secure: true → HTTPS فقط في الإنتاج
- * - sameSite: lax → حماية CSRF مع دعم OAuth redirects
- * - path: '/' دائماً → المتصفح يرسل الكوكي حسب مسار الطلب. الواجهة تستدعي /api/auth/*
- *   (proxy لـ Next.js) وليس /api/v1/auth/*، لذا path=/api/v1/auth يمنع إرسال الكوكي في الإنتاج.
- * - صلاحية: 7 أيام - موحد مع token.service.ts
- *   ⚠️ يجب أن تتطابق المدة مع DB session expiresAt وإلا ستحصل على 401 رغم وجود الـ cookie
- */
-export const REFRESH_TOKEN_OPTIONS: CookieOptions = {
-  httpOnly: true,
-  secure: cookieSecure,
-  sameSite: getSameSite(), // Lax للسماح بـ OAuth
-  path: '/',  // 🔒 يجب '/' حتى يُرسل مع /api/auth/refresh (proxy) وليس فقط /api/v1/auth
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 أيام - موحد مع DB refreshExpiresAt
-  ...(cookieDomain && { domain: cookieDomain }),
-};
-
-/**
- * 🔒 إعدادات CSRF Token Cookie (قابل للقراءة من JS)
- * 
- * ⚠️ نستخدم sameSite: 'lax' بدلاً من 'strict' لأن:
- * - strict يمنع إرسال الكوكي عند الـ redirect من API إلى Frontend
- * - الـ CSRF token يحتاج أن يكون متاحاً بعد OAuth/QuickSign redirects
- */
-export const CSRF_TOKEN_OPTIONS: Omit<CookieOptions, 'httpOnly'> & { httpOnly: false } = {
-  httpOnly: false, // 🔒 يجب أن يكون قابل للقراءة من JS
-  secure: cookieSecure,
-  sameSite: 'lax', // 🔒 Lax لدعم redirects بين API و Frontend
+const baseCookieOptions: CookieOptions = {
+  domain: COOKIE_DOMAIN,
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAME_SITE,
   path: '/',
-  maxAge: 24 * 60 * 60 * 1000, // 24 ساعة
-  ...(cookieDomain && { domain: cookieDomain }),
 };
 
-/** تذكر هذا الجهاز: صلاحية 30 يوم */
-const TRUSTED_DEVICE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
-export const TRUSTED_DEVICE_OPTIONS: CookieOptions = {
-  httpOnly: true,
-  secure: cookieSecure,
-  sameSite: 'lax',
-  path: '/',
-  maxAge: TRUSTED_DEVICE_MAX_AGE,
-  ...(cookieDomain && { domain: cookieDomain }),
-};
-
-/**
- * 🔒 بناء سطر Set-Cookie يدوياً لضمان HttpOnly و Max-Age الصحيحين
- * (تجنب سلوك Express أحياناً مع domain الذي يضع Expires بعيد)
- */
-function buildSetCookieHeader(
-  name: string,
-  value: string,
-  opts: CookieOptions,
-): string {
-  // اسم الكوكي يُرمّز؛ القيمة (JWT/hex) لا تحتاج ترميزاً وتجنباً لمشاكل parsing نتركها كما هي
-  const parts = [
-    `${encodeURIComponent(name)}=${value}`,
-    `Path=${opts.path}`,
-    `Max-Age=${Math.floor(opts.maxAge / 1000)}`, // بالثواني
-    opts.httpOnly ? 'HttpOnly' : '',
-    opts.secure ? 'Secure' : '',
-    `SameSite=${opts.sameSite}`,
-  ];
-  if (opts.domain) {
-    const domain = opts.domain.startsWith('.') ? opts.domain : `.${opts.domain}`;
-    parts.push(`Domain=${domain}`);
+function safeDecodeURIComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
   }
-  const header = parts.filter(Boolean).join('; ');
-
-  if (process.env.DEBUG_COOKIES === '1') {
-    console.log(`[Cookie] Building Set-Cookie for ${name}:`, {
-      domain: opts.domain,
-      finalDomain: opts.domain ? (opts.domain.startsWith('.') ? opts.domain : `.${opts.domain}`) : 'none',
-      httpOnly: opts.httpOnly,
-      secure: opts.secure,
-      sameSite: opts.sameSite,
-      maxAge: `${Math.floor(opts.maxAge / 1000)}s`,
-      headerLength: header.length,
-    });
-  }
-
-  return header;
 }
 
-/**
- * 🔒 إعداد Access Token في httpOnly Cookie (30 دقيقة، HttpOnly)
- */
-export function setAccessTokenCookie(res: Response, accessToken: string): void {
-  const header = buildSetCookieHeader(
-    COOKIE_NAMES.ACCESS_TOKEN,
-    accessToken,
-    ACCESS_TOKEN_OPTIONS,
+function parseCookieHeader(cookieHeader?: string): Record<string, string> {
+  if (!cookieHeader) return {};
+
+  return cookieHeader.split(';').reduce(
+    (acc, cookie) => {
+      const trimmed = cookie.trim();
+      if (!trimmed) return acc;
+
+      const separatorIndex = trimmed.indexOf('=');
+      if (separatorIndex < 1) return acc;
+
+      const name = trimmed.slice(0, separatorIndex);
+      const value = trimmed.slice(separatorIndex + 1);
+      if (!name || !value) return acc;
+
+      acc[name] = safeDecodeURIComponent(value);
+      return acc;
+    },
+    {} as Record<string, string>,
   );
-  res.append('Set-Cookie', header);
 }
 
-/**
- * 🔒 إعداد Refresh Token في httpOnly Cookie (14 يوم، HttpOnly)
- */
-export function setRefreshTokenCookie(res: Response, refreshToken: string): void {
-  const header = buildSetCookieHeader(
-    COOKIE_NAMES.REFRESH_TOKEN,
-    refreshToken,
-    REFRESH_TOKEN_OPTIONS,
-  );
-  res.append('Set-Cookie', header);
-}
+// ============================================================================
+// Cookie Setters
+// ============================================================================
 
 /**
- * 🔒 إعداد CSRF Token (24 ساعة، غير HttpOnly لقراءة الـ frontend)
+ * Set access token cookie
  */
-export function setCsrfTokenCookie(res: Response, csrfToken: string): void {
-  const header = buildSetCookieHeader(
-    COOKIE_NAMES.CSRF_TOKEN,
-    csrfToken,
-    CSRF_TOKEN_OPTIONS as CookieOptions,
-  );
-  res.append('Set-Cookie', header);
-}
-
-/**
- * 🔒 إعداد كوكي "تذكر هذا الجهاز" (تحسين تجربة 2FA)
- */
-export function setTrustedDeviceCookie(res: Response, deviceId: string): void {
-  const header = buildSetCookieHeader(
-    COOKIE_NAMES.TRUSTED_DEVICE,
-    deviceId,
-    TRUSTED_DEVICE_OPTIONS,
-  );
-  res.append('Set-Cookie', header);
-}
-
-/**
- * 🔒 قراءة معرف الجهاز الموثوق من الطلب
- */
-export function getTrustedDeviceId(req: Request): string | null {
-  const name = COOKIE_NAMES.TRUSTED_DEVICE;
-  const raw = req.headers.cookie;
-  if (!raw) return null;
-  const match = new RegExp(`(?:^|;)\\s*${encodeURIComponent(name)}=([^;]*)`).exec(raw);
-  return match ? decodeURIComponent(match[1].trim()) : null;
-}
-
-/**
- * 🔒 مسح كوكي الجهاز الموثوق
- */
-export function clearTrustedDeviceCookie(res: Response): void {
-  const domainOpt = getCookieDomainForClear();
-  clearCookieManually(res, COOKIE_NAMES.TRUSTED_DEVICE, {
+export function setAccessTokenCookie(
+  res: Response,
+  token: string,
+  maxAge?: number,
+): void {
+  res.cookie(COOKIE_NAMES.accessToken, token, {
+    ...baseCookieOptions,
     httpOnly: true,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    path: '/',
-    domain: domainOpt,
+    maxAge: (maxAge ?? TOKEN_EXPIRY.accessToken) * 1000,
   });
 }
 
 /**
- * 🔒 مسح كوكي واحد باستخدام Set-Cookie مع Max-Age=0
- * هذا أكثر فعالية من clearCookie() الذي قد يفشل بسبب domain/path mismatch
+ * Set refresh token cookie
  */
-function clearCookieManually(res: Response, name: string, opts: Pick<CookieOptions, 'httpOnly' | 'secure' | 'sameSite' | 'path' | 'domain'>): void {
-  const parts = [
-    `${encodeURIComponent(name)}=`,
-    `Path=${opts.path}`,
-    'Max-Age=0', // مسح فوري
-    'Expires=Thu, 01 Jan 1970 00:00:00 GMT', // للتوافق مع المتصفحات القديمة
-    opts.httpOnly ? 'HttpOnly' : '',
-    opts.secure ? 'Secure' : '',
-    `SameSite=${opts.sameSite}`,
-  ];
-  if (opts.domain) {
-    const domain = opts.domain.startsWith('.') ? opts.domain : `.${opts.domain}`;
-    parts.push(`Domain=${domain}`);
-  }
-  const header = parts.filter(Boolean).join('; ');
-
-  if (process.env.DEBUG_COOKIES === '1') {
-    console.log(`[Cookie] Clearing ${name}:`, {
-      domain: opts.domain,
-      path: opts.path,
-      secure: opts.secure,
-    });
-  }
-
-  res.append('Set-Cookie', header);
+export function setRefreshTokenCookie(
+  res: Response,
+  token: string,
+  maxAge?: number,
+): void {
+  res.cookie(COOKIE_NAMES.refreshToken, token, {
+    ...baseCookieOptions,
+    httpOnly: true,
+    maxAge: (maxAge ?? TOKEN_EXPIRY.refreshToken) * 1000,
+  });
 }
 
 /**
- * 🔒 مسح جميع Auth Cookies
- * يستخدم Set-Cookie manual بدلاً من clearCookie لضمان المسح الفعلي
+ * Set CSRF token cookie
  */
-export function clearAuthCookies(res: Response): void {
-  const domainOpt = getCookieDomainForClear();
-  
-  // مسح Access Token
-  clearCookieManually(res, COOKIE_NAMES.ACCESS_TOKEN, {
-    httpOnly: true,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    path: '/',
-    domain: domainOpt,
-  });
-  
-  // مسح Refresh Token
-  clearCookieManually(res, COOKIE_NAMES.REFRESH_TOKEN, {
-    httpOnly: true,
-    secure: cookieSecure,
-    sameSite: getSameSite(),
-    path: '/',
-    domain: domainOpt,
-  });
-  
-  // مسح CSRF Token
-  clearCookieManually(res, COOKIE_NAMES.CSRF_TOKEN, {
-    httpOnly: false,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    path: '/',
-    domain: domainOpt,
-  });
-
-  // مسح Trusted Device (2FA) حتى يُطلب التحقق في الدخول التالي إن وُجد
-  clearCookieManually(res, COOKIE_NAMES.TRUSTED_DEVICE, {
-    httpOnly: true,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    path: '/',
-    domain: domainOpt,
+export function setCsrfTokenCookie(
+  res: Response,
+  token: string,
+  maxAge?: number,
+): void {
+  res.cookie(COOKIE_NAMES.csrfToken, token, {
+    ...baseCookieOptions,
+    httpOnly: false, // Must be accessible by JS
+    maxAge: (maxAge ?? TOKEN_EXPIRY.csrfToken) * 1000,
   });
 }
 
 /**
- * 🔒 مسح Refresh Token Cookie فقط
+ * Set device ID cookie for tracking
+ */
+export function setDeviceIdCookie(res: Response, deviceId: string): void {
+  res.cookie(COOKIE_NAMES.deviceId, deviceId, {
+    ...baseCookieOptions,
+    httpOnly: true,
+    maxAge: TOKEN_EXPIRY.deviceId * 1000,
+  });
+}
+
+// ============================================================================
+// Cookie Clearers
+// ============================================================================
+
+/**
+ * Clear access token cookie
+ */
+export function clearAccessTokenCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAMES.accessToken, {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+  if (!isProduction) return;
+
+  // Clear legacy names for backward compatibility.
+  res.clearCookie('access_token', { ...baseCookieOptions, httpOnly: true });
+  res.clearCookie('__Secure-access_token', {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+}
+
+/**
+ * Clear refresh token cookie
  */
 export function clearRefreshTokenCookie(res: Response): void {
-  const domainOpt = getCookieDomainForClear();
-  clearCookieManually(res, COOKIE_NAMES.REFRESH_TOKEN, {
+  res.clearCookie(COOKIE_NAMES.refreshToken, {
+    ...baseCookieOptions,
     httpOnly: true,
-    secure: cookieSecure,
-    sameSite: getSameSite(),
-    path: '/',
-    domain: domainOpt,
+  });
+  if (!isProduction) return;
+
+  res.clearCookie('refresh_token', { ...baseCookieOptions, httpOnly: true });
+  res.clearCookie('__Secure-refresh_token', {
+    ...baseCookieOptions,
+    httpOnly: true,
   });
 }
 
 /**
- * 🔒 استخراج Access Token من Cookie أو Authorization Header
- * 
- * الأولوية:
- * 1. Cookie (الأكثر أماناً)
- * 2. Authorization Header (للتوافق مع mobile apps/APIs)
+ * Clear CSRF token cookie
  */
-export function extractAccessToken(req: Request): string | null {
-  // أولاً: من الـ Cookie
-  const cookieToken = req.cookies?.[COOKIE_NAMES.ACCESS_TOKEN];
-  if (cookieToken) {
-    return cookieToken;
+export function clearCsrfTokenCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAMES.csrfToken, {
+    ...baseCookieOptions,
+    httpOnly: false,
+  });
+  if (!isProduction) return;
+
+  res.clearCookie('csrf_token', { ...baseCookieOptions, httpOnly: false });
+  res.clearCookie('__Secure-csrf_token', {
+    ...baseCookieOptions,
+    httpOnly: false,
+  });
+  res.clearCookie('__Host-csrf_token', {
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: '/',
+    httpOnly: false,
+  });
+}
+
+/**
+ * Clear device ID cookie
+ */
+export function clearDeviceIdCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAMES.deviceId, {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+  if (!isProduction) return;
+
+  res.clearCookie('device_id', { ...baseCookieOptions, httpOnly: true });
+  res.clearCookie('__Secure-device_id', {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+  res.clearCookie('__Host-device_id', {
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: '/',
+    httpOnly: true,
+  });
+}
+
+/**
+ * Clear all auth cookies
+ */
+export function clearAuthCookies(res: Response): void {
+  clearAccessTokenCookie(res);
+  clearRefreshTokenCookie(res);
+  clearCsrfTokenCookie(res);
+  clearDeviceIdCookie(res);
+}
+
+// ============================================================================
+// Token Extraction
+// ============================================================================
+
+/**
+ * Extract access token from request
+ */
+export function extractAccessToken(req: Request): string | undefined {
+  const cookies = parseCookieHeader(req.headers['cookie']);
+
+  return (
+    cookies[COOKIE_NAMES.accessToken] ||
+    cookies['access_token'] ||
+    cookies['__Secure-access_token']
+  );
+}
+
+/**
+ * Extract refresh token from request
+ */
+export function extractRefreshToken(req: Request): string | undefined {
+  const cookies = parseCookieHeader(req.headers['cookie']);
+
+  return (
+    cookies[COOKIE_NAMES.refreshToken] ||
+    cookies['refresh_token'] ||
+    cookies['__Secure-refresh_token']
+  );
+}
+
+/**
+ * Extract CSRF token from request
+ */
+export function extractCsrfToken(req: Request): string | undefined {
+  // First try header
+  const headerToken = req.headers['x-csrf-token'];
+  if (headerToken) {
+    return Array.isArray(headerToken) ? headerToken[0] : headerToken;
   }
-  
-  // ثانياً: من Authorization Header (fallback)
-  const authHeader = req.headers?.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  
-  return null;
+
+  // Then try cookie
+  const cookies = parseCookieHeader(req.headers['cookie']);
+
+  return (
+    cookies[COOKIE_NAMES.csrfToken] ||
+    cookies['csrf_token'] ||
+    cookies['__Host-csrf_token'] ||
+    cookies['__Secure-csrf_token']
+  );
 }
 
 /**
- * استخراج Refresh Token من Cookie
+ * Extract trusted device ID from request
  */
-export function extractRefreshToken(req: Request): string | null {
-  return req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN] || null;
+export function getTrustedDeviceId(req: Request): string | undefined {
+  const cookies = parseCookieHeader(req.headers['cookie']);
+
+  return (
+    cookies[COOKIE_NAMES.deviceId] ||
+    cookies['device_id'] ||
+    cookies['__Secure-device_id'] ||
+    cookies['__Host-device_id']
+  );
 }
 
-/**
- * استخراج CSRF Token من Header
- */
-export function extractCsrfToken(req: Request): string | null {
-  return req.headers?.['x-csrf-token'] as string || null;
-}
+// ============================================================================
+// CSRF Token Generation
+// ============================================================================
 
 /**
- * التحقق من وجود tokens صالحة
- */
-export function hasAuthTokens(req: Request): { 
-  hasAccessToken: boolean; 
-  hasRefreshToken: boolean;
-  hasCsrfToken: boolean;
-} {
-  return {
-    hasAccessToken: !!extractAccessToken(req),
-    hasRefreshToken: !!extractRefreshToken(req),
-    hasCsrfToken: !!extractCsrfToken(req),
-  };
-}
-
-/**
- * 🔒 توليد CSRF Token مرتبط بـ Session
- * يربط الـ CSRF token بـ sessionId للحماية الإضافية
- * @param sessionId - معرف الجلسة (اختياري - إذا لم يُمرر يُولد token عشوائي)
+ * Generate a cryptographically secure CSRF token
  */
 export function generateCsrfToken(): string {
-  // 🔒 Random token for Double Submit Cookie pattern (SameSite=Lax prevents cross-origin cookie setting)
-  const { randomBytes } = require('crypto') as typeof import('crypto');
   return randomBytes(32).toString('hex');
 }
 
+function constantTimeTokenEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+  return timingSafeEqual(aBuffer, bBuffer);
+}
+
+// ============================================================================
+// CSRF Validation
+// ============================================================================
+
+export interface CsrfValidationResult {
+  valid: boolean;
+  reason?: string;
+}
+
 /**
- * 🔒 التحقق من CSRF Token
+ * Validate CSRF token from request
  */
-export function validateCsrfToken(req: Request): { valid: boolean; reason?: string } {
-  const headerToken = extractCsrfToken(req);
-  const cookieToken = req.cookies?.[COOKIE_NAMES.CSRF_TOKEN];
-  
-  if (!headerToken) {
-    return { valid: false, reason: 'Missing CSRF token in header' };
+export function validateCsrfToken(
+  req: Request,
+  originOnly: boolean = false,
+): CsrfValidationResult {
+  // In production, validate Origin/Referer headers
+  if (isProduction) {
+    const origin = req.headers['origin'];
+    const referer = req.headers['referer'];
+
+    // If origin is present, it must match our domain
+    if (origin) {
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+      const isLocalhostOrigin =
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalizedOrigin);
+
+      const allowedOrigins = [
+        `https://rukny.io`,
+        `https://www.rukny.io`,
+        `https://app.rukny.io`,
+        `https://accounts.rukny.io`,
+        `https://business.rukny.io`,
+        `https://forms.rukny.io`,
+        `https://developers.rukny.io`,
+        `https://hq.rukny.io`,
+        `https://admin.rukny.io`,
+        process.env.FRONTEND_URL,
+        process.env.AUTH_FRONTEND_URL,
+        process.env.DEVELOPERS_FRONTEND_URL,
+        process.env.BUSINESS_FRONTEND_URL,
+        process.env.FORMS_FRONTEND_URL,
+        process.env.HQ_FRONTEND_URL,
+      ]
+        .filter(Boolean)
+        .map((value) => value!.replace(/\/+$/, ''));
+
+      if (!isLocalhostOrigin && !allowedOrigins.includes(normalizedOrigin)) {
+        return { valid: false, reason: 'Invalid origin' };
+      }
+    }
+
+    // Check referer as fallback
+    if (!origin && referer) {
+      try {
+        const refererUrl = new URL(referer);
+        const isLocalhost =
+          refererUrl.hostname === 'localhost' ||
+          refererUrl.hostname === '127.0.0.1';
+        if (!refererUrl.hostname.endsWith('rukny.io') && !isLocalhost) {
+          return { valid: false, reason: 'Invalid referer' };
+        }
+      } catch {
+        return { valid: false, reason: 'Invalid referer URL' };
+      }
+    }
   }
-  
-  if (!cookieToken) {
-    return { valid: false, reason: 'Missing CSRF token in cookie' };
+
+  // In development or if we only want to validate origin (e.g. login endpoints), skip double-submit check
+  if (isDevelopment || originOnly) {
+    return { valid: true };
   }
-  
-  if (headerToken !== cookieToken) {
+
+  // Validate double-submit cookie pattern
+  const cookieToken = extractCsrfToken(req);
+  const headerToken = req.headers['x-csrf-token'];
+
+  if (!cookieToken || !headerToken) {
+    return { valid: false, reason: 'Missing CSRF token' };
+  }
+
+  const headerTokenValue = Array.isArray(headerToken)
+    ? headerToken[0]
+    : headerToken;
+
+  if (!constantTimeTokenEqual(cookieToken, headerTokenValue)) {
     return { valid: false, reason: 'CSRF token mismatch' };
   }
-  
-  return { valid: true };
-}
-
-/**
- * 🔒 CSRF Protection للـ Refresh Endpoint
- * 
- * بما أننا نستخدم SameSite=Lax (لدعم OAuth)،
- * نحتاج حماية إضافية للـ POST requests مثل /auth/refresh
- * 
- * نتحقق من:
- * 1. Origin header يطابق FRONTEND_URL
- * 2. أو Referer header من نفس الـ domain
- */
-export function validateCsrfOrigin(req: Request): { valid: boolean; reason?: string } {
-  const origin = req.headers?.origin;
-  const referer = req.headers?.referer;
-
-  // Helper function to check if origin is a local network IP
-  const isLocalNetworkOrigin = (url: string | undefined): boolean => {
-    if (!url) return false;
-    return (
-      url.includes('localhost') || 
-      url.includes('127.0.0.1') ||
-      /^https?:\/\/192\.168\.\d+\.\d+/.test(url) ||
-      /^https?:\/\/10\.\d+\.\d+\.\d+/.test(url) ||
-      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/.test(url)
-    );
-  };
-
-  // 🔒 في Development، نسمح بأي origin محلي (localhost + local network IPs)
-  if (!isProduction) {
-    if (!origin && !referer) {
-      return { valid: true }; // Postman, curl, etc.
-    }
-    if (isLocalNetworkOrigin(origin)) {
-      return { valid: true };
-    }
-    if (isLocalNetworkOrigin(referer)) {
-      return { valid: true };
-    }
-  }
-
-  // 🔒 في Production، نتحقق من Origin
-  if (origin) {
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      return { valid: true };
-    }
-    return { valid: false, reason: `Invalid origin: ${origin}` };
-  }
-
-  // 🔒 Fallback إلى Referer (مع حماية من referer غير صالح)
-  if (referer) {
-    try {
-      const refererOrigin = new URL(referer).origin;
-      if (ALLOWED_ORIGINS.includes(refererOrigin)) {
-        return { valid: true };
-      }
-      return { valid: false, reason: `Invalid referer: ${referer}` };
-    } catch {
-      return { valid: false, reason: 'Invalid referer format' };
-    }
-  }
-
-  // 🔒 لا يوجد Origin أو Referer - نرفض في Production
-  if (isProduction) {
-    return { valid: false, reason: 'Missing origin header' };
-  }
 
   return { valid: true };
 }
 
-/**
- * 🔒 قائمة Origins المسموحة (للتصدير)
- */
-export function getAllowedOrigins(): string[] {
-  return [...ALLOWED_ORIGINS];
-}
+// ============================================================================
+// Export all
+// ============================================================================
+
+export default {
+  setAccessTokenCookie,
+  setRefreshTokenCookie,
+  setCsrfTokenCookie,
+  setDeviceIdCookie,
+  clearAccessTokenCookie,
+  clearRefreshTokenCookie,
+  clearCsrfTokenCookie,
+  clearDeviceIdCookie,
+  clearAuthCookies,
+  extractAccessToken,
+  extractRefreshToken,
+  extractCsrfToken,
+  getTrustedDeviceId,
+  generateCsrfToken,
+  validateCsrfToken,
+};

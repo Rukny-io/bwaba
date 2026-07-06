@@ -17,10 +17,15 @@ import { AccountLockoutController } from './account-lockout.controller';
 import { AccountLinkingService } from './account-linking.service';
 import { AccountLinkingController } from './account-linking.controller';
 import { IdentityVerificationService } from './identity-verification.service';
+import { IdentityUploadService } from './identity-upload.service';
+import { TwoFactorRequiredGuard } from '../../core/common/guards/auth/two-factor-required.guard';
 import { IdentityVerificationController } from './identity-verification.controller';
+import { RuknyVerifiedService } from './rukny-verified.service';
+import { RuknyVerifiedController } from './rukny-verified.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { LinkedInStrategy } from './strategies/linkedin.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { SecurityModule } from '../../infrastructure/security/security.module';
 import { EmailModule } from '../../integrations/email/email.module';
@@ -29,8 +34,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
 import { RedisModule } from '../../core/cache/redis.module';
 import { StoresModule } from '../stores/stores.module';
-
 import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
+
+import { OAuthProviderController } from './oauth-provider/oauth-provider.controller';
+import { OAuthProviderService } from './oauth-provider/oauth-provider.service';
 
 @Module({
   imports: [
@@ -62,6 +69,8 @@ import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
     AccountLockoutController,
     AccountLinkingController,
     IdentityVerificationController,
+    RuknyVerifiedController,
+    OAuthProviderController,
   ],
   providers: [
     AuthService,
@@ -74,10 +83,15 @@ import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
     AccountLockoutService,
     AccountLinkingService,
     IdentityVerificationService,
+    IdentityUploadService,
+    TwoFactorRequiredGuard,
+    RuknyVerifiedService,
     JwtStrategy,
     GoogleStrategy,
     LinkedInStrategy,
+    FacebookStrategy,
     RedisOAuthCodeService,
+    OAuthProviderService,
   ],
   exports: [
     AuthService,
@@ -90,6 +104,8 @@ import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
     AccountLockoutService,
     AccountLinkingService,
     IdentityVerificationService,
+    RuknyVerifiedService,
+    OAuthProviderService,
   ],
 })
 export class AuthModule {}

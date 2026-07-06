@@ -4,8 +4,31 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
-import { RedisService } from '../../../core/cache/redis.service';
+import { FormsCacheService } from './forms-cache.service';
 import { S3Service } from '../../../services/s3.service';
+import {
+  FormAnalyticsTrackerService,
+  type AnalyticsTrackContext,
+} from './form-analytics-tracker.service';
+import { FormTeamAccessService } from '../form-team/form-team-access.service';
+import { FormTeamRole, InvitationStatus } from '@prisma/client';
+import { SubscriptionsService } from '../../subscriptions/subscriptions.service';
+import {
+  ACTIVE_FORM_FILTER,
+  isActiveForm,
+} from '../utils/forms-deletion.util';
+
+/** Transformed form payload stored in cache before branding metadata is applied. */
+type PublicFormData = {
+  id: string;
+  userId?: string | null;
+  webhookSecret?: string | null;
+  deletedAt?: Date | string | null;
+} & Record<string, any>;
+
+type PublicFormWithBranding = Omit<PublicFormData, 'webhookSecret'> & {
+  showBranding: boolean;
+};
 
 /**
  * 🔍 Forms Queries Service
@@ -25,8 +48,11 @@ export class FormsQueriesService {
 
   constructor(
     private prisma: PrismaService,
-    private redisService: RedisService,
+    private formsCache: FormsCacheService,
     private s3Service: S3Service,
+    private analyticsTracker: FormAnalyticsTrackerService,
+    private formTeamAccess: FormTeamAccessService,
+    private subscriptions: SubscriptionsService,
   ) {}
 
   /**
@@ -40,6 +66,7 @@ export class FormsQueriesService {
     linkedStoreId?: string;
     page?: number;
     limit?: number;
+    visibility?: 'active' | 'deleted' | 'all';
   }) {
     const {
       userId,
@@ -49,11 +76,20 @@ export class FormsQueriesService {
       linkedStoreId,
       page = 1,
       limit = 20,
+      visibility = 'active',
     } = filters || {};
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (userId) where.userId = userId;
+    if (visibility === 'active') {
+      Object.assign(where, ACTIVE_FORM_FILTER);
+    } else if (visibility === 'deleted') {
+      where.deletedAt = { not: null };
+    }
+    if (userId) {
+      const ownerIds = await this.formTeamAccess.listAccessibleOwnerIds(userId);
+      where.userId = ownerIds.length === 1 ? userId : { in: ownerIds };
+    }
     if (type) where.type = type;
     if (status) where.status = status;
     if (linkedEventId) where.linkedEventId = linkedEventId;
@@ -73,30 +109,94 @@ export class FormsQueriesService {
       this.prisma.form.count({ where }),
     ]);
 
+    const sharedWorkspacesByOwnerId = userId
+      ? await this.loadSharedWorkspaceMeta(userId)
+      : new Map<
+          string,
+          { id: string; name: string; role: FormTeamRole; avatar: string | null }
+        >();
+
     // Convert S3 keys to presigned URLs
     const formsWithUrls = await Promise.all(
       forms.map((form) => this.transformFormImages(form)),
     );
 
+    const enriched = formsWithUrls.map((form) =>
+      this.applySharingMeta(form, userId, sharedWorkspacesByOwnerId),
+    );
+
+    if (userId) {
+      enriched.sort((a, b) => {
+        const aOwn = a.userId === userId ? 0 : 1;
+        const bOwn = b.userId === userId ? 0 : 1;
+        if (aOwn !== bOwn) return aOwn - bOwn;
+        if (aOwn === 1) {
+          const workspaceCmp = (a.sharedWorkspace?.name ?? '').localeCompare(
+            b.sharedWorkspace?.name ?? '',
+            'ar',
+          );
+          if (workspaceCmp !== 0) return workspaceCmp;
+        }
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
+    }
+
     return {
-      forms: formsWithUrls,
+      forms: enriched.map(({ webhookSecret: _webhookSecret, ...form }) => form),
       pagination: { total, page, limit, pages: Math.ceil(total / limit) },
     };
+  }
+
+  private async loadSharedWorkspaceMeta(userId: string) {
+    const memberships = await this.prisma.formTeamMember.findMany({
+      where: { userId, status: InvitationStatus.ACCEPTED },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            email: true,
+            profile: { select: { name: true, username: true, avatar: true } },
+          },
+        },
+      },
+    });
+
+    const entries = await Promise.all(
+      memberships.map(async (membership) => {
+        const name =
+          membership.workspace.profile?.name?.trim() ||
+          membership.workspace.profile?.username?.trim() ||
+          membership.workspace.email;
+        const avatar = membership.workspace.profile?.avatar
+          ? await this.getPresignedUrl(membership.workspace.profile.avatar)
+          : null;
+
+        return [
+          membership.workspaceId,
+          {
+            id: membership.workspaceId,
+            name,
+            role: membership.role,
+            avatar,
+          },
+        ] as const;
+      }),
+    );
+
+    return new Map(entries);
   }
 
   /**
    * Find public forms by username (with caching)
    */
   async findPublicByUsername(username: string, limit = 10) {
-    const cacheKey = `forms:public:${username}:${limit}`;
-
-    // Try cache first
-    try {
-      const cached = await this.redisService.get(cacheKey);
-      if (cached) return cached;
-    } catch (e) {
-      // Cache miss, continue
-    }
+    const cacheKey = this.formsCache.publicFormsKey(username, limit);
+    const cached = await this.formsCache.get<{ forms: unknown[]; featured: unknown }>(
+      cacheKey,
+    );
+    if (cached) return cached;
 
     const profile = await this.prisma.profile.findUnique({
       where: { username },
@@ -106,7 +206,11 @@ export class FormsQueriesService {
     if (!profile) return { forms: [], featured: null };
 
     const forms = await this.prisma.form.findMany({
-      where: { userId: profile.userId, status: 'PUBLISHED' },
+      where: {
+        userId: profile.userId,
+        status: 'PUBLISHED',
+        ...ACTIVE_FORM_FILTER,
+      },
       select: {
         id: true,
         title: true,
@@ -144,17 +248,7 @@ export class FormsQueriesService {
         : null,
     };
 
-    // Cache result
-    try {
-      await this.redisService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.CACHE_TTL.PUBLIC_FORMS,
-      );
-    } catch (e) {
-      // Cache write failed, continue
-    }
-
+    await this.formsCache.set(cacheKey, result, this.CACHE_TTL.PUBLIC_FORMS);
     return result;
   }
 
@@ -168,30 +262,47 @@ export class FormsQueriesService {
     });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (userId && form.userId !== userId) {
-      throw new ForbiddenException('Not authorized to access this form');
+    if (!userId && !isActiveForm(form)) {
+      throw new NotFoundException('Form not found');
+    }
+    if (userId) {
+      await this.formTeamAccess.assertFormReadAccess(
+        form,
+        userId,
+        'Not authorized to access this form',
+      );
     }
 
-    return this.transformFormWithUser(form);
+    const transformed = await this.transformFormWithUser(form);
+    const enriched = userId
+      ? this.applySharingMeta(
+          transformed,
+          userId,
+          await this.loadSharedWorkspaceMeta(userId),
+        )
+      : { ...transformed, isShared: false, sharedWorkspace: null };
+
+    return this.sanitizePublicForm(enriched);
   }
 
   /**
    * Find form by slug (with caching for public access)
    */
-  async findBySlug(slug: string) {
-    const cacheKey = `form:slug:${slug}`;
-
-    // Try cache first
-    try {
-      const cached = await this.redisService.get(cacheKey);
-      if (cached) {
-        const form = cached;
-        // Increment view count async (don't wait)
-        this.incrementViewCount(form.id).catch(() => {});
-        return form;
+  async findBySlug(
+    slug: string,
+    trackContext?: AnalyticsTrackContext,
+    options?: { skipViewTrack?: boolean },
+  ): Promise<PublicFormWithBranding> {
+    const cacheKey = this.formsCache.formBySlugKey(slug);
+    const cached = await this.formsCache.get<PublicFormData>(cacheKey);
+    if (cached) {
+      if (!isActiveForm(cached)) {
+        throw new NotFoundException('Form not found');
       }
-    } catch (e) {
-      // Cache miss
+      if (!options?.skipViewTrack) {
+        this.incrementViewCount(cached.id, trackContext).catch(() => {});
+      }
+      return this.attachPublicBrandingMeta(cached);
     }
 
     const form = await this.prisma.form.findUnique({
@@ -200,36 +311,93 @@ export class FormsQueriesService {
     });
 
     if (!form) throw new NotFoundException('Form not found');
+    if (!isActiveForm(form) || form.status !== 'PUBLISHED') {
+      throw new NotFoundException('Form not found');
+    }
 
-    // Increment view count async
-    this.incrementViewCount(form.id).catch(() => {});
+    if (!options?.skipViewTrack) {
+      this.incrementViewCount(form.id, trackContext).catch(() => {});
+    }
 
     const transformed = await this.transformFormWithUser(form);
 
     // Cache only published forms
     if (form.status === 'PUBLISHED') {
-      try {
-        await this.redisService.set(
-          cacheKey,
-          JSON.stringify(transformed),
-          this.CACHE_TTL.FORM_BY_SLUG,
-        );
-      } catch (e) {
-        // Cache write failed
-      }
+      await this.formsCache.set(
+        cacheKey,
+        transformed,
+        this.CACHE_TTL.FORM_BY_SLUG,
+      );
     }
 
-    return transformed;
+    return this.attachPublicBrandingMeta(transformed);
+  }
+
+  private async attachPublicBrandingMeta(
+    form: PublicFormData,
+  ): Promise<PublicFormWithBranding> {
+    const sanitized = this.sanitizePublicForm(form);
+    if (!form.userId) {
+      return { ...sanitized, showBranding: true };
+    }
+    const limits = await this.subscriptions.getUserLimits(form.userId);
+    return {
+      ...sanitized,
+      showBranding: !limits.removeWatermark,
+    };
+  }
+
+  async trackPublicView(slug: string, trackContext?: AnalyticsTrackContext) {
+    const form = await this.prisma.form.findUnique({
+      where: { slug },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    if (!form || !isActiveForm(form) || form.status !== 'PUBLISHED') {
+      throw new NotFoundException('Form not found');
+    }
+
+    await this.incrementViewCount(form.id, trackContext);
+    return { ok: true as const };
   }
 
   /**
    * Get form steps
    */
+  async getWebhookDeliveries(userId: string, formId: string, limit?: number) {
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      select: { id: true, userId: true },
+    });
+    if (!form) throw new NotFoundException('Form not found');
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'manage_webhooks',
+    );
+    return this.prisma.form_webhook_delivery.findMany({
+      where: { formId },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(limit ?? 50, 1), 100),
+      select: {
+        id: true,
+        eventId: true,
+        status: true,
+        attempt: true,
+        responseCode: true,
+        latencyMs: true,
+        errorMessage: true,
+        createdAt: true,
+        webhookUrl: true,
+      },
+    });
+  }
+
   async getFormSteps(userId: string, formId: string) {
     const form = await this.prisma.form.findUnique({ where: { id: formId } });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     return this.prisma.form_steps.findMany({
       where: { formId },
@@ -238,15 +406,46 @@ export class FormsQueriesService {
     });
   }
 
+  private applySharingMeta<T extends { userId: string }>(
+    form: T,
+    viewerUserId: string | undefined,
+    workspaceByOwnerId: Map<
+      string,
+      { id: string; name: string; role: FormTeamRole; avatar: string | null }
+    >,
+  ) {
+    const isShared = Boolean(viewerUserId && form.userId !== viewerUserId);
+    const workspaceMeta = isShared
+      ? workspaceByOwnerId.get(form.userId)
+      : undefined;
+
+    return {
+      ...form,
+      isShared,
+      sharedWorkspace: workspaceMeta
+        ? {
+            id: workspaceMeta.id,
+            name: workspaceMeta.name,
+            role: workspaceMeta.role,
+            avatar: workspaceMeta.avatar,
+          }
+        : null,
+    };
+  }
+
   // ============ Private Helpers ============
 
-  private async incrementViewCount(formId: string) {
+  private async incrementViewCount(
+    formId: string,
+    trackContext?: AnalyticsTrackContext,
+  ) {
     await this.prisma.form
       .update({
         where: { id: formId },
         data: { viewCount: { increment: 1 } },
       })
       .catch(() => {});
+    void this.analyticsTracker.recordView(formId, trackContext);
   }
 
   private async getPresignedUrl(key: string | null): Promise<string | null> {
@@ -261,6 +460,15 @@ export class FormsQueriesService {
   private async transformFormImages(form: any) {
     if (!form?.coverImage || form.coverImage.startsWith('http')) return form;
     return { ...form, coverImage: await this.getPresignedUrl(form.coverImage) };
+  }
+
+  /** Strip secrets from API responses (owner may re-configure via update). */
+  private sanitizePublicForm<T extends Record<string, unknown>>(
+    form: T,
+  ): Omit<T, 'webhookSecret'> {
+    if (!form) return form as Omit<T, 'webhookSecret'>;
+    const { webhookSecret: _ws, ...rest } = form;
+    return rest as Omit<T, 'webhookSecret'>;
   }
 
   private async transformFormWithUser(form: any) {

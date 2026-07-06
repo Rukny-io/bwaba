@@ -27,6 +27,7 @@ export class LinkedInController {
     private readonly config: ConfigService,
   ) {
     this.frontendUrl =
+      this.config.get<string>('APP_FRONTEND_URL') ||
       this.config.get<string>('FRONTEND_URL') ||
       this.config.get<string>('FRONTEND_URL_DEV') ||
       'http://localhost:3000';
@@ -55,15 +56,20 @@ export class LinkedInController {
     @Query('error') error: string,
     @Res() res: Response,
   ) {
-    const redirectBase = `${this.frontendUrl}/app/links`;
+    const redirectBase = `${this.frontendUrl}/links`;
 
     if (error || !code) {
-      return res.redirect(`${redirectBase}?linkedin=error&reason=${error ?? 'no_code'}`);
+      return res.redirect(
+        `${redirectBase}?linkedin=error&reason=${error ?? 'no_code'}`,
+      );
     }
 
     try {
       const userId = Buffer.from(state, 'base64url').toString('utf8');
-      const result = await this.linkedinService.exchangeCodeAndSave(code, userId);
+      const result = await this.linkedinService.exchangeCodeAndSave(
+        code,
+        userId,
+      );
 
       // Auto-create a PROFILE_CARD block if the user doesn't have one yet
       try {
@@ -110,10 +116,7 @@ export class LinkedInController {
    */
   @Post('blocks')
   @UseGuards(JwtAuthGuard)
-  async createBlock(
-    @Req() req: any,
-    @Body('type') type: 'PROFILE_CARD',
-  ) {
+  async createBlock(@Req() req: any, @Body('type') type: 'PROFILE_CARD') {
     return this.linkedinService.createBlock(req.user.id, type);
   }
 
@@ -139,10 +142,7 @@ export class LinkedInController {
    */
   @Patch('blocks/:blockId/toggle')
   @UseGuards(JwtAuthGuard)
-  async toggleBlock(
-    @Req() req: any,
-    @Param('blockId') blockId: string,
-  ) {
+  async toggleBlock(@Req() req: any, @Param('blockId') blockId: string) {
     return this.linkedinService.toggleBlock(req.user.id, blockId);
   }
 
@@ -151,10 +151,7 @@ export class LinkedInController {
    */
   @Delete('blocks/:blockId')
   @UseGuards(JwtAuthGuard)
-  async deleteBlock(
-    @Req() req: any,
-    @Param('blockId') blockId: string,
-  ) {
+  async deleteBlock(@Req() req: any, @Param('blockId') blockId: string) {
     return this.linkedinService.deleteBlock(req.user.id, blockId);
   }
 }

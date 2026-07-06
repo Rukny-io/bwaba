@@ -7,7 +7,7 @@ import { DB_CLEANUP } from './database.constants';
 /**
  * ⚡ Database Cleanup Service
  * Automatically cleans up old/expired data to keep the database performant
- * 
+ *
  * Features:
  * - Distributed locking for multi-instance safety
  * - Batch deletion to avoid long transactions
@@ -35,7 +35,10 @@ export class DatabaseCleanupService implements OnModuleInit {
     // Run initial cleanup on startup (delayed to not block startup)
     setTimeout(() => {
       this.runAllCleanups().catch((err) => {
-        this.logger.warn('Initial cleanup failed (this is non-critical):', err instanceof Error ? err.message : err);
+        this.logger.warn(
+          'Initial cleanup failed (this is non-critical):',
+          err instanceof Error ? err.message : err,
+        );
       });
     }, 30000); // 30 seconds after startup
   }
@@ -106,7 +109,9 @@ export class DatabaseCleanupService implements OnModuleInit {
       ]);
 
       // Log results
-      const successCount = results.filter((r) => r.status === 'fulfilled').length;
+      const successCount = results.filter(
+        (r) => r.status === 'fulfilled',
+      ).length;
       const failCount = results.filter((r) => r.status === 'rejected').length;
 
       results.forEach((result, index) => {
@@ -115,7 +120,7 @@ export class DatabaseCleanupService implements OnModuleInit {
           // Check if it's a connection error
           if (
             error?.code === 'P1001' ||
-            error?.message?.includes('Can\'t reach database server')
+            error?.message?.includes("Can't reach database server")
           ) {
             this.logger.warn(
               `Cleanup task ${index} skipped: Database temporarily unreachable. This is non-critical and will retry in the next cycle.`,
@@ -137,8 +142,11 @@ export class DatabaseCleanupService implements OnModuleInit {
         );
       }
     } catch (error) {
-      const err = error as any;
-      if (err?.code === 'P1001' || err?.message?.includes('Can\'t reach database server')) {
+      const err = error;
+      if (
+        err?.code === 'P1001' ||
+        err?.message?.includes("Can't reach database server")
+      ) {
         this.logger.warn(
           '⚠️ Database cleanup skipped: Database is currently unreachable. Will retry in the next cycle.',
         );
@@ -160,17 +168,23 @@ export class DatabaseCleanupService implements OnModuleInit {
    */
   private async acquireLock(): Promise<boolean> {
     try {
-      const instanceId = process.env.HOSTNAME || process.env.POD_NAME || `instance-${process.pid}`;
-      
+      const instanceId =
+        process.env.HOSTNAME ||
+        process.env.POD_NAME ||
+        `instance-${process.pid}`;
+
       // Try to set the lock with NX (only if not exists)
       const lockValue = `${instanceId}:${Date.now()}`;
       await this.redis.set(this.LOCK_KEY, lockValue, this.LOCK_TTL);
-      
+
       // Verify we got the lock
       const currentValue = await this.redis.get<string>(this.LOCK_KEY);
       return currentValue === lockValue;
     } catch (error) {
-      this.logger.warn('Failed to acquire distributed lock, proceeding anyway:', error);
+      this.logger.warn(
+        'Failed to acquire distributed lock, proceeding anyway:',
+        error,
+      );
       // If Redis is down, allow cleanup to run (single instance fallback)
       return true;
     }
@@ -207,7 +221,8 @@ export class DatabaseCleanupService implements OnModuleInit {
             // جلسات مُبطلة قديمة (أكثر من 7 أيام)
             {
               isRevoked: true,
-              revokedAt: { lt: this.daysAgo(7) } },
+              revokedAt: { lt: this.daysAgo(7) },
+            },
           ],
         },
       });
@@ -231,7 +246,10 @@ export class DatabaseCleanupService implements OnModuleInit {
 
       const result = await this.prisma.whatsappOtp.deleteMany({
         where: {
-          OR: [{ expiresAt: { lt: new Date() } }, { verified: true, createdAt: { lt: cutoff } }],
+          OR: [
+            { expiresAt: { lt: new Date() } },
+            { verified: true, createdAt: { lt: cutoff } },
+          ],
         },
       });
 
@@ -355,12 +373,17 @@ export class DatabaseCleanupService implements OnModuleInit {
     try {
       const result = await this.prisma.verification_codes.deleteMany({
         where: {
-          OR: [{ expiresAt: { lt: new Date() } }, { verified: true, verifiedAt: { lt: this.daysAgo(1) } }],
+          OR: [
+            { expiresAt: { lt: new Date() } },
+            { verified: true, verifiedAt: { lt: this.daysAgo(1) } },
+          ],
         },
       });
 
       if (result.count > 0) {
-        this.logger.debug(`Cleaned up ${result.count} expired verification codes`);
+        this.logger.debug(
+          `Cleaned up ${result.count} expired verification codes`,
+        );
       }
       return result.count;
     } catch (error) {
@@ -437,24 +460,33 @@ export class DatabaseCleanupService implements OnModuleInit {
     expiredPending2FA: number;
   }> {
     const now = new Date();
-    const [expiredSessions, expiredOTPs, oldSecurityLogs, oldLoginAttempts, expiredPending2FA] =
-      await Promise.all([
-        this.prisma.session.count({
-          where: { OR: [{ expiresAt: { lt: now } }, { isRevoked: true }] },
-        }),
-        this.prisma.whatsappOtp.count({
-          where: { expiresAt: { lt: now } },
-        }),
-        this.prisma.securityLog.count({
-          where: { createdAt: { lt: this.daysAgo(DB_CLEANUP.RETENTION.SECURITY_LOGS) } },
-        }),
-        this.prisma.loginAttempt.count({
-          where: { createdAt: { lt: this.daysAgo(DB_CLEANUP.RETENTION.LOGIN_ATTEMPTS) } },
-        }),
-        this.prisma.pendingTwoFactorSession.count({
-          where: { expiresAt: { lt: now } },
-        }),
-      ]);
+    const [
+      expiredSessions,
+      expiredOTPs,
+      oldSecurityLogs,
+      oldLoginAttempts,
+      expiredPending2FA,
+    ] = await Promise.all([
+      this.prisma.session.count({
+        where: { OR: [{ expiresAt: { lt: now } }, { isRevoked: true }] },
+      }),
+      this.prisma.whatsappOtp.count({
+        where: { expiresAt: { lt: now } },
+      }),
+      this.prisma.securityLog.count({
+        where: {
+          createdAt: { lt: this.daysAgo(DB_CLEANUP.RETENTION.SECURITY_LOGS) },
+        },
+      }),
+      this.prisma.loginAttempt.count({
+        where: {
+          createdAt: { lt: this.daysAgo(DB_CLEANUP.RETENTION.LOGIN_ATTEMPTS) },
+        },
+      }),
+      this.prisma.pendingTwoFactorSession.count({
+        where: { expiresAt: { lt: now } },
+      }),
+    ]);
 
     return {
       expiredSessions,
@@ -475,7 +507,7 @@ export class DatabaseCleanupService implements OnModuleInit {
     // Check if it's a database connection error
     if (
       error?.code === 'P1001' ||
-      error?.message?.includes('Can\'t reach database server') ||
+      error?.message?.includes("Can't reach database server") ||
       error?.message?.includes('ECONNREFUSED') ||
       error?.message?.includes('ETIMEDOUT')
     ) {
@@ -484,7 +516,9 @@ export class DatabaseCleanupService implements OnModuleInit {
       );
     } else if (error?.code?.startsWith('P')) {
       // Other Prisma errors
-      this.logger.warn(`${taskName}: Prisma error ${error.code}: ${error.message}`);
+      this.logger.warn(
+        `${taskName}: Prisma error ${error.code}: ${error.message}`,
+      );
     } else {
       // Unexpected errors
       this.logger.error(`${taskName}: Unexpected error:`, error);

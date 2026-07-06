@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsEmail, IsArray, MaxLength, Matches } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsArray,
+  MaxLength,
+  Matches,
+} from 'class-validator';
 
 export class CreateContactDto {
   @IsString()

@@ -4,14 +4,37 @@ import {
   ConflictException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
+import * as crypto from 'node:crypto';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
-import { RedisService } from '../../../core/cache/redis.service';
+import { FormsCacheService } from './forms-cache.service';
 import { S3Service } from '../../../services/s3.service';
 import { CreateFormDto, UpdateFormDto, FormStatus } from '../dto';
 import { SecureIds } from '../../../core/common/utils/secure-id.util';
 import { EmailService } from '../../../integrations/email/email.service';
-import { v4 as uuidv4 } from 'uuid';
+import { mapFormFieldData } from '../utils/form-field.mapper';
+import { duplicateFormStructure } from '../utils/duplicate-form.helper';
+import {
+  generateRandomFormSlug,
+  normalizeFormSlugInput,
+} from '../utils/form-slug.util';
+import { GoogleSheetsService } from '../../../integrations/google-sheets/google-sheets.service';
+import {
+  buildFormCoverS3Key,
+  decodeCoverImageDataUrl,
+  resolveExistingCoverImageKey,
+  validateFormCoverImageBuffer,
+} from '../utils/form-cover-image.util';
+import { StorageService } from '../../storage/storage.service';
+import { FormTeamAccessService } from '../form-team/form-team-access.service';
+import { WebhookService } from './webhook.service';
+import { SubscriptionsService } from '../../subscriptions/subscriptions.service';
+import { assertFormUpdatePlanLimits } from '../utils/form-plan-enforcement.util';
+import { FormsDeletionService } from './forms-deletion.service';
+import type { FormDeletionRequestMeta } from './forms-deletion.service';
+import { isActiveForm } from '../utils/forms-deletion.util';
 
 /**
  * 📝 Forms Commands Service
@@ -28,17 +51,24 @@ export class FormsCommandsService {
 
   constructor(
     private prisma: PrismaService,
-    private redisService: RedisService,
+    private formsCache: FormsCacheService,
     private s3Service: S3Service,
     private emailService: EmailService,
+    @Inject(forwardRef(() => GoogleSheetsService))
+    private googleSheetsService: GoogleSheetsService,
+    private storageService: StorageService,
+    private webhookService: WebhookService,
+    private subscriptionsService: SubscriptionsService,
+    private formTeamAccess: FormTeamAccessService,
+    private formsDeletion: FormsDeletionService,
   ) {}
 
   /**
    * Create a new form
-   * Images are processed outside the transaction to keep it short; email is sent asynchronously.
+   * Images are processed outside the transaction to keep it short.
    */
   async create(userId: string, createFormDto: CreateFormDto) {
-    const uniqueSlug = await this.generateUniqueSlug(createFormDto.slug);
+    const uniqueSlug = await this.resolveCreateSlug(createFormDto.slug);
     await this.validateLinkedEntities(userId, createFormDto);
 
     const {
@@ -47,6 +77,8 @@ export class FormsCommandsService {
       coverImage,
       bannerImages,
       bannerDisplayMode,
+      enableGoogleSheets,
+      storageProvider: _storageProvider,
       ...formData
     } = createFormDto;
     const isMultiStep = formData.isMultiStep || (steps && steps.length > 0);
@@ -89,12 +121,21 @@ export class FormsCommandsService {
       });
     });
 
-    // Send notification email asynchronously (do not block response)
-    void this.sendFormCreatedEmail(form).catch((e) =>
-      console.error('Form created email failed:', e),
-    );
+    if (form?.status === 'PUBLISHED') {
+      void this.sendFormPublishedEmail(form).catch((e) =>
+        console.error('Form published email failed:', e),
+      );
+    }
 
-    await this.invalidateUserCache(form?.userId);
+    if (enableGoogleSheets && form?.id) {
+      void this.googleSheetsService
+        .createSpreadsheet(form.id, userId)
+        .catch((e) =>
+          console.error('Auto Google Sheets setup failed:', e?.message || e),
+        );
+    }
+
+    await this.invalidateFormCaches(form);
     return form;
   }
 
@@ -105,7 +146,10 @@ export class FormsCommandsService {
     const form = await this.prisma.form.findUnique({ where: { id: formId } });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
+
+    const limits = await this.subscriptionsService.getUserLimits(userId);
+    assertFormUpdatePlanLimits(limits, updateFormDto);
 
     // Check slug uniqueness if changed
     if (updateFormDto.slug && updateFormDto.slug !== form.slug) {
@@ -117,6 +161,11 @@ export class FormsCommandsService {
 
     const { fields, steps, coverImage, bannerImages, ...formData } =
       updateFormDto;
+
+    if (formData.webhookEnabled === true && !form.webhookSecret) {
+      (formData as Record<string, unknown>).webhookSecret =
+        crypto.randomBytes(32).toString('hex');
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       // Process cover image
@@ -147,16 +196,14 @@ export class FormsCommandsService {
         },
       });
 
-      // Update fields if provided
+      // Update fields if provided (preserve ids so submission data stays linked)
       if (fields) {
         await tx.formField.deleteMany({ where: { formId } });
-        for (const field of fields) {
-          await tx.formField.create({
-            data: {
-              id: SecureIds.field(),
-              formId,
-              ...this.mapFieldData(field),
-            },
+        if (fields.length > 0) {
+          await tx.formField.createMany({
+            data: fields.map((field: any) =>
+              this.mapFieldData(field, formId, null, { preserveId: true }),
+            ),
           });
         }
       }
@@ -167,7 +214,18 @@ export class FormsCommandsService {
       });
     });
 
-    await this.invalidateUserCache(updated?.userId);
+    await this.invalidateFormCaches(updated, form.slug);
+
+    if (
+      formData.status === 'PUBLISHED' &&
+      form.status === 'DRAFT' &&
+      updated
+    ) {
+      void this.sendFormPublishedEmail(updated).catch((e) =>
+        console.error('Form published email failed:', e),
+      );
+    }
+
     return this.transformCoverImage(updated);
   }
 
@@ -175,31 +233,60 @@ export class FormsCommandsService {
    * Update form status
    */
   async updateStatus(userId: string, formId: string, status: FormStatus) {
-    const form = await this.prisma.form.findUnique({ where: { id: formId } });
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      include: {
+        user: { include: { profile: true } },
+      },
+    });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(form, userId, 'publish_form');
 
     const updated = await this.prisma.form.update({
       where: { id: formId },
       data: { status },
+      include: {
+        user: { include: { profile: true } },
+      },
     });
 
-    await this.invalidateUserCache(updated?.userId);
+    if (status === 'PUBLISHED' && form.status === 'DRAFT') {
+      void this.sendFormPublishedEmail(updated).catch((e) =>
+        console.error('Form published email failed:', e),
+      );
+    }
+
+    await this.invalidateFormCaches(updated);
     return updated;
   }
 
   /**
-   * Delete a form
+   * Soft-delete a form (30-day retention before permanent purge).
    */
-  async delete(userId: string, formId: string) {
-    const form = await this.prisma.form.findUnique({ where: { id: formId } });
+  async delete(
+    userId: string,
+    formId: string,
+    confirmTitle: string,
+    reason: string | undefined,
+    meta: FormDeletionRequestMeta,
+  ) {
+    return this.formsDeletion.softDelete(
+      userId,
+      formId,
+      confirmTitle,
+      reason,
+      meta,
+    );
+  }
 
-    if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
-
-    await this.prisma.form.delete({ where: { id: formId } });
-    await this.invalidateUserCache(form.userId);
+  async restore(
+    userId: string,
+    formId: string,
+    confirmTitle: string,
+    meta: FormDeletionRequestMeta,
+  ) {
+    return this.formsDeletion.restore(userId, formId, confirmTitle, meta);
   }
 
   /**
@@ -208,41 +295,62 @@ export class FormsCommandsService {
   async duplicate(userId: string, formId: string) {
     const original = await this.prisma.form.findUnique({
       where: { id: formId },
-      include: { fields: true },
     });
 
     if (!original) throw new NotFoundException('Form not found');
-    if (original.userId !== userId)
-      throw new ForbiddenException('Not authorized');
+    if (!isActiveForm(original)) {
+      throw new BadRequestException('Cannot duplicate a deleted form');
+    }
+    await this.formTeamAccess.assertFormPermission(
+      original,
+      userId,
+      'create_form',
+    );
 
-    // Generate unique slug
-    const slug = await this.generateUniqueSlug(`${original.slug}-copy`);
+    const slug = await this.ensureUniqueSlug(
+      `${original.slug}-copy`,
+      true,
+    );
+    const newFormId = SecureIds.form();
 
     const {
-      id,
-      createdAt,
-      updatedAt,
-      viewCount,
-      submissionCount,
+      id: _id,
+      createdAt: _c,
+      updatedAt: _u,
+      viewCount: _v,
+      submissionCount: _s,
       ...formData
     } = original;
 
-    return this.prisma.form.create({
-      data: {
-        ...formData,
-        title: `${original.title} (Copy)`,
-        slug,
-        status: 'DRAFT',
-        viewCount: 0,
-        submissionCount: 0,
-        fields: {
-          create: original.fields.map(
-            ({ id, formId, createdAt, updatedAt, ...field }) => field,
-          ),
+    const duplicated = await this.prisma.$transaction(async (tx) => {
+      await tx.form.create({
+        data: {
+          id: newFormId,
+          ...formData,
+          title: `${original.title} (Copy)`,
+          slug,
+          status: 'DRAFT',
+          viewCount: 0,
+          submissionCount: 0,
         },
-      },
-      include: { fields: { orderBy: { order: 'asc' } } },
+      });
+
+      await duplicateFormStructure(tx, formId, newFormId);
+
+      return tx.form.findUnique({
+        where: { id: newFormId },
+        include: {
+          fields: { orderBy: { order: 'asc' } },
+          steps: {
+            orderBy: { order: 'asc' },
+            include: { form_fields: { orderBy: { order: 'asc' } } },
+          },
+        },
+      });
     });
+
+    await this.invalidateFormCaches(duplicated);
+    return duplicated;
   }
 
   // ============ Private Helpers ============
@@ -290,41 +398,28 @@ export class FormsCommandsService {
 
         if (step.fields?.length) {
           await tx.formField.createMany({
-            data: step.fields.map((field: any) => ({
-              id: SecureIds.field(),
-              formId,
-              stepId,
-              ...this.mapFieldData(field),
-            })),
+            data: step.fields.map((field: any) =>
+              this.mapFieldData(field, formId, stepId, { preserveId: true }),
+            ),
           });
         }
       }
     } else if (fields?.length) {
       await tx.formField.createMany({
-        data: fields.map((field: any) => ({
-          id: SecureIds.field(),
-          formId,
-          ...this.mapFieldData(field),
-        })),
+        data: fields.map((field: any) =>
+          this.mapFieldData(field, formId, null, { preserveId: true }),
+        ),
       });
     }
   }
 
-  private mapFieldData(field: any) {
-    return {
-      label: field.label,
-      description: field.description || null,
-      type: field.type,
-      order: field.order,
-      required: field.required ?? false,
-      placeholder: field.placeholder || null,
-      options: field.options || null,
-      minValue: field.minValue ?? null,
-      maxValue: field.maxValue ?? null,
-      allowedFileTypes: field.allowedFileTypes || [],
-      maxFileSize: field.maxFileSize ?? null,
-      maxFiles: field.maxFiles ?? null,
-    };
+  private mapFieldData(
+    field: any,
+    formId: string,
+    stepId?: string | null,
+    options?: { preserveId?: boolean },
+  ) {
+    return mapFormFieldData(field, formId, stepId, options);
   }
 
   private async processCoverImage(
@@ -333,30 +428,12 @@ export class FormsCommandsService {
     formId: string,
   ): Promise<string | undefined> {
     if (!coverImage) return undefined;
-    if (
-      coverImage.startsWith('http') ||
-      coverImage.startsWith('users/') ||
-      coverImage.startsWith('forms/')
-    ) {
-      return coverImage;
-    }
 
-    let normalized = coverImage;
-    if (coverImage.startsWith('image/') && coverImage.includes(';base64,')) {
-      normalized = 'data:' + coverImage;
-    }
+    const existingKey = resolveExistingCoverImageKey(coverImage, userId, formId);
+    if (existingKey) return existingKey;
 
-    if (!normalized.startsWith('data:image/')) return coverImage;
-
-    const matches = normalized.match(/^data:image\/([\w+]+);base64,(.+)$/);
-    if (!matches) throw new BadRequestException('Invalid image format');
-
-    const [, , base64Data] = matches;
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    if (buffer.length > this.MAX_COVER_SIZE) {
-      throw new BadRequestException('Cover image exceeds 5MB limit');
-    }
+    const buffer = decodeCoverImageDataUrl(coverImage);
+    await validateFormCoverImageBuffer(buffer);
 
     const sharp = await import('sharp');
     const processed = await sharp
@@ -368,12 +445,19 @@ export class FormsCommandsService {
       .webp({ quality: 85 })
       .toBuffer();
 
-    const s3Key = `users/${userId}/forms/${formId}/cover/${uuidv4()}.webp`;
+    const s3Key = buildFormCoverS3Key(userId, formId);
     await this.s3Service.uploadBuffer(
       this.bucket,
       s3Key,
       processed,
       'image/webp',
+    );
+
+    await this.storageService.registerFormCoverFile(
+      userId,
+      formId,
+      s3Key,
+      processed.length,
     );
 
     return s3Key;
@@ -392,16 +476,56 @@ export class FormsCommandsService {
     return results;
   }
 
-  private async generateUniqueSlug(baseSlug: string): Promise<string> {
+  /** Create: random 6-char slug when omitted; otherwise normalize and ensure uniqueness. */
+  private async resolveCreateSlug(provided?: string): Promise<string> {
+    const trimmed = provided?.trim();
+    if (!trimmed) {
+      return this.generateUniqueRandomSlug();
+    }
+    const base = normalizeFormSlugInput(trimmed);
+    if (!base) {
+      return this.generateUniqueRandomSlug();
+    }
+    return this.ensureUniqueSlug(base, true);
+  }
+
+  private async generateUniqueRandomSlug(): Promise<string> {
+    const maxAttempts = 32;
+    for (let i = 0; i < maxAttempts; i++) {
+      const slug = generateRandomFormSlug();
+      const existing = await this.prisma.form.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+      if (!existing) return slug;
+    }
+    throw new ConflictException('Could not generate a unique form slug');
+  }
+
+  private async ensureUniqueSlug(
+    baseSlug: string,
+    appendCounterOnCollision: boolean,
+  ): Promise<string> {
     let slug = baseSlug;
     let counter = 1;
     while (await this.prisma.form.findUnique({ where: { slug } })) {
+      if (!appendCounterOnCollision) {
+        return this.generateUniqueRandomSlug();
+      }
       slug = `${baseSlug}-${counter++}`;
     }
     return slug;
   }
 
-  private async sendFormCreatedEmail(form: any) {
+  private async sendFormPublishedEmail(form: {
+    id: string;
+    title: string;
+    slug: string;
+    user?: {
+      email: string;
+      profile?: { name?: string | null } | null;
+    } | null;
+  }) {
     if (form?.user?.email) {
       try {
         const userName =
@@ -416,18 +540,30 @@ export class FormsCommandsService {
           },
         );
       } catch (e) {
-        console.error('Error sending form created notification:', e);
+        console.error('Error sending form published notification:', e);
       }
     }
   }
 
-  private async invalidateUserCache(userId?: string) {
-    if (userId) {
-      try {
-        await this.redisService.del(`dashboard:stats:${userId}`);
-      } catch (e) {
-        console.warn('Redis del error:', e);
-      }
+  private async invalidateFormCaches(
+    form?: { id?: string; slug?: string; userId?: string } | null,
+    previousSlug?: string,
+  ) {
+    if (!form?.userId) return;
+
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId: form.userId },
+      select: { username: true },
+    });
+
+    await this.formsCache.invalidateForm({
+      slug: form.slug,
+      userId: form.userId,
+      username: profile?.username ?? undefined,
+    });
+
+    if (previousSlug && previousSlug !== form.slug) {
+      await this.formsCache.invalidateForm({ slug: previousSlug });
     }
   }
 
@@ -457,5 +593,63 @@ export class FormsCommandsService {
       _count: { select: { submissions: true } },
       user: { include: { profile: true } },
     };
+  }
+
+  async testWebhook(userId: string, formId: string) {
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      select: {
+        id: true,
+        userId: true,
+        webhookUrl: true,
+        webhookSecret: true,
+        webhookEnabled: true,
+      },
+    });
+
+    if (!form) throw new NotFoundException('Form not found');
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'manage_webhooks',
+    );
+    if (!form.webhookUrl) {
+      throw new BadRequestException('Webhook URL is not configured');
+    }
+
+    const result = await this.webhookService.testWebhook(
+      form.webhookUrl,
+      form.webhookSecret ?? undefined,
+    );
+
+    return {
+      success: result.success,
+      statusCode: result.statusCode,
+      latencyMs: result.latencyMs,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  async regenerateWebhookSecret(userId: string, formId: string) {
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      select: { id: true, userId: true },
+    });
+
+    if (!form) throw new NotFoundException('Form not found');
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'manage_webhooks',
+    );
+
+    const webhookSecret = crypto.randomBytes(32).toString('hex');
+
+    await this.prisma.form.update({
+      where: { id: formId },
+      data: { webhookSecret },
+    });
+
+    return { webhookSecret };
   }
 }

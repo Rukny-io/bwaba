@@ -1,10 +1,16 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { FormTeamAccessService } from '../form-team/form-team-access.service';
+import {
+  buildCurrentFieldKeySet,
+  collectOrphanedFieldKeys,
+  formatOrphanedFieldKeyLabel,
+  getSubmissionFieldValue,
+} from '../utils/submission-field-data.util';
 
 /**
  * 📊 Forms Export Service
@@ -14,7 +20,10 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
  */
 @Injectable()
 export class FormsExportService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private formTeamAccess: FormTeamAccessService,
+  ) {}
 
   /**
    * Export submissions to CSV
@@ -26,7 +35,11 @@ export class FormsExportService {
     });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'export_submissions',
+    );
 
     const submissions = await this.prisma.form_submissions.findMany({
       where: { formId },
@@ -46,7 +59,6 @@ export class FormsExportService {
       throw new BadRequestException('No submissions to export');
     }
 
-    // Build CSV
     const headers = [
       '#',
       'Name',
@@ -80,7 +92,10 @@ export class FormsExportService {
       ];
 
       form.fields.forEach((field) => {
-        const value = sub.data[field.label] ?? sub.data[field.id];
+        const value = getSubmissionFieldValue(
+          sub.data as Record<string, unknown>,
+          field,
+        );
         row.push(this.formatCellValue(value));
       });
 
@@ -99,6 +114,101 @@ export class FormsExportService {
   }
 
   /**
+   * Export only answers from deleted / orphaned fields (Plus plan and above).
+   */
+  async exportOrphanedSubmissions(userId: string, formId: string) {
+    const form = await this.prisma.form.findUnique({
+      where: { id: formId },
+      include: { fields: { orderBy: { order: 'asc' } } },
+    });
+
+    if (!form) throw new NotFoundException('Form not found');
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'export_submissions',
+    );
+
+    const submissions = await this.prisma.form_submissions.findMany({
+      where: { formId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            profile: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { completedAt: 'desc' },
+    });
+
+    if (submissions.length === 0) {
+      throw new BadRequestException('No submissions to export');
+    }
+
+    const currentFieldKeys = buildCurrentFieldKeySet(form.fields);
+    const orphanedKeys = collectOrphanedFieldKeys(submissions, currentFieldKeys);
+
+    if (orphanedKeys.length === 0) {
+      throw new BadRequestException(
+        'لا توجد استجابات من حقول محذوفة للتصدير',
+      );
+    }
+
+    const headers = [
+      '#',
+      'Submission ID',
+      'Name',
+      'Email',
+      'Date',
+      'Time',
+      ...orphanedKeys.map((key) => formatOrphanedFieldKeyLabel(key)),
+    ];
+
+    const rows = submissions.map((sub, index) => {
+      const date = sub.completedAt;
+      const dateStr = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      const row = [
+        (index + 1).toString(),
+        sub.id,
+        sub.user?.profile?.name || 'Anonymous',
+        sub.user?.email || '-',
+        dateStr,
+        timeStr,
+      ];
+
+      orphanedKeys.forEach((key) => {
+        row.push(
+          this.formatCellValue((sub.data as Record<string, unknown>)[key]),
+        );
+      });
+
+      return row;
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => this.escapeCsvCell(cell)).join(','))
+      .join('\r\n');
+
+    return {
+      content: csvContent,
+      filename: `${form.slug}-orphaned-submissions-${Date.now()}.csv`,
+      contentType: 'text/csv',
+    };
+  }
+
+  /**
    * Get form analytics
    */
   async getFormAnalytics(userId: string, formId: string) {
@@ -108,7 +218,12 @@ export class FormsExportService {
     });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'view_analytics',
+    );
 
     const submissions = await this.prisma.form_submissions.findMany({
       where: { formId },

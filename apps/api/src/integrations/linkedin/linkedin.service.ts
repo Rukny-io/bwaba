@@ -31,9 +31,12 @@ export class LinkedInService {
   ) {
     this.clientId = this.config.get<string>('LINKEDIN_CLIENT_ID') ?? '';
     this.clientSecret = this.config.get<string>('LINKEDIN_CLIENT_SECRET') ?? '';
-    this.redirectUri = this.config.get<string>('LINKEDIN_INTEGRATION_CALLBACK_URL') ??
-      this.config.get<string>('LINKEDIN_CALLBACK_URL') ?? '';
-    this.scopes = this.config.get<string>('LINKEDIN_SCOPES') ?? 'openid profile email';
+    this.redirectUri =
+      this.config.get<string>('LINKEDIN_INTEGRATION_CALLBACK_URL') ??
+      this.config.get<string>('LINKEDIN_CALLBACK_URL') ??
+      '';
+    this.scopes =
+      this.config.get<string>('LINKEDIN_SCOPES') ?? 'openid profile email';
   }
 
   private ensureConfigured() {
@@ -119,7 +122,8 @@ export class LinkedInService {
       throw new BadRequestException('فشل جلب بيانات حساب LinkedIn.');
     }
 
-    const name = profile.name ||
+    const name =
+      profile.name ||
       `${profile.given_name || ''} ${profile.family_name || ''}`.trim() ||
       'LinkedIn User';
 
@@ -257,7 +261,14 @@ export class LinkedInService {
     const blocks = await this.getActiveBlocks(userId);
 
     return {
-      profile: conn ?? null,
+      profile: conn
+        ? {
+            name: conn.name,
+            email: conn.email,
+            profilePicUrl: conn.profilePicUrl,
+            profileUrl: conn.profileUrl,
+          }
+        : null,
       blocks,
     };
   }

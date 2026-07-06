@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { S3Service } from '../../shared/services/s3.service';
 import { FileCategory } from '@prisma/client';
@@ -12,18 +17,47 @@ import { encode } from 'blurhash';
 
 // Dangerous file extensions that should be blocked
 const BLOCKED_EXTENSIONS = [
-  '.exe', '.bat', '.cmd', '.sh', '.php', '.asp', '.aspx', '.jsp',
-  '.cgi', '.pl', '.py', '.rb', '.js', '.mjs', '.ts', '.ps1',
-  '.vbs', '.wsf', '.hta', '.scr', '.pif', '.com', '.jar', '.war',
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.sh',
+  '.php',
+  '.asp',
+  '.aspx',
+  '.jsp',
+  '.cgi',
+  '.pl',
+  '.py',
+  '.rb',
+  '.js',
+  '.mjs',
+  '.ts',
+  '.ps1',
+  '.vbs',
+  '.wsf',
+  '.hta',
+  '.scr',
+  '.pif',
+  '.com',
+  '.jar',
+  '.war',
 ];
 
 // Dangerous SVG elements/attributes that could execute scripts
 const SVG_DANGEROUS_ELEMENTS = [
-  'script', 'foreignobject', 'iframe', 'object', 'embed',
-  'use', 'animate', 'set',
+  'script',
+  'foreignobject',
+  'iframe',
+  'object',
+  'embed',
+  'use',
+  'animate',
+  'set',
 ];
-const SVG_DANGEROUS_ATTRS = /^(on\w+|href|xlink:href|formaction|action|data|srcdoc)$/i;
-const SVG_DANGEROUS_VALUES = /javascript:|data:text\/html|vbscript:|livescript:/i;
+const SVG_DANGEROUS_ATTRS =
+  /^(on\w+|href|xlink:href|formaction|action|data|srcdoc)$/i;
+const SVG_DANGEROUS_VALUES =
+  /javascript:|data:text\/html|vbscript:|livescript:/i;
 
 /**
  * Storage Service
@@ -66,7 +100,10 @@ export class StorageService {
   /**
    * Validate that a form belongs to the user
    */
-  private async validateFormOwnership(userId: string, formId: string): Promise<void> {
+  private async validateFormOwnership(
+    userId: string,
+    formId: string,
+  ): Promise<void> {
     const form = await this.prisma.form.findFirst({
       where: { id: formId, userId },
       select: { id: true },
@@ -79,7 +116,10 @@ export class StorageService {
   /**
    * Validate that an event belongs to the user
    */
-  private async validateEventOwnership(userId: string, eventId: string): Promise<void> {
+  private async validateEventOwnership(
+    userId: string,
+    eventId: string,
+  ): Promise<void> {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, userId },
       select: { id: true },
@@ -92,9 +132,12 @@ export class StorageService {
   /**
    * Validate that a product belongs to the user (via store)
    */
-  private async validateProductOwnership(userId: string, productId: string): Promise<void> {
+  private async validateProductOwnership(
+    userId: string,
+    productId: string,
+  ): Promise<void> {
     const product = await this.prisma.products.findFirst({
-      where: { 
+      where: {
         id: productId,
         stores: { userId },
       },
@@ -157,7 +200,9 @@ export class StorageService {
   /**
    * Get image dimensions from buffer
    */
-  private async getImageDimensions(buffer: Buffer): Promise<{ width: number; height: number } | null> {
+  private async getImageDimensions(
+    buffer: Buffer,
+  ): Promise<{ width: number; height: number } | null> {
     try {
       const metadata = await sharp(buffer).metadata();
       return {
@@ -183,7 +228,10 @@ export class StorageService {
     files: number;
     trashUsed: number;
     categoryBreakdown: Record<string, number>;
+    formsUsed: number;
   }> {
+    await this.recalculateStorageUsed(userId).catch(() => undefined);
+
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
       select: { storageUsed: true, storageLimit: true },
@@ -214,6 +262,11 @@ export class StorageService {
       categoryBreakdown[row.category] = Number(row._sum.fileSize || 0);
     }
 
+    const formsUsed =
+      (categoryBreakdown.FORM_COVER ?? 0) +
+      (categoryBreakdown.FORM_BANNER ?? 0) +
+      (categoryBreakdown.FORM_SUBMISSION ?? 0);
+
     return {
       used,
       limit,
@@ -222,6 +275,7 @@ export class StorageService {
       files: fileCount,
       trashUsed,
       categoryBreakdown,
+      formsUsed,
     };
   }
 
@@ -272,7 +326,12 @@ export class StorageService {
 
     // Generate unique key based on category
     const filename = `${uuidv4()}.${this.getExtensionFromMime(contentType)}`;
-    const key = this.generateKeyForCategory(userId, category, filename, entityId);
+    const key = this.generateKeyForCategory(
+      userId,
+      category,
+      filename,
+      entityId,
+    );
 
     // Generate presigned PUT URL (15 minutes expiry)
     const expiresIn = 900;
@@ -340,13 +399,19 @@ export class StorageService {
         height = dims?.height ?? null;
       }
     } catch (error) {
-      this.logger.warn(`Failed to process uploaded file for BlurHash: ${error.message}`);
+      this.logger.warn(
+        `Failed to process uploaded file for BlurHash: ${error.message}`,
+      );
     }
 
     // Delete old file if single-file category
     if (category === FileCategory.AVATAR || category === FileCategory.COVER) {
       await this.deleteFileByCategory(userId, category);
-    } else if (entityId && (category === FileCategory.FORM_COVER || category === FileCategory.EVENT_COVER)) {
+    } else if (
+      entityId &&
+      (category === FileCategory.FORM_COVER ||
+        category === FileCategory.EVENT_COVER)
+    ) {
       await this.deleteFileByEntityAndCategory(userId, entityId, category);
     }
 
@@ -424,13 +489,28 @@ export class StorageService {
       case FileCategory.COVER:
         return this.s3Service.getCoverKey(userId, filename);
       case FileCategory.FORM_COVER:
-        return this.s3Service.getFormFileKey(userId, entityId!, 'cover', filename);
+        return this.s3Service.getFormFileKey(
+          userId,
+          entityId,
+          'cover',
+          filename,
+        );
       case FileCategory.FORM_BANNER:
-        return this.s3Service.getFormFileKey(userId, entityId!, 'banner', filename);
+        return this.s3Service.getFormFileKey(
+          userId,
+          entityId,
+          'banner',
+          filename,
+        );
       case FileCategory.EVENT_COVER:
-        return this.s3Service.getEventFileKey(userId, entityId!, 'cover', filename);
+        return this.s3Service.getEventFileKey(
+          userId,
+          entityId,
+          'cover',
+          filename,
+        );
       case FileCategory.PRODUCT_IMAGE:
-        return this.s3Service.getProductFileKey(userId, entityId!, filename);
+        return this.s3Service.getProductFileKey(userId, entityId, filename);
       default:
         return `users/${userId}/files/${filename}`;
     }
@@ -669,7 +749,10 @@ export class StorageService {
    */
   private isSvgBuffer(buffer: Buffer): boolean {
     const head = buffer.subarray(0, 512).toString('utf-8').trim();
-    return head.startsWith('<svg') || head.startsWith('<?xml') && head.includes('<svg');
+    return (
+      head.startsWith('<svg') ||
+      (head.startsWith('<?xml') && head.includes('<svg'))
+    );
   }
 
   /**
@@ -1179,6 +1262,31 @@ export class StorageService {
   }
 
   /**
+   * Register a form cover upload (replaces any existing cover for the same form).
+   */
+  async registerFormCoverFile(
+    userId: string,
+    formId: string,
+    key: string,
+    fileSize: number,
+  ): Promise<void> {
+    await this.deleteFileByEntityAndCategory(
+      userId,
+      formId,
+      FileCategory.FORM_COVER,
+    );
+
+    await this.trackFile(userId, {
+      key,
+      fileName: 'form-cover.webp',
+      fileType: 'image/webp',
+      fileSize: BigInt(fileSize),
+      category: FileCategory.FORM_COVER,
+      entityId: formId,
+    });
+  }
+
+  /**
    * Track a file in the database
    */
   private async trackFile(
@@ -1442,10 +1550,17 @@ export class StorageService {
     });
     const used = Number(agg._sum.fileSize || 0);
 
-    await this.prisma.profile.update({
+    const profile = await this.prisma.profile.findUnique({
       where: { userId },
-      data: { storageUsed: BigInt(used) },
+      select: { userId: true },
     });
+
+    if (profile) {
+      await this.prisma.profile.update({
+        where: { userId },
+        data: { storageUsed: BigInt(used) },
+      });
+    }
 
     this.logger.debug(`Recalculated storage for user ${userId}: ${used} bytes`);
     return { used };

@@ -78,7 +78,7 @@ export class ImageOptimizationService {
     const hasAlpha = metadata.hasAlpha || false;
 
     // تحسين الصورة الأصلية
-    let processedOriginal = sharp(buffer)
+    const processedOriginal = sharp(buffer)
       .rotate() // إزالة EXIF وتصحيح الاتجاه
       .resize(maxWidth, maxHeight, {
         fit: 'inside',
@@ -146,12 +146,10 @@ export class ImageOptimizationService {
     size: { width: number; height: number | null; fit: 'cover' | 'inside' },
     format: 'webp' | 'avif' | 'jpeg' | 'png',
   ): Promise<Buffer> {
-    let pipeline = sharp(buffer)
-      .rotate()
-      .resize(size.width, size.height, {
-        fit: size.fit,
-        withoutEnlargement: true,
-      });
+    let pipeline = sharp(buffer).rotate().resize(size.width, size.height, {
+      fit: size.fit,
+      withoutEnlargement: true,
+    });
 
     switch (format) {
       case 'webp':
@@ -237,7 +235,12 @@ export class ImageOptimizationService {
 
     // رفع الصورة الأصلية
     const originalKey = `${basePath}/original.webp`;
-    await this.s3Service.uploadBuffer(bucket, originalKey, original, 'image/webp');
+    await this.s3Service.uploadBuffer(
+      bucket,
+      originalKey,
+      original,
+      'image/webp',
+    );
 
     // رفع النسخ المختلفة
     const variantUrls: { [key: string]: string } = {};

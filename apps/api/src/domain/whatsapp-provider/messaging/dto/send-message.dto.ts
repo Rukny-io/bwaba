@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsObject, ValidateNested, IsIn, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  ValidateNested,
+  IsIn,
+  IsNotEmpty,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SendMessageDto {
@@ -7,7 +14,18 @@ export class SendMessageDto {
   to: string; // رقم المستلم
 
   @IsString()
-  @IsIn(['text', 'image', 'video', 'audio', 'document', 'sticker', 'location', 'contacts', 'template', 'interactive'])
+  @IsIn([
+    'text',
+    'image',
+    'video',
+    'audio',
+    'document',
+    'sticker',
+    'location',
+    'contacts',
+    'template',
+    'interactive',
+  ])
   type: string;
 
   @IsOptional()
@@ -32,7 +50,12 @@ export class SendMessageDto {
 
   @IsOptional()
   @IsObject()
-  document?: { link?: string; id?: string; filename?: string; caption?: string };
+  document?: {
+    link?: string;
+    id?: string;
+    filename?: string;
+    caption?: string;
+  };
 
   @IsOptional()
   @IsObject()
@@ -40,7 +63,12 @@ export class SendMessageDto {
 
   @IsOptional()
   @IsObject()
-  location?: { latitude: number; longitude: number; name?: string; address?: string };
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+  };
 
   @IsOptional()
   contacts?: any[];

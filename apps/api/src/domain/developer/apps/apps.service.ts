@@ -4,13 +4,19 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { CreateAppDto } from './dto/create-app.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
 import { SendAppOtpDto } from './dto/app-otp.dto';
-import { DEVELOPER_PLAN_LIMITS } from '../subscriptions/dev-plan-limits.config';
-import { WhatsAppBusinessService } from '../../../integrations/whatsapp-business/whatsapp-business.service';
+import { buildAppVerificationSummary } from './app-verification.util';
+import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
+import {
+  WhatsAppBusinessService,
+  WhatsAppBusinessError,
+} from '../../../integrations/whatsapp-business/whatsapp-business.service';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 
@@ -19,6 +25,30 @@ const OTP_MAX_ATTEMPTS = 5;
 const OTP_COOLDOWN_SECONDS = 60;
 const BCRYPT_ROUNDS = 10;
 
+const APP_SETTINGS_SELECT = {
+  id: true,
+  appId: true,
+  name: true,
+  contactEmail: true,
+  appType: true,
+  description: true,
+  businessId: true,
+  icon: true,
+  profileImage: true,
+  websiteUrl: true,
+  termsOfUseUrl: true,
+  privacyPolicyUrl: true,
+  dpoName: true,
+  dpoEmail: true,
+  dpoPhone: true,
+  status: true,
+  verified: true,
+  accessVerified: true,
+  accessReviewRequestedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 @Injectable()
 export class AppsService {
   private readonly logger = new Logger(AppsService.name);
@@ -26,7 +56,15 @@ export class AppsService {
   constructor(
     private prisma: PrismaService,
     private whatsapp: WhatsAppBusinessService,
+    private configService: ConfigService,
+    private devSubscriptions: DevSubscriptionsService,
   ) {}
+
+  private isDevOtpBypass(): boolean {
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+    if (nodeEnv === 'production') return false;
+    return this.configService.get<string>('WHATSAPP_OTP_DEV_BYPASS') === 'true';
+  }
 
   /**
    * Generate a unique 16-digit snowflake-like numeric ID
@@ -60,7 +98,10 @@ export class AppsService {
 
     if (recent) {
       const waitSeconds = Math.ceil(
-        (recent.createdAt.getTime() + OTP_COOLDOWN_SECONDS * 1000 - Date.now()) / 1000,
+        (recent.createdAt.getTime() +
+          OTP_COOLDOWN_SECONDS * 1000 -
+          Date.now()) /
+          1000,
       );
       throw new BadRequestException(
         `Please wait ${waitSeconds} seconds before requesting a new code.`,
@@ -70,8 +111,32 @@ export class AppsService {
     const code = this.generateOtpCode();
     const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
 
-    // Send OTP via WhatsApp
-    await this.whatsapp.sendOtp(dto.phoneNumber, code);
+    if (this.isDevOtpBypass()) {
+      this.logger.warn(
+        `[DEV] WHATSAPP_OTP_DEV_BYPASS — OTP for ${dto.phoneNumber.slice(0, 4)}***: ${code}`,
+      );
+    } else {
+      if (!this.whatsapp.isEnabled()) {
+        throw new ServiceUnavailableException(
+          'خدمة التحقق عبر واتساب غير مهيّأة. تواصل مع مسؤول المنصة.',
+        );
+      }
+
+      try {
+        await this.whatsapp.sendOtp(dto.phoneNumber, code);
+      } catch (error) {
+        if (error instanceof WhatsAppBusinessError) {
+          const msg =
+            error.userMessage ??
+            'تعذّر إرسال رمز التحقق. حاول لاحقاً أو تواصل مع الدعم.';
+          if (error.metaCode === 190) {
+            throw new ServiceUnavailableException(msg);
+          }
+          throw new BadRequestException(msg);
+        }
+        throw error;
+      }
+    }
 
     // Store OTP record
     await this.prisma.whatsappOtp.create({
@@ -85,13 +150,19 @@ export class AppsService {
       },
     });
 
-    this.logger.log(`App verification OTP sent to ${dto.phoneNumber.slice(0, 4)}*** for user ${userId}`);
+    this.logger.log(
+      `App verification OTP sent to ${dto.phoneNumber.slice(0, 4)}*** for user ${userId}`,
+    );
     return { sent: true, expiresInSeconds: OTP_EXPIRY_MINUTES * 60 };
   }
 
   /* ────────── OTP: Verify (internal) ────────── */
 
-  private async verifyOtp(userId: string, phoneNumber: string, code: string): Promise<boolean> {
+  private async verifyOtp(
+    userId: string,
+    phoneNumber: string,
+    code: string,
+  ): Promise<boolean> {
     const otp = await this.prisma.whatsappOtp.findFirst({
       where: {
         userId,
@@ -104,11 +175,15 @@ export class AppsService {
     });
 
     if (!otp) {
-      throw new BadRequestException('No valid OTP found. Please request a new code.');
+      throw new BadRequestException(
+        'No valid OTP found. Please request a new code.',
+      );
     }
 
     if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-      throw new BadRequestException('Too many attempts. Please request a new code.');
+      throw new BadRequestException(
+        'Too many attempts. Please request a new code.',
+      );
     }
 
     // Increment attempts
@@ -133,7 +208,10 @@ export class AppsService {
 
   /* ────────── OTP: Verify (public endpoint) ────────── */
 
-  async verifyOtpEndpoint(userId: string, dto: { phoneNumber: string; code: string }) {
+  async verifyOtpEndpoint(
+    userId: string,
+    dto: { phoneNumber: string; code: string },
+  ) {
     await this.verifyOtp(userId, dto.phoneNumber, dto.code);
     return { verified: true };
   }
@@ -156,7 +234,9 @@ export class AppsService {
     });
 
     if (!verifiedOtp) {
-      throw new ForbiddenException('Phone verification required. Please verify your phone number first.');
+      throw new ForbiddenException(
+        'Phone verification required. Please verify your phone number first.',
+      );
     }
 
     let appId: string;
@@ -183,20 +263,7 @@ export class AppsService {
           icon: dto.icon,
           verified: true,
         },
-        select: {
-          id: true,
-          appId: true,
-          name: true,
-          contactEmail: true,
-          appType: true,
-          description: true,
-          businessId: true,
-          icon: true,
-          status: true,
-          verified: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: APP_SETTINGS_SELECT,
       });
 
       await tx.developerAppWallet.create({
@@ -209,50 +276,53 @@ export class AppsService {
     });
 
     this.logger.log(`App created: ${app.appId} for user ${userId}`);
-    return app;
+    return this.enrichApp(app);
+  }
+
+  private enrichApp<T extends Record<string, unknown>>(app: T) {
+    const verification = buildAppVerificationSummary({
+      businessId: app.businessId as string | null | undefined,
+      verified: Boolean(app.verified),
+      accessVerified: Boolean(app.accessVerified),
+      accessReviewRequestedAt: app.accessReviewRequestedAt as Date | null | undefined,
+      websiteUrl: app.websiteUrl as string | null | undefined,
+      termsOfUseUrl: app.termsOfUseUrl as string | null | undefined,
+      privacyPolicyUrl: app.privacyPolicyUrl as string | null | undefined,
+      dpoName: app.dpoName as string | null | undefined,
+      dpoEmail: app.dpoEmail as string | null | undefined,
+      icon: app.icon as string | null | undefined,
+      profileImage: app.profileImage as string | null | undefined,
+      name: String(app.name ?? ''),
+    });
+
+    return {
+      ...app,
+      verification,
+    };
+  }
+
+  private normalizeOptionalString(value?: string) {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   async findAll(userId: string) {
-    return this.prisma.developerApp.findMany({
+    const apps = await this.prisma.developerApp.findMany({
       where: { userId, status: { not: 'DELETED' } },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        appId: true,
-        name: true,
-        contactEmail: true,
-        appType: true,
-        description: true,
-        businessId: true,
-        icon: true,
-        status: true,
-        verified: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: APP_SETTINGS_SELECT,
     });
+    return apps.map((app) => this.enrichApp(app));
   }
 
   async findOne(userId: string, appId: string) {
     const app = await this.prisma.developerApp.findFirst({
       where: { appId, userId, status: { not: 'DELETED' } },
-      select: {
-        id: true,
-        appId: true,
-        name: true,
-        contactEmail: true,
-        appType: true,
-        description: true,
-        businessId: true,
-        icon: true,
-        status: true,
-        verified: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: APP_SETTINGS_SELECT,
     });
     if (!app) throw new NotFoundException('App not found');
-    return app;
+    return this.enrichApp(app);
   }
 
   async update(userId: string, appId: string, dto: UpdateAppDto) {
@@ -261,26 +331,69 @@ export class AppsService {
     });
     if (!app) throw new NotFoundException('App not found');
 
-    return this.prisma.developerApp.update({
+    const updated = await this.prisma.developerApp.update({
       where: { id: app.id },
       data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.businessId !== undefined && { businessId: dto.businessId }),
-        ...(dto.icon !== undefined && { icon: dto.icon }),
+        ...(dto.name !== undefined && { name: dto.name.trim() }),
+        ...(dto.description !== undefined && {
+          description: this.normalizeOptionalString(dto.description),
+        }),
+        ...(dto.businessId !== undefined && {
+          businessId: this.normalizeOptionalString(dto.businessId),
+        }),
+        ...(dto.icon !== undefined && {
+          icon: this.normalizeOptionalString(dto.icon),
+        }),
+        ...(dto.profileImage !== undefined && {
+          profileImage: this.normalizeOptionalString(dto.profileImage),
+        }),
+        ...(dto.websiteUrl !== undefined && {
+          websiteUrl: this.normalizeOptionalString(dto.websiteUrl),
+        }),
+        ...(dto.termsOfUseUrl !== undefined && {
+          termsOfUseUrl: this.normalizeOptionalString(dto.termsOfUseUrl),
+        }),
+        ...(dto.privacyPolicyUrl !== undefined && {
+          privacyPolicyUrl: this.normalizeOptionalString(dto.privacyPolicyUrl),
+        }),
+        ...(dto.dpoName !== undefined && {
+          dpoName: this.normalizeOptionalString(dto.dpoName),
+        }),
+        ...(dto.dpoEmail !== undefined && {
+          dpoEmail: this.normalizeOptionalString(dto.dpoEmail),
+        }),
+        ...(dto.dpoPhone !== undefined && {
+          dpoPhone: this.normalizeOptionalString(dto.dpoPhone),
+        }),
       },
-      select: {
-        id: true,
-        appId: true,
-        name: true,
-        description: true,
-        businessId: true,
-        icon: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: APP_SETTINGS_SELECT,
     });
+
+    return this.enrichApp(updated);
+  }
+
+  async submitAccessReview(userId: string, appId: string) {
+    const app = await this.prisma.developerApp.findFirst({
+      where: { appId, userId, status: { not: 'DELETED' } },
+      select: APP_SETTINGS_SELECT,
+    });
+    if (!app) throw new NotFoundException('App not found');
+
+    const summary = buildAppVerificationSummary(app);
+    if (!summary.canSubmitAccessReview) {
+      throw new BadRequestException(
+        'Complete all required settings before submitting for access review.',
+      );
+    }
+
+    const updated = await this.prisma.developerApp.update({
+      where: { id: app.id },
+      data: { accessReviewRequestedAt: new Date() },
+      select: APP_SETTINGS_SELECT,
+    });
+
+    this.logger.log(`Access review submitted for app ${appId} by user ${userId}`);
+    return this.enrichApp(updated);
   }
 
   async remove(userId: string, appId: string) {
@@ -299,23 +412,11 @@ export class AppsService {
   }
 
   private async checkAppLimit(userId: string) {
-    const subscription = await this.prisma.developerSubscription.findUnique({
-      where: { userId },
-      select: { plan: true, appsLimit: true },
-    });
-
-    const limit =
-      subscription?.appsLimit ??
-      (DEVELOPER_PLAN_LIMITS[subscription?.plan || 'FREE'] as any)?.maxApps ??
-      3;
-
-    const currentCount = await this.prisma.developerApp.count({
-      where: { userId, status: 'ACTIVE' },
-    });
-
-    if (currentCount >= limit) {
+    const allowed = await this.devSubscriptions.checkResourceLimit(userId, 'apps');
+    if (!allowed) {
+      const quotas = await this.devSubscriptions.getResourceQuotas(userId);
       throw new ForbiddenException(
-        `App limit reached (${limit}). Upgrade your plan for more.`,
+        `App limit reached (${quotas.appsUsed}/${quotas.appsLimit >= Number.MAX_SAFE_INTEGER ? '∞' : quotas.appsLimit}). Upgrade to Pro for unlimited apps.`,
       );
     }
   }

@@ -1,17 +1,26 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
-import { TopUpWalletDto, UpdateAutoRechargeDto, UpdateLowBalanceAlertDto } from './dto/wallet.dto';
+import {
+  TopUpWalletDto,
+  UpdateAutoRechargeDto,
+  UpdateLowBalanceAlertDto,
+} from './dto/wallet.dto';
 
 /**
  * تسعير الرسائل حسب فئة المحادثة (IQD)
  * أسعار Meta + هامش Rukny (~20%)
  */
 export const MESSAGE_PRICING: Record<string, number> = {
-  AUTHENTICATION: 12,  // ~$0.008
-  UTILITY: 15,         // ~$0.01
-  MARKETING: 60,       // ~$0.04
-  SERVICE: 0,          // مجاني (أول 1000/شهر)
+  AUTHENTICATION: 12, // ~$0.008
+  UTILITY: 15, // ~$0.01
+  MARKETING: 60, // ~$0.04
+  SERVICE: 0, // مجاني (أول 1000/شهر)
   REFERRAL_CONVERSION: 0,
 };
 
@@ -213,7 +222,9 @@ export class WalletService {
     // مسح الكاش
     await this.redis.del(`wallet:${userId}`);
 
-    this.logger.log(`Top-up verified: ${transaction.amount} IQD for user ${userId}`);
+    this.logger.log(
+      `Top-up verified: ${transaction.amount} IQD for user ${userId}`,
+    );
 
     return {
       balance: updatedWallet.balance,
@@ -402,7 +413,9 @@ export class WalletService {
   private async triggerAutoRecharge(userId: string, wallet: any) {
     if (!wallet.autoRechargeAmount) return;
 
-    this.logger.log(`Auto-recharge triggered for user ${userId}: ${wallet.autoRechargeAmount} IQD`);
+    this.logger.log(
+      `Auto-recharge triggered for user ${userId}: ${wallet.autoRechargeAmount} IQD`,
+    );
 
     // TODO: تكامل مع بوابة الدفع المحفوظة
     // حالياً نضيف الرصيد مباشرة (سيتم تحديثه عند ربط بوابة الدفع)

@@ -48,10 +48,22 @@ export interface CacheOptions {
  */
 export function Cacheable(options: CacheOptions): MethodDecorator {
   return (target, propertyKey, descriptor) => {
-    SetMetadata(CACHE_KEY_METADATA, options.key)(target, propertyKey, descriptor);
-    SetMetadata(CACHE_TTL_METADATA, options.ttl)(target, propertyKey, descriptor);
+    SetMetadata(CACHE_KEY_METADATA, options.key)(
+      target,
+      propertyKey,
+      descriptor,
+    );
+    SetMetadata(CACHE_TTL_METADATA, options.ttl)(
+      target,
+      propertyKey,
+      descriptor,
+    );
     if (options.tags) {
-      SetMetadata(CACHE_TAGS_METADATA, options.tags)(target, propertyKey, descriptor);
+      SetMetadata(CACHE_TAGS_METADATA, options.tags)(
+        target,
+        propertyKey,
+        descriptor,
+      );
     }
     return descriptor;
   };
@@ -92,9 +104,15 @@ export interface CacheInvalidateOptions {
   tags?: string[];
 }
 
-export function CacheInvalidate(options: CacheInvalidateOptions): MethodDecorator {
+export function CacheInvalidate(
+  options: CacheInvalidateOptions,
+): MethodDecorator {
   return (target, propertyKey, descriptor) => {
-    SetMetadata(CACHE_INVALIDATE_METADATA, options)(target, propertyKey, descriptor);
+    SetMetadata(CACHE_INVALIDATE_METADATA, options)(
+      target,
+      propertyKey,
+      descriptor,
+    );
     return descriptor;
   };
 }

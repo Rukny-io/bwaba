@@ -46,7 +46,10 @@ export class CacheManager {
           this.redis
             .hincrbyBatch([
               { hash: this.METRICS_HASH, field: 'hits' },
-              { hash: this.METRICS_HASH, field: `hits:${this.getKeyPrefix(key)}` },
+              {
+                hash: this.METRICS_HASH,
+                field: `hits:${this.getKeyPrefix(key)}`,
+              },
             ])
             .catch(() => {}); // Non-blocking metrics
           return cached;
@@ -80,10 +83,21 @@ export class CacheManager {
       Promise.all([
         this.redis.hincrbyBatch([
           { hash: this.METRICS_HASH, field: 'misses' },
-          { hash: this.METRICS_HASH, field: `misses:${this.getKeyPrefix(key)}` },
+          {
+            hash: this.METRICS_HASH,
+            field: `misses:${this.getKeyPrefix(key)}`,
+          },
         ]),
-        this.redis.hset('cache:latency', this.getKeyPrefix(key), String(computeLatency)),
-        this.redis.hset('cache:wrap_latency', this.getKeyPrefix(key), String(total)),
+        this.redis.hset(
+          'cache:latency',
+          this.getKeyPrefix(key),
+          String(computeLatency),
+        ),
+        this.redis.hset(
+          'cache:wrap_latency',
+          this.getKeyPrefix(key),
+          String(total),
+        ),
       ]).catch(() => {}); // Non-blocking metrics
     } catch (err) {
       this.logger.warn(`Cache set error for ${key}: ${err?.message || err}`);
@@ -107,7 +121,12 @@ export class CacheManager {
   /**
    * ⚡ Set cache value directly
    */
-  async set<T>(key: string, value: T, ttlSeconds: number, tags?: string[]): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttlSeconds: number,
+    tags?: string[],
+  ): Promise<void> {
     try {
       await this.redis.set(key, value, ttlSeconds);
       if (tags && tags.length > 0) {
@@ -137,10 +156,14 @@ export class CacheManager {
   async invalidatePattern(pattern: string): Promise<number> {
     try {
       const count = await this.redis.delPattern(pattern);
-      this.logger.debug(`Invalidated ${count} keys matching pattern: ${pattern}`);
+      this.logger.debug(
+        `Invalidated ${count} keys matching pattern: ${pattern}`,
+      );
       return count;
     } catch (err) {
-      this.logger.warn(`Cache invalidate pattern error: ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidate pattern error: ${err?.message || err}`,
+      );
       return 0;
     }
   }
@@ -166,7 +189,9 @@ export class CacheManager {
         }
       }
     } catch (err) {
-      this.logger.warn(`Cache invalidate by tags error: ${err?.message || err}`);
+      this.logger.warn(
+        `Cache invalidate by tags error: ${err?.message || err}`,
+      );
     }
 
     return totalInvalidated;
@@ -188,7 +213,9 @@ export class CacheManager {
   /**
    * ⚡ Batch set multiple keys at once
    */
-  async setMany(entries: Array<{ key: string; value: unknown; ttl?: number }>): Promise<void> {
+  async setMany(
+    entries: Array<{ key: string; value: unknown; ttl?: number }>,
+  ): Promise<void> {
     if (entries.length === 0) return;
     try {
       await this.redis.mset(entries);
@@ -220,13 +247,17 @@ export class CacheManager {
             }
           }
         } catch (err) {
-          this.logger.warn(`Cache warm error for ${key}: ${err?.message || err}`);
+          this.logger.warn(
+            `Cache warm error for ${key}: ${err?.message || err}`,
+          );
         }
       }),
     );
 
     const duration = Date.now() - start;
-    this.logger.log(`Cache warmed: ${warmed}/${keys.length} keys in ${duration}ms`);
+    this.logger.log(
+      `Cache warmed: ${warmed}/${keys.length} keys in ${duration}ms`,
+    );
   }
 
   /**
@@ -274,7 +305,11 @@ export class CacheManager {
   /**
    * Track keys by tags for grouped invalidation
    */
-  private async trackTags(key: string, tags: string[], ttlSeconds: number): Promise<void> {
+  private async trackTags(
+    key: string,
+    tags: string[],
+    ttlSeconds: number,
+  ): Promise<void> {
     for (const tag of tags) {
       const tagKey = `${this.TAGS_PREFIX}${tag}`;
       const existingKeys = (await this.redis.get<string[]>(tagKey)) || [];

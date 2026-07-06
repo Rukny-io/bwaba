@@ -8,7 +8,13 @@ import { RedisModule } from '../../core/cache/redis.module';
 import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/whatsapp-business.module';
 
 @Module({
-  imports: [PrismaModule, StorageModule, SharedModule, RedisModule, WhatsAppBusinessModule],
+  imports: [
+    PrismaModule,
+    StorageModule,
+    SharedModule,
+    RedisModule,
+    WhatsAppBusinessModule,
+  ],
   controllers: [ProfilesController],
   providers: [ProfilesService],
   exports: [ProfilesService],

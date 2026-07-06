@@ -26,10 +26,7 @@ export class DevSubscriptionsController {
 
   @Post('upgrade')
   @ApiOperation({ summary: 'ترقية الخطة' })
-  upgradePlan(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpgradePlanDto,
-  ) {
+  upgradePlan(@CurrentUser('id') userId: string, @Body() dto: UpgradePlanDto) {
     return this.subscriptionsService.upgradePlan(userId, dto);
   }
 }

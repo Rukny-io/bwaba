@@ -1,22 +1,20 @@
-import { Controller, Post, Delete, Get, Body, UseGuards, Req, Logger, HttpCode, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  Logger,
+  HttpCode,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
-import { PushSubscriptionService, PushSubscriptionInput } from './push-subscription.service';
-
-// Custom guard that accepts both JWT and Session cookies
-@Injectable()
-class OptionalAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    
-    // Check if user is authenticated (either via JWT or session)
-    if (request.user || request.session?.userId) {
-      return true;
-    }
-    
-    // Allow unauthenticated access for subscription endpoints
-    return true;
-  }
-}
+import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
+import {
+  PushSubscriptionService,
+  PushSubscriptionInput,
+} from './push-subscription.service';
 
 @Controller('push-subscriptions')
 export class PushSubscriptionController {
@@ -25,33 +23,33 @@ export class PushSubscriptionController {
   constructor(private readonly pushService: PushSubscriptionService) {}
 
   /**
-   * Subscribe to push notifications
-   * POST /push-subscriptions/subscribe
+   * Public VAPID key for browser subscription (safe to expose).
+   * GET /push-subscriptions/vapid-public-key
    */
+  @Get('vapid-public-key')
+  getVapidPublicKey() {
+    const key = process.env.VAPID_PUBLIC_KEY;
+    if (!key || key.includes('YOUR_VAPID')) {
+      return { publicKey: null };
+    }
+    return { publicKey: key };
+  }
+
   @Post('subscribe')
-  @UseGuards(OptionalAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   async subscribe(
     @Body() subscription: PushSubscriptionInput,
-    @Req() req: any
+    @CurrentUser('id') userId: string,
+    @Req() req: { get: (name: string) => string | undefined },
   ) {
-    // Get user ID from JWT or session
-    const userId = req.user?.id || req.session?.userId;
-    
-    if (!userId) {
-      return {
-        success: false,
-        message: 'يجب تسجيل الدخول أولاً',
-      };
-    }
-
     const userAgent = req.get('user-agent');
 
     try {
       const result = await this.pushService.subscribeToPush(
         userId,
         subscription,
-        userAgent
+        userAgent,
       );
 
       return {
@@ -68,17 +66,10 @@ export class PushSubscriptionController {
     }
   }
 
-  /**
-   * Unsubscribe from push notifications
-   * POST /push-subscriptions/unsubscribe
-   */
   @Post('unsubscribe')
-  @UseGuards(OptionalAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(200)
-  async unsubscribe(
-    @Body() body: { endpoint: string },
-    @Req() req: any
-  ) {
+  async unsubscribe(@Body() body: { endpoint: string }) {
     try {
       await this.pushService.unsubscribeFromPush(body.endpoint);
 
@@ -92,23 +83,9 @@ export class PushSubscriptionController {
     }
   }
 
-  /**
-   * Get all push subscriptions for current user
-   * GET /push-subscriptions
-   */
   @Get()
-  @UseGuards(OptionalAuthGuard)
-  async getSubscriptions(@Req() req: any) {
-    const userId = req.user?.id || req.session?.userId;
-
-    if (!userId) {
-      return {
-        success: false,
-        message: 'يجب تسجيل الدخول أولاً',
-        data: [],
-      };
-    }
-
+  @UseGuards(JwtAuthGuard)
+  async getSubscriptions(@CurrentUser('id') userId: string) {
     try {
       const subscriptions = await this.pushService.getUserSubscriptions(userId);
 
@@ -123,16 +100,9 @@ export class PushSubscriptionController {
     }
   }
 
-  /**
-   * Delete a specific push subscription
-   * DELETE /push-subscriptions/:id
-   */
   @Delete(':id')
-  @UseGuards(OptionalAuthGuard)
-  async deleteSubscription(
-    @Body() body: { endpoint: string },
-    @Req() req: any
-  ) {
+  @UseGuards(JwtAuthGuard)
+  async deleteSubscription(@Body() body: { endpoint: string }) {
     try {
       await this.pushService.unsubscribeFromPush(body.endpoint);
 

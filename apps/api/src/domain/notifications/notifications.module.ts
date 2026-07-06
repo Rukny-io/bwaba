@@ -5,10 +5,12 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
+import { PushNotificationsModule } from '../../integrations/push-notifications/push-notifications.module';
 
 @Module({
   imports: [
     PrismaModule,
+    PushNotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

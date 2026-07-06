@@ -96,7 +96,11 @@ export class CreateProfileDto {
   themeKey?: string;
 
   @ApiPropertyOptional({
-    example: { headline: 'مطور واجهات', description: 'أساعد الشركات في بناء تجارب رقمية', buttons: [{ label: 'تواصل معي', url: '#', variant: 'dark' }] },
+    example: {
+      headline: 'مطور واجهات',
+      description: 'أساعد الشركات في بناء تجارب رقمية',
+      buttons: [{ label: 'تواصل معي', url: '#', variant: 'dark' }],
+    },
     description: 'Hero section settings (headline, description, buttons)',
   })
   @IsObject()

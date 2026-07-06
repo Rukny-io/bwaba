@@ -236,11 +236,11 @@ export class ProductsUploadService {
       const f = file as any;
       this.logger.debug(
         `ملف ${i + 1}: ${file.originalname}, النوع: ${file.mimetype}, الحجم: ${file.size}, ` +
-        `حجم البافر: ${f.buffer?.length || 0}, ` +
-        `content: ${f.content?.length || 0}, ` +
-        `path: ${f.path || 'none'}, ` +
-        `stream: ${f.stream ? 'yes' : 'no'}, ` +
-        `keys: ${Object.keys(file).join(',')}`,
+          `حجم البافر: ${f.buffer?.length || 0}, ` +
+          `content: ${f.content?.length || 0}, ` +
+          `path: ${f.path || 'none'}, ` +
+          `stream: ${f.stream ? 'yes' : 'no'}, ` +
+          `keys: ${Object.keys(file).join(',')}`,
       );
     });
 

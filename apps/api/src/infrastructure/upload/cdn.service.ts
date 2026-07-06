@@ -32,18 +32,16 @@ export class CDNService {
   constructor(private readonly configService: ConfigService) {
     this.config = {
       baseUrl: this.configService.get('CDN_BASE_URL', ''),
-      provider: this.configService.get('CDN_PROVIDER', 'cloudflare') as any,
-      transformations: this.configService.get('CDN_TRANSFORMATIONS', 'true') === 'true',
+      provider: this.configService.get('CDN_PROVIDER', 'cloudflare'),
+      transformations:
+        this.configService.get('CDN_TRANSFORMATIONS', 'true') === 'true',
     };
   }
 
   /**
    * الحصول على رابط CDN للصورة
    */
-  getImageUrl(
-    originalUrl: string,
-    options?: ImageTransformOptions,
-  ): string {
+  getImageUrl(originalUrl: string, options?: ImageTransformOptions): string {
     if (!this.config.baseUrl) {
       return originalUrl;
     }
@@ -112,10 +110,7 @@ export class CDNService {
   /**
    * بناء رابط Bunny CDN
    */
-  private buildBunnyUrl(
-    path: string,
-    options: ImageTransformOptions,
-  ): string {
+  private buildBunnyUrl(path: string, options: ImageTransformOptions): string {
     const transformations: string[] = [];
 
     if (options.width) transformations.push(`width=${options.width}`);
@@ -206,7 +201,9 @@ export class CDNService {
         case 'bunny':
           return await this.invalidateBunny(paths);
         default:
-          this.logger.warn('Cache invalidation not supported for this provider');
+          this.logger.warn(
+            'Cache invalidation not supported for this provider',
+          );
           return false;
       }
     } catch (error) {

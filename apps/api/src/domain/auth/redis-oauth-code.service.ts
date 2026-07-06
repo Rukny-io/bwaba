@@ -57,7 +57,7 @@ export class RedisOAuthCodeService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     // Initialize Redis connection - prefer REDIS_URL for Railway/production
     const redisUrl = this.configService.get<string>('REDIS_URL');
-    
+
     if (redisUrl) {
       // Use REDIS_URL if available (Railway, production)
       this.redis = new Redis(redisUrl, {

@@ -12,7 +12,12 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../../../core/common/decorators/auth/current-user.decorator';
 import { WalletService } from './wallet.service';
-import { AllocateAppBalanceDto, TopUpWalletDto, UpdateAutoRechargeDto, UpdateLowBalanceAlertDto } from './dto/wallet.dto';
+import {
+  AllocateAppBalanceDto,
+  TopUpWalletDto,
+  UpdateAutoRechargeDto,
+  UpdateLowBalanceAlertDto,
+} from './dto/wallet.dto';
 
 @ApiTags('Developer - Wallet')
 @ApiBearerAuth()
@@ -48,10 +53,7 @@ export class WalletController {
 
   @Post('top-up')
   @ApiOperation({ summary: 'شحن الرصيد' })
-  topUp(
-    @CurrentUser('id') userId: string,
-    @Body() dto: TopUpWalletDto,
-  ) {
+  topUp(@CurrentUser('id') userId: string, @Body() dto: TopUpWalletDto) {
     return this.walletService.topUp(userId, dto);
   }
 

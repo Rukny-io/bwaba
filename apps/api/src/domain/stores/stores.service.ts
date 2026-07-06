@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
-import { CacheKeys, CACHE_TTL, CACHE_TAGS } from '../../core/cache/cache.constants';
+import {
+  CacheKeys,
+  CACHE_TTL,
+  CACHE_TAGS,
+} from '../../core/cache/cache.constants';
 import { CreateStoreDto, StoreStatus } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -112,7 +116,9 @@ export class StoresService {
     storeLatitude?: number;
     storeLongitude?: number;
   }): Promise<{ slug: string; id: string } | null> {
-    const existing = await this.prisma.store.findFirst({ where: { userId: opts.userId } });
+    const existing = await this.prisma.store.findFirst({
+      where: { userId: opts.userId },
+    });
     if (existing) return { slug: existing.slug, id: existing.id };
 
     let resolvedCategoryId: string | null = null;
@@ -394,7 +400,9 @@ export class StoresService {
     const updatedMetadata = {
       ...currentMetadata,
       googleAnalyticsId: googleAnalyticsId || null,
-      googleAnalyticsConnectedAt: googleAnalyticsId ? new Date().toISOString() : null,
+      googleAnalyticsConnectedAt: googleAnalyticsId
+        ? new Date().toISOString()
+        : null,
     };
 
     const updatedStore = await this.prisma.store.update({
@@ -514,8 +522,19 @@ export class StoresService {
       select: { createdAt: true, total: true },
     });
 
-    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const dayMap: Record<string, { day: string; sales: number; orders: number }> = {};
+    const dayNames = [
+      'الأحد',
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+    ];
+    const dayMap: Record<
+      string,
+      { day: string; sales: number; orders: number }
+    > = {};
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date();

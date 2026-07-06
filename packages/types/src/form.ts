@@ -52,6 +52,10 @@ export type FormFieldType =
   | 'TOGGLE'
   | 'MATRIX'
   | 'RANKING'
+  | 'YES_NO'
+  | 'LEGAL_CONSENT'
+  | 'IRAQ_GOVERNORATE'
+  | 'NPS'
   // Layout blocks
   | 'HEADING'
   | 'PARAGRAPH'
@@ -66,7 +70,8 @@ export type FormFieldType =
   | 'CONDITIONAL_LOGIC'
   | 'CALCULATED'
   | 'HIDDEN'
-  | 'RECAPTCHA';
+  | 'RECAPTCHA'
+  | 'RESPONDENT_COUNTRY';
 
 /**
  * Form field

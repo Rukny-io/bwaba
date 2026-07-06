@@ -3,13 +3,19 @@ import {
   Post,
   Param,
   UseInterceptors,
-  UploadedFile,
   UploadedFiles,
   UseGuards,
   Request,
   BadRequestException,
+  ForbiddenException,
   Body,
+  GoneException,
+  Req,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+import { FormsUploadCleanupService } from './services/forms-upload-cleanup.service';
+import { FormsPublicUploadService } from './services/forms-public-upload.service';
+import { RedisService } from '../../core/cache/redis.service';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -28,6 +34,7 @@ import { S3Service } from '../../services/s3.service';
 import { v4 as uuidv4 } from 'uuid';
 import { FileValidationPipe } from '../../core/common/pipes/file-validation.pipe';
 import { generateSecureFilename } from '../../core/common/utils/file-security.util';
+import { FormTeamAccessService } from './form-team/form-team-access.service';
 
 interface PresignFileInfo {
   name: string;
@@ -46,7 +53,19 @@ export class FormsUploadController {
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
+    private uploadCleanup: FormsUploadCleanupService,
+    private redis: RedisService,
+    private publicUpload: FormsPublicUploadService,
+    private formTeamAccess: FormTeamAccessService,
   ) {}
+
+  private getClientIp(req: ExpressRequest): string {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.length > 0) {
+      return forwarded.split(',')[0].trim();
+    }
+    return req.ip || req.socket.remoteAddress || '127.0.0.1';
+  }
 
   @Post(':id/upload')
   @UseGuards(JwtAuthGuard)
@@ -57,7 +76,9 @@ export class FormsUploadController {
     FilesInterceptor('files', 10, {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const formId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+          const formId = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
           const uploadPath = join(process.cwd(), 'uploads', 'forms', formId);
 
           // Create directory if it doesn't exist
@@ -69,7 +90,22 @@ export class FormsUploadController {
         },
         filename: (req, file, cb) => {
           // 🔒 Use secure UUID-based filename instead of client-supplied name
-          const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.csv'];
+          const allowedExtensions = [
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.gif',
+            '.webp',
+            '.bmp',
+            '.tiff',
+            '.pdf',
+            '.doc',
+            '.docx',
+            '.xls',
+            '.xlsx',
+            '.txt',
+            '.csv',
+          ];
           const ext = extname(file.originalname).toLowerCase();
           const safeExt = allowedExtensions.includes(ext) ? ext : '.bin';
           const filename = `${uuidv4()}${safeExt}`;
@@ -113,17 +149,27 @@ export class FormsUploadController {
   async uploadFiles(
     @Request() req,
     @Param('id') formId: string,
-    @UploadedFiles(new FileValidationPipe({
-      allowedTypes: [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
-        'application/pdf', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/plain', 'text/csv',
-      ],
-      maxSize: 10 * 1024 * 1024,
-    })) files: Array<Express.Multer.File>,
+    @UploadedFiles(
+      new FileValidationPipe({
+        allowedTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'image/bmp',
+          'image/tiff',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/plain',
+          'text/csv',
+        ],
+        maxSize: 10 * 1024 * 1024,
+      }),
+    )
+    files: Array<Express.Multer.File>,
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
@@ -137,6 +183,13 @@ export class FormsUploadController {
     if (!form) {
       throw new BadRequestException('Form not found');
     }
+
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      req.user.id,
+      'edit_form',
+      'Not authorized to upload to this form',
+    );
 
     // Return file information
     const uploadedFiles = files.map((file) => ({
@@ -255,19 +308,21 @@ export class FormsUploadController {
       throw new BadRequestException('User not authenticated');
     }
 
-    // Verify form ownership
     const form = await this.prisma.form.findUnique({
       where: { id: formId },
-      select: { userId: true },
+      select: { id: true, userId: true },
     });
 
     if (!form) {
       throw new BadRequestException('Form not found');
     }
 
-    if (form.userId !== userId) {
-      throw new BadRequestException('Not authorized to upload to this form');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'edit_form',
+      'Not authorized to upload to this form',
+    );
 
     const files = body.files || [];
     if (files.length === 0) {
@@ -336,13 +391,11 @@ export class FormsUploadController {
     // Verify keys belong to this user
     const validKeys = keys.filter((key) => key.startsWith(`users/${userId}/`));
 
-    // Log for tracking (could also store in DB)
-    console.log(
-      `User ${userId} confirmed ${validKeys.length} uploads:`,
-      validKeys,
-    );
+    for (const key of validKeys) {
+      await this.redis.set(`form:upload:confirmed:${userId}:${key}`, '1', 7 * 24 * 3600);
+    }
 
-    return { ok: true, confirmed: validKeys.length };
+    return { ok: true, confirmed: validKeys.length, keys: validKeys };
   }
 
   /**
@@ -362,132 +415,88 @@ export class FormsUploadController {
       throw new BadRequestException('User not authenticated');
     }
 
-    // Verify form ownership
     const form = await this.prisma.form.findUnique({
       where: { id: formId },
-      select: { userId: true },
-    });
-
-    if (!form || form.userId !== userId) {
-      throw new BadRequestException('Not authorized');
-    }
-
-    const keys = body.keys || [];
-    return { ok: true, confirmed: keys.length };
-  }
-
-  @Post('public/:slug/upload')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 uploads per minute per IP
-  @ApiOperation({ summary: 'Upload files for public form (no auth required)' })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FilesInterceptor('files', 10, {
-      storage: diskStorage({
-        destination: async (req, file, cb) => {
-          const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
-
-          // We need to get formId from slug, but we can't use await here
-          // So we'll use a temporary folder based on slug
-          // 🔒 Sanitize slug to prevent path traversal
-          const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, '');
-          if (!safeSlug) {
-            return cb(new BadRequestException('Invalid form slug'), '');
-          }
-          const uploadPath = join(
-            process.cwd(),
-            'uploads',
-            'forms',
-            'temp',
-            safeSlug,
-          );
-
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          // 🔒 Use secure UUID-based filename instead of client-supplied name
-          const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.pdf', '.doc', '.docx', '.txt'];
-          const ext = extname(file.originalname).toLowerCase();
-          const safeExt = allowedExtensions.includes(ext) ? ext : '.bin';
-          const filename = `${uuidv4()}${safeExt}`;
-          cb(null, filename);
-        },
-      }),
-      limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
-        files: 5, // 🔒 Max 5 files per request for public upload
-      },
-      fileFilter: (req, file, cb) => {
-        const allowedMimes = [
-          'image/jpeg',
-          'image/jpg',
-          'image/png',
-          'image/gif',
-          'image/webp',
-          'image/bmp',
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'text/plain',
-        ];
-
-        if (allowedMimes.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(
-            new BadRequestException(
-              `Unsupported file type: ${file.mimetype}. Allowed: images, PDF, Word, and text files.`,
-            ),
-            false,
-          );
-        }
-      },
-    }),
-  )
-  async uploadFilesPublic(
-    @Param('slug') slug: string,
-    @UploadedFiles(new FileValidationPipe({
-      allowedTypes: [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
-        'application/pdf', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-      ],
-      maxSize: 10 * 1024 * 1024,
-    })) files: Array<Express.Multer.File>,
-  ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('No files uploaded');
-    }
-
-    // Verify form exists
-    const form = await this.prisma.form.findUnique({
-      where: { slug },
+      select: { id: true, userId: true },
     });
 
     if (!form) {
       throw new BadRequestException('Form not found');
     }
 
-    if (form.status !== 'PUBLISHED') {
-      throw new BadRequestException('Form is not accepting submissions');
-    }
+    await this.formTeamAccess.assertFormPermission(
+      form,
+      userId,
+      'edit_form',
+      'Not authorized',
+    );
 
-    const uploadedFiles = files.map((file) => ({
-      filename: file.filename,
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-      path: `/uploads/forms/temp/${slug}/${file.filename}`,
-      url: `${process.env.API_URL || 'http://localhost:3001'}/uploads/forms/temp/${slug}/${file.filename}`,
-    }));
+    const keys = body.keys || [];
+    return { ok: true, confirmed: keys.length };
+  }
 
-    return {
-      success: true,
-      files: uploadedFiles,
-    };
+  @Post('public/:slug/upload/session')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Create a short-lived S3 upload session for a public form',
+  })
+  async createPublicUploadSession(
+    @Param('slug') slug: string,
+    @Req() req: ExpressRequest,
+  ) {
+    return this.publicUpload.createSession(slug, this.getClientIp(req));
+  }
+
+  @Post('public/:slug/upload/presign')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Get presigned PUT URLs for public form file uploads (S3)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['sessionToken', 'files'],
+      properties: {
+        sessionToken: { type: 'string' },
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              type: { type: 'string' },
+              size: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async presignPublicUpload(
+    @Param('slug') slug: string,
+    @Req() req: ExpressRequest,
+    @Body()
+    body: {
+      sessionToken: string;
+      files: PresignFileInfo[];
+    },
+  ) {
+    return this.publicUpload.getPresignedUrls(
+      slug,
+      body.sessionToken,
+      body.files || [],
+      this.getClientIp(req),
+    );
+  }
+
+  /** @deprecated Use POST public/:slug/upload/session + presign instead */
+  @Post('public/:slug/upload')
+  @ApiOperation({
+    summary: '[Deprecated] Disk upload removed — use session + presign',
+  })
+  async uploadFilesPublic() {
+    throw new GoneException(
+      'Direct disk upload is disabled. Use POST /forms/public/:slug/upload/session and /upload/presign.',
+    );
   }
 }

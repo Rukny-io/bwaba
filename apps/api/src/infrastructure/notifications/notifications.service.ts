@@ -13,7 +13,10 @@ export type NotificationType =
   | 'reminder';
 
 // Map internal types to Prisma enum
-const notificationTypeMapping: Record<NotificationType, PrismaNotificationType> = {
+const notificationTypeMapping: Record<
+  NotificationType,
+  PrismaNotificationType
+> = {
   order: PrismaNotificationType.NEW_ORDER,
   event: PrismaNotificationType.EVENT_STATUS_CHANGED,
   security: PrismaNotificationType.ORDER_STATUS_CHANGED,
@@ -110,7 +113,9 @@ export class NotificationsService {
     return this.prisma.notifications.create({
       data: {
         userId: payload.userId,
-        type: notificationTypeMapping[payload.type] || PrismaNotificationType.ORDER_STATUS_CHANGED,
+        type:
+          notificationTypeMapping[payload.type] ||
+          PrismaNotificationType.ORDER_STATUS_CHANGED,
         title: payload.title,
         message: payload.body,
         data: payload.data || null,
@@ -226,7 +231,7 @@ export class NotificationsService {
       userId,
       type: 'order',
       title: 'طلب جديد 🎉',
-      body: `لديك طلب جديد بقيمة ${amount.toLocaleString()} د.ع`,
+      body: `لديك طلب جديد بقيمة ${amount.toLocaleString('en-US')} د.ع`,
       data: { orderId, amount },
       actionUrl: `/dashboard/orders/${orderId}`,
       channels: ['in-app', 'push'],
@@ -301,7 +306,7 @@ export class NotificationsService {
       userId,
       type: 'payment',
       title: 'تم استلام الدفعة 💰',
-      body: `تم استلام ${amount.toLocaleString()} ${currency}`,
+      body: `تم استلام ${amount.toLocaleString('en-US')} ${currency}`,
       data: { amount, currency },
       actionUrl: '/dashboard/payments',
       channels: ['in-app', 'email'],

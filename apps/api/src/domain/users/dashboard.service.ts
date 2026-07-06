@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
-import { CacheKeys, CACHE_TTL, CACHE_TAGS } from '../../core/cache/cache.constants';
-import { EventStatus } from '@prisma/client';
+import {
+  CacheKeys,
+  CACHE_TTL,
+  CACHE_TAGS,
+} from '../../core/cache/cache.constants';
+import { EventStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
@@ -23,6 +27,11 @@ export class DashboardService {
       async () => {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+        );
 
         // ⚡ Performance: Run ALL queries in parallel using Promise.all
         // This reduces ~8 sequential queries to 1 parallel batch
@@ -35,6 +44,14 @@ export class DashboardService {
           totalForms,
           // Form submissions count
           totalFormSubmissions,
+          formSubmissionsThisMonth,
+          formSubmissionsLastMonth,
+          formsCreatedThisMonth,
+          formsCreatedLastMonth,
+          formViewTotals,
+          formAnalyticsThisMonth,
+          formAnalyticsLastMonth,
+          themedFormsCount,
           // User's store
           userStore,
         ] = await Promise.all([
@@ -63,6 +80,51 @@ export class DashboardService {
           this.prisma.form_submissions.count({
             where: {
               form: { userId },
+            },
+          }),
+          this.prisma.form_submissions.count({
+            where: {
+              form: { userId },
+              createdAt: { gte: startOfMonth },
+            },
+          }),
+          this.prisma.form_submissions.count({
+            where: {
+              form: { userId },
+              createdAt: { gte: startOfLastMonth, lt: startOfMonth },
+            },
+          }),
+          this.prisma.form.count({
+            where: { userId, createdAt: { gte: startOfMonth } },
+          }),
+          this.prisma.form.count({
+            where: {
+              userId,
+              createdAt: { gte: startOfLastMonth, lt: startOfMonth },
+            },
+          }),
+          this.prisma.form.aggregate({
+            where: { userId },
+            _sum: { viewCount: true, submissionCount: true },
+          }),
+          this.prisma.form_analytics.aggregate({
+            where: {
+              forms: { userId },
+              date: { gte: startOfMonth },
+            },
+            _sum: { views: true, submissions: true },
+          }),
+          this.prisma.form_analytics.aggregate({
+            where: {
+              forms: { userId },
+              date: { gte: startOfLastMonth, lt: startOfMonth },
+            },
+            _sum: { views: true, submissions: true },
+          }),
+          this.prisma.form.count({
+            where: {
+              userId,
+              theme: { not: Prisma.DbNull },
             },
           }),
           // Store (for products + orders)
@@ -121,6 +183,43 @@ export class DashboardService {
           totalProducts = secondBatchResults[3] || 0;
         }
 
+        const totalFormViews =
+          formViewTotals._sum.viewCount ?? 0;
+        const totalFormSubmissionCount =
+          formViewTotals._sum.submissionCount ?? totalFormSubmissions;
+
+        const completionRate =
+          totalFormViews > 0
+            ? Math.round(
+                (totalFormSubmissionCount / totalFormViews) * 1000,
+              ) / 10
+            : 0;
+
+        const formAnalyticsMonthViews =
+          formAnalyticsThisMonth._sum.views ?? 0;
+        const formAnalyticsMonthSubmissions =
+          formAnalyticsThisMonth._sum.submissions ?? 0;
+        const formAnalyticsLastMonthViews =
+          formAnalyticsLastMonth._sum.views ?? 0;
+        const formAnalyticsLastMonthSubmissions =
+          formAnalyticsLastMonth._sum.submissions ?? 0;
+
+        const completionRateThisMonth =
+          formAnalyticsMonthViews > 0
+            ? Math.round(
+                (formAnalyticsMonthSubmissions / formAnalyticsMonthViews) *
+                  1000,
+              ) / 10
+            : 0;
+        const completionRateLastMonth =
+          formAnalyticsLastMonthViews > 0
+            ? Math.round(
+                (formAnalyticsLastMonthSubmissions /
+                  formAnalyticsLastMonthViews) *
+                  1000,
+              ) / 10
+            : 0;
+
         return {
           events: {
             active: activeEvents,
@@ -134,6 +233,15 @@ export class DashboardService {
             active: activeForms,
             total: totalForms,
             submissions: totalFormSubmissions,
+            submissionsThisMonth: formSubmissionsThisMonth,
+            submissionsLastMonth: formSubmissionsLastMonth,
+            views: totalFormViews,
+            completionRate,
+            completionRateThisMonth,
+            completionRateLastMonth,
+            themed: themedFormsCount,
+            createdThisMonth: formsCreatedThisMonth,
+            createdLastMonth: formsCreatedLastMonth,
           },
           views: {
             total: totalViews,
@@ -178,7 +286,7 @@ export class DashboardService {
     const now = new Date();
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - days);
-    
+
     const previousStartDate = new Date(startDate);
     previousStartDate.setDate(previousStartDate.getDate() - days);
 
@@ -227,7 +335,11 @@ export class DashboardService {
 
     // Generate daily data
     const currentData = this.aggregateByDay(currentOrders, startDate, days);
-    const previousData = this.aggregateByDay(previousOrders, previousStartDate, days);
+    const previousData = this.aggregateByDay(
+      previousOrders,
+      previousStartDate,
+      days,
+    );
 
     return {
       current: currentData,
@@ -245,7 +357,15 @@ export class DashboardService {
    * Aggregate orders by day
    */
   private aggregateByDay(orders: any[], startDate: Date, days: number) {
-    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayNames = [
+      'الأحد',
+      'الإثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+    ];
     const data = [];
 
     for (let i = 0; i < days; i++) {
@@ -275,7 +395,15 @@ export class DashboardService {
    * Generate empty chart data
    */
   private generateEmptyChartData(days: number) {
-    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayNames = [
+      'الأحد',
+      'الإثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+    ];
     const now = new Date();
     const data = [];
 
@@ -341,7 +469,8 @@ export class DashboardService {
 
         socialLinks.forEach((link) => {
           const platform = link.platform || 'رابط';
-          platformClicks[platform] = (platformClicks[platform] || 0) + (link.totalClicks || 0);
+          platformClicks[platform] =
+            (platformClicks[platform] || 0) + (link.totalClicks || 0);
         });
       }
 
@@ -352,7 +481,7 @@ export class DashboardService {
       });
 
       let productCount = 0;
-      let orderSources: { source: string; count: number }[] = [];
+      const orderSources: { source: string; count: number }[] = [];
 
       if (userStore) {
         // عدد المنتجات النشطة
@@ -414,9 +543,12 @@ export class DashboardService {
           name: s.name,
           value: s.value,
           percentage: maxValue > 0 ? Math.round((s.value / maxValue) * 100) : 0,
-          color: index === 0 ? 'bg-foreground' : 
-                 index < 3 ? 'bg-slate-500 dark:bg-slate-400' : 
-                 'bg-slate-300 dark:bg-slate-600',
+          color:
+            index === 0
+              ? 'bg-foreground'
+              : index < 3
+                ? 'bg-slate-500 dark:bg-slate-400'
+                : 'bg-slate-300 dark:bg-slate-600',
         }));
       }
     } catch (error) {

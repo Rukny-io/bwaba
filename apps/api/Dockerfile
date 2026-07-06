@@ -10,9 +10,18 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm install --ignore-scripts \
- && npx prisma generate --config prisma/prisma.config.ts \
- && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm \
+  --mount=type=cache,target=/root/.cache/prisma \
+  npm config set fetch-retries 10 \
+  && npm config set fetch-timeout 600000 \
+  && npm install --ignore-scripts --no-audit --no-fund \
+  && for attempt in 1 2 3 4 5; do \
+       npx prisma generate --config prisma/prisma.config.ts && break; \
+       if [ "$attempt" -eq 5 ]; then exit 1; fi; \
+       echo "prisma generate failed (attempt $attempt), retrying..."; \
+       sleep $((attempt * 5)); \
+     done \
+  && npm cache clean --force
 
 # --- Builder ---
 FROM base AS builder
@@ -39,9 +48,15 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
 
 # Regenerate prisma client + clean all caches
-RUN npx prisma generate --config prisma/prisma.config.ts \
+RUN --mount=type=cache,target=/root/.cache/prisma \
+  for attempt in 1 2 3 4 5; do \
+    npx prisma generate --config prisma/prisma.config.ts && break; \
+    if [ "$attempt" -eq 5 ]; then exit 1; fi; \
+    echo "prisma generate failed (attempt $attempt), retrying..."; \
+    sleep $((attempt * 5)); \
+  done \
  && npm cache clean --force \
- && rm -rf /root/.cache /tmp/*
+ && rm -rf /tmp/*
 
 # Writable directories for the non-root user
 RUN mkdir -p /app/temp/videos /app/uploads/avatars /app/uploads/events \

@@ -51,9 +51,9 @@ export class YouTubeService {
   getAuthUrl(state: string): string {
     this.ensureOAuthConfigured();
 
-    const scopes = [
-      'https://www.googleapis.com/auth/youtube.readonly',
-    ].join(' ');
+    const scopes = ['https://www.googleapis.com/auth/youtube.readonly'].join(
+      ' ',
+    );
 
     const params = new URLSearchParams({
       client_id: this.clientId,
@@ -124,13 +124,18 @@ export class YouTubeService {
 
     const channel = channelData.items?.[0];
     if (!channel) {
-      throw new BadRequestException('لم يتم العثور على قناة YouTube مرتبطة بهذا الحساب');
+      throw new BadRequestException(
+        'لم يتم العثور على قناة YouTube مرتبطة بهذا الحساب',
+      );
     }
 
     const tokenExpiry = new Date(Date.now() + tokenData.expires_in * 1000);
     const thumbnails = channel.snippet?.thumbnails;
     const channelThumbnail =
-      thumbnails?.high?.url ?? thumbnails?.medium?.url ?? thumbnails?.default?.url ?? null;
+      thumbnails?.high?.url ??
+      thumbnails?.medium?.url ??
+      thumbnails?.default?.url ??
+      null;
 
     // 3. Upsert connection
     await this.youtubeConnectionModel.upsert({
@@ -165,9 +170,12 @@ export class YouTubeService {
 
   /** Refresh expired access token using refresh token */
   async refreshAccessToken(userId: string) {
-    const conn = await this.youtubeConnectionModel.findUnique({ where: { userId } });
+    const conn = await this.youtubeConnectionModel.findUnique({
+      where: { userId },
+    });
     if (!conn) throw new NotFoundException('لا يوجد حساب YouTube مرتبط');
-    if (!conn.refreshToken) throw new BadRequestException('لا يوجد refresh token');
+    if (!conn.refreshToken)
+      throw new BadRequestException('لا يوجد refresh token');
 
     const res = await fetch(YT_TOKEN_URL, {
       method: 'POST',
@@ -185,7 +193,10 @@ export class YouTubeService {
       throw new BadRequestException(`Token refresh failed: ${err}`);
     }
 
-    const data = (await res.json()) as { access_token: string; expires_in: number };
+    const data = (await res.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     const tokenExpiry = new Date(Date.now() + data.expires_in * 1000);
 
     await this.youtubeConnectionModel.update({
@@ -198,7 +209,9 @@ export class YouTubeService {
 
   /** Get a valid access token (refreshing if needed) */
   private async getValidToken(userId: string): Promise<string> {
-    const conn = await this.youtubeConnectionModel.findUnique({ where: { userId } });
+    const conn = await this.youtubeConnectionModel.findUnique({
+      where: { userId },
+    });
     if (!conn) throw new NotFoundException('لا يوجد حساب YouTube مرتبط');
 
     if (conn.tokenExpiry && new Date(conn.tokenExpiry) < new Date()) {
@@ -239,7 +252,9 @@ export class YouTubeService {
   /** Fetch latest videos from connected channel */
   async getLatestVideos(userId: string, limit = 12) {
     const accessToken = await this.getValidToken(userId);
-    const conn = await this.youtubeConnectionModel.findUnique({ where: { userId } });
+    const conn = await this.youtubeConnectionModel.findUnique({
+      where: { userId },
+    });
 
     // Get uploads playlist
     const channelRes = await fetch(
@@ -291,7 +306,9 @@ export class YouTubeService {
         id: v.id,
         title: v.snippet?.title,
         description: v.snippet?.description,
-        thumbnail: v.snippet?.thumbnails?.high?.url ?? v.snippet?.thumbnails?.medium?.url,
+        thumbnail:
+          v.snippet?.thumbnails?.high?.url ??
+          v.snippet?.thumbnails?.medium?.url,
         publishedAt: v.snippet?.publishedAt,
         viewCount: v.statistics?.viewCount,
         likeCount: v.statistics?.likeCount,
@@ -327,7 +344,9 @@ export class YouTubeService {
       id: video.id,
       title: video.snippet?.title,
       description: video.snippet?.description,
-      thumbnail: video.snippet?.thumbnails?.high?.url ?? video.snippet?.thumbnails?.medium?.url,
+      thumbnail:
+        video.snippet?.thumbnails?.high?.url ??
+        video.snippet?.thumbnails?.medium?.url,
       channelTitle: video.snippet?.channelTitle,
       publishedAt: video.snippet?.publishedAt,
       viewCount: video.statistics?.viewCount,
@@ -339,7 +358,9 @@ export class YouTubeService {
 
   /** Fetch public videos for display (uses stored token) */
   async getPublicVideos(userId: string, limit = 6) {
-    const conn = await this.youtubeConnectionModel.findUnique({ where: { userId } });
+    const conn = await this.youtubeConnectionModel.findUnique({
+      where: { userId },
+    });
     if (!conn) return null;
 
     if (conn.tokenExpiry && new Date(conn.tokenExpiry) < new Date()) {
@@ -385,7 +406,9 @@ export class YouTubeService {
   ) {
     if (type === 'LATEST_VIDEOS') {
       // Ensure user has YouTube connected
-      const conn = await this.youtubeConnectionModel.findUnique({ where: { userId } });
+      const conn = await this.youtubeConnectionModel.findUnique({
+        where: { userId },
+      });
       if (!conn) throw new BadRequestException('يجب ربط حساب YouTube أولاً');
     }
 

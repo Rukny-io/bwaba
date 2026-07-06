@@ -51,13 +51,18 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get top products for store dashboard' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of products to return' })
-  @ApiResponse({ status: 200, description: 'Top products retrieved successfully' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of products to return',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Top products retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getTopProducts(
-    @Request() req,
-    @Query('limit') limit?: number,
-  ) {
+  async getTopProducts(@Request() req, @Query('limit') limit?: number) {
     return this.productsService.getTopProducts(req.user.id, limit || 5);
   }
 

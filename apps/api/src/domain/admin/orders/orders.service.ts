@@ -12,12 +12,17 @@ export class OrdersService {
   async getStats() {
     return this.cache.wrap('admin:orders-stats', 120, async () => {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       const weekStart = new Date(todayStart);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `
         SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE "createdAt" >= $1)::int AS today,
@@ -36,7 +41,11 @@ export class OrdersService {
           COALESCE(SUM(total) FILTER (WHERE "createdAt" >= $1), 0)::float AS revenue_today,
           COALESCE(AVG(total), 0)::float AS avg_order
         FROM orders
-      `, todayStart, weekStart, monthStart);
+      `,
+        todayStart,
+        weekStart,
+        monthStart,
+      );
 
       const r = rows[0];
       const total = r.total;
@@ -89,8 +98,10 @@ export class OrdersService {
       ];
     }
     if (status) where.status = status;
-    if (startDate) where.createdAt = { ...where.createdAt, gte: new Date(startDate) };
-    if (endDate) where.createdAt = { ...where.createdAt, lte: new Date(endDate) };
+    if (startDate)
+      where.createdAt = { ...where.createdAt, gte: new Date(startDate) };
+    if (endDate)
+      where.createdAt = { ...where.createdAt, lte: new Date(endDate) };
 
     const [orders, total] = await Promise.all([
       this.prisma.orders.findMany({
@@ -131,14 +142,19 @@ export class OrdersService {
           ? {
               id: o.users.id,
               email: o.users.email,
-              name: o.users.profile?.name || (o as any).addresses?.fullName,
+              name: o.users.profile?.name || o.addresses?.fullName,
               avatar: o.users.profile?.avatar,
             }
-          : (o as any).addresses?.fullName
-            ? { name: (o as any).addresses.fullName }
+          : o.addresses?.fullName
+            ? { name: o.addresses.fullName }
             : null,
         store: o.stores
-          ? { id: o.stores.id, name: o.stores.name, slug: o.stores.slug, logo: o.stores.logo }
+          ? {
+              id: o.stores.id,
+              name: o.stores.name,
+              slug: o.stores.slug,
+              logo: o.stores.logo,
+            }
           : null,
       })),
       total,
@@ -196,8 +212,10 @@ export class OrdersService {
   }) {
     const where: any = {};
     if (query.status) where.status = query.status;
-    if (query.startDate) where.createdAt = { ...where.createdAt, gte: new Date(query.startDate) };
-    if (query.endDate) where.createdAt = { ...where.createdAt, lte: new Date(query.endDate) };
+    if (query.startDate)
+      where.createdAt = { ...where.createdAt, gte: new Date(query.startDate) };
+    if (query.endDate)
+      where.createdAt = { ...where.createdAt, lte: new Date(query.endDate) };
 
     const orders = await this.prisma.orders.findMany({
       where,

@@ -12,7 +12,10 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../../../core/common/decorators/auth/current-user.decorator';
 import { PhoneNumbersService } from './phone-numbers.service';
-import { RegisterPhoneDto, UpdatePhoneProfileDto } from './dto/phone-number.dto';
+import {
+  RegisterPhoneDto,
+  UpdatePhoneProfileDto,
+} from './dto/phone-number.dto';
 import { SendTestMessageDto } from './dto/send-test-message.dto';
 
 @ApiTags('Developer - Phone Numbers')
@@ -24,10 +27,7 @@ export class PhoneNumbersController {
 
   @Get()
   @ApiOperation({ summary: 'قائمة أرقام الهاتف' })
-  findAll(
-    @CurrentUser('id') userId: string,
-    @Query('appId') appId: string,
-  ) {
+  findAll(@CurrentUser('id') userId: string, @Query('appId') appId: string) {
     return this.phoneNumbersService.findAll(userId, appId);
   }
 

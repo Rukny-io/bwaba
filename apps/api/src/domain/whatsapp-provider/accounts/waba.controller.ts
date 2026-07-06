@@ -34,19 +34,13 @@ export class WabaController {
 
   @Post('connect')
   @ApiOperation({ summary: 'ربط حساب WABA عبر Embedded Signup' })
-  connect(
-    @CurrentUser('id') userId: string,
-    @Body() dto: ConnectWabaDto,
-  ) {
+  connect(@CurrentUser('id') userId: string, @Body() dto: ConnectWabaDto) {
     return this.wabaService.connect(userId, dto);
   }
 
   @Get('accounts')
   @ApiOperation({ summary: 'قائمة حسابات WABA' })
-  findAll(
-    @CurrentUser('id') userId: string,
-    @Query('appId') appId: string,
-  ) {
+  findAll(@CurrentUser('id') userId: string, @Query('appId') appId: string) {
     return this.wabaService.findAll(userId, appId);
   }
 

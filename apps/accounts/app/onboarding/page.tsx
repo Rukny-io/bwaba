@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { AuthLayout } from "@/components/auth/auth-layout"
 import { AuthFooter } from "@/components/auth/auth-footer"
 import { Button } from "@/components/ui/button"
@@ -25,8 +26,8 @@ const accountTypes: AccountTypeOption[] = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
       </svg>
     ),
-    label: "مستخدم عادي",
-    description: "إدارة روابطي وملفي الشخصي",
+    label: "type_user",
+    description: "type_user_desc",
   },
   {
     id: "store",
@@ -35,8 +36,8 @@ const accountTypes: AccountTypeOption[] = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
       </svg>
     ),
-    label: "صاحب متجر",
-    description: "إدارة متجر ومنتجات تجارية",
+    label: "type_store",
+    description: "type_store_desc",
   },
   {
     id: "developer",
@@ -45,8 +46,8 @@ const accountTypes: AccountTypeOption[] = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
       </svg>
     ),
-    label: "مطوّر",
-    description: "الوصول إلى API والأدوات التقنية",
+    label: "type_developer",
+    description: "type_developer_desc",
   },
 ]
 
@@ -67,15 +68,16 @@ export default function OnboardingPage() {
   const [accountType, setAccountType] = useState<AccountType>("user")
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const t = useTranslations("Auth")
 
   const validateStep1 = () => {
     const errs: Record<string, string> = {}
     if (!fullName.trim() || fullName.trim().length < 2)
-      errs.fullName = "يرجى إدخال اسمك الكامل (حرفان على الأقل)"
+      errs.fullName = t("full_name_error")
     if (!username.trim() || username.trim().length < 3)
-      errs.username = "اسم المستخدم يجب أن يكون 3 أحرف على الأقل"
+      errs.username = t("username_error_length")
     if (!/^[a-z0-9_]+$/.test(username))
-      errs.username = "اسم المستخدم: أحرف إنجليزية صغيرة، أرقام، أو _"
+      errs.username = t("username_error_chars")
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -89,8 +91,9 @@ export default function OnboardingPage() {
     setIsLoading(true)
     try {
       await completeProfile({ fullName, username, accountType })
+      const appBase = (process.env.NEXT_PUBLIC_APP_URL || "https://app.rukny.io").replace(/\/$/, "")
       const redirectMap: Record<AccountType, string> = {
-        user: process.env.NEXT_PUBLIC_APP_URL || "https://app.rukny.io",
+        user: `${appBase}/app/links`,
         store: process.env.NEXT_PUBLIC_BUSINESS_URL || "https://business.rukny.io",
         developer: process.env.NEXT_PUBLIC_DEVELOPERS_URL || "https://developers.rukny.io",
       }
@@ -122,7 +125,7 @@ export default function OnboardingPage() {
                 ) : s}
               </div>
               <span className={cn("text-xs hidden sm:block", s <= step ? "text-foreground font-medium" : "text-muted-foreground")}>
-                {s === 1 ? "بياناتك الشخصية" : "نوع الحساب"}
+                {s === 1 ? t("personal_info") : t("account_type")}
               </span>
             </div>
             {s < 2 && <div className={cn("flex-1 h-px", step > s ? "bg-primary" : "bg-border")} />}
@@ -134,18 +137,18 @@ export default function OnboardingPage() {
       {step === 1 && (
         <form onSubmit={handleStep1} className="w-full space-y-4">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-semibold text-foreground mb-1">أكمل ملفك الشخصي</h1>
-            <p className="text-sm text-muted-foreground">أخبرنا قليلاً عن نفسك</p>
+            <h1 className="text-2xl font-semibold text-foreground mb-1">{t("complete_profile_title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("tell_us_more")}</p>
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="fullName" className="text-sm font-medium text-foreground block text-right">
-              الاسم الكامل
+              {t("full_name_label")}
             </label>
             <Input
               id="fullName"
               type="text"
-              placeholder="محمد عبدالله"
+              placeholder={t("full_name_placeholder")}
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); setErrors({}) }}
               aria-invalid={!!errors.fullName}
@@ -156,7 +159,7 @@ export default function OnboardingPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="username" className="text-sm font-medium text-foreground block text-right">
-              اسم المستخدم
+              {t("username_label")}
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 start-4 flex items-center text-sm text-muted-foreground pointer-events-none">
@@ -181,7 +184,7 @@ export default function OnboardingPage() {
             size="lg"
             className="w-full h-12 rounded-full bg-primary text-primary-foreground text-base font-medium mt-2"
           >
-            التالي
+            {t("next")}
           </Button>
         </form>
       )}
@@ -190,8 +193,8 @@ export default function OnboardingPage() {
       {step === 2 && (
         <div className="w-full">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-semibold text-foreground mb-1">ما نوع حسابك؟</h1>
-            <p className="text-sm text-muted-foreground">سنقوم بتهيئة المنصة لتناسبك</p>
+            <h1 className="text-2xl font-semibold text-foreground mb-1">{t("what_account_type")}</h1>
+            <p className="text-sm text-muted-foreground">{t("what_account_type_desc")}</p>
           </div>
 
           <div className="space-y-3 mb-6">
@@ -212,8 +215,8 @@ export default function OnboardingPage() {
                   {opt.icon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground">{opt.description}</p>
+                  <p className="text-sm font-medium text-foreground">{t(opt.label as any)}</p>
+                  <p className="text-xs text-muted-foreground">{t(opt.description as any)}</p>
                 </div>
                 {accountType === opt.id && (
                   <svg xmlns="http://www.w3.org/2000/svg" className="size-4 text-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -232,7 +235,7 @@ export default function OnboardingPage() {
               onClick={() => setStep(1)}
               className="flex-1 h-12 rounded-full"
             >
-              رجوع
+              {t("back")}
             </Button>
             <Button
               type="button"
@@ -241,7 +244,7 @@ export default function OnboardingPage() {
               disabled={isLoading}
               className="flex-1 h-12 rounded-full bg-primary text-primary-foreground text-base font-medium"
             >
-              {isLoading ? "جارٍ الحفظ..." : "ابدأ الآن"}
+              {isLoading ? t("saving") : t("start_now")}
             </Button>
           </div>
         </div>

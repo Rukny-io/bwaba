@@ -52,19 +52,62 @@ export class SanitizePipe implements PipeTransform {
 
   // قيم الـ enum المسموح بها (لن تُحذف)
   private readonly ALLOWED_ENUM_VALUES = [
-    'TEXT', 'TEXTAREA', 'NUMBER', 'EMAIL', 'PHONE', 'DATE', 'TIME', 'DATETIME',
-    'SELECT', 'MULTISELECT', 'RADIO', 'CHECKBOX', 'FILE', 'RATING', 'SCALE', 'TOGGLE', 
-    'MATRIX', 'SIGNATURE', 'URL', 'RANKING',
-    // Layout blocks
-    'HEADING', 'PARAGRAPH', 'DIVIDER', 'TITLE', 'LABEL',
-    // Embed blocks  
-    'IMAGE', 'VIDEO', 'AUDIO', 'EMBED',
+    'TEXT',
+    'TEXTAREA',
+    'NUMBER',
+    'EMAIL',
+    'PHONE',
+    'DATE',
+    'TIME',
+    'DATETIME',
+    'SELECT',
+    'MULTISELECT',
+    'RADIO',
+    'CHECKBOX',
+    'FILE',
+    'RATING',
+    'SCALE',
+    'TOGGLE',
+    'MATRIX',
+    'SIGNATURE',
+    'URL',
+    'RANKING',
+    'YES_NO',
+    'LEGAL_CONSENT',
+    'IRAQ_GOVERNORATE',
+    'NPS',
+    'RESPONDENT_COUNTRY',
+    'HEADING',
+    'PARAGRAPH',
+    'DIVIDER',
+    'TITLE',
+    'LABEL',
+    // Embed blocks
+    'IMAGE',
+    'VIDEO',
+    'AUDIO',
+    'EMBED',
     // Advanced blocks
-    'CONDITIONAL_LOGIC', 'CALCULATED', 'HIDDEN', 'RECAPTCHA',
+    'CONDITIONAL_LOGIC',
+    'CALCULATED',
+    'HIDDEN',
+    'RECAPTCHA',
     // Form statuses
-    'DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED', 'ACTIVE', 'INACTIVE',
+    'DRAFT',
+    'PUBLISHED',
+    'CLOSED',
+    'ARCHIVED',
+    'ACTIVE',
+    'INACTIVE',
     // Form types
-    'CONTACT', 'SURVEY', 'REGISTRATION', 'ORDER', 'FEEDBACK', 'QUIZ', 'APPLICATION', 'OTHER',
+    'CONTACT',
+    'SURVEY',
+    'REGISTRATION',
+    'ORDER',
+    'FEEDBACK',
+    'QUIZ',
+    'APPLICATION',
+    'OTHER',
   ];
 
   // Regex للتحقق من صورة base64 صالحة
@@ -83,8 +126,11 @@ export class SanitizePipe implements PipeTransform {
       // 🔒 Debug logging - log ALL string values to trace the token
       const isToken = fieldName && this.isTokenField(fieldName);
       const looksLikeToken = this.isJwtLike(value);
-      
-      if (process.env.NODE_ENV === 'development' && (isToken || looksLikeToken)) {
+
+      if (
+        process.env.NODE_ENV === 'development' &&
+        (isToken || looksLikeToken)
+      ) {
         console.log(`[SanitizePipe.transform] String parameter:`, {
           fieldName,
           paramType: metadata.type,
@@ -94,9 +140,9 @@ export class SanitizePipe implements PipeTransform {
           preview: value.substring(0, 50) + '...',
         });
       }
-      
+
       const sanitized = this.sanitizeString(value, fieldName);
-      
+
       // 🔒 Log if something changed
       if (value !== sanitized && (isToken || looksLikeToken)) {
         console.warn(`[SanitizePipe] ⚠️ TOKEN WAS MODIFIED!`, {
@@ -107,7 +153,7 @@ export class SanitizePipe implements PipeTransform {
           sanitizedPreview: sanitized.substring(0, 30),
         });
       }
-      
+
       return sanitized;
     }
 
@@ -123,6 +169,11 @@ export class SanitizePipe implements PipeTransform {
    */
   private sanitizeString(str: string, fieldName?: string): string {
     if (!str) return str;
+
+    // توقيعات وصور مضمّنة في JSON (مثل data في submit) — لا تُعدَّل أبداً
+    if (this.isEmbeddedImagePayload(str)) {
+      return str;
+    }
 
     // إذا كان حقل token، احفظه كما هو بدون تعديل
     if (fieldName && this.isTokenField(fieldName)) {
@@ -172,13 +223,16 @@ export class SanitizePipe implements PipeTransform {
           '',
         )
         // 🔒 SQL Injection Protection - أنماط إضافية (لكن ليس على قيم قصيرة جداً)
-        .replace(/(\b)(union|select|insert|update|delete|drop|truncate|alter|exec|execute|xp_|sp_|0x)(\b)/gi, (match, p1, word, p3) => {
-          // لا تحذف الكلمات المحجوزة إذا كانت قيمة enum مسموح بها
-          if (this.ALLOWED_ENUM_VALUES.includes(word.toUpperCase())) {
-            return match;
-          }
-          return '';
-        })
+        .replace(
+          /(\b)(union|select|insert|update|delete|drop|truncate|alter|exec|execute|xp_|sp_|0x)(\b)/gi,
+          (match, p1, word, p3) => {
+            // لا تحذف الكلمات المحجوزة إذا كانت قيمة enum مسموح بها
+            if (this.ALLOWED_ENUM_VALUES.includes(word.toUpperCase())) {
+              return match;
+            }
+            return '';
+          },
+        )
         .replace(/(--)|(\/\*)|(\*\/)|(\|{2})|(;)/g, '')
         .replace(/('|"|`)\s*(or|and)\s*('|"|`)/gi, '')
         .replace(/(char|nchar|varchar|nvarchar)\s*\(/gi, '')
@@ -190,6 +244,16 @@ export class SanitizePipe implements PipeTransform {
         // تنظيف whitespace زائد
         .trim()
     );
+  }
+
+  /**
+   * صور base64 مضمّنة (توقيع، غلاف، …) — تجاوز التنظيف لأن replace يفسد ;base64,
+   */
+  private isEmbeddedImagePayload(str: string): boolean {
+    if (str.startsWith('data:image/')) return true;
+    if (/^data:image\/[\w+.-]+base64,/i.test(str.slice(0, 80))) return true;
+    if (str.startsWith('image/') && str.includes(';base64,')) return true;
+    return false;
   }
 
   /**

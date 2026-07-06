@@ -63,8 +63,9 @@ import { WhatsAppBusinessModule } from './integrations/whatsapp-business/whatsap
 import { InstagramModule } from './integrations/instagram/instagram.module';
 import { YouTubeModule } from './integrations/youtube/youtube.module';
 import { LinkedInModule } from './integrations/linkedin/linkedin.module';
+import { TikTokModule } from './integrations/tiktok/tiktok.module';
 import { QasehPaymentModule } from './integrations/qaseh-payment/qaseh-payment.module';
-// import { PushNotificationsModule } from './integrations/push-notifications/push-notifications.module'; // Disabled - needs configuration
+import { PushNotificationsModule } from './integrations/push-notifications/push-notifications.module';
 import { DevModule } from './dev/dev.module';
 
 // Domain - Developer Portal & WhatsApp Provider
@@ -158,8 +159,9 @@ import { SharedModule } from './shared/modules/shared.module';
     InstagramModule,
     YouTubeModule,
     LinkedInModule,
+    TikTokModule,
     QasehPaymentModule, // 💳 Al-Qaseh Payment Gateway
-    // PushNotificationsModule, // 🔔 Web Push Notifications - Disabled (needs configuration)
+    PushNotificationsModule, // 🔔 Web Push (active when VAPID keys are configured)
     ...(process.env.NODE_ENV !== 'production' ? [DevModule] : []),
   ],
   controllers: [AppController],

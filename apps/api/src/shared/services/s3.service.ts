@@ -178,7 +178,9 @@ export class S3Service implements OnModuleInit {
     }
 
     if (buffer && typeof (buffer as any).arrayBuffer === 'function') {
-      const ab = await (buffer as { arrayBuffer: () => Promise<ArrayBuffer> }).arrayBuffer();
+      const ab = await (
+        buffer as { arrayBuffer: () => Promise<ArrayBuffer> }
+      ).arrayBuffer();
       return Buffer.from(new Uint8Array(ab));
     }
 
@@ -214,7 +216,10 @@ export class S3Service implements OnModuleInit {
         lastError = err;
 
         // Don't retry client errors (4xx)
-        if (err?.name === 'NoSuchBucket' || err?.$metadata?.httpStatusCode < 500) {
+        if (
+          err?.name === 'NoSuchBucket' ||
+          err?.$metadata?.httpStatusCode < 500
+        ) {
           throw err;
         }
 
@@ -233,6 +238,20 @@ export class S3Service implements OnModuleInit {
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Server-side encryption: SSE-KMS when AWS_KMS_KEY_ID is set, otherwise SSE-S3 (AES256).
+   */
+  getServerSideEncryptionParams(): {
+    ServerSideEncryption: 'aws:kms' | 'AES256';
+    SSEKMSKeyId?: string;
+  } {
+    const kmsKeyId = this.configService.get<string>('AWS_KMS_KEY_ID');
+    if (kmsKeyId?.trim()) {
+      return { ServerSideEncryption: 'aws:kms', SSEKMSKeyId: kmsKeyId.trim() };
+    }
+    return { ServerSideEncryption: 'AES256' };
   }
 
   // ===== Core Operations =====
@@ -265,6 +284,7 @@ export class S3Service implements OnModuleInit {
       Body: body,
       ContentType: contentType,
       ContentLength: body.length,
+      ...this.getServerSideEncryptionParams(),
     });
 
     await this.withRetry(async () => {
@@ -320,7 +340,7 @@ export class S3Service implements OnModuleInit {
       // Convert stream to buffer
       const stream = response.Body as NodeJS.ReadableStream;
       const chunks: Buffer[] = [];
-      
+
       for await (const chunk of stream) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
@@ -330,7 +350,9 @@ export class S3Service implements OnModuleInit {
       if (err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404) {
         return null;
       }
-      this.logger.warn(`Failed to get S3 object ${bucket}/${key}: ${err?.name || err}`);
+      this.logger.warn(
+        `Failed to get S3 object ${bucket}/${key}: ${err?.name || err}`,
+      );
       throw err;
     }
   }
@@ -401,6 +423,7 @@ export class S3Service implements OnModuleInit {
       Bucket: bucket,
       Key: key,
       ContentType: contentType,
+      ...this.getServerSideEncryptionParams(),
     });
     return getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds });
   }
@@ -576,9 +599,8 @@ export class S3Service implements OnModuleInit {
    * Deletes all files under: users/{userId}/
    */
   async deleteUserFiles(bucket: string, userId: string): Promise<void> {
-    const { ListObjectsV2Command, DeleteObjectsCommand } = await import(
-      '@aws-sdk/client-s3'
-    );
+    const { ListObjectsV2Command, DeleteObjectsCommand } =
+      await import('@aws-sdk/client-s3');
 
     const prefix = `users/${userId}/`;
     let continuationToken: string | undefined;

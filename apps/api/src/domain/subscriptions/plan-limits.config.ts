@@ -32,6 +32,14 @@ export interface PlanLimits {
   googleDrive: boolean;
   webhook: boolean;
   formAnalytics: false | 'basic' | 'advanced' | 'full';
+  /** التحقق من البريد برمز OTP داخل حقول النموذج */
+  emailFieldVerification: boolean;
+  /** التحقق من الهاتف عبر WhatsApp OTP داخل حقول النموذج */
+  phoneWhatsappVerification: boolean;
+  /** مشاركة النماذج مع فريق العمل */
+  formTeam: boolean;
+  /** عدد أعضاء الفريق المسموح بهم */
+  teamMembers: number;
 
   // === المتجر ===
   store: boolean;
@@ -109,10 +117,14 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     formMultiSlider: false,
     multiStepForms: false,
     conditionalLogic: false,
-    googleSheets: false,
-    googleDrive: false,
-    webhook: false,
-    formAnalytics: false,
+    googleSheets: true,
+    googleDrive: true,
+    webhook: true,
+    formAnalytics: 'basic',
+    emailFieldVerification: false,
+    phoneWhatsappVerification: false,
+    formTeam: false,
+    teamMembers: 0,
 
     // المتجر
     store: true,
@@ -187,10 +199,14 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     formMultiSlider: true,
     multiStepForms: true,
     conditionalLogic: 'basic',
-    googleSheets: false,
-    googleDrive: false,
-    webhook: false,
+    googleSheets: true,
+    googleDrive: true,
+    webhook: true,
     formAnalytics: 'basic',
+    emailFieldVerification: true,
+    phoneWhatsappVerification: true,
+    formTeam: true,
+    teamMembers: 2,
 
     // المتجر
     store: true,
@@ -269,6 +285,10 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     googleDrive: true,
     webhook: true,
     formAnalytics: 'advanced',
+    emailFieldVerification: true,
+    phoneWhatsappVerification: true,
+    formTeam: true,
+    teamMembers: 5,
 
     // المتجر
     store: true,
@@ -347,6 +367,10 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     googleDrive: true,
     webhook: true,
     formAnalytics: 'full',
+    emailFieldVerification: true,
+    phoneWhatsappVerification: true,
+    formTeam: true,
+    teamMembers: 15,
 
     // المتجر
     store: true,
@@ -410,8 +434,8 @@ export const PLAN_PRICES: Record<
   { monthly: number; yearly: number }
 > = {
   PRO: { monthly: 15_000, yearly: 144_000 },
-  WHALE: { monthly: 25_000, yearly: 240_000 },
-  BUSINESS: { monthly: 40_000, yearly: 384_000 },
+  WHALE: { monthly: 20_000, yearly: 192_000 },
+  BUSINESS: { monthly: 30_000, yearly: 288_000 },
 };
 
 /**

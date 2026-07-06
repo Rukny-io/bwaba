@@ -25,6 +25,13 @@ export class GoogleSheetsController {
     private readonly config: ConfigService,
   ) {}
 
+  /** Forms dashboard (apps/forms) — never fall back to FRONTEND_URL (main app on :3000). */
+  private getFormsAppBase(): string {
+    const base =
+      this.config.get<string>('FORMS_APP_URL') || 'http://localhost:3007';
+    return base.replace(/\/$/, '');
+  }
+
   /**
    * Get OAuth URL to connect Google Sheets
    * Uses login_hint to auto-select the user's Google account
@@ -37,7 +44,11 @@ export class GoogleSheetsController {
     @CurrentUser('email') userEmail: string,
   ) {
     // Pass user's email as login_hint to skip account selection
-    const authUrl = this.googleSheetsService.getAuthUrl(formId, userId, userEmail);
+    const authUrl = this.googleSheetsService.getAuthUrl(
+      formId,
+      userId,
+      userEmail,
+    );
     return { authUrl };
   }
 
@@ -71,17 +82,16 @@ export class GoogleSheetsController {
         // Continue anyway - the connection was successful
       }
 
-      // Redirect to the form's responses page with success
-      const frontendUrl =
-        this.config.get('FRONTEND_URL') || 'http://localhost:3000';
-      res.redirect(
-        `${frontendUrl}/app/forms/${formId}/responses?sheets_connected=true`,
-      );
+      // Redirect to forms app (slug-based URL)
+      const form = await this.googleSheetsService.getFormSlug(formId);
+      const formsBase = this.getFormsAppBase();
+      const path = form?.slug
+        ? `${formsBase}/app/forms/${encodeURIComponent(form.slug)}/integrations?sheets_connected=true`
+        : `${formsBase}/app/integrations?sheets_connected=true`;
+      res.redirect(path);
     } catch (error) {
       console.error('Google Sheets callback error:', error);
-      const frontendUrl =
-        this.config.get('FRONTEND_URL') || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/app/forms?sheets_error=true`);
+      res.redirect(`${this.getFormsAppBase()}/app/integrations?sheets_error=true`);
     }
   }
 

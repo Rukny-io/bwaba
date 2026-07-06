@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/common/guards/roles.guard';
 import { Roles } from '../../core/common/decorators/auth/roles.decorator';
@@ -80,16 +73,24 @@ export class SubscriptionsController {
   // ======== Admin Endpoints ========
 
   /**
+   * Admin: user subscription and invoices
+   * GET /subscriptions/admin/:userId
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/:userId')
+  adminGetUserBilling(@Param('userId') userId: string) {
+    return this.subscriptionsService.getAdminUserBilling(userId);
+  }
+
+  /**
    * 🔧 تعيين باقة مستخدم (أدمن)
    * POST /subscriptions/admin/:userId/set-plan
    */
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post('admin/:userId/set-plan')
-  adminSetPlan(
-    @Param('userId') userId: string,
-    @Body() dto: AdminSetPlanDto,
-  ) {
+  adminSetPlan(@Param('userId') userId: string, @Body() dto: AdminSetPlanDto) {
     return this.subscriptionsService.adminSetPlan(
       userId,
       dto.plan,

@@ -1,54 +1,63 @@
+"use client"
 import React from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
-
-// شعار Rukny SVG
-function RuknyLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      className={cn("size-8", className)}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Rukny"
-    >
-      <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path
-        d="M8 10h10a4 4 0 0 1 0 8h-4l6 4H16l-5.5-4H10v4H8V10z"
-        fill="white"
-      />
-      <rect x="10" y="12" width="7" height="1.5" rx="0.75" fill="white" opacity="0" />
-    </svg>
-  )
-}
+import { useLocale } from "next-intl"
 
 interface AuthLayoutProps {
   children: React.ReactNode
   className?: string
   showLogo?: boolean
-  title?: string
-  description?: string
 }
 
 export function AuthLayout({
   children,
   className,
   showLogo = true,
-  title,
-  description,
 }: AuthLayoutProps) {
+  const locale = useLocale()
+  
+  const toggleLocale = () => {
+    const nextLocale = locale === "ar" ? "en" : "ar"
+    document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=31536000`
+    window.location.reload()
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      {showLogo && (
-        <header className="px-6 py-5 flex items-center">
-          <div className="flex items-center gap-2.5">
-            <RuknyLogo />
-            <span className="text-base font-semibold text-foreground tracking-tight">
-              Rukny
+      <header className="px-4 md:px-6 pt-4">
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-3.5 flex items-center justify-between">
+        {showLogo ? (
+          <div className="flex items-center gap-3">
+            <div className="size-10  flex items-center justify-center">
+              <Image
+                src="/rukny-logo.svg"
+                alt="Rukny Logo"
+                width={24}
+                height={24}
+                className="size-6"
+                priority
+              />
+            </div>
+            <span className="text-base md:text-lg font-semibold text-foreground tracking-tight">
+              accounts
             </span>
           </div>
-        </header>
-      )}
+        ) : <div />}
+
+        <button 
+          onClick={toggleLocale}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-2xl border border-border/70 bg-background/80 hover:bg-accent text-foreground text-sm font-medium transition-colors cursor-pointer"
+          aria-label={locale === "ar" ? "Switch to English" : "التبديل إلى العربية"}
+        >
+          <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
+          <span className="mb-0.5">{locale === 'ar' ? 'English' : 'العربية'}</span>
+        </button>
+        </div>
+      </header>
 
       {/* Main content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -58,18 +67,6 @@ export function AuthLayout({
             className
           )}
         >
-          {(title || description) && (
-            <div className="w-full text-center mb-8">
-              {title && (
-                <h1 className="text-2xl font-semibold text-foreground mb-2">
-                  {title}
-                </h1>
-              )}
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
-              )}
-            </div>
-          )}
           {children}
         </div>
       </main>

@@ -49,15 +49,21 @@ export class ProductsService {
     }
 
     if (query.status) {
-      conditions.push(Prisma.sql`p.status = CAST(${query.status} AS "ProductStatus")`);
+      conditions.push(
+        Prisma.sql`p.status = CAST(${query.status} AS "ProductStatus")`,
+      );
     }
 
     if (query.isFeatured !== undefined) {
-      conditions.push(Prisma.sql`p."isFeatured" = ${query.isFeatured === 'true'}`);
+      conditions.push(
+        Prisma.sql`p."isFeatured" = ${query.isFeatured === 'true'}`,
+      );
     }
 
     if (query.startDate) {
-      conditions.push(Prisma.sql`p."createdAt" >= ${new Date(query.startDate)}`);
+      conditions.push(
+        Prisma.sql`p."createdAt" >= ${new Date(query.startDate)}`,
+      );
     }
 
     if (query.endDate) {
@@ -72,13 +78,18 @@ export class ProductsService {
   async getStats() {
     return this.cache.wrap('admin:products-stats', 120, async () => {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       const weekStart = new Date(todayStart);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const [productRows, extraRows] = await Promise.all([
-        this.prisma.$queryRawUnsafe<any[]>(`
+        this.prisma.$queryRawUnsafe<any[]>(
+          `
           SELECT
             COUNT(*)::int AS total,
             COUNT(*) FILTER (WHERE "createdAt" >= $1)::int AS today,
@@ -91,7 +102,11 @@ export class ProductsService {
             COUNT(*) FILTER (WHERE "trackInventory" = true AND quantity <= 5 AND quantity > 0)::int AS low_stock,
             COALESCE(AVG(price), 0)::float AS avg_price
           FROM products
-        `, todayStart, weekStart, monthStart),
+        `,
+          todayStart,
+          weekStart,
+          monthStart,
+        ),
         this.prisma.$queryRaw<any[]>(Prisma.sql`
           SELECT
             (
@@ -116,7 +131,11 @@ export class ProductsService {
         today: p.today,
         thisWeek: p.this_week,
         thisMonth: p.this_month,
-        byStatus: { active: p.active, inactive: p.inactive, outOfStock: p.out_of_stock },
+        byStatus: {
+          active: p.active,
+          inactive: p.inactive,
+          outOfStock: p.out_of_stock,
+        },
         featured: p.featured,
         lowStock: p.low_stock,
         averagePrice: p.avg_price,
@@ -218,10 +237,19 @@ export class ProductsService {
           createdAt: p.createdAt.toISOString(),
           image: await this.resolveImageUrl(p.image),
           store: p.storeId
-            ? { id: p.storeId, name: p.storeName, slug: p.storeSlug, logo: p.storeLogo }
+            ? {
+                id: p.storeId,
+                name: p.storeName,
+                slug: p.storeSlug,
+                logo: p.storeLogo,
+              }
             : null,
           category: p.categoryId
-            ? { id: p.categoryId, name: p.categoryName, nameAr: p.categoryNameAr }
+            ? {
+                id: p.categoryId,
+                name: p.categoryName,
+                nameAr: p.categoryNameAr,
+              }
             : null,
           ordersCount: p.ordersCount,
           reviewsCount: p.reviewsCount,
@@ -244,7 +272,9 @@ export class ProductsService {
         product_images: { orderBy: { displayOrder: 'asc' } },
         variants: true,
         productAttributes: true,
-        _count: { select: { order_items: true, reviews: true, variants: true } },
+        _count: {
+          select: { order_items: true, reviews: true, variants: true },
+        },
       },
     });
 
@@ -283,8 +313,10 @@ export class ProductsService {
   }) {
     const where: any = {};
     if (query.status) where.status = query.status;
-    if (query.startDate) where.createdAt = { ...where.createdAt, gte: new Date(query.startDate) };
-    if (query.endDate) where.createdAt = { ...where.createdAt, lte: new Date(query.endDate) };
+    if (query.startDate)
+      where.createdAt = { ...where.createdAt, gte: new Date(query.startDate) };
+    if (query.endDate)
+      where.createdAt = { ...where.createdAt, lte: new Date(query.endDate) };
 
     const products = await this.prisma.products.findMany({
       where,

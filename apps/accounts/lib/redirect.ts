@@ -12,7 +12,7 @@ export function getRedirectUrlByRole(role?: string): string {
   const developersUrl = process.env.NEXT_PUBLIC_DEVELOPERS_URL || "http://localhost:3004"
   const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3002"
 
-  if (!role) return appUrl
+  if (!role) return `${appUrl.replace(/\/$/, '')}/app/links`
 
   const upperRole = role.toUpperCase()
 
@@ -29,7 +29,7 @@ export function getRedirectUrlByRole(role?: string): string {
   }
 
   // الافتراضي (BASIC, GUEST، وغيرها)
-  return appUrl
+  return `${appUrl.replace(/\/$/, '')}/app/links`
 }
 
 /**

@@ -742,6 +742,13 @@ export class GoogleSheetsService {
   /**
    * Get integration status for a form
    */
+  async getFormSlug(formId: string) {
+    return this.prisma.form.findUnique({
+      where: { id: formId },
+      select: { slug: true },
+    });
+  }
+
   async getIntegrationStatus(formId: string, userId: string) {
     const form = await this.prisma.form.findFirst({
       where: { id: formId, userId },

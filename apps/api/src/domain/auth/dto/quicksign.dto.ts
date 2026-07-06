@@ -311,7 +311,9 @@ export class UpdateOAuthProfileDto {
   })
   @IsOptional()
   @IsString()
-  @IsIn(['solo', '2-5', '6-10', '11-50', '50+'], { message: 'عدد الموظفين غير صحيح' })
+  @IsIn(['solo', '2-5', '6-10', '11-50', '50+'], {
+    message: 'عدد الموظفين غير صحيح',
+  })
   employeesCount?: string;
 
   @ApiProperty({ example: 'العراق', required: false })

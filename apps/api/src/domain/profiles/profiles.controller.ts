@@ -99,7 +99,9 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload profile avatar to S3' })
   @ApiResponse({ status: 200, description: 'Avatar uploaded successfully' })
@@ -125,7 +127,9 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload cover image to S3' })
   @ApiResponse({
@@ -162,14 +166,13 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload logo for logo cloud slider' })
   @ApiResponse({ status: 201, description: 'Logo uploaded successfully' })
-  async uploadLogo(
-    @Request() req,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
+  async uploadLogo(@Request() req, @UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -198,10 +201,7 @@ export class ProfilesController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'إرسال رمز OTP للتحقق من رقم الهاتف عبر واتساب' })
   @ApiResponse({ status: 200, description: 'تم إرسال رمز OTP' })
-  async sendPhoneOtp(
-    @Request() req,
-    @Body() body: { phone: string },
-  ) {
+  async sendPhoneOtp(@Request() req, @Body() body: { phone: string }) {
     const phone = body.phone?.trim();
     if (!phone) throw new BadRequestException('رقم الهاتف مطلوب.');
 
@@ -209,7 +209,11 @@ export class ProfilesController {
     const redisKey = `phone_otp:${userId}`;
 
     // Rate limit: 1 OTP per 60s per user
-    const existing = await this.redisService.get<{ otp: string; phone: string; attempts: number }>(redisKey);
+    const existing = await this.redisService.get<{
+      otp: string;
+      phone: string;
+      attempts: number;
+    }>(redisKey);
     if (existing && existing.phone === phone) {
       // Allow resend only after 60s — enforced by TTL; if still exists, block
       throw new BadRequestException('انتظر دقيقة قبل إعادة إرسال الرمز.');
@@ -240,14 +244,21 @@ export class ProfilesController {
   ) {
     const phone = body.phone?.trim();
     const otp = body.otp?.trim();
-    if (!phone || !otp) throw new BadRequestException('رقم الهاتف والرمز مطلوبان.');
+    if (!phone || !otp)
+      throw new BadRequestException('رقم الهاتف والرمز مطلوبان.');
 
     const userId = req.user.id;
     const redisKey = `phone_otp:${userId}`;
 
-    const stored = await this.redisService.get<{ otp: string; phone: string; attempts: number }>(redisKey);
-    if (!stored) throw new BadRequestException('الرمز منتهي الصلاحية. اطلب رمزاً جديداً.');
-    if (stored.phone !== phone) throw new BadRequestException('رقم الهاتف غير مطابق.');
+    const stored = await this.redisService.get<{
+      otp: string;
+      phone: string;
+      attempts: number;
+    }>(redisKey);
+    if (!stored)
+      throw new BadRequestException('الرمز منتهي الصلاحية. اطلب رمزاً جديداً.');
+    if (stored.phone !== phone)
+      throw new BadRequestException('رقم الهاتف غير مطابق.');
 
     stored.attempts = (stored.attempts || 0) + 1;
     if (stored.attempts > 5) {

@@ -1,34 +1,60 @@
 # ============================================
-# PRODUCTION Dockerfile for Next.js App
+# PRODUCTION Dockerfile for Next.js App (rukny.work)
+# Build context: repository root (see docker-compose.app.yml)
 # ============================================
 FROM node:20-alpine AS base
 
-# --- Dependencies ---
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+# file: dependency needs the shared package present before npm install
+COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
+COPY apps/app/package.json apps/app/package-lock.json* ./apps/app/
 
-# --- Builder ---
+WORKDIR /app/apps/app
+RUN --mount=type=cache,target=/root/.npm \
+  npm config set fetch-retries 10 \
+  && npm config set fetch-timeout 600000 \
+  && npm install --no-audit --no-fund
+
 FROM base AS builder
-WORKDIR /app
+WORKDIR /app/apps/app
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/apps/app/node_modules ./node_modules
+COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
+COPY apps/app .
+
+# Materialize font package (Turbopack rejects symlinks pointing outside filesystem root)
+RUN rm -rf node_modules/@rukny/thmanyah-font \
+  && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG API_BACKEND_URL=http://localhost:3001
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_ACCOUNTS_URL=http://localhost:3005
+ARG NEXT_PUBLIC_BUSINESS_URL=http://localhost:3003
+ARG NEXT_PUBLIC_DEVELOPERS_URL=http://localhost:3004
+ARG NEXT_PUBLIC_FORMS_URL=http://localhost:3006
+ARG NEXT_PUBLIC_ROOT_DOMAIN=localhost
+ARG NEXT_PUBLIC_FORM_PUBLIC_ORIGIN=https://rukny.io
+ARG NEXT_PUBLIC_EMBED_FORM_SLUG=57fb02
 ENV API_BACKEND_URL=${API_BACKEND_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL}
+ENV NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL}
+ENV NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL}
+ENV NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL}
+ENV NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN}
+ENV NEXT_PUBLIC_FORM_PUBLIC_ORIGIN=${NEXT_PUBLIC_FORM_PUBLIC_ORIGIN}
+ENV NEXT_PUBLIC_EMBED_FORM_SLUG=${NEXT_PUBLIC_EMBED_FORM_SLUG}
+
+RUN test -f node_modules/@rukny/thmanyah-font/src/next.ts
 
 RUN npm run build
 
-# --- Runner ---
 FROM base AS runner
 WORKDIR /app
 
@@ -38,11 +64,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-
-# Standalone output
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/apps/app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/.next/static ./.next/static
 
 USER nextjs
 

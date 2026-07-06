@@ -21,6 +21,17 @@ export class ProductAttributesService {
 
   constructor(private prisma: PrismaService) {}
 
+  private isCategoryTemplateFields(
+    value: unknown,
+  ): value is CategoryTemplateFields {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    return (
+      'hasVariants' in value &&
+      'productAttributes' in value &&
+      Array.isArray((value as { productAttributes?: unknown }).productAttributes)
+    );
+  }
+
   /**
    * إنشاء خاصية منتج جديدة
    */
@@ -249,7 +260,8 @@ export class ProductAttributesService {
     });
 
     if (!category?.templateFields) return null;
-    return category.templateFields as unknown as CategoryTemplateFields;
+    if (!this.isCategoryTemplateFields(category.templateFields)) return null;
+    return category.templateFields;
   }
 
   /**
@@ -264,8 +276,10 @@ export class ProductAttributesService {
     });
 
     if (!store?.store_categories?.templateFields) return null;
-    return store.store_categories
-      .templateFields as unknown as CategoryTemplateFields;
+    if (!this.isCategoryTemplateFields(store.store_categories.templateFields)) {
+      return null;
+    }
+    return store.store_categories.templateFields;
   }
 
   /**

@@ -91,10 +91,7 @@ export class ThreatAlertService {
   /**
    * تنسيق رسالة التنبيه
    */
-  private formatAlertMessage(
-    alert: any,
-    timestamp: string,
-  ): string {
+  private formatAlertMessage(alert: any, timestamp: string): string {
     const severityEmoji = {
       LOW: 'ℹ️',
       MEDIUM: '⚠️',
@@ -173,7 +170,13 @@ ${alert.ipAddress ? `🌐 **IP:** ${alert.ipAddress}` : ''}
                   ? [{ title: 'User ID', value: alert.userId, short: true }]
                   : []),
                 ...(alert.ipAddress
-                  ? [{ title: 'IP Address', value: alert.ipAddress, short: true }]
+                  ? [
+                      {
+                        title: 'IP Address',
+                        value: alert.ipAddress,
+                        short: true,
+                      },
+                    ]
                   : []),
               ],
               footer: 'Rukny Security',
@@ -221,7 +224,13 @@ ${alert.ipAddress ? `🌐 **IP:** ${alert.ipAddress}` : ''}
                   ? [{ name: 'User ID', value: alert.userId, inline: true }]
                   : []),
                 ...(alert.ipAddress
-                  ? [{ name: 'IP Address', value: alert.ipAddress, inline: true }]
+                  ? [
+                      {
+                        name: 'IP Address',
+                        value: alert.ipAddress,
+                        inline: true,
+                      },
+                    ]
                   : []),
               ],
               timestamp,

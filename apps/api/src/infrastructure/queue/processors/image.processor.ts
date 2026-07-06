@@ -52,9 +52,7 @@ export class ImageProcessor {
       generateFormats: ['webp'],
     });
 
-    this.logger.log(
-      `Generated ${variants.length} thumbnails for ${key}`,
-    );
+    this.logger.log(`Generated ${variants.length} thumbnails for ${key}`);
 
     return { thumbnails: variants.length };
   }

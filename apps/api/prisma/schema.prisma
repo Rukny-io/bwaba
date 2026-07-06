@@ -18,6 +18,7 @@ model User {
   twoFactorSecret        String?
   googleId               String?                 @unique
   linkedinId             String?                 @unique
+  facebookId             String?                 @unique
   lastKnownIpFingerprint String?
   lastLoginAt            DateTime?
   lastLoginIpFingerprint String?
@@ -40,13 +41,20 @@ model User {
   isDeactivated          Boolean                 @default(false)
   deactivatedAt          DateTime?
   verificationLevel      Int                     @default(0) // 0=none, 1=email, 2=phone, 3=id
+  isRuknyVerified        Boolean                 @default(false)
+  ruknyVerifiedAt        DateTime?
+  verifiedCategory       String?
+  verifiedDisplayName    String?
   identityVerifications  IdentityVerification[]
-  instagramConnection    InstagramConnection?
+  ruknyVerifiedApplications RuknyVerifiedApplication[]
+  instagramConnections   InstagramConnection[]
   instagramBlocks        InstagramBlock[]
   youtubeConnection      YouTubeConnection?
   youtubeBlocks          YouTubeBlock[]
   linkedinConnection     LinkedInConnection?
   linkedinBlocks         LinkedInBlock[]
+  tiktokConnection       TikTokConnection?
+  tiktokBlocks           TikTokBlock[]
   addresses              addresses[]
   calendar_integrations  calendar_integrations[]
   carts                  carts?
@@ -63,6 +71,7 @@ model User {
   following              follows[]               @relation("follows_followingIdTousers")
   form_submissions       form_submissions[]
   forms                  Form[]
+  formsDeletedBy         Form[]                  @relation("forms_deleted_by")
   likes                  likes[]
   notifications          notifications[]
   pushSubscriptions      PushSubscription[]
@@ -97,6 +106,9 @@ model User {
   developerApiRequestLogs   ApiRequestLog[]
   developerSubscription     DeveloperSubscription?     @relation("developer_subscription")
   developerWallet           DeveloperWallet?           @relation("developer_wallet")
+  formTeamWorkspaceMembers  FormTeamMember[]           @relation("form_team_workspace")
+  formTeamMemberships       FormTeamMember[]           @relation("form_team_member")
+  formTeamInvitationsSent   FormTeamMember[]           @relation("form_team_inviter")
 
   @@index([telegramChatId])
   @@index([telegramConnectedAt])
@@ -139,22 +151,48 @@ model Profile {
 model IdentityVerification {
   id               String    @id @default(uuid())
   userId           String
-  documentType     String // "national_id" | "passport" | "driving_license"
-  documentFrontUrl String
-  documentBackUrl  String?
-  selfieUrl        String?
+  documentType     String // national_id | passport | driving_license
+  documentFrontUrl String // S3 key — primary document front
+  documentBackUrl  String? // S3 key — primary document back
+  residenceFrontKey String?
+  residenceBackKey  String?
+  selfieUrl        String? // S3 key
+  uploadSessionId  String?
   status           String    @default("pending") // pending | approved | rejected | expired
   rejectionReason  String?
-  reviewedBy       String? // admin userId
+  reviewedBy       String?
   reviewedAt       DateTime?
   submittedAt      DateTime  @default(now())
   expiresAt        DateTime?
+  documentsPurgeAt DateTime?
+  documentsDeletedAt DateTime?
   metadata         Json?
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
+  @@index([documentsPurgeAt])
   @@map("identity_verifications")
+}
+
+model RuknyVerifiedApplication {
+  id              String    @id @default(uuid())
+  userId          String
+  category        String // personal | business | creator
+  displayName     String
+  publicBio       String
+  websiteUrl      String?
+  socialLinks     Json?
+  status          String    @default("pending") // pending | approved | rejected
+  rejectionReason String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  submittedAt     DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("rukny_verified_applications")
 }
 
 model SocialLink {
@@ -189,7 +227,7 @@ model SocialLink {
 
 model InstagramConnection {
   id             String    @id @default(uuid())
-  userId         String    @unique
+  userId         String
   accessToken    String
   tokenExpiry    DateTime?
   igUserId       String
@@ -197,11 +235,38 @@ model InstagramConnection {
   name           String?
   profilePicUrl  String?
   followersCount Int?
+  mediaCount     Int?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments       InstagramComment[]
 
+  @@unique([userId, igUserId])
+  @@index([userId])
   @@map("instagram_connections")
+}
+
+model InstagramComment {
+  id              String              @id @default(uuid())
+  connectionId    String              
+  mediaId         String              // Instagram Media ID
+  igCommentId     String              @unique // Meta Comment ID
+  fromUsername    String              
+  fromIgId        String              
+  text            String              
+  timestamp       DateTime
+  isReply         Boolean             @default(false)
+  parentId        String?             
+  isRead          Boolean             @default(false)
+  isReplied       Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  connection      InstagramConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, isRead])
+  @@index([mediaId])
+  @@map("instagram_comments")
 }
 
 model InstagramBlock {
@@ -312,6 +377,49 @@ model LinkedInBlock {
 
 enum LinkedInBlockType {
   PROFILE_CARD
+}
+
+// ─── TikTok Integration ────────────────────────────────────────────
+
+model TikTokConnection {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  accessToken   String
+  refreshToken  String?
+  tokenExpiry   DateTime?
+  openId        String
+  unionId       String?
+  displayName   String
+  avatarUrl     String?
+  profileUrl    String?
+  isVerified    Boolean   @default(false)
+  bio           String?
+  followers     Int?
+  following     Int?
+  likes         Int?
+  videoCount    Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tiktok_connections")
+}
+
+model TikTokBlock {
+  id           String           @id @default(uuid())
+  userId       String
+  type         TikTokBlockType
+  displayOrder Int              @default(0)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tiktok_blocks")
+}
+
+enum TikTokBlockType {
+  FEED
 }
 
 model LinkGroup {
@@ -638,6 +746,7 @@ model Form {
   autoResponseMessage      String?
   linkedEventId            String?
   linkedStoreId            String?
+  developerAppId           String?
   theme                    Json?
   coverImage               String?
   bannerImages             String[]           @default([])
@@ -646,8 +755,13 @@ model Form {
   submissionCount          Int                @default(0)
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
+  deletedAt                DateTime?
+  deletedById              String?
+  purgeScheduledAt         DateTime?
+  deletionReason           String?
   closeAfterDate           Boolean            @default(false)
   oneResponsePerUser       Boolean            @default(false)
+  requireTurnstileOnSubmit Boolean            @default(false)
   isMultiStep              Boolean            @default(false)
   webhookEnabled           Boolean            @default(false)
   webhookEvents            String[]           @default([])
@@ -658,19 +772,78 @@ model Form {
   integrations             FormIntegration[]
   steps                    form_steps[]
   submissions              form_submissions[] @relation("submissions")
+  submission_slots         form_submission_slot[]
+  submission_idempotency   form_submission_idempotency[]
+  webhook_deliveries       form_webhook_delivery[]
   events                   Event?             @relation(fields: [linkedEventId], references: [id])
   stores                   Store?             @relation(fields: [linkedStoreId], references: [id])
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deletedBy                User?              @relation("forms_deleted_by", fields: [deletedById], references: [id], onDelete: SetNull)
+  developerApp             DeveloperApp?      @relation(fields: [developerAppId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([slug])
+  @@index([deletedAt])
+  @@index([purgeScheduledAt])
   @@index([linkedEventId])
   @@index([linkedStoreId])
+  @@index([developerAppId])
   @@index([status])
   @@index([type])
   @@index([userId, status, createdAt])
   @@index([type, status, createdAt])
   @@map("forms")
+}
+
+model FormDeletionLog {
+  id              String     @id @default(uuid())
+  formId          String
+  formTitle       String
+  formSlug        String
+  ownerId         String
+  deletedById     String
+  submissionCount Int        @default(0)
+  fieldCount      Int        @default(0)
+  statusAtDelete  FormStatus
+  typeAtDelete    FormType
+  reason          String?
+  ipAddress       String?
+  userAgent       String?
+  purgeScheduledAt DateTime
+  restoredAt      DateTime?
+  purgedAt        DateTime?
+  createdAt       DateTime   @default(now())
+
+  @@index([formId])
+  @@index([ownerId])
+  @@index([deletedById])
+  @@index([createdAt])
+  @@index([purgedAt])
+  @@index([restoredAt])
+  @@map("form_deletion_logs")
+}
+
+model FormTeamMember {
+  id          String           @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        FormTeamRole     @default(VIEWER)
+  permissions String[]
+  status      InvitationStatus @default(PENDING)
+  invitedBy   String
+  invitedAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   User             @relation("form_team_workspace", fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User             @relation("form_team_member", fields: [userId], references: [id], onDelete: Cascade)
+  inviter     User             @relation("form_team_inviter", fields: [invitedBy], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([status])
+  @@map("form_team_members")
 }
 
 model FormIntegration {
@@ -873,6 +1046,7 @@ model form_analytics {
   date              DateTime @db.Date
   views             Int      @default(0)
   submissions       Int      @default(0)
+  shares            Int      @default(0)
   completionRate    Float?
   avgTimeToComplete Int?
   createdAt         DateTime @default(now())
@@ -917,18 +1091,21 @@ model form_field_analytics {
 }
 
 model form_geographic_analytics {
-  id          String   @id
-  formId      String
-  date        DateTime @db.Date
-  country     String?
-  city        String?
-  views       Int      @default(0)
-  submissions Int      @default(0)
-  createdAt   DateTime @default(now())
+  id               String   @id
+  formId           String
+  date             DateTime @db.Date
+  country          String?
+  countryCode      String   @default("XX")
+  governorateCode  String   @default("")
+  city             String   @default("")
+  views            Int      @default(0)
+  submissions      Int      @default(0)
+  createdAt        DateTime @default(now())
 
-  @@unique([formId, date, country, city])
+  @@unique([formId, date, countryCode, governorateCode, city])
   @@index([date])
   @@index([formId])
+  @@index([countryCode, governorateCode])
 }
 
 model form_steps {
@@ -960,12 +1137,61 @@ model form_submissions {
   updatedAt      DateTime
   form           Form     @relation("submissions", fields: [formId], references: [id], onDelete: Cascade)
   user           User?    @relation(fields: [userId], references: [id])
+  idempotency_records form_submission_idempotency[]
 
   @@index([formId, completedAt(sort: Desc)])
   @@index([formId, userId])
   @@index([completedAt])
   @@index([formId])
   @@index([userId])
+}
+
+/// Enforces one submission per slot when app creates a row (e.g. user:{userId}).
+model form_submission_slot {
+  id        String   @id @default(uuid())
+  formId    String
+  slotKey   String
+  createdAt DateTime @default(now())
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, slotKey])
+  @@index([formId])
+  @@map("form_submission_slots")
+}
+
+/// Durable idempotency for form submit (backup when Redis is unavailable).
+model form_submission_idempotency {
+  id             String            @id @default(uuid())
+  formId         String
+  idempotencyKey String
+  submissionId   String?
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  form           Form              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submission     form_submissions? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+
+  @@unique([formId, idempotencyKey])
+  @@index([expiresAt])
+  @@index([submissionId])
+  @@map("form_submission_idempotency")
+}
+
+model form_webhook_delivery {
+  id           String   @id @default(uuid())
+  formId       String
+  eventId      String   @unique
+  webhookUrl   String   @db.Text
+  status       String
+  attempt      Int      @default(1)
+  responseCode Int?
+  latencyMs    Int?
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+  form         Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("form_webhook_deliveries")
 }
 
 model ip_blocklist {
@@ -1691,6 +1917,10 @@ enum FieldType {
   MATRIX
   SIGNATURE
   RANKING
+  YES_NO
+  LEGAL_CONSENT
+  IRAQ_GOVERNORATE
+  NPS
   // Layout blocks
   HEADING
   PARAGRAPH
@@ -1707,6 +1937,7 @@ enum FieldType {
   CALCULATED
   HIDDEN
   RECAPTCHA
+  RESPONDENT_COUNTRY
 }
 
 enum FormStatus {
@@ -1822,6 +2053,13 @@ enum OrganizerRole {
   ASSISTANT
 }
 
+enum FormTeamRole {
+  ADMIN
+  EDITOR
+  ANALYST
+  VIEWER
+}
+
 enum ProductStatus {
   ACTIVE
   INACTIVE
@@ -1854,6 +2092,9 @@ enum SecurityAction {
   ACCOUNT_DEACTIVATED
   ACCOUNT_REACTIVATED
   ACCOUNT_DELETED
+  FORM_SOFT_DELETED
+  FORM_RESTORED
+  FORM_HARD_DELETED
 }
 
 enum SecurityStatus {
@@ -2136,6 +2377,17 @@ model DeveloperApp {
   description  String?
   businessId   String?
   icon         String?
+  profileImage String?
+  websiteUrl   String?
+  /// Origins allowed to embed linked forms via iframe (?embed=1), e.g. https://shop.example.com
+  embedAllowedOrigins String[] @default([])
+  termsOfUseUrl String?
+  privacyPolicyUrl String?
+  dpoName      String?
+  dpoEmail     String?
+  dpoPhone     String?
+  accessReviewRequestedAt DateTime?
+  accessVerified Boolean            @default(false)
   status       DeveloperAppStatus @default(ACTIVE)
   verified     Boolean            @default(false)
   createdAt    DateTime           @default(now())
@@ -2145,11 +2397,29 @@ model DeveloperApp {
   apiKeys          DeveloperApiKey[]
   appWallet        DeveloperAppWallet?
   whatsappAccounts DeveloperWhatsappAccount[]
+  forms            Form[]
+  installedProducts DeveloperAppProduct[]
 
   @@index([userId])
   @@index([appId])
   @@index([status])
   @@map("developer_apps")
+}
+
+/// منتج منصة مثبّت على تطبيق المطوّر (دائم — لا يُحذف إلا بحذف التطبيق)
+model DeveloperAppProduct {
+  id             String   @id @default(uuid())
+  developerAppId String
+  productId      String
+  installedAt    DateTime @default(now())
+  installedBy    String
+
+  developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+
+  @@unique([developerAppId, productId])
+  @@index([developerAppId])
+  @@index([productId])
+  @@map("developer_app_products")
 }
 
 model DeveloperAppWallet {
@@ -2576,6 +2846,7 @@ model ApiRequestLog {
 /// 💳 خطة المطوّر
 enum DeveloperPlan {
   FREE
+  PRO
   STARTER
   GROWTH
   ENTERPRISE

@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
-import { CacheKeys, CACHE_TTL, CACHE_TAGS } from '../../core/cache/cache.constants';
+import {
+  CacheKeys,
+  CACHE_TTL,
+  CACHE_TAGS,
+} from '../../core/cache/cache.constants';
 import { NotificationType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 
@@ -112,7 +116,9 @@ export class NotificationsService {
         CacheKeys.notificationsUnreadCount(userId),
       );
     } catch (error) {
-      this.logger.warn(`Failed to invalidate cache for user ${userId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to invalidate cache for user ${userId}: ${error.message}`,
+      );
     }
   }
 

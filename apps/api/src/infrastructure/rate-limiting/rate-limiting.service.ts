@@ -149,7 +149,7 @@ export class RateLimitingService implements OnModuleInit {
     `;
 
     try {
-      const result = await client.eval(
+      const result = (await client.eval(
         script,
         1,
         key,
@@ -157,7 +157,7 @@ export class RateLimitingService implements OnModuleInit {
         windowStart.toString(),
         config.limit.toString(),
         config.window.toString(),
-      ) as number[];
+      )) as number[];
 
       return {
         allowed: result[0] === 1,
@@ -286,9 +286,12 @@ export class RateLimitingService implements OnModuleInit {
     const endpoints: Record<string, RateLimitResult> = {};
 
     for (const key of keys) {
-      const endpoint = key.replace(`${this.PREFIX}`, '').replace(`:${identifier}`, '');
+      const endpoint = key
+        .replace(`${this.PREFIX}`, '')
+        .replace(`:${identifier}`, '');
       const count = await client.zcard(key);
-      const config = this.endpointLimits[endpoint] || this.tiers.free.limits.default;
+      const config =
+        this.endpointLimits[endpoint] || this.tiers.free.limits.default;
 
       endpoints[endpoint] = {
         allowed: count < config.limit,
@@ -365,9 +368,12 @@ export class RateLimitingService implements OnModuleInit {
 
   // ==================== Private Methods ====================
 
-  private getEndpointType(endpoint: string): 'default' | 'auth' | 'upload' | 'api' {
+  private getEndpointType(
+    endpoint: string,
+  ): 'default' | 'auth' | 'upload' | 'api' {
     if (endpoint.includes('/auth')) return 'auth';
-    if (endpoint.includes('/upload') || endpoint.includes('/files')) return 'upload';
+    if (endpoint.includes('/upload') || endpoint.includes('/files'))
+      return 'upload';
     if (endpoint.includes('/api')) return 'api';
     return 'default';
   }

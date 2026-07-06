@@ -40,7 +40,12 @@ export class MetricsInterceptor implements NestInterceptor {
         const statusCode = response.statusCode;
 
         // تسجيل الطلب
-        this.metricsService.recordHttpRequest(method, path, statusCode, duration);
+        this.metricsService.recordHttpRequest(
+          method,
+          path,
+          statusCode,
+          duration,
+        );
 
         // تقليل عداد الطلبات النشطة
         this.metricsService.setGauge(
@@ -62,7 +67,12 @@ export class MetricsInterceptor implements NestInterceptor {
         const statusCode = error.status || 500;
 
         // تسجيل الخطأ
-        this.metricsService.recordHttpRequest(method, path, statusCode, duration);
+        this.metricsService.recordHttpRequest(
+          method,
+          path,
+          statusCode,
+          duration,
+        );
         this.metricsService.recordError(error.name || 'UnknownError');
 
         // تقليل عداد الطلبات النشطة

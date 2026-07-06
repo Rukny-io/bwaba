@@ -54,6 +54,10 @@ export enum FieldType {
   SIGNATURE = 'SIGNATURE',
   URL = 'URL',
   RANKING = 'RANKING',
+  YES_NO = 'YES_NO',
+  LEGAL_CONSENT = 'LEGAL_CONSENT',
+  IRAQ_GOVERNORATE = 'IRAQ_GOVERNORATE',
+  NPS = 'NPS',
   // Layout blocks
   HEADING = 'HEADING',
   PARAGRAPH = 'PARAGRAPH',
@@ -70,6 +74,7 @@ export enum FieldType {
   CALCULATED = 'CALCULATED',
   HIDDEN = 'HIDDEN',
   RECAPTCHA = 'RECAPTCHA',
+  RESPONDENT_COUNTRY = 'RESPONDENT_COUNTRY',
 }
 
 export class CreateFormStepDto {
@@ -110,6 +115,16 @@ export class CreateFormStepDto {
 }
 
 export class CreateFormFieldDto {
+  @ApiPropertyOptional({
+    example: 'fld_V1StGXR8_Z5jdHi6B-myT',
+    description:
+      'Stable field id — preserved on update so existing submission answers stay linked',
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(128)
+  id?: string;
+
   @ApiPropertyOptional({
     example: 'step-uuid-here',
     description: 'ID of the step this field belongs to (for multi-step forms)',
@@ -228,7 +243,6 @@ export class CreateFormFieldDto {
   @IsString()
   @IsOptional()
   maxLabel?: string;
-
 }
 
 export class CreateFormDto {
@@ -237,13 +251,18 @@ export class CreateFormDto {
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ example: 'customer-feedback-form' })
+  @ApiPropertyOptional({
+    example: 'a3k9m2',
+    description:
+      'Optional. If omitted, the server assigns a unique 6-character slug (a-z, 0-9).',
+  })
   @IsString()
+  @IsOptional()
   @Matches(/^[a-z0-9-]+$/, {
     message: 'Slug can only contain lowercase letters, numbers, and hyphens',
   })
   @MaxLength(200)
-  slug: string;
+  slug?: string;
 
   @ApiPropertyOptional({
     example: 'Help us improve our service by providing your feedback',
@@ -271,6 +290,15 @@ export class CreateFormDto {
   @IsBoolean()
   @IsOptional()
   requiresAuthentication?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Require Cloudflare Turnstile token on every submit (turnstileToken in body)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  requireTurnstileOnSubmit?: boolean;
 
   @ApiPropertyOptional({ example: true })
   @IsBoolean()
@@ -407,9 +435,30 @@ export class CreateFormDto {
   // Integration Settings
   // ============================================
 
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  webhookEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: 'https://example.com/webhook' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2048)
+  webhookUrl?: string;
+
+  @ApiPropertyOptional({
+    example: ['form.submission.created'],
+    description: 'Webhook events to deliver',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  webhookEvents?: string[];
+
   @ApiPropertyOptional({
     example: false,
-    description: 'Enable automatic Google Sheets integration for form submissions',
+    description:
+      'Enable automatic Google Sheets integration for form submissions',
   })
   @IsBoolean()
   @IsOptional()

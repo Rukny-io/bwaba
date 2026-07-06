@@ -220,7 +220,8 @@ export function processCursorResults<T extends { id: string }>(
 ): { data: T[]; hasMore: boolean; nextCursor?: string } {
   const hasMore = items.length > limit;
   const data = hasMore ? items.slice(0, limit) : items;
-  const nextCursor = hasMore && data.length > 0 ? data[data.length - 1].id : undefined;
+  const nextCursor =
+    hasMore && data.length > 0 ? data[data.length - 1].id : undefined;
 
   return { data, hasMore, nextCursor };
 }
@@ -243,7 +244,9 @@ export function createSelect<T extends string>(fields: T[]): Record<T, true> {
 /**
  * ⚡ Merge multiple select objects
  */
-export function mergeSelect(...selects: Record<string, any>[]): Record<string, any> {
+export function mergeSelect(
+  ...selects: Record<string, any>[]
+): Record<string, any> {
   return Object.assign({}, ...selects);
 }
 

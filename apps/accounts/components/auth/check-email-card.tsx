@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 interface CheckEmailCardProps {
   email: string
@@ -22,6 +23,7 @@ export function CheckEmailCard({
   const [canResend, setCanResend] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
+  const t = useTranslations("Auth")
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -68,12 +70,12 @@ export function CheckEmailCard({
 
       {/* Title */}
       <h1 className="text-2xl font-semibold text-foreground mb-2">
-        تحقق من بريدك
+        {t("check_email_title")}
       </h1>
 
       {/* Description */}
       <p className="text-sm text-muted-foreground mb-1">
-        أرسلنا رابط تسجيل الدخول إلى
+        {t("check_email_desc")}
       </p>
       <p className="text-sm font-medium text-foreground mb-8 break-all">
         {email}
@@ -83,7 +85,7 @@ export function CheckEmailCard({
       <div className="space-y-3">
         {resendSuccess ? (
           <p className="text-sm text-green-600 font-medium">
-            ✓ تم إرسال الرابط مجدداً
+            {t("resend_success")}
           </p>
         ) : canResend ? (
           <Button
@@ -93,15 +95,11 @@ export function CheckEmailCard({
             disabled={isResending}
             className="text-foreground font-medium underline underline-offset-4 hover:no-underline"
           >
-            {isResending ? "جارٍ الإرسال..." : "إعادة إرسال الرابط"}
+            {isResending ? t("sending") : t("resend_link")}
           </Button>
         ) : (
           <p className="text-sm text-muted-foreground">
-            إعادة الإرسال خلال{" "}
-            <span className="font-medium tabular-nums text-foreground">
-              {countdown}
-            </span>{" "}
-            ثانية
+            {t("resend_in", { seconds: countdown })}
           </p>
         )}
 
@@ -112,7 +110,7 @@ export function CheckEmailCard({
             onClick={onTryOtherMethod}
             className="text-sm text-muted-foreground underline underline-offset-3 hover:text-foreground transition-colors cursor-pointer"
           >
-            جرّب طريقة أخرى للتحقق
+            {t("try_other_method")}
           </button>
         </div>
       </div>

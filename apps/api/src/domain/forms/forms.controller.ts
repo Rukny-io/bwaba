@@ -4,14 +4,19 @@ import {
   Post,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
   UseGuards,
   Request,
+  Req,
   Res,
   HttpCode,
   HttpStatus,
+  Headers,
+  MethodNotAllowedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -20,86 +25,279 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { FormsService } from './forms.service';
-import { CreateFormDto, UpdateFormDto, SubmitFormDto, FormStatus } from './dto';
+import { FormsFacadeService } from './forms-facade.service';
+import {
+  CreateFormDto,
+  UpdateFormDto,
+  SubmitFormDto,
+  FormStatus,
+  SendVerificationCodeDto,
+  VerifyEmailCodeDto,
+  SendPhoneVerificationCodeDto,
+  VerifyPhoneCodeDto,
+  DeleteFormDto,
+  RestoreFormDto,
+} from './dto';
+import { FormsEmailVerificationService } from './services/forms-email-verification.service';
+import { FormsPhoneVerificationService } from './services/forms-phone-verification.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { JwtOrApiKeyGuard } from '../developer/api-keys/guards/jwt-or-api-key.guard';
+import { RequireScopes } from '../developer/api-keys/decorators/require-scopes.decorator';
 import { PlanGuard } from '../../core/common/guards/plan.guard';
-import { CheckLimit, CheckFeature } from '../../core/common/decorators/auth/plan.decorator';
+import {
+  CheckLimit,
+  CheckFeature,
+  CheckFeatureTier,
+  RequirePlan,
+} from '../../core/common/decorators/auth/plan.decorator';
 import { OptionalUserId } from '../../core/common/decorators/auth/optional-user.decorator';
+import { SubmitContentLengthGuard } from './guards/submit-content-length.guard';
+import { parsePageLimit } from './utils/forms-pagination.util';
+import { getClientIp } from './utils/client-ip.util';
+import type { AnalyticsTrackContext } from './services/form-analytics-tracker.service';
+import type { Request as ExpressRequest } from 'express';
+import { FormTeamService } from './form-team/form-team.service';
+import { DevFormsService } from '../developer/forms/dev-forms.service';
+import {
+  InviteFormTeamMemberDto,
+  UpdateFormTeamMemberDto,
+} from './form-team/dto/form-team.dto';
+import { LinkFormDeveloperEmbedDto } from '../developer/forms/dto/dev-forms.dto';
+
+function buildTrackContext(req: ExpressRequest): AnalyticsTrackContext {
+  return {
+    ip: getClientIp(req),
+    headers: req.headers as Record<string, string | string[] | undefined>,
+    userAgent:
+      typeof req.headers['user-agent'] === 'string'
+        ? req.headers['user-agent']
+        : undefined,
+  };
+}
+
+function shouldSkipViewTrack(header?: string): boolean {
+  return header === '1' || header === 'true';
+}
 
 @ApiTags('Forms')
 @Controller('forms')
 export class FormsController {
   constructor(
-    private readonly formsService: FormsService,
+    private readonly forms: FormsFacadeService,
+    private readonly emailVerification: FormsEmailVerificationService,
+    private readonly phoneVerification: FormsPhoneVerificationService,
+    private readonly formTeam: FormTeamService,
+    private readonly devForms: DevFormsService,
   ) {}
 
   // ==================== PUBLIC ENDPOINTS ====================
 
+  /**
+   * Diagnostic endpoint — verifies Cloudflare geo headers are reaching the API.
+   * Returns the detected country, city, IP, and resolution source.
+   * Safe to expose: contains no user data, just geo probe info.
+   */
+  @Get('public/geo-check')
+  @SkipThrottle()
+  @ApiOperation({
+    summary: 'Geo header diagnostic (public)',
+    description:
+      'Returns detected country/city/IP and which geo provider resolved the data. ' +
+      'Use to verify Cloudflare IP Geolocation is enabled and headers reach the API.',
+  })
+  async geoCheck(@Req() req: ExpressRequest) {
+    const trackCtx = buildTrackContext(req);
+    const geo = await this.forms.resolveGeoForDiagnostic(
+      trackCtx.ip,
+      trackCtx.headers,
+    );
+    return {
+      ip: trackCtx.ip ?? null,
+      cloudflareHeaders: {
+        'cf-ipcountry': this.headerVal(req, 'cf-ipcountry'),
+        'cf-ipcity': this.headerVal(req, 'cf-ipcity'),
+        'cf-ipregion': this.headerVal(req, 'cf-ipregion'),
+        'cf-ipregioncode': this.headerVal(req, 'cf-ipregioncode'),
+        'cf-iplatitude': this.headerVal(req, 'cf-iplatitude'),
+        'cf-iplongitude': this.headerVal(req, 'cf-iplongitude'),
+        'cf-connecting-ip': this.headerVal(req, 'cf-connecting-ip'),
+      },
+      resolved: geo
+        ? {
+            countryCode: geo.countryCode,
+            countryName: geo.countryName,
+            city: geo.city,
+            governorateCode: geo.governorateCode || null,
+            source: geo.source,
+          }
+        : null,
+    };
+  }
+
+  private headerVal(req: ExpressRequest, name: string): string | null {
+    const raw = req.headers[name.toLowerCase()];
+    if (!raw) return null;
+    return Array.isArray(raw) ? raw[0] : raw;
+  }
+
   @Get('public/user/:username')
   @SkipThrottle()
   @ApiOperation({ summary: 'Get published forms by username (public)' })
-  @ApiResponse({ status: 200, description: 'Forms retrieved successfully' })
   async getPublicFormsByUsername(
     @Param('username') username: string,
     @Query('limit') limit?: number,
   ) {
-    return this.formsService.findPublicByUsername(username, limit || 10);
+    return this.forms.findPublicByUsername(
+      username,
+      parsePageLimit(limit, 10),
+    );
+  }
+
+  @Get('public/:slug/embed-policy')
+  @SkipThrottle()
+  @ApiOperation({
+    summary: 'Embed CSP policy for iframe embedding (public)',
+    description:
+      'Returns allowed frame-ancestors when the form is linked to a developer app with configured origins.',
+  })
+  async getEmbedPolicy(@Param('slug') slug: string) {
+    const policy = await this.devForms.getPublicEmbedPolicy(slug);
+    if (!policy) {
+      throw new NotFoundException('Embed not available for this form');
+    }
+    return policy;
   }
 
   @Get('public/:slug')
   @SkipThrottle()
   @ApiOperation({ summary: 'Get form by slug (public)' })
-  @ApiResponse({ status: 200, description: 'Form retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
-  async getPublicForm(@Param('slug') slug: string) {
-    return this.formsService.findBySlug(slug);
+  @ApiHeader({
+    name: 'X-Rukny-Skip-View-Track',
+    required: false,
+    description: 'Set to 1 for SSR/internal fetches that should not count a view',
+  })
+  async getPublicForm(
+    @Param('slug') slug: string,
+    @Req() req: ExpressRequest,
+    @Headers('x-rukny-skip-view-track') skipViewTrackHeader?: string,
+  ) {
+    return this.forms.findBySlug(slug, buildTrackContext(req), {
+      skipViewTrack: shouldSkipViewTrack(skipViewTrackHeader),
+    });
+  }
+
+  @Post('public/:slug/view')
+  @SkipThrottle()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Track public form view (browser)',
+    description:
+      'Records a view with Cloudflare geo headers. Used by the public form page after SSR load.',
+  })
+  async trackPublicFormView(
+    @Param('slug') slug: string,
+    @Req() req: ExpressRequest,
+  ) {
+    return this.forms.trackPublicFormView(slug, buildTrackContext(req));
   }
 
   @Post('public/:slug/submit')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 submissions per minute per IP
+  @UseGuards(SubmitContentLengthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Submit form (public)' })
-  @ApiResponse({ status: 201, description: 'Form submitted successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Submit form (public)', description: 'Max payload size is 5MB' })
+  @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Optional unique key to prevent duplicate submissions on network retries' })
   async submitPublicForm(
     @Param('slug') slug: string,
     @Body() submitFormDto: SubmitFormDto,
+    @Req() req: ExpressRequest,
     @OptionalUserId() userId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    const form = await this.formsService.findBySlug(slug);
-    return this.formsService.submitForm(form.id, submitFormDto, userId);
+    const trackContext = buildTrackContext(req);
+    trackContext.userAgent =
+      trackContext.userAgent ?? submitFormDto.userAgent ?? undefined;
+    const form = await this.forms.findBySlug(slug, trackContext, {
+      skipViewTrack: true,
+    });
+    return this.forms.submitForm(
+      form.id,
+      submitFormDto,
+      userId,
+      idempotencyKey,
+      trackContext,
+    );
+  }
+
+  @Post('public/:slug/verify-email/send')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send email verification code for form field' })
+  async sendPublicEmailVerification(
+    @Param('slug') slug: string,
+    @Body() dto: SendVerificationCodeDto,
+  ) {
+    const form = await this.forms.findBySlug(slug);
+    return this.emailVerification.sendCode(form.id, dto.fieldId, dto.email);
+  }
+
+  @Post('public/:slug/verify-email/confirm')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm email verification code' })
+  async confirmPublicEmailVerification(
+    @Param('slug') slug: string,
+    @Body() dto: VerifyEmailCodeDto,
+  ) {
+    const form = await this.forms.findBySlug(slug);
+    return this.emailVerification.verifyCode(form.id, dto.email, dto.code);
+  }
+
+  @Post('public/:slug/verify-phone/send')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send WhatsApp verification code for phone field' })
+  async sendPublicPhoneVerification(
+    @Param('slug') slug: string,
+    @Body() dto: SendPhoneVerificationCodeDto,
+  ) {
+    const form = await this.forms.findBySlug(slug);
+    return this.phoneVerification.sendCode(form.id, dto.fieldId, dto.phone);
+  }
+
+  @Post('public/:slug/verify-phone/confirm')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm WhatsApp verification code' })
+  async confirmPublicPhoneVerification(
+    @Param('slug') slug: string,
+    @Body() dto: VerifyPhoneCodeDto,
+  ) {
+    const form = await this.forms.findBySlug(slug);
+    return this.phoneVerification.verifyCode(form.id, dto.phone, dto.code);
   }
 
   // ==================== AUTHENTICATED ENDPOINTS ====================
 
   @Post()
-  @UseGuards(JwtAuthGuard, PlanGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:write')
   @CheckLimit('forms')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new form' })
-  @ApiResponse({ status: 201, description: 'Form created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 409, description: 'Slug already exists' })
   async create(@Request() req, @Body() createFormDto: CreateFormDto) {
-    return this.formsService.create(req.user.id, createFormDto);
+    return this.forms.create(req.user.id, createFormDto);
   }
 
   @Get()
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all forms for current user' })
-  @ApiQuery({ name: 'type', required: false })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'linkedEventId', required: false })
-  @ApiQuery({ name: 'linkedStoreId', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Forms retrieved successfully' })
   async getUserForms(
     @Request() req,
     @Query('type') type?: string,
@@ -108,231 +306,513 @@ export class FormsController {
     @Query('linkedStoreId') linkedStoreId?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('visibility') visibility?: 'active' | 'deleted' | 'all',
   ) {
-    return this.formsService.findAll({
+    return this.forms.findAll({
       userId: req.user.id,
       type,
       status,
       linkedEventId,
       linkedStoreId,
       page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      limit: parsePageLimit(limit, 20),
+      visibility: visibility ?? 'active',
     });
+  }
+
+  @Get('analytics/overview')
+  @SkipThrottle()
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:read')
+  @CheckFeatureTier('formAnalytics', 'basic')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Analytics overview for all user forms' })
+  @ApiQuery({ name: 'days', required: false, type: Number })
+  async getAnalyticsOverview(
+    @Request() req,
+    @Query('days') days?: number,
+  ) {
+    const periodDays = days ? Math.min(Math.max(Number(days), 1), 365) : 30;
+    return this.forms.getAnalyticsOverview(req.user.id, periodDays);
+  }
+
+  @Get('integrations/overview')
+  @SkipThrottle()
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Integrations overview for all user forms' })
+  async getIntegrationsOverview(@Request() req) {
+    return this.forms.getIntegrationsOverview(req.user.id);
+  }
+
+  // ==================== TEAM (must be before :id) ====================
+
+  @Get('team')
+  @SkipThrottle()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List team members for my workspace' })
+  listTeamMembers(@Request() req: { user: { id: string } }) {
+    return this.formTeam.listMembers(req.user.id, req.user.id);
+  }
+
+  @Get('team/invitations')
+  @SkipThrottle()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List pending team invitations for current user' })
+  listTeamInvitations(@Request() req: { user: { id: string } }) {
+    return this.formTeam.listMyInvitations(req.user.id);
+  }
+
+  @Get('team/workspaces')
+  @SkipThrottle()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List workspaces I am a team member of' })
+  listTeamWorkspaces(@Request() req: { user: { id: string } }) {
+    return this.formTeam.listMyWorkspaces(req.user.id);
+  }
+
+  @Post('team/workspaces/:workspaceId/leave')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Leave a team workspace you joined' })
+  leaveTeamWorkspace(
+    @Request() req: { user: { id: string } },
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.formTeam.leaveWorkspace(workspaceId, req.user.id);
+  }
+
+  @Post('team/invite')
+  @UseGuards(JwtAuthGuard, PlanGuard)
+  @CheckFeature('formTeam')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Invite a user to my forms team' })
+  inviteTeamMember(
+    @Request() req: { user: { id: string } },
+    @Body() dto: InviteFormTeamMemberDto,
+  ) {
+    return this.formTeam.inviteMember(req.user.id, req.user.id, dto);
+  }
+
+  @Patch('team/:memberId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update team member role' })
+  updateTeamMember(
+    @Request() req: { user: { id: string } },
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateFormTeamMemberDto,
+  ) {
+    return this.formTeam.updateMember(
+      req.user.id,
+      memberId,
+      req.user.id,
+      dto,
+    );
+  }
+
+  @Delete('team/:memberId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove team member or cancel invitation' })
+  removeTeamMember(
+    @Request() req: { user: { id: string } },
+    @Param('memberId') memberId: string,
+  ) {
+    return this.formTeam.removeMember(req.user.id, memberId, req.user.id);
+  }
+
+  @Post('team/invitations/:memberId/accept')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Accept a team invitation' })
+  acceptTeamInvitation(
+    @Request() req: { user: { id: string } },
+    @Param('memberId') memberId: string,
+  ) {
+    return this.formTeam.acceptInvitation(memberId, req.user.id);
+  }
+
+  @Post('team/invitations/:memberId/decline')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Decline a team invitation' })
+  declineTeamInvitation(
+    @Request() req: { user: { id: string } },
+    @Param('memberId') memberId: string,
+  ) {
+    return this.formTeam.declineInvitation(memberId, req.user.id);
   }
 
   @Get(':id')
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get form by ID' })
-  @ApiResponse({ status: 200, description: 'Form retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Get form by ID or slug' })
   async getForm(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.findById(formId, req.user.id);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.findById(formId, req.user.id);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update form' })
-  @ApiResponse({ status: 200, description: 'Form updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
   async update(
     @Request() req,
     @Param('id') id: string,
     @Body() updateFormDto: UpdateFormDto,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.update(req.user.id, formId, updateFormDto);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.update(req.user.id, formId, updateFormDto);
   }
 
   @Put(':id/status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update form status' })
-  @ApiResponse({ status: 200, description: 'Status updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
   async updateStatus(
     @Request() req,
     @Param('id') id: string,
     @Body('status') status: FormStatus,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.updateStatus(req.user.id, formId, status);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.updateStatus(req.user.id, formId, status);
+  }
+
+  @Post(':id/delete')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Soft-delete form (requires title confirmation)',
+    description:
+      'Prefer this over DELETE — some proxies do not forward DELETE request bodies.',
+  })
+  async softDelete(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: DeleteFormDto,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.delete(req.user.id, formId, dto.confirmTitle, dto.reason, {
+      ipAddress: getClientIp(req),
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete form' })
-  @ApiResponse({ status: 204, description: 'Form deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
-  async delete(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    await this.formsService.delete(req.user.id, formId);
+  @HttpCode(HttpStatus.METHOD_NOT_ALLOWED)
+  @ApiOperation({
+    summary: 'Deprecated — use POST /forms/:id/delete',
+    deprecated: true,
+  })
+  async deleteLegacy() {
+    throw new MethodNotAllowedException(
+      'Form deletion requires POST /api/v1/forms/:id/delete with JSON body { confirmTitle, reason? }. ' +
+        'DELETE is not supported because request bodies are dropped by proxies.',
+    );
+  }
+
+  @Post(':id/restore')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Restore a soft-deleted form' })
+  async restore(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: RestoreFormDto,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.restore(req.user.id, formId, dto.confirmTitle, {
+      ipAddress: getClientIp(req),
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Post(':id/duplicate')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Duplicate form' })
-  @ApiResponse({ status: 201, description: 'Form duplicated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Duplicate form (includes steps)' })
   async duplicate(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.duplicateForm(req.user.id, formId);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.duplicateForm(req.user.id, formId);
   }
 
-  // ==================== SUBMISSIONS ====================
+  @Get(':id/developer-embed')
+  @SkipThrottle()
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Developer app embed integration status for a form',
+    description:
+      'Returns iframe embed settings when the form is linked to a Rukny Developers app.',
+  })
+  async getDeveloperEmbed(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.devForms.getFormDeveloperEmbed(req.user.id, formId);
+  }
+
+  @Get(':id/developer-embed/link-targets')
+  @SkipThrottle()
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Developer apps available to link this form (with signed challenges)',
+  })
+  async getDeveloperEmbedLinkTargets(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.devForms.listFormLinkTargets(req.user.id, formId);
+  }
+
+  @Post(':id/developer-embed/link')
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Link form to a developer app using a signed challenge',
+  })
+  async linkDeveloperEmbed(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: LinkFormDeveloperEmbedDto,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.devForms.linkFormWithChallenge(
+      req.user.id,
+      formId,
+      dto.appId,
+      dto.linkChallenge,
+    );
+  }
+
+  @Get(':id/webhook-deliveries')
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:webhooks')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List recent webhook delivery attempts for a form' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getWebhookDeliveries(
+    @Request() req,
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.getWebhookDeliveries(
+      req.user.id,
+      formId,
+      limit ? Number(limit) : undefined,
+    );
+  }
+
+  @Post(':id/webhooks/test')
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:webhooks')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Send a test payload to the form webhook URL' })
+  async testWebhook(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.testWebhook(req.user.id, formId);
+  }
+
+  @Post(':id/webhooks/regenerate-secret')
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:webhooks')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Regenerate webhook signing secret (shown once)' })
+  async regenerateWebhookSecret(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.regenerateWebhookSecret(req.user.id, formId);
+  }
 
   @Post(':id/submit')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, SubmitContentLengthGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Submit form (authenticated)' })
-  @ApiResponse({ status: 201, description: 'Form submitted successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Submit form (authenticated)', description: 'Max payload size is 5MB' })
+  @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Optional unique key to prevent duplicate submissions on network retries' })
   async submitForm(
     @Request() req,
     @Param('id') id: string,
     @Body() submitFormDto: SubmitFormDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.submitForm(formId, submitFormDto, req.user.id);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.submitForm(formId, submitFormDto, req.user.id, idempotencyKey);
   }
 
   @Get(':id/submissions')
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get form submissions' })
+  @ApiOperation({ summary: 'Get form submissions (offset or cursor pagination)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Submissions retrieved successfully',
-  })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
   async getSubmissions(
     @Request() req,
     @Param('id') id: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('cursor') cursor?: string,
+    @Query('search') search?: string,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.getFormSubmissions(
-      req.user.id,
-      formId,
-      page ? Number(page) : undefined,
-      limit ? Number(limit) : undefined,
-    );
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.getFormSubmissions(req.user.id, formId, {
+      page: page ? Number(page) : undefined,
+      limit: parsePageLimit(limit, 20),
+      cursor,
+      search,
+    });
   }
 
   @Get(':id/submissions/summary')
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get submissions summary with aggregated data per field' })
-  @ApiResponse({ status: 200, description: 'Summary retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Submissions summary per field' })
   async getSubmissionsSummary(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.getSubmissionsSummary(req.user.id, formId);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.getSubmissionsSummary(req.user.id, formId);
+  }
+
+  @Get(':id/submissions/field-response-counts')
+  @SkipThrottle()
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:read')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Response counts per field (for editor warnings)' })
+  async getFieldResponseCounts(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.getFieldResponseCounts(req.user.id, formId);
   }
 
   @Delete(':id/submissions/:submissionId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a submission' })
-  @ApiResponse({ status: 204, description: 'Submission deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Submission not found' })
   async deleteSubmission(
     @Request() req,
     @Param('id') id: string,
     @Param('submissionId') submissionId: string,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    await this.formsService.deleteSubmission(req.user.id, formId, submissionId);
+    const formId = await this.forms.resolveFormId(id);
+    await this.forms.deleteSubmission(req.user.id, formId, submissionId);
   }
-
-  // ==================== STEPS ====================
 
   @Get(':id/steps')
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:read')
+  @CheckFeature('multiStepForms')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get form steps' })
-  @ApiResponse({ status: 200, description: 'Steps retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
   async getFormSteps(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.getFormSteps(req.user.id, formId);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.getFormSteps(req.user.id, formId);
   }
 
   @Put(':id/steps')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:write')
+  @CheckFeature('multiStepForms')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update form steps' })
-  @ApiResponse({ status: 200, description: 'Steps updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
   async updateFormSteps(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { steps: any[] },
+    @Body() body: { steps: unknown[] },
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.updateFormSteps(req.user.id, formId, body.steps);
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.updateFormSteps(req.user.id, formId, body.steps);
   }
 
-  // ==================== ANALYTICS ====================
+  @Post(':id/analytics/share')
+  @UseGuards(JwtOrApiKeyGuard)
+  @RequireScopes('forms:write')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Record form link share' })
+  async recordAnalyticsShare(@Request() req, @Param('id') id: string) {
+    const formId = await this.forms.resolveFormId(id);
+    return this.forms.recordShare(req.user.id, formId);
+  }
 
   @Get(':id/analytics')
   @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:read')
+  @CheckFeatureTier('formAnalytics', 'basic')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get form analytics' })
-  @ApiResponse({ status: 200, description: 'Analytics retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
-  async getAnalytics(@Request() req, @Param('id') id: string) {
-    const formId = await this.formsService.resolveFormId(id);
-    return this.formsService.getFormAnalytics(req.user.id, formId);
+  @ApiQuery({ name: 'days', required: false, type: Number })
+  async getAnalytics(
+    @Request() req,
+    @Param('id') id: string,
+    @Query('days') days?: number,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    const periodDays = days ? Math.min(Math.max(Number(days), 1), 365) : 30;
+    return this.forms.getFormAnalytics(req.user.id, formId, periodDays);
+  }
+
+  @Get(':id/export/orphaned')
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:read')
+  @RequirePlan('PRO')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export orphaned (deleted-field) submissions as CSV' })
+  async exportOrphanedSubmissions(
+    @Request() req,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const formId = await this.forms.resolveFormId(id);
+    const result = await this.forms.exportOrphanedSubmissions(req.user.id, formId);
+    const csvWithBOM = '\uFEFF' + result.content;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.send(csvWithBOM);
   }
 
   @Get(':id/export')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrApiKeyGuard, PlanGuard)
+  @RequireScopes('forms:read')
+  @CheckFeatureTier('formAnalytics', 'full')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Export form submissions as CSV' })
-  @ApiResponse({ status: 200, description: 'CSV file generated successfully' })
-  @ApiResponse({ status: 400, description: 'No submissions to export' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Form not found' })
+  @ApiOperation({ summary: 'Export submissions as CSV' })
   async exportSubmissions(
     @Request() req,
     @Param('id') id: string,
     @Res() res: Response,
   ) {
-    const formId = await this.formsService.resolveFormId(id);
-    const result = await this.formsService.exportSubmissions(req.user.id, formId);
-
-    // Add BOM for UTF-8 Excel compatibility
-    const BOM = '\uFEFF';
-    const csvWithBOM = BOM + result.content;
-
+    const formId = await this.forms.resolveFormId(id);
+    const result = await this.forms.exportSubmissions(req.user.id, formId);
+    const csvWithBOM = '\uFEFF' + result.content;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',

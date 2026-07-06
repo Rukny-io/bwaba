@@ -26,6 +26,10 @@ export const envSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().optional(),
   LINKEDIN_CLIENT_ID: z.string().optional(),
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
+  FACEBOOK_APP_ID: z.string().optional(),
+  FACEBOOK_APP_SECRET: z.string().optional(),
+  FACEBOOK_CALLBACK_URL: z.string().optional(),
+  FACEBOOK_CONFIG_ID: z.string().optional(),
 
   // Redis
   REDIS_HOST: z.string().default('localhost'),
@@ -38,9 +42,28 @@ export const envSchema = z.object({
     .string()
     .url('FRONTEND_URL must be a valid URL')
     .default('http://localhost:3000'),
-  FRONTEND_URL_ALT: z.string().url('FRONTEND_URL_ALT must be a valid URL').optional(),
-  APP_FRONTEND_URL: z.string().url('APP_FRONTEND_URL must be a valid URL').optional(),
-  AUTH_FRONTEND_URL: z.string().url('AUTH_FRONTEND_URL must be a valid URL').optional(),
+  FORMS_APP_URL: z
+    .string()
+    .url('FORMS_APP_URL must be a valid URL')
+    .default('http://localhost:3007'),
+  FRONTEND_URL_ALT: z
+    .string()
+    .url('FRONTEND_URL_ALT must be a valid URL')
+    .optional(),
+  APP_FRONTEND_URL: z
+    .string()
+    .url('APP_FRONTEND_URL must be a valid URL')
+    .optional(),
+  AUTH_FRONTEND_URL: z
+    .string()
+    .url('AUTH_FRONTEND_URL must be a valid URL')
+    .optional(),
+
+  // Third-party integrations (Make.com OAuth)
+  API_PUBLIC_URL: z.string().url().optional(),
+  INTEGRATION_OAUTH_CLIENT_ID: z.string().optional(),
+  INTEGRATION_OAUTH_CLIENT_SECRET: z.string().optional(),
+  INTEGRATION_OAUTH_REDIRECT_URIS: z.string().optional(),
 
   // Cookies
   COOKIE_DOMAIN: z.string().optional(),
@@ -70,6 +93,11 @@ export const envSchema = z.object({
   SMTP_PORT: z.string().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+
+  // Forms geo analytics (mock country for localhost/private IPs)
+  GEOIP_MOCK_COUNTRY: z.string().optional(),
+  GEOIP_MOCK_GOVERNORATE: z.string().optional(),
+  GEOIP_MOCK_CITY: z.string().optional(),
 
   // App
   NODE_ENV: z

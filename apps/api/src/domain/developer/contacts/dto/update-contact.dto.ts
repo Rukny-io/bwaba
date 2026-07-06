@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEmail, IsArray, MaxLength, Matches, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsArray,
+  MaxLength,
+  Matches,
+  IsBoolean,
+} from 'class-validator';
 
 export class UpdateContactDto {
   @IsOptional()

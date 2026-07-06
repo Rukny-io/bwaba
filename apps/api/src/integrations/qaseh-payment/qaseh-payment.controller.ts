@@ -42,10 +42,7 @@ export class QasehPaymentController {
   @UseGuards(CheckoutSessionGuard)
   @ApiOperation({ summary: 'بدء عملية الدفع لطلب موجود' })
   @ApiResponse({ status: 200, description: 'تم إنشاء جلسة الدفع' })
-  async initiatePayment(
-    @Param('orderId') orderId: string,
-    @Req() req: any,
-  ) {
+  async initiatePayment(@Param('orderId') orderId: string, @Req() req: any) {
     const order = await this.prisma.orders.findUnique({
       where: { id: orderId },
       include: {
@@ -66,7 +63,11 @@ export class QasehPaymentController {
     const itemDescriptions = order.order_items
       .map((item) => `${item.productName} x${item.quantity}`)
       .join(', ');
-    const description = `طلب ${order.orderNumber} - ${order.stores.name}: ${itemDescriptions}`.substring(0, 250);
+    const description =
+      `طلب ${order.orderNumber} - ${order.stores.name}: ${itemDescriptions}`.substring(
+        0,
+        250,
+      );
 
     try {
       const payment = await this.qasehService.createPayment({
@@ -91,7 +92,9 @@ export class QasehPaymentController {
         },
       });
 
-      this.logger.log(`Payment initiated for order ${order.orderNumber}: ${payment.payment_id}`);
+      this.logger.log(
+        `Payment initiated for order ${order.orderNumber}: ${payment.payment_id}`,
+      );
 
       return {
         success: true,
@@ -100,7 +103,10 @@ export class QasehPaymentController {
         token: payment.token,
       };
     } catch (error) {
-      this.logger.error(`Failed to initiate payment for order ${orderId}:`, error);
+      this.logger.error(
+        `Failed to initiate payment for order ${orderId}:`,
+        error,
+      );
       throw new BadRequestException('فشل في إنشاء جلسة الدفع. حاول مرة أخرى.');
     }
   }
@@ -111,10 +117,7 @@ export class QasehPaymentController {
    */
   @Post('webhook')
   @ApiOperation({ summary: 'Qaseh Webhook - استقبال تحديثات الدفع' })
-  async handleWebhook(
-    @Body() body: any,
-    @Req() req: Request,
-  ) {
+  async handleWebhook(@Body() body: any, @Req() req: Request) {
     this.logger.log(`Qaseh Webhook received: ${JSON.stringify(body)}`);
 
     const paymentId = body.payment_id;
@@ -125,7 +128,8 @@ export class QasehPaymentController {
 
     try {
       // Verify payment status with Qaseh API (don't trust webhook body alone)
-      const paymentContext = await this.qasehService.getPaymentContext(paymentId);
+      const paymentContext =
+        await this.qasehService.getPaymentContext(paymentId);
 
       // Find order by paymentId
       const order = await this.prisma.orders.findFirst({
@@ -138,7 +142,9 @@ export class QasehPaymentController {
       }
 
       // Map Qaseh status to our OrderPaymentStatus
-      const newPaymentStatus = this.mapPaymentStatus(paymentContext.payment_status);
+      const newPaymentStatus = this.mapPaymentStatus(
+        paymentContext.payment_status,
+      );
 
       // Update order payment status
       const updateData: any = { paymentStatus: newPaymentStatus };
@@ -149,7 +155,11 @@ export class QasehPaymentController {
       }
 
       // If payment failed/declined/expired, mark accordingly
-      if (['failed', 'declined', 'expired'].includes(paymentContext.payment_status)) {
+      if (
+        ['failed', 'declined', 'expired'].includes(
+          paymentContext.payment_status,
+        )
+      ) {
         updateData.paymentStatus = 'FAILED';
       }
 
@@ -164,7 +174,10 @@ export class QasehPaymentController {
 
       return { status: 'processed' };
     } catch (error) {
-      this.logger.error(`Webhook processing error for payment ${paymentId}:`, error);
+      this.logger.error(
+        `Webhook processing error for payment ${paymentId}:`,
+        error,
+      );
       return { status: 'error' };
     }
   }
@@ -181,9 +194,14 @@ export class QasehPaymentController {
     @Query('status') status: string,
     @Res() res: Response,
   ) {
-    const frontendUrl = this.qasehService['config'].get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.qasehService['config'].get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
 
-    this.logger.log(`Qaseh callback: payment_id=${paymentId}, order_id=${orderId}, status=${status}`);
+    this.logger.log(
+      `Qaseh callback: payment_id=${paymentId}, order_id=${orderId}, status=${status}`,
+    );
 
     if (!paymentId) {
       return res.redirect(`${frontendUrl}/payment/failed?error=missing_params`);
@@ -200,18 +218,27 @@ export class QasehPaymentController {
 
       if (!order) {
         this.logger.warn(`No order found for payment_id: ${paymentId}`);
-        return res.redirect(`${frontendUrl}/payment/failed?error=order_not_found`);
+        return res.redirect(
+          `${frontendUrl}/payment/failed?error=order_not_found`,
+        );
       }
 
       // Verify payment status with Qaseh API (don't trust redirect params alone)
-      const paymentContext = await this.qasehService.getPaymentContext(paymentId);
-      const newPaymentStatus = this.mapPaymentStatus(paymentContext.payment_status);
+      const paymentContext =
+        await this.qasehService.getPaymentContext(paymentId);
+      const newPaymentStatus = this.mapPaymentStatus(
+        paymentContext.payment_status,
+      );
 
       const updateData: any = { paymentStatus: newPaymentStatus };
       if (paymentContext.payment_status === 'succeeded') {
         updateData.status = 'CONFIRMED';
       }
-      if (['failed', 'declined', 'expired'].includes(paymentContext.payment_status)) {
+      if (
+        ['failed', 'declined', 'expired'].includes(
+          paymentContext.payment_status,
+        )
+      ) {
         updateData.paymentStatus = 'FAILED';
       }
 
@@ -220,7 +247,9 @@ export class QasehPaymentController {
         data: updateData,
       });
 
-      this.logger.log(`Order ${order.orderNumber} updated: ${paymentContext.payment_status} → ${newPaymentStatus}`);
+      this.logger.log(
+        `Order ${order.orderNumber} updated: ${paymentContext.payment_status} → ${newPaymentStatus}`,
+      );
 
       if (paymentContext.payment_status === 'succeeded') {
         return res.redirect(
@@ -234,7 +263,9 @@ export class QasehPaymentController {
       );
     } catch (error) {
       this.logger.error('Callback processing error:', error);
-      return res.redirect(`${frontendUrl}/payment/failed?error=processing_error`);
+      return res.redirect(
+        `${frontendUrl}/payment/failed?error=processing_error`,
+      );
     }
   }
 
@@ -264,7 +295,9 @@ export class QasehPaymentController {
     // If we have a payment ID, check with Qaseh for latest status
     if (order.paymentId) {
       try {
-        const paymentContext = await this.qasehService.getPaymentContext(order.paymentId);
+        const paymentContext = await this.qasehService.getPaymentContext(
+          order.paymentId,
+        );
         return {
           orderId: order.id,
           orderNumber: order.orderNumber,

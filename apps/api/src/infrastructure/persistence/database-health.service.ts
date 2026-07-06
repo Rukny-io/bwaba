@@ -54,7 +54,9 @@ export class DatabaseHealthService implements OnModuleInit {
     const connections = await this.checkConnections();
     if (connections.active > connections.max * 0.8) {
       issues.push('High connection usage');
-      recommendations.push('Consider increasing max connections or using connection pooling');
+      recommendations.push(
+        'Consider increasing max connections or using connection pooling',
+      );
     }
 
     // فحص الأداء
@@ -204,10 +206,13 @@ export class DatabaseHealthService implements OnModuleInit {
   /**
    * فحص الـ Replication
    */
-  private async checkReplication(): Promise<{
-    lag: number;
-    status: string;
-  } | undefined> {
+  private async checkReplication(): Promise<
+    | {
+        lag: number;
+        status: string;
+      }
+    | undefined
+  > {
     try {
       const result = await this.prisma.$queryRaw<any[]>`
         SELECT 
@@ -243,10 +248,14 @@ export class DatabaseHealthService implements OnModuleInit {
 
     for (const table of tables) {
       try {
-        await this.prisma.$executeRawUnsafe(`VACUUM ANALYZE "${table.tablename}"`);
+        await this.prisma.$executeRawUnsafe(
+          `VACUUM ANALYZE "${table.tablename}"`,
+        );
         optimized.push(table.tablename);
       } catch (error) {
-        this.logger.warn(`Failed to optimize ${table.tablename}: ${error.message}`);
+        this.logger.warn(
+          `Failed to optimize ${table.tablename}: ${error.message}`,
+        );
       }
     }
 
@@ -296,12 +305,16 @@ export class DatabaseHealthService implements OnModuleInit {
   async scheduledHealthCheck(): Promise<void> {
     try {
       const health = await this.getHealthStatus();
-      
+
       if (health.status === 'critical') {
-        this.logger.error(`🚨 Database health critical: ${health.issues.join(', ')}`);
+        this.logger.error(
+          `🚨 Database health critical: ${health.issues.join(', ')}`,
+        );
         // يمكن إضافة تنبيه هنا
       } else if (health.status === 'warning') {
-        this.logger.warn(`⚠️ Database health warning: ${health.issues.join(', ')}`);
+        this.logger.warn(
+          `⚠️ Database health warning: ${health.issues.join(', ')}`,
+        );
       }
     } catch (error) {
       this.logger.error(`Health check failed: ${error.message}`);

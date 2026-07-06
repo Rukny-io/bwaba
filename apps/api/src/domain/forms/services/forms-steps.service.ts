@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { SecureIds } from '../../../core/common/utils/secure-id.util';
+import { mapFormFieldData } from '../utils/form-field.mapper';
+import { FormTeamAccessService } from '../form-team/form-team-access.service';
 
 /**
  * 🔧 Forms Steps Service
@@ -14,7 +16,10 @@ import { SecureIds } from '../../../core/common/utils/secure-id.util';
  */
 @Injectable()
 export class FormsStepsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private formTeamAccess: FormTeamAccessService,
+  ) {}
 
   /**
    * Get form steps with fields
@@ -23,7 +28,7 @@ export class FormsStepsService {
     const form = await this.prisma.form.findUnique({ where: { id: formId } });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     return this.prisma.form_steps.findMany({
       where: { formId },
@@ -39,7 +44,7 @@ export class FormsStepsService {
     const form = await this.prisma.form.findUnique({ where: { id: formId } });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (form.userId !== userId) throw new ForbiddenException('Not authorized');
+    await this.formTeamAccess.assertFormPermission(form, userId, 'edit_form');
 
     return this.prisma.$transaction(async (tx) => {
       // Delete existing steps and fields
@@ -69,7 +74,9 @@ export class FormsStepsService {
 
         if (step.fields?.length) {
           await tx.formField.createMany({
-            data: step.fields.map((field: any) => this.formFieldRow(field, formId, stepId)),
+            data: step.fields.map((field: any) =>
+              mapFormFieldData(field, formId, stepId, { preserveId: true }),
+            ),
           });
         }
       }
@@ -82,24 +89,4 @@ export class FormsStepsService {
     });
   }
 
-  /** ⚡ Performance: صف واحد لـ createMany (تجنب N+1) */
-  private formFieldRow(field: any, formId: string, stepId: string) {
-    return {
-      id: SecureIds.field(),
-      formId,
-      stepId,
-      label: field.label,
-      description: field.description ?? null,
-      type: field.type,
-      order: field.order,
-      required: field.required ?? false,
-      placeholder: field.placeholder ?? null,
-      options: field.options ?? null,
-      minValue: field.minValue ?? null,
-      maxValue: field.maxValue ?? null,
-      allowedFileTypes: field.allowedFileTypes || [],
-      maxFileSize: field.maxFileSize ?? null,
-      maxFiles: field.maxFiles ?? null,
-    } as any;
-  }
 }

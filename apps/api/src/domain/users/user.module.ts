@@ -11,9 +11,9 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    PrismaModule, 
-    SecurityModule, 
-    EmailModule, 
+    PrismaModule,
+    SecurityModule,
+    EmailModule,
     NotificationsModule,
     forwardRef(() => AuthModule), // لاستخدام IpVerificationService
   ],

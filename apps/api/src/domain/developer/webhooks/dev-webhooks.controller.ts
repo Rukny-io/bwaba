@@ -24,10 +24,7 @@ export class DevWebhooksController {
 
   @Post()
   @ApiOperation({ summary: 'إنشاء webhook' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateWebhookDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateWebhookDto) {
     return this.webhooksService.create(userId, dto);
   }
 
@@ -49,28 +46,19 @@ export class DevWebhooksController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'حذف webhook' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.webhooksService.remove(userId, id);
   }
 
   @Post(':id/test')
   @ApiOperation({ summary: 'اختبار webhook بحدث تجريبي' })
-  test(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  test(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.webhooksService.test(userId, id);
   }
 
   @Post(':id/rotate-secret')
   @ApiOperation({ summary: 'تدوير المفتاح السري' })
-  rotateSecret(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  rotateSecret(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.webhooksService.rotateSecret(userId, id);
   }
 }

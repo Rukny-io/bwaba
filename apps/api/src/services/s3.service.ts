@@ -9,6 +9,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -96,9 +97,9 @@ export class S3Service implements OnModuleInit {
         return key;
       } catch (err: any) {
         lastError = err;
-        
+
         // Determine if error is retryable (transient)
-        const isTransient = 
+        const isTransient =
           err?.name === 'RequestTimeout' ||
           err?.name === 'ServiceUnavailable' ||
           err?.name === 'RequestAbortedError' ||
@@ -107,9 +108,8 @@ export class S3Service implements OnModuleInit {
           err?.statusCode === 503 ||
           err?.statusCode === 429;
 
-        const isPermissionError = 
-          err?.name === 'AccessDenied' ||
-          err?.Code === 'AccessDenied';
+        const isPermissionError =
+          err?.name === 'AccessDenied' || err?.Code === 'AccessDenied';
 
         // Log attempt
         if (attempt < maxRetries) {
@@ -118,8 +118,8 @@ export class S3Service implements OnModuleInit {
               `S3 upload attempt ${attempt}/${maxRetries} failed (transient): ${err?.name || err?.Code || err}. Retrying...`,
             );
             // Exponential backoff
-            await new Promise(resolve => 
-              setTimeout(resolve, Math.pow(2, attempt - 1) * 100)
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.pow(2, attempt - 1) * 100),
             );
             continue;
           } else if (isPermissionError) {
@@ -218,6 +218,17 @@ export class S3Service implements OnModuleInit {
     );
   }
 
+  async objectExists(bucket: string, key: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: key }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Get object from S3
    */
@@ -226,7 +237,7 @@ export class S3Service implements OnModuleInit {
       const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
       const response = await this.client.send(cmd);
       const stream = response.Body as any;
-      
+
       // Convert stream to buffer
       const chunks: Buffer[] = [];
       for await (const chunk of stream) {
@@ -257,9 +268,14 @@ export class S3Service implements OnModuleInit {
   /**
    * Create multipart upload
    */
-  async createMultipartUpload(bucket: string, key: string, contentType: string): Promise<string> {
+  async createMultipartUpload(
+    bucket: string,
+    key: string,
+    contentType: string,
+  ): Promise<string> {
     try {
-      const { CreateMultipartUploadCommand } = await import('@aws-sdk/client-s3');
+      const { CreateMultipartUploadCommand } =
+        await import('@aws-sdk/client-s3');
       const cmd = new CreateMultipartUploadCommand({
         Bucket: bucket,
         Key: key,
@@ -310,7 +326,8 @@ export class S3Service implements OnModuleInit {
     parts: { PartNumber: number; ETag: string }[],
   ): Promise<void> {
     try {
-      const { CompleteMultipartUploadCommand } = await import('@aws-sdk/client-s3');
+      const { CompleteMultipartUploadCommand } =
+        await import('@aws-sdk/client-s3');
       const cmd = new CompleteMultipartUploadCommand({
         Bucket: bucket,
         Key: key,
@@ -327,9 +344,14 @@ export class S3Service implements OnModuleInit {
   /**
    * Abort multipart upload
    */
-  async abortMultipartUpload(bucket: string, key: string, uploadId: string): Promise<void> {
+  async abortMultipartUpload(
+    bucket: string,
+    key: string,
+    uploadId: string,
+  ): Promise<void> {
     try {
-      const { AbortMultipartUploadCommand } = await import('@aws-sdk/client-s3');
+      const { AbortMultipartUploadCommand } =
+        await import('@aws-sdk/client-s3');
       const cmd = new AbortMultipartUploadCommand({
         Bucket: bucket,
         Key: key,

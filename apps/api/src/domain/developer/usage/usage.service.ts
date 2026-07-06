@@ -19,21 +19,28 @@ export class UsageService {
    * ملخص الاستخدام الشامل
    */
   async getUsageSummary(userId: string) {
-    const [subscription, wallet, messageCounts, apiKeysCount, contactsCount, webhooksCount, phoneNumbersCount] =
-      await Promise.all([
-        this.subscriptionsService.getSubscription(userId),
-        this.walletService.getWallet(userId),
-        this.getMessageCounts(userId),
-        this.prisma.developerApiKey.count({ where: { userId, status: 'ACTIVE' } }),
-        this.prisma.developerContact.count({ where: { userId } }),
-        this.prisma.developerWebhook.count({ where: { userId } }),
-        this.prisma.developerPhoneNumber.count({
-          where: {
-            account: { userId },
-            status: 'ACTIVE',
-          },
-        }),
-      ]);
+    const [
+      subscription,
+      wallet,
+      messageCounts,
+      apiKeyQuota,
+      contactsCount,
+      webhooksCount,
+      phoneNumbersCount,
+    ] = await Promise.all([
+      this.subscriptionsService.getSubscription(userId),
+      this.walletService.getWallet(userId),
+      this.getMessageCounts(userId),
+      this.subscriptionsService.getResourceQuotas(userId),
+      this.prisma.developerContact.count({ where: { userId } }),
+      this.prisma.developerWebhook.count({ where: { userId } }),
+      this.prisma.developerPhoneNumber.count({
+        where: {
+          account: { userId },
+          status: 'ACTIVE',
+        },
+      }),
+    ]);
 
     return {
       plan: subscription.plan || 'FREE',
@@ -44,10 +51,26 @@ export class UsageService {
         ...messageCounts,
       },
       resources: {
-        apiKeys: { used: apiKeysCount, limit: subscription.apiKeysLimit || 1 },
-        contacts: { used: contactsCount, limit: subscription.contactsLimit || 500 },
-        webhooks: { used: webhooksCount, limit: subscription.webhooksLimit || 2 },
-        phoneNumbers: { used: phoneNumbersCount, limit: subscription.phoneNumbersLimit || 1 },
+        apiKeys: {
+          used: apiKeyQuota.apiKeysUsed,
+          limit: apiKeyQuota.apiKeysLimit,
+        },
+        apps: {
+          used: apiKeyQuota.appsUsed,
+          limit: apiKeyQuota.appsLimit,
+        },
+        contacts: {
+          used: contactsCount,
+          limit: subscription.contactsLimit || 500,
+        },
+        webhooks: {
+          used: webhooksCount,
+          limit: subscription.webhooksLimit || 2,
+        },
+        phoneNumbers: {
+          used: phoneNumbersCount,
+          limit: subscription.phoneNumbersLimit || 1,
+        },
       },
       period: {
         start: subscription.currentPeriodStart,

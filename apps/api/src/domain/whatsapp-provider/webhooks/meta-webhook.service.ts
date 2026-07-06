@@ -55,11 +55,19 @@ export class MetaWebhookService {
     // Handle incoming messages
     const messages = value?.messages || [];
     for (const message of messages) {
-      await this.handleIncomingMessage(account.userId, phoneNumberId, message, value?.contacts);
+      await this.handleIncomingMessage(
+        account.userId,
+        phoneNumberId,
+        message,
+        value?.contacts,
+      );
     }
   }
 
-  private async handleMessageStatus(userId: string, status: any): Promise<void> {
+  private async handleMessageStatus(
+    userId: string,
+    status: any,
+  ): Promise<void> {
     const messageId = status?.id;
     const statusValue = status?.status;
 
@@ -92,15 +100,22 @@ export class MetaWebhookService {
         },
       });
 
-      await this.webhookDelivery.dispatchEvent(userId, `message.${statusValue}`, {
-        messageId: log.id,
-        metaMessageId: messageId,
-        status: statusValue,
-        timestamp: status?.timestamp,
-        ...(status?.errors?.[0] ? { error: status.errors[0] } : {}),
-      });
+      await this.webhookDelivery.dispatchEvent(
+        userId,
+        `message.${statusValue}`,
+        {
+          messageId: log.id,
+          metaMessageId: messageId,
+          status: statusValue,
+          timestamp: status?.timestamp,
+          ...(status?.errors?.[0] ? { error: status.errors[0] } : {}),
+        },
+      );
     } catch (error) {
-      this.logger.error(`Failed to update message status: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update message status: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -129,7 +144,7 @@ export class MetaWebhookService {
           recipientNumber: phone.phoneNumber,
           senderNumber: from,
           direction: 'INBOUND',
-          messageType: messageType as any,
+          messageType: messageType,
           content: message,
           status: 'DELIVERED',
           metaMessageId: message?.id,
@@ -146,11 +161,17 @@ export class MetaWebhookService {
         timestamp: message?.timestamp,
       });
     } catch (error) {
-      this.logger.error(`Failed to handle incoming message: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to handle incoming message: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
-  private async handleTemplateStatusUpdate(wabaId: string, value: any): Promise<void> {
+  private async handleTemplateStatusUpdate(
+    wabaId: string,
+    value: any,
+  ): Promise<void> {
     const event = value?.event;
     const messageTemplateName = value?.message_template_name;
     const messageTemplateId = value?.message_template_id?.toString();
@@ -189,14 +210,21 @@ export class MetaWebhookService {
         });
       }
 
-      await this.webhookDelivery.dispatchEvent(account.userId, 'template.status_update', {
-        templateName: messageTemplateName,
-        templateId: template?.id,
-        event,
-        reason: value?.reason,
-      });
+      await this.webhookDelivery.dispatchEvent(
+        account.userId,
+        'template.status_update',
+        {
+          templateName: messageTemplateName,
+          templateId: template?.id,
+          event,
+          reason: value?.reason,
+        },
+      );
     } catch (error) {
-      this.logger.error(`Failed to handle template status update: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to handle template status update: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -214,14 +242,21 @@ export class MetaWebhookService {
         });
       }
 
-      await this.webhookDelivery.dispatchEvent(account.userId, 'account.update', {
-        accountId: account.id,
-        wabaId,
-        event,
-        details: value,
-      });
+      await this.webhookDelivery.dispatchEvent(
+        account.userId,
+        'account.update',
+        {
+          accountId: account.id,
+          wabaId,
+          event,
+          details: value,
+        },
+      );
     } catch (error) {
-      this.logger.error(`Failed to handle account update: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to handle account update: ${error.message}`,
+        error.stack,
+      );
     }
   }
 

@@ -19,8 +19,9 @@ export class WebSocketTokenService {
     private configService: ConfigService,
   ) {
     // 🔒 Use dedicated WS secret if available, fall back to JWT_SECRET
-    this.wsSecret = this.configService.get<string>('WS_JWT_SECRET')
-      || this.configService.get<string>('JWT_SECRET')!;
+    this.wsSecret =
+      this.configService.get<string>('WS_JWT_SECRET') ||
+      this.configService.get<string>('JWT_SECRET');
   }
 
   /**

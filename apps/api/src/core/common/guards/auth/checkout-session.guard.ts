@@ -34,7 +34,8 @@ export class CheckoutSessionGuard implements CanActivate {
       });
 
       // التحقق من نوع التوكن - accept checkout tokens AND regular access tokens
-      const isCheckout = payload.type === 'checkout_session' || payload.type === 'checkout';
+      const isCheckout =
+        payload.type === 'checkout_session' || payload.type === 'checkout';
       const isAccess = payload.type === 'access' || !payload.type;
 
       if (!isCheckout && !isAccess) {

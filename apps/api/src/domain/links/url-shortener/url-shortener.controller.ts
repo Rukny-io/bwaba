@@ -45,10 +45,10 @@ export class UrlShortenerController {
     try {
       const parsedUrl = new URL(url);
       const hostname = parsedUrl.hostname.toLowerCase();
-      
+
       // Check if it's an allowed domain or subdomain
-      return ALLOWED_REDIRECT_DOMAINS.some(domain => 
-        hostname === domain || hostname.endsWith('.' + domain)
+      return ALLOWED_REDIRECT_DOMAINS.some(
+        (domain) => hostname === domain || hostname.endsWith('.' + domain),
       );
     } catch {
       return false;

@@ -1,9 +1,18 @@
 import dotenv from 'dotenv';
-import { defineConfig } from 'prisma/config';
 import path from 'path';
+import { defineConfig, env } from 'prisma/config';
 
 const baseDir = __dirname;
-dotenv.config({ path: path.join(baseDir, '..', '.env') });
+const apiRoot = path.join(baseDir, '..');
+
+// Prefer runtime env (Docker `environment:`) over files; load common env paths for local CLI.
+for (const envFile of [
+  path.join(apiRoot, '.env'),
+  path.join(apiRoot, '..', '..', '.env.dev'),
+  path.join(apiRoot, '..', '..', '.env'),
+]) {
+  dotenv.config({ path: envFile, override: false });
+}
 
 export default defineConfig({
   schema: path.join(baseDir, 'schema.prisma'),
@@ -11,6 +20,6 @@ export default defineConfig({
     path: path.join(baseDir, 'migrations'),
   },
   datasource: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy',
   },
 });

@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  scryptSync,
+} from 'crypto';
 
 /**
  * 🔐 خدمة تشفير Access Tokens
@@ -15,7 +20,9 @@ export class TokenEncryptionService {
   constructor(private configService: ConfigService) {
     const masterKey = this.configService.get<string>('ENCRYPTION_KEY', '');
     if (!masterKey || masterKey.length < 32) {
-      this.logger.warn('ENCRYPTION_KEY not set or too short. Token encryption will use fallback.');
+      this.logger.warn(
+        'ENCRYPTION_KEY not set or too short. Token encryption will use fallback.',
+      );
     }
     // اشتقاق مفتاح 32 بايت من المفتاح الرئيسي
     this.encryptionKey = scryptSync(
@@ -37,9 +44,9 @@ export class TokenEncryptionService {
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
 
-    return Buffer.from(`${iv.toString('hex')}:${encrypted}:${authTag}`).toString(
-      'base64',
-    );
+    return Buffer.from(
+      `${iv.toString('hex')}:${encrypted}:${authTag}`,
+    ).toString('base64');
   }
 
   /**

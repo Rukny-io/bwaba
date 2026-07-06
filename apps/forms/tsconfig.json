@@ -20,7 +20,9 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@heroui/react": ["./app/components/react/src/index.ts"]
+      "@rukny/forms-shared/*": ["./node_modules/@rukny/forms-shared/src/*"],
+      "@heroui/react": ["./app/components/react/src/index.ts"],
+      "@heroui/styles": ["./packages/styles/src/index.ts"]
     }
   },
   "include": [
@@ -31,5 +33,15 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    "**/*.test.tsx",
+    "**/*.test.ts",
+    "packages/storybook/**/*",
+    "packages/vitest/**/*",
+    "**/*.config.ts",
+    "**/*.config.js"
+  ]
 }

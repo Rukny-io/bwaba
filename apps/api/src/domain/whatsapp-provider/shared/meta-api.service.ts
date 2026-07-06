@@ -90,7 +90,10 @@ export class MetaApiService {
     },
   ) {
     const client = this.createClient(accessToken);
-    const response = await client.post(`/${wabaId}/message_templates`, template);
+    const response = await client.post(
+      `/${wabaId}/message_templates`,
+      template,
+    );
     return response.data;
   }
 
@@ -108,7 +111,11 @@ export class MetaApiService {
   /**
    * حذف قالب
    */
-  async deleteTemplate(wabaId: string, accessToken: string, templateName: string) {
+  async deleteTemplate(
+    wabaId: string,
+    accessToken: string,
+    templateName: string,
+  ) {
     const client = this.createClient(accessToken);
     const response = await client.delete(`/${wabaId}/message_templates`, {
       params: { name: templateName },
@@ -127,7 +134,8 @@ export class MetaApiService {
     const client = this.createClient(accessToken);
     const response = await client.get(`/${wabaId}`, {
       params: {
-        fields: 'id,name,currency,timezone_id,message_template_namespace,account_review_status',
+        fields:
+          'id,name,currency,timezone_id,message_template_namespace,account_review_status',
       },
     });
     return response.data;
@@ -254,7 +262,11 @@ export class MetaApiService {
     const client = this.createClient(accessToken);
     const formData = new FormData();
     formData.append('messaging_product', 'whatsapp');
-    formData.append('file', new Blob([new Uint8Array(file)], { type: mimeType }), filename);
+    formData.append(
+      'file',
+      new Blob([new Uint8Array(file)], { type: mimeType }),
+      filename,
+    );
     formData.append('type', mimeType);
 
     const response = await client.post(`/${phoneNumberId}/media`, formData, {

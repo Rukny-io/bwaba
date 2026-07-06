@@ -90,10 +90,7 @@ export class TokenService {
       where: {
         userId,
         isRevoked: false,
-        OR: [
-          { refreshExpiresAt: null },
-          { refreshExpiresAt: { gt: now } },
-        ],
+        OR: [{ refreshExpiresAt: null }, { refreshExpiresAt: { gt: now } }],
       },
       orderBy: { lastActivity: 'asc' },
       select: { id: true },
@@ -149,7 +146,9 @@ export class TokenService {
     sessionExpiresAt.setMinutes(sessionExpiresAt.getMinutes() + 30); // ✅ مطابق لـ ACCESS_TOKEN_EXPIRY
 
     const refreshExpiresAt = new Date();
-    refreshExpiresAt.setDate(refreshExpiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
+    refreshExpiresAt.setDate(
+      refreshExpiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS,
+    );
 
     // 4. تحليل معلومات الجهاز
     const parser = new UAParser(sessionInfo?.userAgent);
@@ -193,7 +192,7 @@ export class TokenService {
   ): Promise<TokenPair> {
     const startTime = Date.now();
     const timings: Record<string, number> = {};
-    
+
     const refreshTokenHash = this.hashToken(refreshToken);
     timings.hash = Date.now() - startTime;
 
@@ -217,29 +216,42 @@ export class TokenService {
       },
     });
     timings.sessionQuery = Date.now() - sessionQueryStart;
-    
+
     if (timings.sessionQuery > 500) {
-      console.warn(`[TokenService] ⚠️ Slow session query: ${timings.sessionQuery}ms`);
+      console.warn(
+        `[TokenService] ⚠️ Slow session query: ${timings.sessionQuery}ms`,
+      );
     }
 
     // 2. إذا لم نجد الجلسة بـ hash الحالي، نبحث عن سرقة محتملة أو فترة سماح
     if (!session) {
       if (!isProduction) {
-        console.log('[TokenService] Session not found with current refresh token hash');
+        console.log(
+          '[TokenService] Session not found with current refresh token hash',
+        );
       }
 
-      const tokenTheftCheck = await this.detectTokenTheft(refreshToken, refreshTokenHash);
+      const tokenTheftCheck = await this.detectTokenTheft(
+        refreshToken,
+        refreshTokenHash,
+      );
 
       // ✅ فترة السماح — نُصدر access token جديداً فقط، بدون تدوير refresh token ثانية
       if (tokenTheftCheck.isGracePeriod && tokenTheftCheck.session) {
         if (!isProduction) {
-          console.log('[TokenService] ✅ Grace period hit - issuing new access token only');
+          console.log(
+            '[TokenService] ✅ Grace period hit - issuing new access token only',
+          );
         }
         const gracePeriodSession = tokenTheftCheck.session;
 
         // 🔒 Fix #4: قفل Redis على الجلسة لمنع تدوير متزامن آخر
         const lockKey = `${this.REFRESH_LOCK_PREFIX}${gracePeriodSession.id}`;
-        const lockAcquired = await this.redis.setNX(lockKey, '1', this.REFRESH_LOCK_TTL);
+        const lockAcquired = await this.redis.setNX(
+          lockKey,
+          '1',
+          this.REFRESH_LOCK_TTL,
+        );
 
         if (!lockAcquired) {
           // تدوير آخر قيد التنفيذ — أخبر العميل بإعادة المحاولة بعد ثانية
@@ -249,11 +261,17 @@ export class TokenService {
         try {
           const currentSession = await this.prisma.session.findUnique({
             where: { id: gracePeriodSession.id },
-            select: { id: true, userId: true, user: { select: { email: true } } },
+            select: {
+              id: true,
+              userId: true,
+              user: { select: { email: true } },
+            },
           });
 
           if (!currentSession) {
-            throw new UnauthorizedException('Session not found during grace period');
+            throw new UnauthorizedException(
+              'Session not found during grace period',
+            );
           }
 
           // نُصدر access token جديد فقط — refresh token يبقى كما هو
@@ -307,15 +325,19 @@ export class TokenService {
         });
 
         // 🚨 إرسال تنبيه فوري عبر جميع القنوات (Telegram/Slack/Discord)
-        await this.threatAlertService.sendThreatAlert({
-          type: 'ACCOUNT_TAKEOVER',
-          severity: 'CRITICAL',
-          title: 'Token Theft Detected',
-          description: `Rotated refresh token reused for user ${tokenTheftCheck.userId}. All sessions revoked.`,
-          userId: tokenTheftCheck.userId,
-          ipAddress,
-          metadata: { userAgent, sessionId: tokenTheftCheck.sessionId },
-        }).catch(() => { /* non-critical */ });
+        await this.threatAlertService
+          .sendThreatAlert({
+            type: 'ACCOUNT_TAKEOVER',
+            severity: 'CRITICAL',
+            title: 'Token Theft Detected',
+            description: `Rotated refresh token reused for user ${tokenTheftCheck.userId}. All sessions revoked.`,
+            userId: tokenTheftCheck.userId,
+            ipAddress,
+            metadata: { userAgent, sessionId: tokenTheftCheck.sessionId },
+          })
+          .catch(() => {
+            /* non-critical */
+          });
 
         throw new UnauthorizedException(
           'تم اكتشاف نشاط مشبوه. تم تسجيل خروجك من جميع الأجهزة لحماية حسابك',
@@ -398,59 +420,63 @@ export class TokenService {
 
     // 🔒 Fix #4: قفل Redis لمنع التدوير المتزامن لنفس الجلسة
     const rotationLockKey = `${this.REFRESH_LOCK_PREFIX}${session.id}`;
-    const rotationLockAcquired = await this.redis.setNX(rotationLockKey, '1', this.REFRESH_LOCK_TTL);
+    const rotationLockAcquired = await this.redis.setNX(
+      rotationLockKey,
+      '1',
+      this.REFRESH_LOCK_TTL,
+    );
     if (!rotationLockAcquired) {
       throw new UnauthorizedException('TOKEN_REFRESH_IN_PROGRESS');
     }
 
     try {
-    // 6. إنشاء توكنز جديدة
-    const newAccessPayload: TokenPayload = {
-      sub: session.userId,
-      sid: session.id,
-      email: session.user.email,
-      type: 'access',
-    };
-    const newAccessToken = this.jwtService.sign(newAccessPayload, {
-      expiresIn: this.ACCESS_TOKEN_EXPIRY,
-    });
-
-    const newRefreshToken = this.generateSecureRefreshToken();
-
-    // 7. حساب أوقات انتهاء جديدة
-    const newSessionExpiresAt = new Date();
-    newSessionExpiresAt.setMinutes(newSessionExpiresAt.getMinutes() + 30);
-
-    // 8. تحديث الجلسة (Rotation) - فقط Refresh Token Hash الجديد
-    const updateStart = Date.now();
-    await this.prisma.session.update({
-      where: { id: session.id },
-      data: {
-        previousRefreshTokenHash: session.refreshTokenHash,
-        refreshTokenHash: this.hashToken(newRefreshToken),
-        expiresAt: newSessionExpiresAt,
-        lastActivity: new Date(),
-        rotationCount: session.rotationCount + 1,
-        lastRotatedAt: new Date(),
-        ipAddress: ipAddress || session.ipAddress,
-        userAgent: userAgent || session.userAgent,
-      },
-    });
-    timings.sessionUpdate = Date.now() - updateStart;
-    
-    const totalTime = Date.now() - startTime;
-    if (totalTime > 1000 || !isProduction) {
-      console.log(`[TokenService] Refresh completed in ${totalTime}ms`, {
-        sessionQuery: timings.sessionQuery,
-        sessionUpdate: timings.sessionUpdate,
-        hash: timings.hash,
+      // 6. إنشاء توكنز جديدة
+      const newAccessPayload: TokenPayload = {
+        sub: session.userId,
+        sid: session.id,
+        email: session.user.email,
+        type: 'access',
+      };
+      const newAccessToken = this.jwtService.sign(newAccessPayload, {
+        expiresIn: this.ACCESS_TOKEN_EXPIRY,
       });
-    }
 
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    };
+      const newRefreshToken = this.generateSecureRefreshToken();
+
+      // 7. حساب أوقات انتهاء جديدة
+      const newSessionExpiresAt = new Date();
+      newSessionExpiresAt.setMinutes(newSessionExpiresAt.getMinutes() + 30);
+
+      // 8. تحديث الجلسة (Rotation) - فقط Refresh Token Hash الجديد
+      const updateStart = Date.now();
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          previousRefreshTokenHash: session.refreshTokenHash,
+          refreshTokenHash: this.hashToken(newRefreshToken),
+          expiresAt: newSessionExpiresAt,
+          lastActivity: new Date(),
+          rotationCount: session.rotationCount + 1,
+          lastRotatedAt: new Date(),
+          ipAddress: ipAddress || session.ipAddress,
+          userAgent: userAgent || session.userAgent,
+        },
+      });
+      timings.sessionUpdate = Date.now() - updateStart;
+
+      const totalTime = Date.now() - startTime;
+      if (totalTime > 1000 || !isProduction) {
+        console.log(`[TokenService] Refresh completed in ${totalTime}ms`, {
+          sessionQuery: timings.sessionQuery,
+          sessionUpdate: timings.sessionUpdate,
+          hash: timings.hash,
+        });
+      }
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
     } finally {
       await this.redis.del(rotationLockKey);
     }

@@ -1,3 +1,4 @@
+"use client"
 import React from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -13,14 +14,14 @@ export function AuthFooter({ className }: AuthFooterProps) {
         href="/terms"
         className="underline underline-offset-3 hover:text-foreground transition-colors"
       >
-        شروط الاستخدام
+        Terms of Use
       </Link>
       <span className="mx-2 opacity-40">|</span>
       <Link
         href="/privacy"
         className="underline underline-offset-3 hover:text-foreground transition-colors"
       >
-        سياسة الخصوصية
+        Privacy Policy
       </Link>
     </footer>
   )

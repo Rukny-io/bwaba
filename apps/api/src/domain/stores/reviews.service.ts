@@ -365,7 +365,9 @@ export class ReviewsService {
     ]);
 
     return {
-      reviews: await Promise.all(reviews.map((r) => this.formatReview(r, true))),
+      reviews: await Promise.all(
+        reviews.map((r) => this.formatReview(r, true)),
+      ),
       pagination: {
         page,
         limit,
@@ -474,7 +476,9 @@ export class ReviewsService {
     ]);
 
     return {
-      reviews: await Promise.all(reviews.map((r) => this.formatReview(r, true))),
+      reviews: await Promise.all(
+        reviews.map((r) => this.formatReview(r, true)),
+      ),
       pagination: {
         page,
         limit,
@@ -560,7 +564,8 @@ export class ReviewsService {
     };
 
     if (includeProduct && review.products) {
-      let image: string | null = review.products.product_images?.[0]?.imagePath || null;
+      let image: string | null =
+        review.products.product_images?.[0]?.imagePath || null;
       if (image && !image.startsWith('http')) {
         image = `/api/media/${image}`;
       }

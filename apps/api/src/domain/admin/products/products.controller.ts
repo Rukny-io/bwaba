@@ -68,7 +68,10 @@ export class ProductsController {
   }
 
   @Patch(':id/featured')
-  updateFeatured(@Param('id') id: string, @Body('isFeatured') isFeatured: boolean) {
+  updateFeatured(
+    @Param('id') id: string,
+    @Body('isFeatured') isFeatured: boolean,
+  ) {
     return this.productsService.updateProductFeatured(id, isFeatured);
   }
 

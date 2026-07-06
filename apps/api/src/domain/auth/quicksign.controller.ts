@@ -14,7 +14,12 @@ import {
   ForbiddenException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { QuickSignService } from './quicksign.service';
 import { IpVerificationService } from './ip-verification.service';
@@ -28,14 +33,20 @@ import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { SecurityDetectorService } from '../../infrastructure/security/detector.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { RequestQuickSignDto, ResendQuickSignDto, VerifyIPCodeDto, CompleteProfileDto, CheckUsernameDto } from './dto';
+import {
+  RequestQuickSignDto,
+  ResendQuickSignDto,
+  VerifyIPCodeDto,
+  CompleteProfileDto,
+  CheckUsernameDto,
+} from './dto';
 import { UAParser } from 'ua-parser-js';
 import * as crypto from 'crypto';
 import { QuickSignType, VerificationType } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { RedisOAuthCodeService } from './redis-oauth-code.service';
-import { 
+import {
   setAccessTokenCookie,
   setRefreshTokenCookie,
   setCsrfTokenCookie,
@@ -55,6 +66,11 @@ const QUICK_SIGN_RESEND_THROTTLE =
   process.env.NODE_ENV === 'production'
     ? { default: { limit: 2, ttl: 60000 } } // 2 requests per minute
     : { default: { limit: 30, ttl: 60000 } }; // 30 requests per minute
+
+const QUICK_SIGN_VERIFY_THROTTLE =
+  process.env.NODE_ENV === 'production'
+    ? { default: { limit: 20, ttl: 60000 } } // 20 verify attempts per minute
+    : { default: { limit: 80, ttl: 60000 } }; // generous limit for local testing
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -136,32 +152,38 @@ export class QuickSignController {
 
     // إرسال البريد في الخلفية (لا ننتظر) - استخدام Resend
     if (type === QuickSignType.LOGIN) {
-      this.resendService.sendQuickSignLogin(dto.email, token, deviceInfo).catch((error) => {
-        console.error('[QuickSign] Failed to send login email:', error);
-        // لا نرمي الخطأ - البريد فشل لكن الطلب نجح
-      });
+      this.resendService
+        .sendQuickSignLogin(dto.email, token, deviceInfo)
+        .catch((error) => {
+          console.error('[QuickSign] Failed to send login email:', error);
+          // لا نرمي الخطأ - البريد فشل لكن الطلب نجح
+        });
     } else {
-      this.resendService.sendQuickSignSignup(dto.email, token, deviceInfo).catch((error) => {
-        console.error('[QuickSign] Failed to send signup email:', error);
-        // لا نرمي الخطأ - البريد فشل لكن الطلب نجح
-      });
+      this.resendService
+        .sendQuickSignSignup(dto.email, token, deviceInfo)
+        .catch((error) => {
+          console.error('[QuickSign] Failed to send signup email:', error);
+          // لا نرمي الخطأ - البريد فشل لكن الطلب نجح
+        });
     }
 
     // ⚡ Security log بشكل غير متزامن أيضاً
-    this.securityLogService.createLog({
-      userId: null,
-      action: 'LOGIN_SUCCESS',
-      status: 'SUCCESS',
-      description: `طلب QuickSign ${type === QuickSignType.LOGIN ? 'للدخول' : 'للتسجيل'}: ${dto.email}`,
-      ipAddress,
-      deviceType: result.device.type || 'desktop',
-      browser: result.browser.name || 'Unknown',
-      os: result.os.name || 'Unknown',
-      userAgent,
-    }).catch((error) => {
-      console.error('[QuickSign] Failed to create security log:', error);
-      // لا نرمي الخطأ - التسجيل فشل لكن الطلب نجح
-    });
+    this.securityLogService
+      .createLog({
+        userId: null,
+        action: 'LOGIN_SUCCESS',
+        status: 'SUCCESS',
+        description: `طلب QuickSign ${type === QuickSignType.LOGIN ? 'للدخول' : 'للتسجيل'}: ${dto.email}`,
+        ipAddress,
+        deviceType: result.device.type || 'desktop',
+        browser: result.browser.name || 'Unknown',
+        os: result.os.name || 'Unknown',
+        userAgent,
+      })
+      .catch((error) => {
+        console.error('[QuickSign] Failed to create security log:', error);
+        // لا نرمي الخطأ - التسجيل فشل لكن الطلب نجح
+      });
 
     // ⚡ إرجاع الاستجابة فوراً بدون انتظار البريد أو التسجيل
     // 🔒 Security: Always return the same generic message to prevent email enumeration
@@ -182,9 +204,7 @@ export class QuickSignController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'فحص صلاحية QuickSign token بدون استهلاكه' })
   @ApiResponse({ status: 200, description: 'نتيجة فحص الـ token' })
-  async checkToken(
-    @Query('token') token: string,
-  ) {
+  async checkToken(@Query('token') token: string) {
     if (!token) {
       return {
         valid: false,
@@ -208,44 +228,71 @@ export class QuickSignController {
   @Get('verify/:token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'صفحة وسيطة لمنع استهلاك الرابط بواسطة البريد' })
-  async verifyQuickSignPage(@Param('token') token: string, @Res() res: Response) {
+  async verifyQuickSignPage(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ) {
+    const safeToken = encodeURIComponent(token);
+    const authFrontendUrl =
+      process.env.AUTH_FRONTEND_URL || 'https://accounts.rukny.io';
+    const authBaseUrl = process.env.AUTH_BASE_URL || 'https://api.rukny.io';
+
+    const toOrigin = (value: string): string => {
+      try {
+        return new URL(value).origin;
+      } catch {
+        return '';
+      }
+    };
+
+    const allowedFormOrigins = [
+      toOrigin(authFrontendUrl),
+      toOrigin(authBaseUrl),
+      'https://accounts.rukny.io',
+      'https://api.rukny.io',
+    ].filter(Boolean);
+
+    const formAction = `${toOrigin(authBaseUrl) || 'https://api.rukny.io'}/api/v1/auth/quicksign/verify/${safeToken}`;
+    const csp = [
+      "default-src 'self'",
+      "img-src 'self' data: blob: https:",
+      "style-src 'self' 'unsafe-inline' https:",
+      "script-src 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      `form-action 'self' ${allowedFormOrigins.join(' ')}`,
+    ].join('; ');
+
     const html = `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
       <meta charset="utf-8">
-      <title>جاري التحقق...</title>
+      <title>تأكيد تسجيل الدخول</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
         body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f9fafb; margin: 0; color: #111827; }
         .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center; max-width: 400px; width: 90%; }
         .btn { background: #000; color: #fff; border: none; padding: 12px 24px; border-radius: 9999px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 1.5rem; font-weight: 500; transition: opacity 0.2s; }
         .btn:hover { opacity: 0.8; }
-        .loader { width: 40px; height: 40px; border: 3px solid #f3f4f6; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .hint { color: #6b7280; margin: 0; font-size: 0.9rem; }
       </style>
     </head>
     <body>
       <div class="card">
-        <div class="loader" id="loader"></div>
-        <h2 style="margin: 0 0 0.5rem;">جاري تسجيل الدخول</h2>
-        <p style="color: #6b7280; margin: 0; font-size: 0.9rem;">يرجى الانتظار لحظات...</p>
+        <h2 style="margin: 0 0 0.5rem;">تأكيد تسجيل الدخول</h2>
+        <p class="hint">اضغط الزر أدناه لإكمال التحقق وتسجيل الدخول بأمان.</p>
         
-        <form id="verifyForm" action="/api/v1/auth/quicksign/verify/${token}" method="POST">
-          <noscript>
-            <p style="margin-top: 1.5rem; color: #b91c1c;">يجب تفعيل الجافاسكربت أو النقر على الزر أدناه</p>
-            <button class="btn" type="submit">المتابعة لتسجيل الدخول</button>
-          </noscript>
+        <form id="verifyForm" action="${formAction}" method="POST">
+          <button class="btn" type="submit">المتابعة لتسجيل الدخول</button>
         </form>
       </div>
-      <script>
-        // إرسال النموذج تلقائياً بشكل فوري
-        document.getElementById('verifyForm').submit();
-      </script>
     </body>
     </html>
     `;
     res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Security-Policy', csp);
     res.send(html);
   }
 
@@ -255,7 +302,7 @@ export class QuickSignController {
    */
   @Post('verify/:token')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 🔒 5 attempts per minute to prevent brute force
+  @Throttle(QUICK_SIGN_VERIFY_THROTTLE)
   @ApiOperation({ summary: 'التحقق من صلاحية QuickSign token' })
   @ApiResponse({ status: 200, description: 'Token صالح' })
   @ApiResponse({ status: 401, description: 'Token غير صالح أو منتهي' })
@@ -266,7 +313,10 @@ export class QuickSignController {
   ) {
     const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip || req.socket.remoteAddress;
-    const frontendUrl = process.env.AUTH_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl =
+      process.env.AUTH_FRONTEND_URL ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:3000';
 
     // 🔒 Debug: Log incoming token
     if (!isProduction) {
@@ -278,13 +328,15 @@ export class QuickSignController {
     }
 
     // 🔒 التحقق من Token واستهلاكه بشكل ذري (يمنع race conditions)
-    const verification = await this.quickSignService.verifyAndConsumeQuickSign(token);
+    const verification =
+      await this.quickSignService.verifyAndConsumeQuickSign(token);
 
     if (!verification.valid) {
       // 🔒 التعامل مع حالة القفل (race condition)
       if (verification.error === 'locked') {
         const errorUrl = `${frontendUrl}/auth/verify?error=processing&message=${encodeURIComponent('جاري معالجة طلب تسجيل الدخول، يرجى الانتظار')}`;
-        if (!isProduction) console.log('🔄 Redirecting to error page (locked):', errorUrl);
+        if (!isProduction)
+          console.log('🔄 Redirecting to error page (locked):', errorUrl);
         return res.redirect(errorUrl);
       }
 
@@ -293,23 +345,30 @@ export class QuickSignController {
         await this.accountLockoutService.recordFailedAttempt(
           verification.email,
           ipAddress,
-          verification.used ? 'Link already used' : verification.expired ? 'Link expired' : 'Invalid link',
+          verification.used
+            ? 'Link already used'
+            : verification.expired
+              ? 'Link expired'
+              : 'Invalid link',
         );
       }
 
       // Redirect to frontend with error instead of throwing exception
       if (verification.used) {
         const errorUrl = `${frontendUrl}/auth/verify?error=used&message=${encodeURIComponent('هذا الرابط تم استخدامه مسبقاً')}`;
-        if (!isProduction) console.log('🔄 Redirecting to error page (used):', errorUrl);
+        if (!isProduction)
+          console.log('🔄 Redirecting to error page (used):', errorUrl);
         return res.redirect(errorUrl);
       }
       if (verification.expired) {
         const errorUrl = `${frontendUrl}/auth/verify?error=expired&message=${encodeURIComponent('انتهت صلاحية هذا الرابط')}`;
-        if (!isProduction) console.log('🔄 Redirecting to error page (expired):', errorUrl);
+        if (!isProduction)
+          console.log('🔄 Redirecting to error page (expired):', errorUrl);
         return res.redirect(errorUrl);
       }
       const errorUrl = `${frontendUrl}/auth/verify?error=invalid&message=${encodeURIComponent('رابط غير صالح')}`;
-      if (!isProduction) console.log('🔄 Redirecting to error page (invalid):', errorUrl);
+      if (!isProduction)
+        console.log('🔄 Redirecting to error page (invalid):', errorUrl);
       return res.redirect(errorUrl);
     }
 
@@ -321,8 +380,9 @@ export class QuickSignController {
     if (verification.type === QuickSignType.SIGNUP) {
       // لا نعلم الرابط كمستخدم هنا - سيتم تعليمه عند إكمال الملف الشخصي
       // Redirect لصفحة إكمال الملف الشخصي مع الـ token
-      const redirectUrl = `${frontendUrl}/complete-profile?email=${encodeURIComponent(verification.email)}&token=${encodeURIComponent(token)}`;
-      if (!isProduction) console.log('🔄 Redirecting to complete-profile:', redirectUrl);
+      const redirectUrl = `${frontendUrl}/complete-profile?token=${encodeURIComponent(token)}`;
+      if (!isProduction)
+        console.log('🔄 Redirecting to complete-profile:', redirectUrl);
       return res.redirect(redirectUrl);
     }
 
@@ -341,7 +401,7 @@ export class QuickSignController {
     if (ipCheck.isNewIP && ipCheck.shouldAlert) {
       const user = await this.prisma.user.findUnique({
         where: { id: verification.userId },
-        select: { 
+        select: {
           email: true,
           profile: { select: { name: true } },
         },
@@ -349,10 +409,8 @@ export class QuickSignController {
 
       if (user) {
         // إرسال تنبيه فقط (بدون طلب تحقق)
-        await this.emailService.sendLoginAlert(
-          user.email,
-          user.profile?.name || 'مستخدم',
-          {
+        await this.emailService
+          .sendLoginAlert(user.email, user.profile?.name || 'مستخدم', {
             success: true,
             ipAddress: ipCheck.maskedIP, // IP مُخفى للحماية
             location: 'تسجيل دخول من IP جديد',
@@ -360,29 +418,38 @@ export class QuickSignController {
             os: result.os.name,
             deviceType: result.device.type || 'desktop',
             timestamp: new Date(),
-          },
-        ).catch(err => console.warn('Failed to send IP alert email:', err));
+          })
+          .catch((err) => console.warn('Failed to send IP alert email:', err));
       }
     }
 
     // تحديث آخر IP معروف (كـ fingerprint)
-    await this.ipVerificationService.updateLastKnownIP(verification.userId, ipAddress);
+    await this.ipVerificationService.updateLastKnownIP(
+      verification.userId,
+      ipAddress,
+    );
 
     // التحقق من 2FA قبل تسجيل الدخول
-    const requires2FA = await this.twoFactorService.requiresTwoFactor(verification.userId);
-    
+    const requires2FA = await this.twoFactorService.requiresTwoFactor(
+      verification.userId,
+    );
+
     if (requires2FA) {
       // تذكر هذا الجهاز: إذا كان الطلب يحمل جهازاً موثوقاً صالحاً، تخطّ 2FA
       const trustedDeviceId = getTrustedDeviceId(req);
       if (trustedDeviceId) {
-        const trusted = await this.securityDetectorService.findTrustedDeviceById(
-          trustedDeviceId,
-          verification.userId,
-        );
+        const trusted =
+          await this.securityDetectorService.findTrustedDeviceById(
+            trustedDeviceId,
+            verification.userId,
+          );
         if (trusted) {
           // تخطي 2FA والمتابعة كتسجيل دخول عادي
           // ملاحظة: markQuickSignAsUsed تم استدعاؤها في verifyAndConsumeQuickSign
-          await this.ipVerificationService.updateLastKnownIP(verification.userId, ipAddress);
+          await this.ipVerificationService.updateLastKnownIP(
+            verification.userId,
+            ipAddress,
+          );
           const user = await this.prisma.user.findUnique({
             where: { id: verification.userId },
             select: {
@@ -425,10 +492,11 @@ export class QuickSignController {
       );
 
       // ملاحظة: markQuickSignAsUsed تم استدعاؤها في verifyAndConsumeQuickSign
-      
+
       // Redirect لصفحة اختيار طريقة التحقق (2FA Method Chooser)
       const redirectUrl = `${frontendUrl}/choose-method?sessionId=${pendingSessionId}&email=${encodeURIComponent(verification.email)}`;
-      if (!isProduction) console.log('🔄 Redirecting to choose-method (2FA):', redirectUrl);
+      if (!isProduction)
+        console.log('🔄 Redirecting to choose-method (2FA):', redirectUrl);
       return res.redirect(redirectUrl);
     }
 
@@ -504,25 +572,31 @@ export class QuickSignController {
     });
 
     // تسجيل المحاولة الناجحة وإعادة تعيين عداد الإغلاق
-    await this.accountLockoutService.recordSuccessfulAttempt(user.email, ipAddress);
+    await this.accountLockoutService.recordSuccessfulAttempt(
+      user.email,
+      ipAddress,
+    );
 
     // 🔒 استخدام نفس نظام OAuth - إنشاء one-time code وredirect
     // هذا يحل مشكلة cross-origin cookies
-    const code = await this.oauthCodeService.generate({
-      userId: user.id,
-      email: user.email,
-      user: {
-        id: user.id,
+    const code = await this.oauthCodeService.generate(
+      {
+        userId: user.id,
         email: user.email,
-        role: user.role,
-        name: user.profile?.name,
-        avatar: user.profile?.avatar,
-        profileCompleted: user.profileCompleted,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.profile?.name,
+          avatar: user.profile?.avatar,
+          profileCompleted: user.profileCompleted,
+        },
+        needsProfileCompletion: !user.profileCompleted,
+        userAgent,
+        ipAddress,
       },
-      needsProfileCompletion: !user.profileCompleted,
-      userAgent,
       ipAddress,
-    }, ipAddress);
+    );
 
     // Redirect مع code فقط - نفس نظام OAuth
     const callbackUrl = `${frontendUrl}/callback?code=${code}`;
@@ -539,10 +613,7 @@ export class QuickSignController {
   @Throttle(QUICK_SIGN_RESEND_THROTTLE)
   @ApiOperation({ summary: 'إعادة إرسال رابط QuickSign' })
   @ApiResponse({ status: 200, description: 'تم إعادة الإرسال بنجاح' })
-  async resendQuickSign(
-    @Body() dto: ResendQuickSignDto,
-    @Req() req: Request,
-  ) {
+  async resendQuickSign(@Body() dto: ResendQuickSignDto, @Req() req: Request) {
     // نفس منطق request endpoint
     return this.requestQuickSign(dto, req);
   }
@@ -572,7 +643,6 @@ export class QuickSignController {
     // Debug: log verification result to help diagnose invalid/expired tokens
     // (remove or lower verbosity in production)
     try {
-      // eslint-disable-next-line no-console
       console.log('[QUICKSIGN] completeProfile verification:', {
         tokenPreview: dto.quickSignToken?.substring?.(0, 20) + '...',
         verification,
@@ -636,7 +706,7 @@ export class QuickSignController {
 
     // 🔒 إعداد Access Token في httpOnly Cookie
     setAccessTokenCookie(res, tokens.accessToken);
-    
+
     // 🔒 إعداد Refresh Token في httpOnly Cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -671,7 +741,10 @@ export class QuickSignController {
     });
 
     // تسجيل المحاولة الناجحة وإعادة تعيين عداد الإغلاق
-    await this.accountLockoutService.recordSuccessfulAttempt(user.email, ipAddress);
+    await this.accountLockoutService.recordSuccessfulAttempt(
+      user.email,
+      ipAddress,
+    );
 
     return {
       success: true,
@@ -709,8 +782,9 @@ export class QuickSignController {
     const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip || req.socket.remoteAddress;
 
-    // التحقق من QuickSign token
-    const verification = await this.quickSignService.verifyQuickSign(
+    // التحقق من QuickSign token — نستخدم verifySignupToken الذي لا يحتاج قفل
+    // ويتحقق من أن التوكن من نوع SIGNUP ولم يُسجَّل المستخدم بعد
+    const verification = await this.quickSignService.verifySignupToken(
       dto.quickSignToken,
     );
 
@@ -740,12 +814,12 @@ export class QuickSignController {
               email: true,
               role: true,
               profileCompleted: true,
-              profile: { 
-                select: { 
-                  name: true, 
-                  username: true, 
-                  avatar: true 
-                } 
+              profile: {
+                select: {
+                  name: true,
+                  username: true,
+                  avatar: true,
+                },
               },
             },
           });
@@ -798,11 +872,13 @@ export class QuickSignController {
                 username: existingUser.profile?.username,
                 avatar: existingUser.profile?.avatar,
               },
-              store: store ? {
-                id: store.id,
-                name: store.name,
-                slug: store.slug,
-              } : null,
+              store: store
+                ? {
+                    id: store.id,
+                    name: store.name,
+                    slug: store.slug,
+                  }
+                : null,
               csrf_token: csrfToken,
               expires_in: 30 * 60,
               message: 'تم تسجيل الدخول بنجاح',
@@ -838,7 +914,7 @@ export class QuickSignController {
     // Import IP hashing utility
     const { hashIP } = await import('../../core/common/utils/ip-hash.util');
     const ipFingerprint = hashIP(ipAddress);
-    
+
     // إنشاء المستخدم مع Profile
     const user = await this.prisma.user.create({
       data: {
@@ -913,7 +989,7 @@ export class QuickSignController {
 
     // 🔒 إعداد Access Token في httpOnly Cookie
     setAccessTokenCookie(res, tokens.accessToken);
-    
+
     // 🔒 إعداد Refresh Token في httpOnly Cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -943,7 +1019,10 @@ export class QuickSignController {
     });
 
     // تسجيل المحاولة الناجحة وإعادة تعيين عداد الإغلاق
-    await this.accountLockoutService.recordSuccessfulAttempt(user.email, ipAddress);
+    await this.accountLockoutService.recordSuccessfulAttempt(
+      user.email,
+      ipAddress,
+    );
 
     return {
       success: true,

@@ -26,7 +26,14 @@ export class AnalyticsService {
     // Get all user's links
     const links = await this.prisma.socialLink.findMany({
       where: { profileId: profile.id },
-      select: { id: true, totalClicks: true, views: true, title: true, platform: true, url: true },
+      select: {
+        id: true,
+        totalClicks: true,
+        views: true,
+        title: true,
+        platform: true,
+        url: true,
+      },
     });
 
     const linkIds = links.map((l) => l.id);
@@ -38,37 +45,47 @@ export class AnalyticsService {
     });
 
     // ── Current period link analytics ──
-    const currentLinkStats = linkIds.length > 0
-      ? await this.prisma.link_analytics.aggregate({
-          where: { linkId: { in: linkIds }, date: { gte: startDate } },
-          _sum: { clicks: true },
-        })
-      : { _sum: { clicks: 0 } };
+    const currentLinkStats =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.aggregate({
+            where: { linkId: { in: linkIds }, date: { gte: startDate } },
+            _sum: { clicks: true },
+          })
+        : { _sum: { clicks: 0 } };
 
     // ── Previous period link analytics ──
-    const prevLinkStats = linkIds.length > 0
-      ? await this.prisma.link_analytics.aggregate({
-          where: { linkId: { in: linkIds }, date: { gte: prevStartDate, lt: startDate } },
-          _sum: { clicks: true },
-        })
-      : { _sum: { clicks: 0 } };
+    const prevLinkStats =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.aggregate({
+            where: {
+              linkId: { in: linkIds },
+              date: { gte: prevStartDate, lt: startDate },
+            },
+            _sum: { clicks: true },
+          })
+        : { _sum: { clicks: 0 } };
 
     // ── Current period form analytics ──
     const formIds = forms.map((f) => f.id);
-    const currentFormStats = formIds.length > 0
-      ? await this.prisma.form_analytics.aggregate({
-          where: { formId: { in: formIds }, date: { gte: startDate } },
-          _sum: { views: true, submissions: true },
-        })
-      : { _sum: { views: 0, submissions: 0 } };
+    const currentFormStats =
+      formIds.length > 0
+        ? await this.prisma.form_analytics.aggregate({
+            where: { formId: { in: formIds }, date: { gte: startDate } },
+            _sum: { views: true, submissions: true },
+          })
+        : { _sum: { views: 0, submissions: 0 } };
 
     // ── Previous period form analytics ──
-    const prevFormStats = formIds.length > 0
-      ? await this.prisma.form_analytics.aggregate({
-          where: { formId: { in: formIds }, date: { gte: prevStartDate, lt: startDate } },
-          _sum: { views: true, submissions: true },
-        })
-      : { _sum: { views: 0, submissions: 0 } };
+    const prevFormStats =
+      formIds.length > 0
+        ? await this.prisma.form_analytics.aggregate({
+            where: {
+              formId: { in: formIds },
+              date: { gte: prevStartDate, lt: startDate },
+            },
+            _sum: { views: true, submissions: true },
+          })
+        : { _sum: { views: 0, submissions: 0 } };
 
     const totalClicks = currentLinkStats._sum.clicks || 0;
     const prevClicks = prevLinkStats._sum.clicks || 0;
@@ -79,66 +96,84 @@ export class AnalyticsService {
     const totalLinkViews = links.reduce((sum, l) => sum + l.views, 0);
 
     // Daily click data for chart
-    const dailyClicks = linkIds.length > 0
-      ? await this.prisma.link_analytics.groupBy({
-          by: ['date'],
-          where: { linkId: { in: linkIds }, date: { gte: startDate } },
-          _sum: { clicks: true },
-          orderBy: { date: 'asc' },
-        })
-      : [];
+    const dailyClicks =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.groupBy({
+            by: ['date'],
+            where: { linkId: { in: linkIds }, date: { gte: startDate } },
+            _sum: { clicks: true },
+            orderBy: { date: 'asc' },
+          })
+        : [];
 
     // Daily form submissions for chart
-    const dailySubmissions = formIds.length > 0
-      ? await this.prisma.form_analytics.groupBy({
-          by: ['date'],
-          where: { formId: { in: formIds }, date: { gte: startDate } },
-          _sum: { views: true, submissions: true },
-          orderBy: { date: 'asc' },
-        })
-      : [];
+    const dailySubmissions =
+      formIds.length > 0
+        ? await this.prisma.form_analytics.groupBy({
+            by: ['date'],
+            where: { formId: { in: formIds }, date: { gte: startDate } },
+            _sum: { views: true, submissions: true },
+            orderBy: { date: 'asc' },
+          })
+        : [];
 
     // Device breakdown
-    const deviceBreakdown = linkIds.length > 0
-      ? await this.prisma.link_analytics.groupBy({
-          by: ['device'],
-          where: { linkId: { in: linkIds }, date: { gte: startDate } },
-          _sum: { clicks: true },
-        })
-      : [];
+    const deviceBreakdown =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.groupBy({
+            by: ['device'],
+            where: { linkId: { in: linkIds }, date: { gte: startDate } },
+            _sum: { clicks: true },
+          })
+        : [];
 
     // Browser breakdown
-    const browserBreakdown = linkIds.length > 0
-      ? await this.prisma.link_analytics.groupBy({
-          by: ['browser'],
-          where: { linkId: { in: linkIds }, date: { gte: startDate }, browser: { not: null } },
-          _sum: { clicks: true },
-          orderBy: { _sum: { clicks: 'desc' } },
-          take: 5,
-        })
-      : [];
+    const browserBreakdown =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.groupBy({
+            by: ['browser'],
+            where: {
+              linkId: { in: linkIds },
+              date: { gte: startDate },
+              browser: { not: null },
+            },
+            _sum: { clicks: true },
+            orderBy: { _sum: { clicks: 'desc' } },
+            take: 5,
+          })
+        : [];
 
     // Country breakdown
-    const countryBreakdown = linkIds.length > 0
-      ? await this.prisma.link_analytics.groupBy({
-          by: ['country'],
-          where: { linkId: { in: linkIds }, date: { gte: startDate }, country: { not: null } },
-          _sum: { clicks: true },
-          orderBy: { _sum: { clicks: 'desc' } },
-          take: 8,
-        })
-      : [];
+    const countryBreakdown =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.groupBy({
+            by: ['country'],
+            where: {
+              linkId: { in: linkIds },
+              date: { gte: startDate },
+              country: { not: null },
+            },
+            _sum: { clicks: true },
+            orderBy: { _sum: { clicks: 'desc' } },
+            take: 8,
+          })
+        : [];
 
     // Referrer breakdown
-    const referrerBreakdown = linkIds.length > 0
-      ? await this.prisma.link_analytics.groupBy({
-          by: ['referrer'],
-          where: { linkId: { in: linkIds }, date: { gte: startDate }, referrer: { not: null } },
-          _sum: { clicks: true },
-          orderBy: { _sum: { clicks: 'desc' } },
-          take: 5,
-        })
-      : [];
+    const referrerBreakdown =
+      linkIds.length > 0
+        ? await this.prisma.link_analytics.groupBy({
+            by: ['referrer'],
+            where: {
+              linkId: { in: linkIds },
+              date: { gte: startDate },
+              referrer: { not: null },
+            },
+            _sum: { clicks: true },
+            orderBy: { _sum: { clicks: 'desc' } },
+            take: 5,
+          })
+        : [];
 
     // Top links by clicks
     const topLinks = [...links]
@@ -161,15 +196,22 @@ export class AnalyticsService {
         title: f.title,
         views: f.viewCount,
         submissions: f.submissionCount,
-        conversionRate: f.viewCount > 0
-          ? Math.round((f.submissionCount / f.viewCount) * 100)
-          : 0,
+        conversionRate:
+          f.viewCount > 0
+            ? Math.round((f.submissionCount / f.viewCount) * 100)
+            : 0,
       }));
 
     const chartData = this.buildChartData(dailyClicks, dailySubmissions, days);
 
-    const conversionRate = totalFormViews > 0 ? Math.round((totalSubmissions / totalFormViews) * 100) : 0;
-    const prevConversionRate = prevFormViews > 0 ? Math.round((prevSubmissions / prevFormViews) * 100) : 0;
+    const conversionRate =
+      totalFormViews > 0
+        ? Math.round((totalSubmissions / totalFormViews) * 100)
+        : 0;
+    const prevConversionRate =
+      prevFormViews > 0
+        ? Math.round((prevSubmissions / prevFormViews) * 100)
+        : 0;
 
     return {
       summary: {
@@ -216,7 +258,10 @@ export class AnalyticsService {
 
   private buildChartData(
     dailyClicks: { date: Date; _sum: { clicks: number | null } }[],
-    dailySubmissions: { date: Date; _sum: { views: number | null; submissions: number | null } }[],
+    dailySubmissions: {
+      date: Date;
+      _sum: { views: number | null; submissions: number | null };
+    }[],
     days: number,
   ) {
     const data: { date: string; clicks: number; submissions: number }[] = [];

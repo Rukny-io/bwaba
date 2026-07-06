@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
-import { CacheKeys, CACHE_TTL, CACHE_TAGS } from '../../core/cache/cache.constants';
+import {
+  CacheKeys,
+  CACHE_TTL,
+  CACHE_TAGS,
+} from '../../core/cache/cache.constants';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { sanitizeInput } from './utils/event.utils';

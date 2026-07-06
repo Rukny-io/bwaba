@@ -2,10 +2,11 @@
 
 import React, { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { ArrowUpRight, Mail, Sparkles } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
 import { AuthFooter } from "@/components/auth/auth-footer"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { requestMagicLink } from "@/lib/api"
@@ -31,6 +32,45 @@ function LinkedInIcon() {
   )
 }
 
+function FacebookIcon() {
+  return (
+    <svg className="size-5 flex-shrink-0" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  )
+}
+
+interface SocialLoginButtonProps {
+  id: string
+  label: string
+  onClick: () => void
+  icon: React.ReactNode
+  className?: string
+}
+
+function SocialLoginButton({ id, label, onClick, icon, className }: SocialLoginButtonProps) {
+  return (
+    <Button
+      id={id}
+      type="button"
+      variant="outline"
+      size="lg"
+      onClick={onClick}
+      className={cn(
+        "h-11 w-full rounded-full border-border bg-background px-4 text-sm font-medium",
+        "flex items-center justify-center",
+        "transition-all hover:bg-accent/40 hover:border-border/80",
+        className
+      )}
+    >
+      <span className="inline-flex items-center justify-center gap-2">
+        <span className="flex size-5 items-center justify-center">{icon}</span>
+        <span>{label}</span>
+      </span>
+    </Button>
+  )
+}
+
 // ── صفحة تسجيل الدخول ──────────────────────────────────────────────────────
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1"
@@ -38,6 +78,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations("Auth")
   const nextParam = searchParams.get("next")
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -56,7 +97,7 @@ function LoginPageContent() {
     try {
       await requestMagicLink(trimmedEmail)
       sessionStorage.setItem("auth_email", trimmedEmail)
-      if (nextParam) sessionStorage.setItem("auth_next", nextParam)
+      if (nextParam) localStorage.setItem("auth_next", nextParam)
       router.push("/check-email")
     } catch (err: unknown) {
       console.error("Login Error:", err)
@@ -81,106 +122,120 @@ function LoginPageContent() {
     }
   }
 
-  const handleOAuth = (provider: "google" | "linkedin") => {
+  const handleOAuth = (provider: "google" | "linkedin" | "facebook") => {
     const origin = window.location.origin
-    const statePayload = JSON.stringify({ o: origin, n: nextParam || "" })
-    const stateB64 = btoa(statePayload)
-    window.location.href = `${API_BASE}/auth/${provider}?state=${encodeURIComponent(stateB64)}`
+    const params = new URLSearchParams({
+      redirect_origin: origin,
+    })
+    if (nextParam) params.set("next", nextParam)
+    window.location.href = `${API_BASE}/auth/${provider}?${params.toString()}`
   }
 
   return (
-    <AuthLayout>
-      <div className="w-full text-center mb-8">
-        <h1 className="text-2xl font-semibold text-foreground mb-2">
-          مرحباً بعودتك
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          سجّل دخولك إلى حسابك
-        </p>
-      </div>
+    <AuthLayout className="max-w-[460px]">
+      <section className="w-full bg-background/95 px-5 py-6 sm:px-7 sm:py-8">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-medium text-foreground">
+            {t("welcome_back")}
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {t("welcome_back")}
+          </h1>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            {t("login_subtitle")}
+          </p>
+        </div>
 
-      {/* نموذج البريد الإلكتروني */}
-      <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="block text-sm font-medium text-foreground text-right">
-            البريد الإلكتروني
-          </label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              setError(null)
-            }}
-            autoComplete="email"
-            autoFocus
-            aria-invalid={!!error}
-            className="text-left placeholder:text-right"
-            dir="ltr"
+        <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
+          <div className="space-y-1.5">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground">
+              {t("email_label")}
+            </label>
+            <div className="flex h-11 items-center gap-2.5 rounded-full border border-input bg-input/30 px-3 transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20">
+              <Mail className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                id="email"
+                type="email"
+                placeholder={t("email_placeholder")}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setError(null)
+                }}
+                autoComplete="email"
+                autoFocus
+                aria-invalid={!!error}
+                className="h-full w-full bg-transparent text-sm text-left outline-none placeholder:text-muted-foreground"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <p
+              className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
+          <Button
+            id="send-magic-link-btn"
+            type="submit"
+            size="lg"
+            disabled={!isValidEmail || isLoading}
+            className={cn(
+              "h-11 w-full rounded-full text-sm font-semibold transition-all",
+              "bg-primary text-primary-foreground hover:opacity-95",
+              "disabled:opacity-45"
+            )}
+          >
+            {isLoading ? (
+              t("sending")
+            ) : (
+              <>
+                {t("send_magic_link")}
+                <ArrowUpRight className="size-4" />
+              </>
+            )}
+          </Button>
+        </form>
+
+        <div className="my-5 flex w-full items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="shrink-0 text-xs text-muted-foreground">{t("or_continue_with")}</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <SocialLoginButton
+            id="google-login-btn"
+            onClick={() => handleOAuth("google")}
+            label={t("continue_with_google")}
+            icon={<GoogleIcon />}
+            className="col-span-1 sm:col-span-2"
+          />
+
+          <SocialLoginButton
+            id="linkedin-login-btn"
+            onClick={() => handleOAuth("linkedin")}
+            label={t("continue_with_linkedin")}
+            icon={<LinkedInIcon />}
+            className="col-span-1"
+          />
+
+          <SocialLoginButton
+            id="facebook-login-btn"
+            onClick={() => handleOAuth("facebook")}
+            label={t("continue_with_facebook")}
+            icon={<FacebookIcon />}
+            className="col-span-1"
           />
         </div>
 
-        {error && (
-          <p className="text-xs text-destructive text-right" role="alert">
-            {error}
-          </p>
-        )}
-
-        <Button
-          id="send-magic-link-btn"
-          type="submit"
-          size="lg"
-          disabled={!isValidEmail || isLoading}
-          className={cn(
-            "w-full h-12 rounded-full text-base font-medium transition-all",
-            "bg-primary text-primary-foreground",
-            "disabled:opacity-40"
-          )}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-          </svg>
-          {isLoading ? "جارٍ الإرسال..." : "إرسال رابط تسجيل الدخول"}
-        </Button>
-      </form>
-
-      {/* Divider */}
-      <div className="w-full flex items-center gap-3 my-5">
-        <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground flex-shrink-0">أو</span>
-        <Separator className="flex-1" />
-      </div>
-
-      {/* OAuth Buttons */}
-      <div className="w-full space-y-3">
-        <Button
-          id="google-login-btn"
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={() => handleOAuth("google")}
-          className="w-full h-12 rounded-full text-sm font-medium border-border gap-3"
-        >
-          <GoogleIcon />
-          المتابعة عبر Google
-        </Button>
-
-        <Button
-          id="linkedin-login-btn"
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={() => handleOAuth("linkedin")}
-          className="w-full h-12 rounded-full text-sm font-medium border-border gap-3"
-        >
-          <LinkedInIcon />
-          المتابعة عبر LinkedIn
-        </Button>
-      </div>
-
-      <AuthFooter />
+        <AuthFooter className="mt-6" />
+      </section>
     </AuthLayout>
   )
 }

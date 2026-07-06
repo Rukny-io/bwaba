@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { S3Service } from '../../../shared/services/s3.service';
 import { ConfigService } from '@nestjs/config';
@@ -22,10 +26,10 @@ export class WallpapersService {
     });
 
     return wallpapers.map((w) => ({
-        ...w,
-        fileSize: Number(w.fileSize),
-        url: `/api/media/${w.s3Key}`,
-      }));
+      ...w,
+      fileSize: Number(w.fileSize),
+      url: `/api/media/${w.s3Key}`,
+    }));
   }
 
   /** List active wallpapers (public) */
@@ -36,11 +40,11 @@ export class WallpapersService {
     });
 
     return wallpapers.map((w) => ({
-        id: w.id,
-        nameAr: w.nameAr,
-        fileType: w.fileType,
-        url: `/api/media/${w.s3Key}`,
-      }));
+      id: w.id,
+      nameAr: w.nameAr,
+      fileType: w.fileType,
+      url: `/api/media/${w.s3Key}`,
+    }));
   }
 
   /** Get a fresh presigned URL for a wallpaper by ID */
@@ -56,7 +60,15 @@ export class WallpapersService {
   /** Upload file to S3 and create DB record in one step */
   async uploadAndCreate(file: Express.Multer.File, nameAr?: string) {
     // 🔒 Use a safe whitelist of extensions instead of trusting client filename
-    const SAFE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm'];
+    const SAFE_EXTENSIONS = [
+      'jpg',
+      'jpeg',
+      'png',
+      'webp',
+      'gif',
+      'mp4',
+      'webm',
+    ];
     const rawExt = file.originalname.split('.').pop()?.toLowerCase() || 'bin';
     const ext = SAFE_EXTENSIONS.includes(rawExt) ? rawExt : 'bin';
     const key = `wallpapers/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -72,7 +84,9 @@ export class WallpapersService {
 
     const wallpaper = await this.prisma.wallpaper.create({
       data: {
-        nameAr: nameAr || file.originalname.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+        nameAr:
+          nameAr ||
+          file.originalname.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
         s3Key: key,
         fileType: isVideo ? 'video' : 'image',
         mimeType: file.mimetype,
@@ -89,7 +103,10 @@ export class WallpapersService {
   }
 
   /** Update wallpaper */
-  async update(id: string, data: { nameAr?: string; isActive?: boolean; sortOrder?: number }) {
+  async update(
+    id: string,
+    data: { nameAr?: string; isActive?: boolean; sortOrder?: number },
+  ) {
     const wallpaper = await this.prisma.wallpaper.findUnique({ where: { id } });
     if (!wallpaper) throw new NotFoundException('Wallpaper not found');
 

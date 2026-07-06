@@ -42,22 +42,24 @@ export class DigitalAssetsController {
   @CheckFeature('digitalProducts')
   @ApiBearerAuth()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: (req, file, cb) => {
-        const uploadPath = join(process.cwd(), 'uploads', 'digital-temp');
-        if (!existsSync(uploadPath)) {
-          mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const ext = extname(file.originalname).toLowerCase();
-        cb(null, `${uuidv4()}${ext}`);
-      },
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'digital-temp');
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const ext = extname(file.originalname).toLowerCase();
+          cb(null, `${uuidv4()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
     }),
-    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
-  }))
+  )
   @ApiOperation({ summary: 'رفع ملف رقمي للمنتج' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -72,19 +74,33 @@ export class DigitalAssetsController {
   uploadDigitalFile(
     @Param('id') productId: string,
     @Request() req,
-    @UploadedFile(new FileValidationPipe({
-      allowedTypes: [
-        'application/pdf', 'application/epub+zip', 'application/zip', 'application/x-zip-compressed',
-        'audio/mpeg', 'audio/wav', 'video/mp4',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'image/jpeg', 'image/png', 'image/webp',
-      ],
-      maxSize: 100 * 1024 * 1024,
-    })) file: Express.Multer.File,
+    @UploadedFile(
+      new FileValidationPipe({
+        allowedTypes: [
+          'application/pdf',
+          'application/epub+zip',
+          'application/zip',
+          'application/x-zip-compressed',
+          'audio/mpeg',
+          'audio/wav',
+          'video/mp4',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+        ],
+        maxSize: 100 * 1024 * 1024,
+      }),
+    )
+    file: Express.Multer.File,
   ) {
-    return this.digitalAssetsService.uploadDigitalFile(req.user.id, productId, file);
+    return this.digitalAssetsService.uploadDigitalFile(
+      req.user.id,
+      productId,
+      file,
+    );
   }
 
   /**
@@ -94,36 +110,49 @@ export class DigitalAssetsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: (req, file, cb) => {
-        const uploadPath = join(process.cwd(), 'uploads', 'digital-temp');
-        if (!existsSync(uploadPath)) {
-          mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const ext = extname(file.originalname).toLowerCase();
-        cb(null, `${uuidv4()}${ext}`);
-      },
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'digital-temp');
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const ext = extname(file.originalname).toLowerCase();
+          cb(null, `${uuidv4()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     }),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  }))
+  )
   @ApiOperation({ summary: 'رفع ملف معاينة للمنتج الرقمي' })
   @ApiConsumes('multipart/form-data')
   uploadPreviewFile(
     @Param('id') productId: string,
     @Request() req,
-    @UploadedFile(new FileValidationPipe({
-      allowedTypes: [
-        'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
-        'audio/mpeg', 'video/mp4',
-      ],
-      maxSize: 10 * 1024 * 1024,
-    })) file: Express.Multer.File,
+    @UploadedFile(
+      new FileValidationPipe({
+        allowedTypes: [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'audio/mpeg',
+          'video/mp4',
+        ],
+        maxSize: 10 * 1024 * 1024,
+      }),
+    )
+    file: Express.Multer.File,
   ) {
-    return this.digitalAssetsService.uploadPreviewFile(req.user.id, productId, file);
+    return this.digitalAssetsService.uploadPreviewFile(
+      req.user.id,
+      productId,
+      file,
+    );
   }
 
   /**
@@ -184,6 +213,9 @@ export class DownloadsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'رموز التحميل لطلب' })
   getOrderDownloads(@Param('orderId') orderId: string, @Request() req) {
-    return this.digitalAssetsService.getOrderDownloadTokens(orderId, req.user.id);
+    return this.digitalAssetsService.getOrderDownloadTokens(
+      orderId,
+      req.user.id,
+    );
   }
 }

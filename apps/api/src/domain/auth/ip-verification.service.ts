@@ -1,19 +1,21 @@
-import {
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
-import { hashIP, compareIP, isIPInList, maskIP } from '../../core/common/utils/ip-hash.util';
+import {
+  hashIP,
+  compareIP,
+  isIPInList,
+  maskIP,
+} from '../../core/common/utils/ip-hash.util';
 
 /**
  * 🔐 خدمة مراقبة تسجيل الدخول من IP جديد
- * 
+ *
  * الميزات:
  * - تخزين IP كـ HMAC-SHA256 fingerprint (لا يمكن استخراج IP الأصلي)
  * - إرسال تنبيه بريدي عند تسجيل الدخول من IP جديد
  * - قائمة IPs موثوقة (لا ترسل تنبيه عنها)
- * 
+ *
  * ملاحظة: تم إلغاء ميزة التحقق من IP لأن 2FA كافٍ
  */
 @Injectable()
@@ -49,7 +51,7 @@ export class IpVerificationService {
    */
   async addTrustedIP(userId: string, ipAddress: string): Promise<void> {
     const fingerprint = hashIP(ipAddress);
-    
+
     const prefs = await this.prisma.security_preferences.findUnique({
       where: { userId },
     });
@@ -91,7 +93,9 @@ export class IpVerificationService {
       await this.prisma.security_preferences.update({
         where: { userId },
         data: {
-          trustedIpFingerprints: prefs.trustedIpFingerprints.filter(fp => fp !== ipFingerprint),
+          trustedIpFingerprints: prefs.trustedIpFingerprints.filter(
+            (fp) => fp !== ipFingerprint,
+          ),
           updatedAt: new Date(),
         },
       });
@@ -102,15 +106,15 @@ export class IpVerificationService {
 
   /**
    * التحقق مما إذا كان يجب إرسال تنبيه عند تسجيل الدخول
-   * 
+   *
    * @returns object يحتوي على:
    *   - shouldAlert: هل يجب إرسال تنبيه
    *   - isNewIP: هل هذا IP جديد
    *   - maskedIP: IP مُخفى للعرض في التنبيه
    */
   async checkLoginIP(
-    userId: string, 
-    currentIP: string
+    userId: string,
+    currentIP: string,
   ): Promise<{
     shouldAlert: boolean;
     isNewIP: boolean;
@@ -126,21 +130,21 @@ export class IpVerificationService {
 
     // إذا لم يكن هناك IP مسجل سابقاً، لا ترسل تنبيه (أول تسجيل دخول)
     if (!user || !user.lastKnownIpFingerprint) {
-      return { 
-        shouldAlert: false, 
+      return {
+        shouldAlert: false,
         isNewIP: true,
-        maskedIP 
+        maskedIP,
       };
     }
 
     // التحقق مما إذا كان IP تغير
     const ipChanged = !compareIP(currentIP, user.lastKnownIpFingerprint);
-    
+
     if (!ipChanged) {
-      return { 
-        shouldAlert: false, 
+      return {
+        shouldAlert: false,
         isNewIP: false,
-        maskedIP 
+        maskedIP,
       };
     }
 
@@ -149,10 +153,10 @@ export class IpVerificationService {
 
     // التحقق مما إذا كان IP موثوقاً
     if (isIPInList(currentIP, prefs.trustedIpFingerprints)) {
-      return { 
-        shouldAlert: false, 
+      return {
+        shouldAlert: false,
         isNewIP: true,
-        maskedIP 
+        maskedIP,
       };
     }
 
@@ -182,7 +186,7 @@ export class IpVerificationService {
    */
   async updateLastKnownIP(userId: string, ipAddress: string): Promise<void> {
     const fingerprint = hashIP(ipAddress);
-    
+
     await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -224,7 +228,7 @@ export class IpVerificationService {
    */
   async updateAlertSettings(
     userId: string,
-    settings: { alertOnNewIP?: boolean }
+    settings: { alertOnNewIP?: boolean },
   ): Promise<void> {
     await this.upsertSecurityPreferences(userId, settings);
   }
@@ -242,18 +246,21 @@ export class IpVerificationService {
   /**
    * إضافة IP الحالي للقائمة الموثوقة
    */
-  async addCurrentIPToTrusted(userId: string, currentIP: string): Promise<{ 
-    success: boolean; 
+  async addCurrentIPToTrusted(
+    userId: string,
+    currentIP: string,
+  ): Promise<{
+    success: boolean;
     fingerprint?: string;
     maskedIP?: string;
   }> {
     try {
       const fingerprint = hashIP(currentIP);
       await this.addTrustedIP(userId, currentIP);
-      return { 
-        success: true, 
+      return {
+        success: true,
         fingerprint,
-        maskedIP: maskIP(currentIP)
+        maskedIP: maskIP(currentIP),
       };
     } catch (error) {
       return { success: false };
@@ -292,7 +299,7 @@ export class IpVerificationService {
     data: Partial<{
       alertOnNewIP: boolean;
       trustedIpFingerprints: string[];
-    }>
+    }>,
   ): Promise<void> {
     const existing = await this.prisma.security_preferences.findUnique({
       where: { userId },
@@ -321,7 +328,10 @@ export class IpVerificationService {
   /**
    * التحقق مما إذا كان IP الحالي موثوقاً
    */
-  async isCurrentIPTrusted(userId: string, currentIP: string): Promise<boolean> {
+  async isCurrentIPTrusted(
+    userId: string,
+    currentIP: string,
+  ): Promise<boolean> {
     return this.isIPTrusted(userId, currentIP);
   }
 

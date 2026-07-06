@@ -22,6 +22,7 @@ import {
   NotificationsService,
   NotificationResponseDto,
 } from './notifications.service';
+import { NotificationsGateway } from './notifications.gateway';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 @ApiTags('notifications')
@@ -30,7 +31,10 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100 requests per minute
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsGateway: NotificationsGateway,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'جلب جميع الإشعارات' })
@@ -99,7 +103,9 @@ export class NotificationsController {
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ): Promise<NotificationResponseDto> {
-    return this.notificationsService.markAsRead(id, userId);
+    const result = await this.notificationsService.markAsRead(id, userId);
+    await this.notificationsGateway.emitUnreadCount(userId);
+    return result;
   }
 
   @Patch('read-all')
@@ -109,7 +115,9 @@ export class NotificationsController {
     description: 'تم تحديد جميع الإشعارات كمقروءة',
   })
   async markAllAsRead(@CurrentUser('id') userId: string) {
-    return this.notificationsService.markAllAsRead(userId);
+    const result = await this.notificationsService.markAllAsRead(userId);
+    await this.notificationsGateway.emitUnreadCount(userId);
+    return result;
   }
 
   @Delete(':id')
@@ -123,7 +131,8 @@ export class NotificationsController {
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ): Promise<void> {
-    return this.notificationsService.remove(id, userId);
+    await this.notificationsService.remove(id, userId);
+    await this.notificationsGateway.emitUnreadCount(userId);
   }
 
   @Delete()
@@ -133,6 +142,8 @@ export class NotificationsController {
     description: 'تم حذف جميع الإشعارات',
   })
   async removeAll(@CurrentUser('id') userId: string) {
-    return this.notificationsService.removeAll(userId);
+    const result = await this.notificationsService.removeAll(userId);
+    await this.notificationsGateway.emitUnreadCount(userId);
+    return result;
   }
 }

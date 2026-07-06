@@ -11,6 +11,17 @@ import cookieParser from 'cookie-parser';
 import * as bodyParser from 'body-parser';
 import compression from 'compression';
 import { randomUUID } from 'crypto';
+import { Request } from 'express';
+import { FORMS_MAX_SUBMIT_BODY_BYTES } from './domain/forms/forms.constants';
+
+function isFormsSubmitRequest(req: Request): boolean {
+  if (req.method !== 'POST') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return (
+    /^\/api\/v\d+\/forms\/public\/[^/]+\/submit\/?$/i.test(path) ||
+    /^\/api\/v\d+\/forms\/[^/]+\/submit\/?$/i.test(path)
+  );
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -45,8 +56,22 @@ async function bootstrap() {
   );
 
   // Increase body size limit for file uploads (with type-specific limits)
-  // Images: 10MB, Documents: 20MB, Other: 5MB (enforced in upload controller)
-  app.use(bodyParser.json({ limit: '25mb' }));
+  // Form submit routes are capped at 5MB via verify (see forms.constants.ts)
+  app.use(
+    bodyParser.json({
+      limit: '25mb',
+      verify: (req, _res, buf) => {
+        if (isFormsSubmitRequest(req as Request) && buf.length > FORMS_MAX_SUBMIT_BODY_BYTES) {
+          const err = new Error(
+            `Payload too large. Maximum allowed size is ${FORMS_MAX_SUBMIT_BODY_BYTES} bytes.`,
+          ) as Error & { status: number; type: string };
+          err.status = 413;
+          err.type = 'entity.too.large';
+          throw err;
+        }
+      },
+    }),
+  );
   app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
 
   // Security: Cookie Parser
@@ -54,7 +79,11 @@ async function bootstrap() {
 
   // ⚡ Performance: Skip favicon/favicon.ico requests (don't log 404 errors)
   app.use((req, res, next) => {
-    if (req.path === '/favicon.ico' || req.path === '/favicon.png' || req.path === '/manifest.json') {
+    if (
+      req.path === '/favicon.ico' ||
+      req.path === '/favicon.png' ||
+      req.path === '/manifest.json'
+    ) {
       return res.status(204).send();
     }
     next();
@@ -150,8 +179,16 @@ async function bootstrap() {
     'http://127.0.0.1:3000',
     'http://localhost:3003',
     'http://127.0.0.1:3003',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002',
     'http://localhost:3004',
     'http://127.0.0.1:3004',
+    'http://localhost:3005',
+    'http://127.0.0.1:3005',
+    'http://localhost:3006',
+    'http://127.0.0.1:3006',
+    'http://localhost:3007',
+    'http://127.0.0.1:3007',
     'https://localhost:3004',
     'https://127.0.0.1:3004',
     // Production domains
@@ -161,6 +198,7 @@ async function bootstrap() {
     'https://accounts.rukny.io',
     'https://business.rukny.io',
     'https://developers.rukny.io',
+    'https://forms.rukny.io',
     'https://rukny.store',
     'https://www.rukny.store',
     // Environment variable override
@@ -170,6 +208,8 @@ async function bootstrap() {
     process.env.AUTH_FRONTEND_URL,
     process.env.BUSINESS_FRONTEND_URL,
     process.env.DEVELOPERS_FRONTEND_URL,
+    process.env.FORMS_FRONTEND_URL,
+    process.env.FORM_PUBLIC_BASE_URL,
   ].filter(Boolean); // Remove undefined values
 
   // In development, allow all local network IPs
@@ -206,6 +246,8 @@ async function bootstrap() {
       'X-Requested-With',
       'Cache-Control',
       'X-CSRF-Token',
+      'Idempotency-Key',
+      'X-Rukny-Skip-View-Track',
     ],
   });
 

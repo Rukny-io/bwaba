@@ -1,13 +1,39 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res, Delete, Param, Query, ForbiddenException, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Req,
+  Res,
+  Delete,
+  Param,
+  Query,
+  ForbiddenException,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { SecurityAction, SecurityStatus } from '@prisma/client';
+import { resolveMediaProxyUrl } from '../../core/common/utils/media-path.util';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { ExchangeCodeDto, UpdateOAuthProfileDto } from './dto';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { GoogleAuthGuard } from '../../core/common/guards/auth/google-auth.guard';
 import { LinkedInAuthGuard } from '../../core/common/guards/auth/linkedin-auth.guard';
-import { CurrentUser, AuthenticatedUser } from '../../core/common/decorators/auth/current-user.decorator';
+import { FacebookAuthGuard } from '../../core/common/guards/auth/facebook-auth.guard';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../core/common/decorators/auth/current-user.decorator';
 import { Request, Response } from 'express';
 import { RedisOAuthCodeService } from './redis-oauth-code.service';
 import { WebSocketTokenService } from './websocket-token.service';
@@ -16,15 +42,15 @@ import { PendingTwoFactorService } from './pending-two-factor.service';
 import { AccountLinkingService } from './account-linking.service';
 import { Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
-import { 
+import {
   setAccessTokenCookie,
   setRefreshTokenCookie,
   setCsrfTokenCookie,
   clearAuthCookies,
-  clearRefreshTokenCookie, 
-  extractAccessToken, 
+  clearRefreshTokenCookie,
+  extractAccessToken,
   extractRefreshToken,
-  validateCsrfOrigin,
+  validateCsrfToken,
   generateCsrfToken,
 } from './cookie.config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -64,27 +90,11 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   async getMe(@CurrentUser() user: any) {
-    // Resolve avatar S3 key to presigned URL
-    if (user.avatar && !user.avatar.startsWith('http')) {
-      try {
-        user.avatar = await this.storageService.getPresignedUrl(user.avatar);
-      } catch {
-        user.avatar = null;
-      }
-    }
-    // Resolve bannerUrls S3 keys to presigned URLs
+    user.avatar = resolveMediaProxyUrl(user.avatar) ?? null;
     if (user.bannerUrls?.length) {
-      user.bannerUrls = await Promise.all(
-        user.bannerUrls.map(async (url: string) => {
-          if (!url || url.startsWith('http')) return url;
-          try {
-            return await this.storageService.getPresignedUrl(url);
-          } catch {
-            return null;
-          }
-        }),
-      );
-      user.bannerUrls = user.bannerUrls.filter(Boolean);
+      user.bannerUrls = user.bannerUrls
+        .map((url: string) => resolveMediaProxyUrl(url))
+        .filter(Boolean);
     }
     return user;
   }
@@ -92,7 +102,7 @@ export class AuthController {
   /**
    * 🔐 Update OAuth User Profile
    * POST /auth/update-profile
-   * 
+   *
    * Used by OAuth users (Google/LinkedIn) to complete their profile
    * with name and username after signup
    */
@@ -147,7 +157,10 @@ export class AuthController {
         },
       });
     } catch (error: any) {
-      if (error.code === 'P2002' && error.meta?.target?.includes('phoneNumber')) {
+      if (
+        error.code === 'P2002' &&
+        error.meta?.target?.includes('phoneNumber')
+      ) {
         throw new ConflictException('رقم الهاتف مستخدم بالفعل بحساب آخر');
       }
       throw error;
@@ -255,9 +268,9 @@ export class AuthController {
 
   /**
    * 🔒 تجديد التوكنز باستخدام Refresh Token
-   * 
+   *
    * Refresh Token في httpOnly Cookie → Access Token في Response Body
-   * 
+   *
    * الحماية:
    * - SameSite=Lax (يسمح بـ OAuth redirect)
    * - Origin/Referer validation (حماية CSRF إضافية)
@@ -266,26 +279,36 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Throttle(AUTH_REFRESH_THROTTLE)
-  @ApiOperation({ summary: 'Refresh access token using refresh token from cookie' })
-  @ApiResponse({ status: 200, description: 'New access token returned in body' })
+  @ApiOperation({
+    summary: 'Refresh access token using refresh token from cookie',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'New access token returned in body',
+  })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   @ApiResponse({ status: 403, description: 'CSRF validation failed' })
   async refreshTokens(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // 🔒 CSRF Protection - التحقق من Origin
-    const csrfCheck = validateCsrfOrigin(req);
+    // Origin/Referer only — refresh uses httpOnly cookies + SameSite=Lax.
+    // Double-submit CSRF header is not available on first refresh after login.
+    const csrfCheck = validateCsrfToken(req, true);
     if (!csrfCheck.valid) {
-      throw new ForbiddenException(`CSRF validation failed: ${csrfCheck.reason}`);
+      throw new ForbiddenException(
+        `CSRF validation failed: ${csrfCheck.reason}`,
+      );
     }
 
     const refreshToken = extractRefreshToken(req);
-    
+
     if (!refreshToken) {
       // 🔒 مسح الكوكي في حالة عدم وجود token
       clearRefreshTokenCookie(res);
-      throw new UnauthorizedException('Refresh token not found. Please login again.');
+      throw new UnauthorizedException(
+        'Refresh token not found. Please login again.',
+      );
     }
 
     const userAgent = req.headers['user-agent'];
@@ -301,7 +324,7 @@ export class AuthController {
 
       // 🔒 Access Token في httpOnly Cookie
       setAccessTokenCookie(res, tokens.accessToken);
-      
+
       // 🔒 Refresh Token الجديد في httpOnly Cookie
       setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -317,9 +340,10 @@ export class AuthController {
         expires_in: 30 * 60, // 30 minutes - matches access token JWT and cookie
       };
     } catch (error) {
-      // 🔒 مسح الكوكي الفاسدة عند فشل التجديد
-      // هذا يمنع الحلقة اللانهائية من محاولات التجديد
-      clearRefreshTokenCookie(res);
+      // Only clear refresh cookie on definitive auth failure — not CSRF/lock races.
+      if (error instanceof UnauthorizedException) {
+        clearRefreshTokenCookie(res);
+      }
       throw error;
     }
   }
@@ -456,7 +480,9 @@ export class AuthController {
 
     if (stateStr && !stateStr.startsWith('http')) {
       try {
-        const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
+        const decoded = JSON.parse(
+          Buffer.from(stateStr, 'base64').toString('utf-8'),
+        );
         origin = decoded.o;
         linkToken = decoded.l;
         nextUrl = decoded.n;
@@ -478,22 +504,29 @@ export class AuthController {
       const base = this.resolveRedirectBase(origin);
       return res.redirect(`${base}/settings/security?linked=google`);
     }
-    
-    const result = await this.authService.googleLogin(req.user, userAgent, ipAddress);
-    
-    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
-    // السبب: redirect من port 3001 إلى 3000 يُعتبر cross-origin
-    const code = await this.oauthCodeService.generate({
-      userId: result.user.id,
-      email: result.user.email,
-      user: result.user,
-      needsProfileCompletion: result.needsProfileCompletion,
+
+    const result = await this.authService.googleLogin(
+      req.user,
       userAgent,
       ipAddress,
-      requiresLinking: result.requiresLinking,
-      requiresChallenge: result.requiresChallenge,
-      challengeReasons: result.challengeReasons,
-    }, ipAddress);
+    );
+
+    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
+    // السبب: redirect من port 3001 إلى 3000 يُعتبر cross-origin
+    const code = await this.oauthCodeService.generate(
+      {
+        userId: result.user.id,
+        email: result.user.email,
+        user: result.user,
+        needsProfileCompletion: result.needsProfileCompletion,
+        userAgent,
+        ipAddress,
+        requiresLinking: result.requiresLinking,
+        requiresChallenge: result.requiresChallenge,
+        challengeReasons: result.challengeReasons,
+      },
+      ipAddress,
+    );
 
     const base = this.resolveRedirectBase(origin);
     let redirectUrl = `${base}/callback?code=${code}`;
@@ -505,11 +538,16 @@ export class AuthController {
 
   @Post('oauth/exchange')
   @HttpCode(HttpStatus.OK)
-  @Throttle(process.env.NODE_ENV === 'production'
-    ? { default: { limit: 10, ttl: 60000 } }   // 🔒 10/min in production
-    : { default: { limit: 50, ttl: 60000 } })   // 50/min in development
+  @Throttle(
+    process.env.NODE_ENV === 'production'
+      ? { default: { limit: 10, ttl: 60000 } } // 🔒 10/min in production
+      : { default: { limit: 50, ttl: 60000 } },
+  ) // 50/min in development
   @ApiOperation({ summary: 'Exchange one-time OAuth code for session cookies' })
-  @ApiResponse({ status: 200, description: 'Session created, tokens stored in httpOnly cookies' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session created, tokens stored in httpOnly cookies',
+  })
   @ApiResponse({ status: 400, description: 'Invalid or expired code' })
   async exchangeOAuthCode(
     @Body() body: ExchangeCodeDto,
@@ -517,27 +555,43 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     // 🔒 CSRF Origin validation
-    const csrfCheck = validateCsrfOrigin(req);
+    const csrfCheck = validateCsrfToken(req, true);
     if (!csrfCheck.valid) {
-      throw new ForbiddenException(`CSRF validation failed: ${csrfCheck.reason}`);
+      throw new ForbiddenException(
+        `CSRF validation failed: ${csrfCheck.reason}`,
+      );
     }
 
     const exchanged = await this.oauthCodeService.exchange(body.code);
-    const { userId, email, user, needsProfileCompletion, userAgent, ipAddress, requiresLinking, requiresChallenge, challengeReasons } = exchanged;
+    const {
+      userId,
+      email,
+      user,
+      needsProfileCompletion,
+      userAgent,
+      ipAddress,
+      requiresLinking,
+      requiresChallenge,
+      challengeReasons,
+    } = exchanged;
 
     // 🔒 Fix 3: إذا كان يتطلب ربط حساب — لا نُنشئ جلسة حتى يؤكد المستخدم
     if (requiresLinking) {
       return {
         success: false,
         requiresLinking: true,
-        message: 'يوجد حساب مسجل بهذا البريد الإلكتروني. سجل الدخول بالطريقة المعتادة ثم اربط الحساب من الإعدادات.',
+        message:
+          'يوجد حساب مسجل بهذا البريد الإلكتروني. سجل الدخول بالطريقة المعتادة ثم اربط الحساب من الإعدادات.',
       };
     }
 
     // 🔒 إذا اكتشف نظام كشف الشذوذ نشاطاً مشبوهاً — يتطلب تحقق إضافي
     if (requiresChallenge) {
       // إنشاء جلسة 2FA معلقة للتحقق
-      const pendingSessionId = await this.pendingTwoFactorService.create(userId, email);
+      const pendingSessionId = await this.pendingTwoFactorService.create(
+        userId,
+        email,
+      );
 
       return {
         success: false,
@@ -550,11 +604,15 @@ export class AuthController {
     }
 
     // 🔒 Fix 1+2: إنشاء الجلسة هنا عبر TokenService (يطبق enforceMaxActiveSessions)
-    const { tokens } = await this.tokenService.generateTokenPair(userId, email, {
+    const { tokens } = await this.tokenService.generateTokenPair(
       userId,
-      userAgent: userAgent || req.headers['user-agent'],
-      ipAddress: ipAddress || req.ip || req.socket.remoteAddress,
-    });
+      email,
+      {
+        userId,
+        userAgent: userAgent || req.headers['user-agent'],
+        ipAddress: ipAddress || req.ip || req.socket.remoteAddress,
+      },
+    );
 
     // 🔒 Access Token في httpOnly Cookie
     setAccessTokenCookie(res, tokens.accessToken);
@@ -573,6 +631,54 @@ export class AuthController {
       needsProfileCompletion,
       message: 'Tokens stored in httpOnly cookies',
     };
+  }
+
+  /**
+   * Issue a one-time OAuth code for the current session (cross-app redirect).
+   * POST /auth/oauth/issue-code
+   */
+  @Post('oauth/issue-code')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Issue one-time OAuth code for authenticated user' })
+  @ApiResponse({ status: 200, description: 'Code issued' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async issueOAuthCode(
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
+  ) {
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { profile: true },
+    });
+
+    if (!fullUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const code = await this.oauthCodeService.generate(
+      {
+        userId: fullUser.id,
+        email: fullUser.email,
+        user: {
+          id: fullUser.id,
+          email: fullUser.email,
+          role: fullUser.role,
+          name: fullUser.profile?.name,
+          username: fullUser.profile?.username,
+          avatar: fullUser.profile?.avatar,
+          profileCompleted: fullUser.profileCompleted,
+        },
+        needsProfileCompletion: !fullUser.profileCompleted,
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip || req.socket.remoteAddress,
+      },
+      req.ip || req.socket.remoteAddress,
+    );
+
+    return { success: true, code };
   }
 
   @Get('linkedin')
@@ -598,7 +704,9 @@ export class AuthController {
 
     if (stateStr && !stateStr.startsWith('http')) {
       try {
-        const decoded = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf-8'));
+        const decoded = JSON.parse(
+          Buffer.from(stateStr, 'base64').toString('utf-8'),
+        );
         origin = decoded.o;
         linkToken = decoded.l;
         nextUrl = decoded.n;
@@ -620,21 +728,105 @@ export class AuthController {
       const base = this.resolveRedirectBase(origin);
       return res.redirect(`${base}/settings/security?linked=linkedin`);
     }
-    
-    const result = await this.authService.linkedinLogin(req.user, userAgent, ipAddress);
 
-    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
-    const code = await this.oauthCodeService.generate({
-      userId: result.user.id,
-      email: result.user.email,
-      user: result.user,
-      needsProfileCompletion: result.needsProfileCompletion,
+    const result = await this.authService.linkedinLogin(
+      req.user,
       userAgent,
       ipAddress,
-      requiresLinking: result.requiresLinking,
-      requiresChallenge: result.requiresChallenge,
-      challengeReasons: result.challengeReasons,
-    }, ipAddress);
+    );
+
+    // 🔒 لا نضع Cookie هنا — سيُضبط في /oauth/exchange بعد إنشاء الجلسة عبر TokenService
+    const code = await this.oauthCodeService.generate(
+      {
+        userId: result.user.id,
+        email: result.user.email,
+        user: result.user,
+        needsProfileCompletion: result.needsProfileCompletion,
+        userAgent,
+        ipAddress,
+        requiresLinking: result.requiresLinking,
+        requiresChallenge: result.requiresChallenge,
+        challengeReasons: result.challengeReasons,
+      },
+      ipAddress,
+    );
+
+    const base = this.resolveRedirectBase(origin);
+    let redirectUrl = `${base}/callback?code=${code}`;
+    if (nextUrl) {
+      redirectUrl += `&next=${encodeURIComponent(nextUrl)}`;
+    }
+    res.redirect(redirectUrl);
+  }
+
+  @Get('facebook')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({ summary: 'Facebook OAuth login' })
+  @ApiResponse({ status: 302, description: 'Redirect to Facebook OAuth' })
+  async facebookAuth() {
+    // Guard redirects to Facebook
+  }
+
+  @Get('facebook/callback')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({ summary: 'Facebook OAuth callback' })
+  @ApiResponse({ status: 200, description: 'Facebook OAuth successful' })
+  async facebookAuthCallback(@Req() req: any, @Res() res: Response) {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = req.ip || req.socket.remoteAddress;
+
+    const stateStr = req.query?.state as string;
+    let origin = stateStr;
+    let linkToken = null;
+    let nextUrl = null;
+
+    if (stateStr && !stateStr.startsWith('http')) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(stateStr, 'base64').toString('utf-8'),
+        );
+        origin = decoded.o;
+        linkToken = decoded.l;
+        nextUrl = decoded.n;
+      } catch (e) {}
+    }
+
+    if (linkToken) {
+      await this.accountLinkingService.completeLinking(
+        linkToken,
+        {
+          providerId: req.user.facebookId,
+          email: req.user.email,
+          name: req.user.name,
+          avatar: req.user.avatar,
+        },
+        ipAddress,
+        userAgent,
+      );
+      const base = this.resolveRedirectBase(origin);
+      return res.redirect(`${base}/settings/security?linked=facebook`);
+    }
+
+    const result = await this.authService.facebookLogin(
+      req.user,
+      userAgent,
+      ipAddress,
+    );
+
+    const code = await this.oauthCodeService.generate(
+      {
+        userId: result.user.id,
+        email: result.user.email,
+        user: result.user,
+        needsProfileCompletion: result.needsProfileCompletion,
+        userAgent,
+        ipAddress,
+        requiresLinking: result.requiresLinking,
+        requiresChallenge: result.requiresChallenge,
+        challengeReasons: result.challengeReasons,
+      },
+      ipAddress,
+    );
 
     const base = this.resolveRedirectBase(origin);
     let redirectUrl = `${base}/callback?code=${code}`;
@@ -652,7 +844,9 @@ export class AuthController {
     const fallback =
       process.env.NODE_ENV === 'development' && process.env.FRONTEND_URL_DEV
         ? process.env.FRONTEND_URL_DEV
-        : process.env.AUTH_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+        : process.env.AUTH_FRONTEND_URL ||
+          process.env.FRONTEND_URL ||
+          'http://localhost:3000';
 
     if (!stateOrigin || typeof stateOrigin !== 'string') return fallback;
 
@@ -676,12 +870,12 @@ export class AuthController {
       process.env.AUTH_FRONTEND_URL,
       process.env.DEVELOPERS_FRONTEND_URL,
       process.env.BUSINESS_FRONTEND_URL,
-    ].filter(Boolean) as string[];
+    ].filter(Boolean);
 
     // Normalize: remove trailing slash
     const normalized = stateOrigin.replace(/\/+$/, '');
 
-    if (allowedOrigins.some(o => o.replace(/\/+$/, '') === normalized)) {
+    if (allowedOrigins.some((o) => o.replace(/\/+$/, '') === normalized)) {
       return normalized;
     }
 
@@ -692,7 +886,9 @@ export class AuthController {
         if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
           return normalized;
         }
-      } catch { /* invalid URL */ }
+      } catch {
+        /* invalid URL */
+      }
     }
 
     return fallback;

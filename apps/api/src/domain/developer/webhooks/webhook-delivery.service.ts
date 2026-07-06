@@ -140,12 +140,16 @@ export class WebhookDeliveryService {
             disabledReason: `Auto-disabled after ${webhook.failureCount} consecutive failures`,
           },
         });
-        this.logger.warn(`Webhook ${job.webhookId} auto-disabled after 10 failures`);
+        this.logger.warn(
+          `Webhook ${job.webhookId} auto-disabled after 10 failures`,
+        );
       }
 
       // إعادة المحاولة إن لم يصل للحد
       if (!success && job.attemptNumber < 5) {
-        throw new Error(`Webhook delivery failed: ${errorMessage || `HTTP ${responseCode}`}`);
+        throw new Error(
+          `Webhook delivery failed: ${errorMessage || `HTTP ${responseCode}`}`,
+        );
       }
     }
   }

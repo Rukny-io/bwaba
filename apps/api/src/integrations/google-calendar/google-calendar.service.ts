@@ -28,10 +28,7 @@ export class GoogleCalendarService {
    * @param userEmail - Optional: User's email to auto-select Google account (login_hint)
    */
   getAuthUrl(state?: string, userEmail?: string): string {
-    const scopes = [
-      'https://www.googleapis.com/auth/calendar.events',
-      'https://www.googleapis.com/auth/calendar',
-    ];
+    const scopes = ['https://www.googleapis.com/auth/calendar.events'];
 
     const authOptions: any = {
       access_type: 'offline',

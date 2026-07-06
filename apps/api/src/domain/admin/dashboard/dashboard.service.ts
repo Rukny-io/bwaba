@@ -17,12 +17,17 @@ export class DashboardService {
   async getStats() {
     return this.cache.wrap('admin:platform-stats', 120, async () => {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       const weekStart = new Date(todayStart);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `
         SELECT
           (SELECT COUNT(*)::int FROM users) AS total_users,
           (SELECT COUNT(*)::int FROM users WHERE "createdAt" >= $1) AS new_today,
@@ -35,11 +40,20 @@ export class DashboardService {
           (SELECT COUNT(*)::int FROM events) AS total_events,
           (SELECT COUNT(*)::int FROM events WHERE status IN ('SCHEDULED', 'ONGOING')) AS active_events,
           (SELECT COUNT(*)::int FROM orders) AS total_orders
-      `, todayStart, weekStart, monthStart);
+      `,
+        todayStart,
+        weekStart,
+        monthStart,
+      );
 
       const r = rows[0];
       return {
-        users: { total: r.total_users, newToday: r.new_today, newThisWeek: r.new_this_week, newThisMonth: r.new_this_month },
+        users: {
+          total: r.total_users,
+          newToday: r.new_today,
+          newThisWeek: r.new_this_week,
+          newThisMonth: r.new_this_month,
+        },
         stores: { total: r.total_stores, active: r.active_stores },
         forms: { total: r.total_forms, active: r.active_forms },
         events: { total: r.total_events, active: r.active_events },
@@ -173,7 +187,8 @@ export class DashboardService {
 
     // Overall status
     const allHealthy = dbStatus === 'healthy' && redisStatus === 'healthy';
-    const allUnhealthy = dbStatus === 'unhealthy' && redisStatus === 'unhealthy';
+    const allUnhealthy =
+      dbStatus === 'unhealthy' && redisStatus === 'unhealthy';
 
     const status = allHealthy
       ? 'healthy'

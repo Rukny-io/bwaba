@@ -21,7 +21,9 @@ export class StorageCleanupService implements OnModuleInit {
     try {
       const { purged } = await this.storageService.purgeExpiredDeletedFiles();
       if (purged > 0) {
-        console.log(`🧹 Storage cleanup: purged ${purged} expired deleted file(s)`);
+        console.log(
+          `🧹 Storage cleanup: purged ${purged} expired deleted file(s)`,
+        );
       }
     } catch (error) {
       console.error('Storage cleanup error:', error);
@@ -35,9 +37,12 @@ export class StorageCleanupService implements OnModuleInit {
   @Cron(CronExpression.EVERY_DAY_AT_5AM)
   async recalculateStorageUsed() {
     try {
-      const { usersUpdated } = await this.storageService.recalculateStorageUsedForAllUsers();
+      const { usersUpdated } =
+        await this.storageService.recalculateStorageUsedForAllUsers();
       if (usersUpdated > 0) {
-        console.log(`🧹 Storage cleanup: recalculated storage for ${usersUpdated} user(s)`);
+        console.log(
+          `🧹 Storage cleanup: recalculated storage for ${usersUpdated} user(s)`,
+        );
       }
     } catch (error) {
       console.error('Storage recalculate error:', error);

@@ -1,0 +1,184 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { AlertDialog, Button, Chip } from '@heroui/react';
+import type { FormDetail, FormSubmission } from '@/lib/forms-api';
+import {
+  getSubmissionFieldValue,
+  sortedInputFields,
+} from '@/lib/submission-utils';
+import { SubmissionAnswerDisplay } from '@/components/forms/submissions/submission-answer-display';
+import {
+  PagerIconActions,
+  SubmissionPagerToolbar,
+} from '@/components/forms/submissions/submission-pager-toolbar';
+
+interface SubmissionsIndividualTabProps {
+  form: FormDetail;
+  submissions: FormSubmission[];
+  totalSubmissions: number;
+  busyId: string | null;
+  onDelete: (submission: FormSubmission) => void;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+}
+
+export function SubmissionsIndividualTab({
+  form,
+  submissions,
+  totalSubmissions,
+  busyId,
+  onDelete,
+  loadingMore,
+  onLoadMore,
+  hasMore,
+}: SubmissionsIndividualTabProps) {
+  const [index, setIndex] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<FormSubmission | null>(null);
+
+  const inputFields = useMemo(
+    () => sortedInputFields(form.fields ?? []),
+    [form.fields],
+  );
+
+  const pagerOptions = useMemo(
+    () =>
+      submissions.map((_, i) => ({
+        id: String(i),
+        label: `استجابة ${i + 1}`,
+      })),
+    [submissions],
+  );
+
+  if (totalSubmissions === 0 || submissions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)]/40 px-6 py-12 text-center">
+        <p className="font-medium text-[var(--foreground)]">
+          لا توجد استجابات بعد
+        </p>
+      </div>
+    );
+  }
+
+  const safeIndex = Math.min(index, submissions.length - 1);
+  const submission = submissions[safeIndex];
+
+  return (
+    <div className="space-y-4 print:space-y-2">
+      <SubmissionPagerToolbar
+        selectLabel="الاستجابة"
+        options={pagerOptions}
+        selectedKey={String(safeIndex)}
+        onSelectionChange={(key) => setIndex(Number(key))}
+        page={safeIndex + 1}
+        total={totalSubmissions}
+        canPrevious={safeIndex > 0}
+        canNext={safeIndex < submissions.length - 1}
+        onPrevious={() => setIndex((i) => Math.max(0, i - 1))}
+        onNext={() =>
+          setIndex((i) => Math.min(submissions.length - 1, i + 1))
+        }
+        previousAriaLabel="الاستجابة السابقة"
+        nextAriaLabel="الاستجابة التالية"
+        actions={
+          <PagerIconActions
+            onPrint={() => window.print()}
+            onDelete={() => setDeleteTarget(submission)}
+            deleteBusy={busyId === submission.id}
+          />
+        }
+      />
+
+      {hasMore && onLoadMore ? (
+        <div className="flex justify-center print:hidden">
+          <Button
+            variant="tertiary"
+            size="sm"
+            isDisabled={loadingMore}
+            onPress={onLoadMore}
+            className="rounded-xl"
+          >
+            {loadingMore ? 'جاري التحميل…' : 'تحميل المزيد من الاستجابات'}
+          </Button>
+        </div>
+      ) : null}
+
+      {submission.user?.email ? (
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <Chip
+            size="sm"
+            className="bg-[var(--surface-secondary)] font-normal text-[var(--foreground)]"
+          >
+            <span dir="ltr">{submission.user.email}</span>
+          </Chip>
+        </div>
+      ) : null}
+
+      <div className="space-y-3 print:space-y-2">
+        {inputFields.map((field, i) => {
+          const value = getSubmissionFieldValue(submission.data, field);
+
+          return (
+            <article
+              key={field.id}
+              className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface)] p-4 shadow-sm shadow-black/[0.02] sm:p-4"
+            >
+              <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">
+                {i + 1}. {field.label}
+                {field.required ? (
+                  <span className="ms-1 text-[var(--danger)]">*</span>
+                ) : null}
+              </p>
+              {field.description ? (
+                <p className="mb-2 text-xs text-[var(--muted-foreground)]">
+                  {field.description}
+                </p>
+              ) : null}
+              <SubmissionAnswerDisplay field={field} value={value} compact />
+            </article>
+          );
+        })}
+      </div>
+
+      <AlertDialog.Backdrop
+        isOpen={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        isDismissable
+      >
+        <AlertDialog.Container size="md">
+          <AlertDialog.Dialog>
+            <AlertDialog.CloseTrigger />
+            <AlertDialog.Header>
+              <AlertDialog.Heading>حذف هذه الاستجابة؟</AlertDialog.Heading>
+            </AlertDialog.Header>
+            <AlertDialog.Body>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </AlertDialog.Body>
+            <AlertDialog.Footer>
+              <Button variant="tertiary" onPress={() => setDeleteTarget(null)}>
+                إلغاء
+              </Button>
+              <Button
+                variant="danger"
+                onPress={() => {
+                  if (deleteTarget) {
+                    onDelete(deleteTarget);
+                    setDeleteTarget(null);
+                    if (index >= submissions.length - 1 && index > 0) {
+                      setIndex((i) => i - 1);
+                    }
+                  }
+                }}
+              >
+                حذف
+              </Button>
+            </AlertDialog.Footer>
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </div>
+  );
+}

@@ -25,10 +25,7 @@ export class ContactsController {
 
   @Post()
   @ApiOperation({ summary: 'إنشاء جهة اتصال' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateContactDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateContactDto) {
     return this.contactsService.create(userId, dto);
   }
 
@@ -51,10 +48,7 @@ export class ContactsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'تفاصيل جهة اتصال' })
-  findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.contactsService.findOne(userId, id);
   }
 
@@ -70,10 +64,7 @@ export class ContactsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'حذف جهة اتصال' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.contactsService.remove(userId, id);
   }
 }

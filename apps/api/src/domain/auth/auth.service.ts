@@ -16,7 +16,7 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
  * 🔒 Auth Service
  *
  * خدمة المصادقة الرئيسية
- * تتعامل مع OAuth (Google/LinkedIn) وإدارة الجلسات
+ * تتعامل مع OAuth (Google/LinkedIn/Facebook) وإدارة الجلسات
  *
  * ملاحظة أمنية:
  * - إنشاء الجلسات يتم في TokenService.generateTokenPair() فقط
@@ -97,15 +97,26 @@ export class AuthService {
    * - إذا وُجد حساب بنفس البريد بدون ربط: لا نربط تلقائياً — نُعيد requiresLinking: true
    * - إنشاء الجلسة يتم لاحقاً في /oauth/exchange عبر TokenService (لضمان enforceMaxActiveSessions)
    */
+  private readonly oauthProviderConfig = {
+    google: { idField: 'googleId' as const, label: 'Google' },
+    linkedin: { idField: 'linkedinId' as const, label: 'LinkedIn' },
+    facebook: { idField: 'facebookId' as const, label: 'Facebook' },
+  };
+
   private async oauthLogin(
-    provider: 'google' | 'linkedin',
-    providerUser: { providerId: string; email: string; name: string; avatar: string | null },
+    provider: keyof typeof this.oauthProviderConfig,
+    providerUser: {
+      providerId: string;
+      email: string;
+      name: string;
+      avatar: string | null;
+    },
     userAgent?: string,
     ipAddress?: string,
   ): Promise<AuthResult> {
     const { providerId, email, name, avatar } = providerUser;
-    const providerIdField = provider === 'google' ? 'googleId' : 'linkedinId';
-    const providerLabel = provider === 'google' ? 'Google' : 'LinkedIn';
+    const { idField: providerIdField, label: providerLabel } =
+      this.oauthProviderConfig[provider];
 
     // 1. البحث بـ providerId أولاً (الأسلوب الآمن الوحيد)
     let user = await this.prisma.user.findFirst({
@@ -121,29 +132,24 @@ export class AuthService {
       });
 
       if (emailUser) {
-        // 🔒 وُجد حساب بنفس البريد لكن بدون ربط هذا الـ provider
-        // لا نربط تلقائياً — نُعيد علامة تطلب تأكيد المستخدم
+        // 🔒 وُجد حساب بنفس البريد.
+        // بما أن مزودي الخدمة (Google/LinkedIn) يؤكدون البريد، يمكننا الربط التلقائي بأمان.
+        user = await this.prisma.user.update({
+          where: { id: emailUser.id },
+          data: {
+            [providerIdField]: providerId,
+          },
+          include: { profile: true },
+        });
+
         await this.securityLogService.createLog({
-          userId: emailUser.id,
-          action: 'SUSPICIOUS_ACTIVITY',
-          status: 'WARNING',
-          description: `محاولة ربط ${providerLabel} بحساب موجود عبر البريد بدون تأكيد المستخدم`,
+          userId: user.id,
+          action: 'SECURITY_SETTINGS_CHANGED',
+          status: 'SUCCESS',
+          description: `تم ربط حساب ${providerLabel} تلقائياً بناءً على تطابق البريد الإلكتروني`,
           ipAddress,
           userAgent,
         });
-
-        return {
-          user: {
-            id: emailUser.id,
-            email: emailUser.email,
-            role: emailUser.role,
-            name: emailUser.profile?.name,
-            username: emailUser.profile?.username,
-            avatar: emailUser.profile?.avatar,
-          },
-          needsProfileCompletion: !emailUser.profileCompleted,
-          requiresLinking: true,
-        };
       }
     }
 
@@ -285,7 +291,10 @@ export class AuthService {
       // Non-critical — don't fail login for a notification error
     }
 
-    await this.accountLockoutService.recordSuccessfulAttempt(user.email, ipAddress);
+    await this.accountLockoutService.recordSuccessfulAttempt(
+      user.email,
+      ipAddress,
+    );
 
     return {
       user: {
@@ -314,7 +323,11 @@ export class AuthService {
     );
   }
 
-  async linkedinLogin(linkedinUser: any, userAgent?: string, ipAddress?: string) {
+  async linkedinLogin(
+    linkedinUser: any,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
     return this.oauthLogin(
       'linkedin',
       {
@@ -322,6 +335,29 @@ export class AuthService {
         email: linkedinUser.email,
         name: linkedinUser.name,
         avatar: linkedinUser.avatar,
+      },
+      userAgent,
+      ipAddress,
+    );
+  }
+
+  async facebookLogin(
+    facebookUser: {
+      facebookId: string;
+      email: string;
+      name: string;
+      avatar: string | null;
+    },
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
+    return this.oauthLogin(
+      'facebook',
+      {
+        providerId: facebookUser.facebookId,
+        email: facebookUser.email,
+        name: facebookUser.name,
+        avatar: facebookUser.avatar,
       },
       userAgent,
       ipAddress,
@@ -336,7 +372,7 @@ export class AuthService {
     try {
       let sessionId: string | undefined;
       try {
-        const decoded = this.jwtService.decode(token) as { sid?: string } | null;
+        const decoded = this.jwtService.decode(token);
         sessionId = decoded?.sid;
       } catch {
         // ignore

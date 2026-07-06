@@ -61,7 +61,9 @@ export class NotificationProcessor {
       channels: string[];
     }>,
   ) {
-    this.logger.debug(`Processing new order notification for ${job.data.userId}`);
+    this.logger.debug(
+      `Processing new order notification for ${job.data.userId}`,
+    );
 
     const { userId, title, body, data, channels } = job.data;
 
@@ -109,7 +111,8 @@ export class NotificationProcessor {
     data?: Record<string, any>,
   ): Promise<void> {
     try {
-      const notificationType = typeMapping[type] || NotificationType.ORDER_STATUS_CHANGED;
+      const notificationType =
+        typeMapping[type] || NotificationType.ORDER_STATUS_CHANGED;
       await this.prisma.notifications.create({
         data: {
           userId,
@@ -121,7 +124,9 @@ export class NotificationProcessor {
         },
       });
     } catch (error) {
-      this.logger.warn(`Failed to create in-app notification: ${error.message}`);
+      this.logger.warn(
+        `Failed to create in-app notification: ${error.message}`,
+      );
     }
   }
 
@@ -132,7 +137,9 @@ export class NotificationProcessor {
     data?: Record<string, any>,
   ): Promise<void> {
     // Push notifications disabled - no pushToken model in schema
-    this.logger.debug(`Push notification skipped for user ${userId} - not implemented`);
+    this.logger.debug(
+      `Push notification skipped for user ${userId} - not implemented`,
+    );
   }
 
   private async sendToDevice(
@@ -143,13 +150,13 @@ export class NotificationProcessor {
     data?: Record<string, any>,
   ): Promise<void> {
     // TODO: تكامل مع FCM أو OneSignal
-    this.logger.debug(`Would send push to ${platform} device: ${token.substring(0, 20)}...`);
+    this.logger.debug(
+      `Would send push to ${platform} device: ${token.substring(0, 20)}...`,
+    );
   }
 
   @OnQueueFailed()
   onFailed(job: Job, error: Error) {
-    this.logger.error(
-      `Notification job ${job.id} failed: ${error.message}`,
-    );
+    this.logger.error(`Notification job ${job.id} failed: ${error.message}`);
   }
 }

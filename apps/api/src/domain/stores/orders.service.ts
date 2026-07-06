@@ -288,8 +288,14 @@ export class OrdersService {
    * Create direct order (buy now)
    */
   async createDirect(userId: string, createOrderDto: CreateDirectOrderDto) {
-    const { addressId, productId, quantity, couponCode, customerNote, variantId } =
-      createOrderDto;
+    const {
+      addressId,
+      productId,
+      quantity,
+      couponCode,
+      customerNote,
+      variantId,
+    } = createOrderDto;
 
     // Get product first to check if digital
     const product = await this.prisma.products.findUnique({
@@ -322,7 +328,8 @@ export class OrdersService {
       }
     }
 
-    const hasDigitalFile = isDigital && product.digitalAssets && product.digitalAssets.length > 0;
+    const hasDigitalFile =
+      isDigital && product.digitalAssets && product.digitalAssets.length > 0;
 
     // Handle variant if provided
     let variant: any = null;
@@ -398,7 +405,9 @@ export class OrdersService {
         customerNote,
         couponId: coupon?.id,
         // المنتجات الرقمية تُسلَّم فوراً
-        ...(isDigital ? { status: 'DELIVERED' as any, deliveredAt: new Date() } : {}),
+        ...(isDigital
+          ? { status: 'DELIVERED' as any, deliveredAt: new Date() }
+          : {}),
       },
     });
 
@@ -431,10 +440,12 @@ export class OrdersService {
         quantity,
         subtotal,
         isDigital,
-        ...(variant ? {
-          variantId: variant.id,
-          variantAttributes: variant.attributes,
-        } : {}),
+        ...(variant
+          ? {
+              variantId: variant.id,
+              variantAttributes: variant.attributes,
+            }
+          : {}),
       },
     });
 
@@ -514,7 +525,13 @@ export class OrdersService {
       items: Array<{ productId: string; quantity: number; variantId?: string }>;
     },
   ) {
-    const { addressId, customerNote, phoneNumber: dtoPhone, paymentMethod, items } = dto;
+    const {
+      addressId,
+      customerNote,
+      phoneNumber: dtoPhone,
+      paymentMethod,
+      items,
+    } = dto;
 
     if (!items || items.length === 0) {
       throw new BadRequestException('يجب إضافة منتج واحد على الأقل');
@@ -547,7 +564,9 @@ export class OrdersService {
       }
 
       if (product.status !== 'ACTIVE') {
-        throw new BadRequestException(`المنتج غير متاح حالياً: ${product.name}`);
+        throw new BadRequestException(
+          `المنتج غير متاح حالياً: ${product.name}`,
+        );
       }
 
       if (product.isDigital) {
@@ -560,13 +579,19 @@ export class OrdersService {
       if (!storeId) {
         storeId = product.storeId;
       } else if (product.storeId !== storeId) {
-        throw new BadRequestException('جميع المنتجات يجب أن تكون من نفس المتجر');
+        throw new BadRequestException(
+          'جميع المنتجات يجب أن تكون من نفس المتجر',
+        );
       }
 
       let variant: any = null;
       if (item.variantId) {
         variant = await this.prisma.product_variants.findFirst({
-          where: { id: item.variantId, productId: item.productId, isActive: true },
+          where: {
+            id: item.variantId,
+            productId: item.productId,
+            isActive: true,
+          },
         });
 
         if (!variant) {
@@ -624,7 +649,7 @@ export class OrdersService {
         id: uuidv4(),
         orderNumber: this.generateOrderNumber(),
         userId,
-        storeId: storeId!,
+        storeId: storeId,
         ...(address ? { addressId: address.id } : {}),
         phoneNumber: address?.phoneNumber || '',
         subtotal: orderSubtotal,
@@ -633,21 +658,26 @@ export class OrdersService {
         customerNote,
         ...(paymentMethod ? { paymentMethod: paymentMethod as any } : {}),
         // Digital-only orders are delivered immediately
-        ...(allDigital ? { status: 'DELIVERED' as any, deliveredAt: new Date() } : {}),
+        ...(allDigital
+          ? { status: 'DELIVERED' as any, deliveredAt: new Date() }
+          : {}),
       },
     });
 
     // Invalidate dashboard cache for store owner
     try {
       const storeRec = await this.prisma.store.findUnique({
-        where: { id: storeId! },
+        where: { id: storeId },
         select: { userId: true },
       });
       if (storeRec?.userId) {
         await this.redisService.del(`dashboard:stats:${storeRec.userId}`);
       }
     } catch (err) {
-      console.warn('Redis del error (order createDirectMultiItem):', err?.message || err);
+      console.warn(
+        'Redis del error (order createDirectMultiItem):',
+        err?.message || err,
+      );
     }
 
     // Create order items, download tokens for digital, and update stock
@@ -731,7 +761,7 @@ export class OrdersService {
           },
         },
       });
-      (orderData as any).downloadTokens = tokens.map(t => ({
+      orderData.downloadTokens = tokens.map((t) => ({
         token: t.token,
         productName: t.orderItem.productNameAr || t.orderItem.productName,
         maxDownloads: t.maxDownloads,
@@ -1248,9 +1278,7 @@ export class OrdersService {
 
     if (includeCustomer) {
       const customerName =
-        order.users?.profile?.name ||
-        order.addresses?.fullName ||
-        null;
+        order.users?.profile?.name || order.addresses?.fullName || null;
 
       if (order.users) {
         formatted.customer = {

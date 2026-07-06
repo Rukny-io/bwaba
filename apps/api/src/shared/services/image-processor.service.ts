@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sharp from 'sharp';
 import { fromBuffer as fileTypeFromBuffer } from 'file-type';
@@ -231,8 +227,7 @@ export class ImageProcessorService {
     if (!outputFormat) {
       // Keep original format for animated images, convert to webp for static
       if (isAnimated) {
-        outputFormat =
-          originalMetadata.format === 'gif' ? 'gif' : 'webp';
+        outputFormat = originalMetadata.format === 'gif' ? 'gif' : 'webp';
       } else {
         outputFormat = 'webp';
       }
@@ -339,10 +334,7 @@ export class ImageProcessorService {
   /**
    * Process image for avatar (square, fixed size)
    */
-  async processAvatar(
-    buffer: Buffer,
-    size = 400,
-  ): Promise<ProcessedImage> {
+  async processAvatar(buffer: Buffer, size = 400): Promise<ProcessedImage> {
     return this.process(buffer, {
       width: size,
       height: size,

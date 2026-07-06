@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
@@ -43,7 +49,9 @@ export class WabaService {
       tokenData = await this.metaApi.exchangeCodeForToken(dto.code);
     } catch (error) {
       this.logger.error(`Failed to exchange code: ${error.message}`);
-      throw new BadRequestException('Failed to exchange authorization code. Please try again.');
+      throw new BadRequestException(
+        'Failed to exchange authorization code. Please try again.',
+      );
     }
 
     const accessToken = tokenData.access_token;
@@ -79,12 +87,17 @@ export class WabaService {
         await this.prisma.developerWhatsappAccount.delete({
           where: { id: existing.id },
         });
-        this.logger.log(`Deleted disconnected WABA ${targetWabaId} to allow reconnection`);
+        this.logger.log(
+          `Deleted disconnected WABA ${targetWabaId} to allow reconnection`,
+        );
       }
       // حالة 2: نفس المستخدم ونفس التطبيق → تحديث التوكن وإعادة التفعيل
-      else if (existing.userId === userId && existing.developerAppId === app.id) {
+      else if (
+        existing.userId === userId &&
+        existing.developerAppId === app.id
+      ) {
         const encryptedToken = this.tokenEncryption.encrypt(accessToken);
-        const updated = await this.prisma.developerWhatsappAccount.update({
+        await this.prisma.developerWhatsappAccount.update({
           where: { id: existing.id },
           data: {
             accessTokenEncrypted: encryptedToken,
@@ -92,6 +105,10 @@ export class WabaService {
             connectedAt: new Date(),
             disconnectedAt: null,
           },
+        });
+        await this.syncPhoneNumbers(existing.id, targetWabaId, accessToken);
+        const updated = await this.prisma.developerWhatsappAccount.findUnique({
+          where: { id: existing.id },
           include: { phoneNumbers: true },
         });
         this.logger.log(`Reconnected WABA ${targetWabaId} for user ${userId}`);
@@ -135,31 +152,7 @@ export class WabaService {
     });
 
     // 7. جلب وتخزين أرقام الهاتف
-    try {
-      const phoneData = await this.metaApi.getPhoneNumbers(targetWabaId, accessToken);
-      const phones = phoneData.data || [];
-
-      for (const phone of phones) {
-        await this.prisma.developerPhoneNumber.create({
-          data: {
-            accountId: account.id,
-            phoneNumber: phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
-            displayPhoneNumber: phone.display_phone_number,
-            verifiedName: phone.verified_name,
-            phoneNumberId: phone.id,
-            qualityRating: this.mapQualityRating(phone.quality_rating),
-            messagingLimit: phone.messaging_limit_tier,
-            status: phone.status === 'CONNECTED' ? 'ACTIVE' : 'PENDING',
-            nameStatus: phone.name_status,
-            isOfficialBusinessAccount: phone.is_official_business_account || false,
-            platformType: phone.platform_type,
-            codeVerificationStatus: phone.code_verification_status,
-          },
-        });
-      }
-    } catch (error) {
-      this.logger.warn(`Failed to fetch phone numbers for WABA ${targetWabaId}: ${error.message}`);
-    }
+    await this.syncPhoneNumbers(account.id, targetWabaId, accessToken);
 
     // 8. الاشتراك في webhooks
     try {
@@ -169,7 +162,9 @@ export class WabaService {
         data: { webhookSubscribed: true },
       });
     } catch (error) {
-      this.logger.warn(`Failed to subscribe to webhooks for WABA ${targetWabaId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to subscribe to webhooks for WABA ${targetWabaId}: ${error.message}`,
+      );
     }
 
     this.logger.log(`WABA ${targetWabaId} connected for user ${userId}`);
@@ -276,46 +271,79 @@ export class WabaService {
 
     if (!account) throw new NotFoundException('WABA account not found');
     if (!account.accessTokenEncrypted) {
-      throw new BadRequestException('Account is disconnected. Please reconnect.');
+      throw new BadRequestException(
+        'Account is disconnected. Please reconnect.',
+      );
     }
 
-    const accessToken = this.tokenEncryption.decrypt(account.accessTokenEncrypted);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
 
     // تحديث معلومات WABA
-    const wabaInfo = await this.metaApi.getWabaInfo(account.wabaId, accessToken);
+    const wabaInfo = await this.metaApi.getWabaInfo(
+      account.wabaId,
+      accessToken,
+    );
 
     // تحديث أرقام الهاتف
-    const phoneData = await this.metaApi.getPhoneNumbers(account.wabaId, accessToken);
-
-    for (const phone of phoneData.data || []) {
-      await this.prisma.developerPhoneNumber.upsert({
-        where: { phoneNumberId: phone.id },
-        update: {
-          qualityRating: this.mapQualityRating(phone.quality_rating),
-          messagingLimit: phone.messaging_limit_tier,
-          status: phone.status === 'CONNECTED' ? 'ACTIVE' : 'PENDING',
-          nameStatus: phone.name_status,
-          verifiedName: phone.verified_name,
-        },
-        create: {
-          accountId: account.id,
-          phoneNumber: phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
-          displayPhoneNumber: phone.display_phone_number,
-          verifiedName: phone.verified_name,
-          phoneNumberId: phone.id,
-          qualityRating: this.mapQualityRating(phone.quality_rating),
-          messagingLimit: phone.messaging_limit_tier,
-          status: phone.status === 'CONNECTED' ? 'ACTIVE' : 'PENDING',
-          nameStatus: phone.name_status,
-          platformType: phone.platform_type,
-        },
-      });
-    }
+    await this.syncPhoneNumbers(accountId, account.wabaId, accessToken);
 
     return this.prisma.developerWhatsappAccount.findUnique({
       where: { id: accountId },
       include: { phoneNumbers: true },
     });
+  }
+
+  private async syncPhoneNumbers(
+    accountId: string,
+    wabaId: string,
+    accessToken: string,
+  ) {
+    try {
+      const phoneData = await this.metaApi.getPhoneNumbers(wabaId, accessToken);
+
+      for (const phone of phoneData.data || []) {
+        await this.prisma.developerPhoneNumber.upsert({
+          where: { phoneNumberId: phone.id },
+          update: {
+            accountId,
+            phoneNumber:
+              phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
+            displayPhoneNumber: phone.display_phone_number,
+            verifiedName: phone.verified_name,
+            qualityRating: this.mapQualityRating(phone.quality_rating),
+            messagingLimit: phone.messaging_limit_tier,
+            status: phone.status === 'CONNECTED' ? 'ACTIVE' : 'PENDING',
+            nameStatus: phone.name_status,
+            isOfficialBusinessAccount:
+              phone.is_official_business_account || false,
+            platformType: phone.platform_type,
+            codeVerificationStatus: phone.code_verification_status,
+          },
+          create: {
+            accountId,
+            phoneNumber:
+              phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
+            displayPhoneNumber: phone.display_phone_number,
+            verifiedName: phone.verified_name,
+            phoneNumberId: phone.id,
+            qualityRating: this.mapQualityRating(phone.quality_rating),
+            messagingLimit: phone.messaging_limit_tier,
+            status: phone.status === 'CONNECTED' ? 'ACTIVE' : 'PENDING',
+            nameStatus: phone.name_status,
+            isOfficialBusinessAccount:
+              phone.is_official_business_account || false,
+            platformType: phone.platform_type,
+            codeVerificationStatus: phone.code_verification_status,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to sync phone numbers for WABA ${wabaId}: ${error.message}`,
+      );
+    }
   }
 
   /**
@@ -327,7 +355,11 @@ export class WabaService {
       select: { accessTokenEncrypted: true, status: true },
     });
 
-    if (!account || !account.accessTokenEncrypted || account.status !== 'ACTIVE') {
+    if (
+      !account ||
+      !account.accessTokenEncrypted ||
+      account.status !== 'ACTIVE'
+    ) {
       throw new BadRequestException('WABA account is not available');
     }
 
@@ -338,10 +370,16 @@ export class WabaService {
    * الحصول على Embedded Signup config
    */
   getEmbeddedSignupConfig() {
-    return {
-      appId: this.configService.get('WHATSAPP_APP_ID'),
-      configId: this.configService.get('WHATSAPP_CONFIG_ID'),
-    };
+    const appId = this.configService.get<string>('WHATSAPP_APP_ID')?.trim();
+    const configId = this.configService.get<string>('WHATSAPP_CONFIG_ID')?.trim();
+
+    if (!appId || !configId) {
+      throw new BadRequestException(
+        'WhatsApp Embedded Signup is not configured. Set WHATSAPP_APP_ID and WHATSAPP_CONFIG_ID on the API server.',
+      );
+    }
+
+    return { appId, configId };
   }
 
   private mapQualityRating(rating: string): any {

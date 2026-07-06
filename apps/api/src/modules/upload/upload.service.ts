@@ -19,11 +19,28 @@ import {
 } from '../../shared/exceptions/upload.exceptions';
 
 // Supported image formats (animated included)
-const ANIMATED_MIME_TYPES = ['image/gif', 'image/webp', 'image/png', 'image/avif'];
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+const ANIMATED_MIME_TYPES = [
+  'image/gif',
+  'image/webp',
+  'image/png',
+  'image/avif',
+];
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+];
 
 // Supported video formats
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+];
 
 // Combined media types
 const ALLOWED_MIME_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
@@ -51,8 +68,14 @@ export class UploadService {
     this.bucket = this.configService.get<string>('S3_BUCKET', '');
     this.maxFiles = this.configService.get<number>('S3_UPLOAD_MAX_FILES', 3);
     this.maxFileSizeMB = this.configService.get<number>('S3_UPLOAD_MAX_MB', 5);
-    this.maxVideoSizeMB = this.configService.get<number>('VIDEO_MAX_SIZE_MB', 50);
-    this.maxVideoDurationSeconds = this.configService.get<number>('VIDEO_MAX_DURATION_SECONDS', 30);
+    this.maxVideoSizeMB = this.configService.get<number>(
+      'VIDEO_MAX_SIZE_MB',
+      50,
+    );
+    this.maxVideoDurationSeconds = this.configService.get<number>(
+      'VIDEO_MAX_DURATION_SECONDS',
+      30,
+    );
   }
 
   /**
@@ -106,7 +129,10 @@ export class UploadService {
    * Validate uploaded files
    * Now supports: JPEG, PNG, WebP, GIF (animated), AVIF
    */
-  validateFiles(files: Express.Multer.File[], options?: { allowAnimated?: boolean }) {
+  validateFiles(
+    files: Express.Multer.File[],
+    options?: { allowAnimated?: boolean },
+  ) {
     const allowAnimated = options?.allowAnimated ?? true;
 
     if (!files || files.length === 0) {
@@ -135,7 +161,11 @@ export class UploadService {
 
       // If animated not allowed, check for GIF specifically
       if (!allowAnimated && file.mimetype === 'image/gif') {
-        throw new InvalidFileTypeException(file.mimetype, ['image/jpeg', 'image/png', 'image/webp']);
+        throw new InvalidFileTypeException(file.mimetype, [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+        ]);
       }
     }
   }
@@ -150,9 +180,14 @@ export class UploadService {
   /**
    * Build S3 key for uploaded file
    */
-  buildKey(userId: string, index: number, originalname: string, format?: string) {
+  buildKey(
+    userId: string,
+    index: number,
+    originalname: string,
+    format?: string,
+  ) {
     // Use provided format or extract from original name
-    const ext = format ? `.${format}` : (extname(originalname) || '.webp');
+    const ext = format ? `.${format}` : extname(originalname) || '.webp';
     // Remove extension from filename before sanitizing
     const nameWithoutExt = originalname.replace(/\.[^.]+$/, '');
     const safe = nameWithoutExt
@@ -164,7 +199,9 @@ export class UploadService {
   /**
    * Normalize file content to Buffer
    */
-  private async normalizeFileBuffer(file: Express.Multer.File): Promise<Buffer> {
+  private async normalizeFileBuffer(
+    file: Express.Multer.File,
+  ): Promise<Buffer> {
     const fb = (file as any).buffer ?? (file as any).content ?? file;
 
     // Direct Buffer
@@ -282,15 +319,29 @@ export class UploadService {
           );
         } else {
           // Process as static banner
-          processed = await this.imageProcessor.processBanner(rawBuffer, 1400, 400);
+          processed = await this.imageProcessor.processBanner(
+            rawBuffer,
+            1400,
+            400,
+          );
         }
 
         // Build key with correct format
-        const key = this.buildKey(userId, i, file.originalname, processed.format);
+        const key = this.buildKey(
+          userId,
+          i,
+          file.originalname,
+          processed.format,
+        );
 
         // Upload to S3
         const contentType = `image/${processed.format}`;
-        await this.s3Service.uploadBuffer(this.bucket, key, processed.buffer, contentType);
+        await this.s3Service.uploadBuffer(
+          this.bucket,
+          key,
+          processed.buffer,
+          contentType,
+        );
 
         uploadedKeys.push(key);
 
@@ -329,7 +380,9 @@ export class UploadService {
         );
       } catch (error: any) {
         this.uploadProgress.failUpload(uploadId, error.message);
-        this.logger.error(`Failed to upload banner ${file.originalname}: ${error.message}`);
+        this.logger.error(
+          `Failed to upload banner ${file.originalname}: ${error.message}`,
+        );
         throw error;
       }
     }
@@ -385,7 +438,10 @@ export class UploadService {
 
       // Validate file size
       if (f.size > maxSizeBytes) {
-        throw new FileTooLargeException(this.maxFileSizeMB, f.size / (1024 * 1024));
+        throw new FileTooLargeException(
+          this.maxFileSizeMB,
+          f.size / (1024 * 1024),
+        );
       }
 
       const key = this.buildKey(userId, i, f.name);
@@ -476,11 +532,19 @@ export class UploadService {
 
     const maxSizeBytes = this.maxVideoSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      throw new FileTooLargeException(this.maxVideoSizeMB, file.size / (1024 * 1024));
+      throw new FileTooLargeException(
+        this.maxVideoSizeMB,
+        file.size / (1024 * 1024),
+      );
     }
 
     const uploadId = uuidv4();
-    this.uploadProgress.startUpload(uploadId, userId, file.originalname, file.size);
+    this.uploadProgress.startUpload(
+      uploadId,
+      userId,
+      file.originalname,
+      file.size,
+    );
 
     try {
       this.uploadProgress.markProcessing(uploadId);
@@ -497,7 +561,12 @@ export class UploadService {
       const thumbnailKey = `users/${userId}/profile/avatar/${timestamp}_thumb.jpg`;
 
       // Upload video
-      await this.s3Service.uploadBuffer(this.bucket, videoKey, processed.buffer, 'video/mp4');
+      await this.s3Service.uploadBuffer(
+        this.bucket,
+        videoKey,
+        processed.buffer,
+        'video/mp4',
+      );
 
       // Upload thumbnail
       if (processed.thumbnail) {
@@ -578,11 +647,19 @@ export class UploadService {
 
     const maxSizeBytes = this.maxVideoSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      throw new FileTooLargeException(this.maxVideoSizeMB, file.size / (1024 * 1024));
+      throw new FileTooLargeException(
+        this.maxVideoSizeMB,
+        file.size / (1024 * 1024),
+      );
     }
 
     const uploadId = uuidv4();
-    this.uploadProgress.startUpload(uploadId, userId, file.originalname, file.size);
+    this.uploadProgress.startUpload(
+      uploadId,
+      userId,
+      file.originalname,
+      file.size,
+    );
 
     try {
       this.uploadProgress.markProcessing(uploadId);
@@ -590,7 +667,11 @@ export class UploadService {
       const rawBuffer = await this.normalizeFileBuffer(file);
 
       // Process video for banner (wider aspect ratio)
-      const processed = await this.videoProcessor.processBanner(rawBuffer, 1400, 400);
+      const processed = await this.videoProcessor.processBanner(
+        rawBuffer,
+        1400,
+        400,
+      );
 
       // Build keys
       const timestamp = Date.now();
@@ -598,7 +679,12 @@ export class UploadService {
       const thumbnailKey = `users/${userId}/banners/${timestamp}_thumb.jpg`;
 
       // Upload video
-      await this.s3Service.uploadBuffer(this.bucket, videoKey, processed.buffer, 'video/mp4');
+      await this.s3Service.uploadBuffer(
+        this.bucket,
+        videoKey,
+        processed.buffer,
+        'video/mp4',
+      );
 
       // Upload thumbnail
       if (processed.thumbnail) {
@@ -684,7 +770,12 @@ export class UploadService {
     }
 
     const uploadId = uuidv4();
-    this.uploadProgress.startUpload(uploadId, userId, file.originalname, file.size);
+    this.uploadProgress.startUpload(
+      uploadId,
+      userId,
+      file.originalname,
+      file.size,
+    );
 
     try {
       this.uploadProgress.markProcessing(uploadId);
@@ -692,7 +783,8 @@ export class UploadService {
       const rawBuffer = await this.normalizeFileBuffer(file);
 
       // Process for background (larger, looping, muted)
-      const processed = await this.videoProcessor.processProfileBackground(rawBuffer);
+      const processed =
+        await this.videoProcessor.processProfileBackground(rawBuffer);
 
       // Build keys
       const timestamp = Date.now();
@@ -700,7 +792,12 @@ export class UploadService {
       const thumbnailKey = `users/${userId}/profile/background/${timestamp}_thumb.jpg`;
 
       // Upload video
-      await this.s3Service.uploadBuffer(this.bucket, videoKey, processed.buffer, 'video/mp4');
+      await this.s3Service.uploadBuffer(
+        this.bucket,
+        videoKey,
+        processed.buffer,
+        'video/mp4',
+      );
 
       // Upload thumbnail
       if (processed.thumbnail) {
@@ -794,10 +891,21 @@ export class UploadService {
 
       switch (purpose) {
         case 'avatar':
-          const avatar = await this.imageProcessor.processAvatar(rawBuffer, 400);
+          const avatar = await this.imageProcessor.processAvatar(
+            rawBuffer,
+            400,
+          );
           const avatarKey = `users/${userId}/profile/avatar/${Date.now()}.${avatar.format}`;
-          await this.s3Service.uploadBuffer(this.bucket, avatarKey, avatar.buffer, `image/${avatar.format}`);
-          const region = this.configService.get<string>('AWS_REGION', 'eu-north-1');
+          await this.s3Service.uploadBuffer(
+            this.bucket,
+            avatarKey,
+            avatar.buffer,
+            `image/${avatar.format}`,
+          );
+          const region = this.configService.get<string>(
+            'AWS_REGION',
+            'eu-north-1',
+          );
           return {
             key: avatarKey,
             url: `https://${this.bucket}.s3.${region}.amazonaws.com/${avatarKey}`,
@@ -806,10 +914,22 @@ export class UploadService {
 
         case 'banner':
         case 'background':
-          const banner = await this.imageProcessor.processBanner(rawBuffer, 1400, 400);
+          const banner = await this.imageProcessor.processBanner(
+            rawBuffer,
+            1400,
+            400,
+          );
           const bannerKey = `users/${userId}/banners/${Date.now()}.${banner.format}`;
-          await this.s3Service.uploadBuffer(this.bucket, bannerKey, banner.buffer, `image/${banner.format}`);
-          const regionB = this.configService.get<string>('AWS_REGION', 'eu-north-1');
+          await this.s3Service.uploadBuffer(
+            this.bucket,
+            bannerKey,
+            banner.buffer,
+            `image/${banner.format}`,
+          );
+          const regionB = this.configService.get<string>(
+            'AWS_REGION',
+            'eu-north-1',
+          );
           return {
             key: bannerKey,
             url: `https://${this.bucket}.s3.${regionB}.amazonaws.com/${bannerKey}`,
@@ -861,16 +981,39 @@ export class UploadService {
       // Limits by purpose
       limits: {
         avatar: {
-          image: { maxSizeMB: this.maxFileSizeMB, maxWidth: 400, maxHeight: 400 },
-          video: { maxSizeMB: this.maxVideoSizeMB, maxDuration: 10, maxWidth: 400, maxHeight: 400 },
+          image: {
+            maxSizeMB: this.maxFileSizeMB,
+            maxWidth: 400,
+            maxHeight: 400,
+          },
+          video: {
+            maxSizeMB: this.maxVideoSizeMB,
+            maxDuration: 10,
+            maxWidth: 400,
+            maxHeight: 400,
+          },
         },
         banner: {
-          image: { maxSizeMB: this.maxFileSizeMB, maxWidth: 1400, maxHeight: 400 },
-          video: { maxSizeMB: this.maxVideoSizeMB, maxDuration: 30, maxWidth: 1400, maxHeight: 400 },
+          image: {
+            maxSizeMB: this.maxFileSizeMB,
+            maxWidth: 1400,
+            maxHeight: 400,
+          },
+          video: {
+            maxSizeMB: this.maxVideoSizeMB,
+            maxDuration: 30,
+            maxWidth: 1400,
+            maxHeight: 400,
+          },
         },
         background: {
           image: { maxSizeMB: 10, maxWidth: 1920, maxHeight: 1080 },
-          video: { maxSizeMB: 100, maxDuration: 60, maxWidth: 1920, maxHeight: 1080 },
+          video: {
+            maxSizeMB: 100,
+            maxDuration: 60,
+            maxWidth: 1920,
+            maxHeight: 1080,
+          },
         },
       },
     };

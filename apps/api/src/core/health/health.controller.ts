@@ -25,7 +25,7 @@ export class HealthController {
    */
   private verifyHealthSecret(providedSecret: string | undefined): void {
     const expectedSecret = process.env.HEALTH_SECRET;
-    
+
     // If no secret configured, allow in development only
     if (!expectedSecret) {
       if (process.env.NODE_ENV === 'production') {
@@ -99,7 +99,8 @@ export class HealthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute
   @ApiOperation({
     summary: 'Detailed health check (protected)',
-    description: 'Returns detailed health status including database and cache. Requires X-Health-Secret header in production.',
+    description:
+      'Returns detailed health status including database and cache. Requires X-Health-Secret header in production.',
   })
   @ApiHeader({
     name: 'X-Health-Secret',
@@ -124,9 +125,7 @@ export class HealthController {
     },
   })
   @ApiResponse({ status: 403, description: 'Invalid or missing health secret' })
-  async detailedCheck(
-    @Headers('x-health-secret') healthSecret?: string,
-  ) {
+  async detailedCheck(@Headers('x-health-secret') healthSecret?: string) {
     // Verify secret in production
     this.verifyHealthSecret(healthSecret);
     const isProd = process.env.NODE_ENV === 'production';
@@ -149,7 +148,12 @@ export class HealthController {
         database: {
           connected: dbHealth.connected,
           responseTime: dbHealth.responseTime,
-          ...(isProd ? {} : { queryCount: dbHealth.queryCount, slowQueries: dbHealth.slowQueryCount }),
+          ...(isProd
+            ? {}
+            : {
+                queryCount: dbHealth.queryCount,
+                slowQueries: dbHealth.slowQueryCount,
+              }),
         },
         redis: {
           connected: redisStatus.connected,

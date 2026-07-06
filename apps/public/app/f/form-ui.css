@@ -1,0 +1,251 @@
+@import "@heroui/styles/css";
+
+@source "../../components/public-form/ui/**/*.{js,ts,jsx,tsx}";
+@source "../../components/public-form/public-form-step-progress.tsx";
+@source "../../components/public-form/field-otp-verification.tsx";
+@source "../../components/forms/form-preview-field.tsx";
+
+/* HeroUI tokens aligned with form theme (--form-*) */
+.public-form-route {
+  --heroui-primary: var(--form-primary, var(--primary, #062c30));
+  --heroui-primary-foreground: var(--form-btn-text, #ffffff);
+  --heroui-danger: var(--danger, #ef4444);
+  --heroui-radius-medium: var(--form-input-radius, var(--form-radius, 0.75rem));
+}
+
+.form-themed .form-heroui-field [data-slot="label"] {
+  font-size: var(--form-label-size, 0.9375rem);
+  font-weight: 600;
+  color: var(--form-text-label);
+  margin-bottom: 0.375rem;
+}
+
+.form-themed .form-heroui-field [data-slot="description"] {
+  font-size: 0.75rem;
+  color: var(--form-text-body);
+  margin-top: 0.25rem;
+}
+
+.form-themed .form-heroui-field [data-slot="input"],
+.form-themed .form-heroui-field [data-slot="textarea"] {
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  border-color: var(--form-input-border);
+  background: #ffffff;
+  color: var(--form-input-text);
+  font-size: 0.875rem;
+  min-height: 2.75rem;
+}
+
+.form-themed .form-heroui-field [data-slot="input"]:focus,
+.form-themed .form-heroui-field [data-slot="textarea"]:focus {
+  border-color: var(--form-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-primary) 18%, transparent);
+}
+
+.form-themed .form-heroui-btn[data-variant="primary"] {
+  background: var(--form-btn-bg, var(--form-primary));
+  color: var(--form-btn-text, #ffffff);
+  border-radius: var(--form-btn-radius, 9999px);
+  font-weight: 600;
+  min-height: 2.75rem;
+}
+
+.form-themed .form-heroui-btn[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--form-btn-hover, var(--form-primary));
+  opacity: 0.95;
+}
+
+.form-themed .form-heroui-btn[data-variant="secondary"] {
+  border-radius: var(--form-btn-radius, 9999px);
+  color: var(--form-text-body);
+  background: color-mix(in srgb, var(--form-input-border) 35%, transparent);
+  font-weight: 500;
+  min-height: 2.75rem;
+}
+
+.form-themed .form-heroui-btn[data-variant="secondary"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--form-input-border) 55%, transparent);
+}
+
+.form-themed .form-heroui-btn[data-variant="outline"] {
+  border-radius: 9999px;
+  border-color: var(--form-input-border);
+  color: var(--form-text-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-height: 2.75rem;
+}
+
+.form-themed .form-heroui-progress [data-slot="track"] {
+  background: color-mix(in srgb, var(--form-input-border) 55%, transparent);
+  border-radius: 9999px;
+  height: 0.375rem;
+}
+
+.form-themed .form-heroui-progress [data-slot="fill"] {
+  background: var(--form-primary);
+  border-radius: 9999px;
+}
+
+.form-themed .form-heroui-otp [data-slot="input-otp-slot"] {
+  border-color: var(--form-input-border);
+  border-radius: calc(var(--form-input-radius, 0.75rem) * 0.65);
+  color: var(--form-input-text);
+  font-family: var(--font-mono);
+}
+
+.form-themed .form-heroui-otp [data-slot="input-otp-slot"][data-active="true"] {
+  border-color: var(--form-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--form-primary) 20%, transparent);
+}
+
+.form-themed .form-heroui-select [data-slot="trigger"] {
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  border-color: var(--form-input-border);
+  background: #ffffff;
+  min-height: 2.75rem;
+}
+
+.form-themed .form-heroui-checkbox [data-slot="checkbox-control"] {
+  border-color: var(--form-input-border);
+}
+
+.form-themed .form-heroui-checkbox [data-selected="true"] [data-slot="checkbox-control"] {
+  border-color: var(--form-primary);
+  background: var(--form-primary);
+}
+
+.form-themed .form-heroui-switch [data-slot="switch-control"] {
+  background: color-mix(in srgb, var(--form-input-border) 70%, transparent);
+}
+
+.form-themed .form-heroui-switch [data-selected="true"] [data-slot="switch-control"] {
+  background: var(--form-primary);
+}
+
+.form-themed .form-heroui-scale [data-slot="toggle-button"] {
+  border-radius: calc(var(--form-input-radius, 0.75rem) * 0.65);
+  border-color: var(--form-input-border);
+  color: var(--form-text-heading);
+  font-weight: 600;
+}
+
+.form-themed .form-heroui-scale [data-slot="toggle-button"][data-selected="true"] {
+  border-color: var(--form-primary);
+  background: color-mix(in srgb, var(--form-primary) 12%, white);
+  color: var(--form-primary);
+}
+
+.form-themed .pf-file-drop {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  border: 2px dashed var(--form-input-border);
+  background: #ffffff;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.form-themed .pf-file-drop:hover:not(:disabled),
+.form-themed .pf-file-drop--active {
+  border-color: var(--form-primary);
+  background: color-mix(in srgb, var(--form-primary) 5%, white);
+}
+
+.form-themed .pf-file-drop__icon {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--form-primary) 10%, white);
+  color: var(--form-primary);
+}
+
+.form-themed .pf-file-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  border: 1px solid var(--form-input-border);
+  background: #ffffff;
+  padding: 0.875rem 1rem;
+}
+
+.form-themed .pf-file-card__icon {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--form-primary) 10%, white);
+  color: var(--form-primary);
+}
+
+.form-themed .pf-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.form-themed .pf-ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  border: 1px solid var(--form-input-border);
+  background: #ffffff;
+  padding: 0.75rem 0.875rem;
+}
+
+.form-themed .pf-ranking-item__rank {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--form-primary) 12%, white);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--form-primary);
+}
+
+.form-themed .pf-ranking-btn {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--form-input-border);
+  color: var(--form-text-heading);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.form-themed .pf-ranking-btn:hover:not(:disabled) {
+  border-color: var(--form-primary);
+  background: color-mix(in srgb, var(--form-primary) 8%, white);
+}
+
+.form-themed .pf-ranking-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.form-themed .public-form-matrix table {
+  border-radius: var(--form-input-radius, var(--form-radius, 0.75rem));
+  overflow: hidden;
+}

@@ -36,7 +36,7 @@ export interface WatermarkOptions {
 export class WatermarkService {
   private readonly logger = new Logger(WatermarkService.name);
   private watermarkCache: Map<string, Buffer> = new Map();
-  
+
   // 🔒 Prevent memory leak - max 50 watermarks cached
   private readonly MAX_CACHE_SIZE = 50;
 
@@ -50,7 +50,9 @@ export class WatermarkService {
       for (const key of keysToDelete) {
         this.watermarkCache.delete(key);
       }
-      this.logger.debug(`Evicted ${keysToDelete.length} watermark cache entries`);
+      this.logger.debug(
+        `Evicted ${keysToDelete.length} watermark cache entries`,
+      );
     }
   }
 
@@ -80,7 +82,7 @@ export class WatermarkService {
         );
       } else {
         watermarkBuffer = await this.createImageWatermark(
-          options.imagePath!,
+          options.imagePath,
           metadata.width,
           metadata.height,
           options,
@@ -163,7 +165,7 @@ export class WatermarkService {
     // التحقق من الكاش
     const cacheKey = `${imagePath}_${imageWidth}_${options.scale || 0.15}`;
     if (this.watermarkCache.has(cacheKey)) {
-      return this.watermarkCache.get(cacheKey)!;
+      return this.watermarkCache.get(cacheKey);
     }
 
     const scale = options.scale || 0.15;
@@ -173,27 +175,31 @@ export class WatermarkService {
     let watermarkBuffer = await fs.readFile(imagePath);
 
     // تحجيم العلامة
-    watermarkBuffer = Buffer.from(await sharp(watermarkBuffer)
-      .resize(watermarkWidth)
-      .ensureAlpha()
-      .modulate({ lightness: 1 })
-      .toBuffer());
+    watermarkBuffer = Buffer.from(
+      await sharp(watermarkBuffer)
+        .resize(watermarkWidth)
+        .ensureAlpha()
+        .modulate({ lightness: 1 })
+        .toBuffer(),
+    );
 
     // تطبيق الشفافية
     if (opacity < 1) {
       const { width, height } = await sharp(watermarkBuffer).metadata();
-      watermarkBuffer = Buffer.from(await sharp(watermarkBuffer)
-        .composite([
-          {
-            input: Buffer.from(
-              `<svg width="${width}" height="${height}">
+      watermarkBuffer = Buffer.from(
+        await sharp(watermarkBuffer)
+          .composite([
+            {
+              input: Buffer.from(
+                `<svg width="${width}" height="${height}">
                 <rect width="100%" height="100%" fill="rgba(0,0,0,${1 - opacity})"/>
               </svg>`,
-            ),
-            blend: 'dest-in',
-          },
-        ])
-        .toBuffer());
+              ),
+              blend: 'dest-in',
+            },
+          ])
+          .toBuffer(),
+      );
     }
 
     // حفظ في الكاش مع حماية من memory leak

@@ -2,6 +2,7 @@
 
 import React from "react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 export type VerificationMethod = "authenticator" | "backup-code" | "email" | "whatsapp"
 
@@ -113,14 +114,15 @@ export function MethodChooser({
   className,
   isLoading = false,
 }: MethodChooserProps) {
+  const t = useTranslations("Auth")
+
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("w-full max-w-sm mx-auto", className)}>
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-semibold text-foreground leading-snug">
-          اختر طريقة
-          <br />
-          للتحقق من هويتك
-        </h1>
+        <h1 
+          className="text-2xl font-bold text-foreground leading-tight tracking-tight"
+          dangerouslySetInnerHTML={{ __html: t("choose_method_heading") }}
+        />
       </div>
 
       <div className="space-y-3">
@@ -133,17 +135,17 @@ export function MethodChooser({
                 type="button"
                 onClick={() => onSelect(method.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 rounded-full border border-border bg-background px-5 py-4",
-                  "text-right transition-all duration-300",
-                  "hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.99]",
+                  "w-full flex items-center gap-4 rounded-3xl border border-border/80 bg-background px-5 py-4",
+                  "text-start transition-all duration-300",
+                  "hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm active:scale-[0.99]",
                   "cursor-pointer animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <span className="text-muted-foreground flex-shrink-0">{method.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-md font-medium text-foreground">{method.label}</span>
-                  <p className="text-xs text-muted-foreground truncate">{method.description}</p>
+                  <span className="text-md font-medium text-foreground">{t(`method_${method.id.replace("-", "_")}` as any)}</span>
+                  <p className="text-xs text-muted-foreground truncate">{t(`method_${method.id.replace("-", "_")}_desc` as any)}</p>
                 </div>
               </button>
             )
@@ -155,7 +157,7 @@ export function MethodChooser({
             return (
               <div
                 key={method.id}
-                className="w-full h-[74px] rounded-full bg-muted/30 animate-pulse"
+                className="w-full h-[76px] rounded-3xl bg-muted/40 animate-pulse"
               />
             )
           }
@@ -172,25 +174,25 @@ export function MethodChooser({
               disabled={isDisabled}
               onClick={() => onSelect(method.id)}
               className={cn(
-                "w-full flex items-center gap-3 rounded-full border border-border bg-background px-5 py-4",
-                "text-right transition-all duration-300",
-                "hover:border-foreground/30 hover:bg-muted/50 active:scale-[0.99]",
+                "w-full flex items-center gap-4 rounded-3xl border border-border/80 bg-background px-5 py-4",
+                "text-start transition-all duration-300",
+                "hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm active:scale-[0.99]",
                 "cursor-pointer animate-in fade-in slide-in-from-bottom-2 fill-mode-both",
-                isDisabled && "opacity-50 cursor-not-allowed hover:bg-background hover:border-border active:scale-100"
+                isDisabled && "opacity-60 cursor-not-allowed hover:bg-background hover:border-border/80 hover:shadow-none active:scale-100"
               )}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <span className="text-muted-foreground flex-shrink-0">{method.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-md font-medium text-foreground">{method.label}</span>
+                  <span className="text-md font-medium text-foreground">{t(`method_${method.id.replace("-", "_")}` as any)}</span>
                   {isDisabled && (
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                      للمشتركين
+                    <span className="text-[10px] bg-secondary text-foreground px-2 py-0.5 rounded-full font-medium">
+                      {t("for_subscribers")}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{method.description}</p>
+                <p className="text-xs text-muted-foreground truncate">{t(`method_${method.id.replace("-", "_")}_desc` as any)}</p>
               </div>
             </button>
           )

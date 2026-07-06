@@ -24,7 +24,11 @@ export class MetricsService implements OnModuleInit {
   /**
    * زيادة عداد
    */
-  incrementCounter(name: string, value: number = 1, labels?: Record<string, string>): void {
+  incrementCounter(
+    name: string,
+    value: number = 1,
+    labels?: Record<string, string>,
+  ): void {
     const key = this.buildKey(name, labels);
     const current = this.counters.get(key) || 0;
     this.counters.set(key, current + value);
@@ -61,23 +65,30 @@ export class MetricsService implements OnModuleInit {
   /**
    * تسجيل قيمة في histogram
    */
-  observeHistogram(name: string, value: number, labels?: Record<string, string>): void {
+  observeHistogram(
+    name: string,
+    value: number,
+    labels?: Record<string, string>,
+  ): void {
     const key = this.buildKey(name, labels);
     const values = this.histograms.get(key) || [];
     values.push(value);
-    
+
     // الاحتفاظ بآخر 1000 قيمة فقط
     if (values.length > 1000) {
       values.shift();
     }
-    
+
     this.histograms.set(key, values);
   }
 
   /**
    * الحصول على إحصائيات histogram
    */
-  getHistogramStats(name: string, labels?: Record<string, string>): {
+  getHistogramStats(
+    name: string,
+    labels?: Record<string, string>,
+  ): {
     count: number;
     sum: number;
     avg: number;
@@ -89,9 +100,18 @@ export class MetricsService implements OnModuleInit {
   } {
     const key = this.buildKey(name, labels);
     const values = this.histograms.get(key) || [];
-    
+
     if (values.length === 0) {
-      return { count: 0, sum: 0, avg: 0, min: 0, max: 0, p50: 0, p95: 0, p99: 0 };
+      return {
+        count: 0,
+        sum: 0,
+        avg: 0,
+        min: 0,
+        max: 0,
+        p50: 0,
+        p95: 0,
+        p99: 0,
+      };
     }
 
     const sorted = [...values].sort((a, b) => a - b);
@@ -182,7 +202,7 @@ export class MetricsService implements OnModuleInit {
     for (const [key, values] of this.histograms) {
       const { name, labels } = this.parseKey(key);
       const stats = this.getHistogramStats(name, labels);
-      
+
       lines.push(`# TYPE ${name} histogram`);
       lines.push(`${name}_count${this.formatLabels(labels)} ${stats.count}`);
       lines.push(`${name}_sum${this.formatLabels(labels)} ${stats.sum}`);
@@ -236,7 +256,10 @@ export class MetricsService implements OnModuleInit {
     return `${name}{${labelStr}}`;
   }
 
-  private parseKey(key: string): { name: string; labels: Record<string, string> } {
+  private parseKey(key: string): {
+    name: string;
+    labels: Record<string, string>;
+  } {
     const match = key.match(/^([^{]+)(?:\{(.+)\})?$/);
     if (!match) {
       return { name: key, labels: {} };
@@ -273,7 +296,10 @@ export class MetricsService implements OnModuleInit {
   private normalizePath(path: string): string {
     // استبدال IDs بـ :id
     return path
-      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+      .replace(
+        /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '/:id',
+      )
       .replace(/\/\d+/g, '/:id');
   }
 }

@@ -57,26 +57,30 @@ export class ProfilesService {
     try {
       const logos = heroSettings.logoCloud.logos;
       const resolvedLogos = logos.map((logo: any) => {
-          const keyFromLogoKey =
-            typeof logo?.key === 'string' && logo.key && !logo.key.startsWith('http')
-              ? logo.key
-              : null;
-          const keyFromSrc =
-            typeof logo?.src === 'string' && logo.src && !logo.src.startsWith('http')
-              ? logo.src
-              : null;
-          const keyFromS3Url =
-            typeof logo?.src === 'string' && logo.src.startsWith('http')
-              ? this.extractS3KeyFromUrl(logo.src)
-              : null;
+        const keyFromLogoKey =
+          typeof logo?.key === 'string' &&
+          logo.key &&
+          !logo.key.startsWith('http')
+            ? logo.key
+            : null;
+        const keyFromSrc =
+          typeof logo?.src === 'string' &&
+          logo.src &&
+          !logo.src.startsWith('http')
+            ? logo.src
+            : null;
+        const keyFromS3Url =
+          typeof logo?.src === 'string' && logo.src.startsWith('http')
+            ? this.extractS3KeyFromUrl(logo.src)
+            : null;
 
-          const sourceKey = keyFromLogoKey || keyFromSrc || keyFromS3Url;
+        const sourceKey = keyFromLogoKey || keyFromSrc || keyFromS3Url;
 
-          if (sourceKey) {
-            return { ...logo, key: sourceKey, src: `/api/media/${sourceKey}` };
-          }
-          return logo;
-        });
+        if (sourceKey) {
+          return { ...logo, key: sourceKey, src: `/api/media/${sourceKey}` };
+        }
+        return logo;
+      });
       return {
         ...heroSettings,
         logoCloud: { ...heroSettings.logoCloud, logos: resolvedLogos },
@@ -153,6 +157,10 @@ export class ProfilesService {
               id: true,
               email: true,
               bannerUrls: true,
+              isRuknyVerified: true,
+              verifiedDisplayName: true,
+              verifiedCategory: true,
+              verificationLevel: true,
             },
           },
           socialLinks: {
@@ -202,22 +210,26 @@ export class ProfilesService {
 
       // Handle legacy local paths (convert to full API URL or clear if invalid)
       const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
-      
+
       if (avatarUrl && !avatarUrl.startsWith('http')) {
         if (avatarUrl.startsWith('/uploads/')) {
-          this.logger.warn(`Legacy local avatar path detected for user, clearing: ${avatarUrl}`);
+          this.logger.warn(
+            `Legacy local avatar path detected for user, clearing: ${avatarUrl}`,
+          );
           avatarUrl = null;
-        } else {
-          avatarUrl = `/api/media/${avatarUrl}`;
+        } else if (!avatarUrl.startsWith('/api/')) {
+          avatarUrl = `/api/media/${avatarUrl.replace(/^\/+/, '')}`;
         }
       }
 
       if (coverUrl && !coverUrl.startsWith('http')) {
         if (coverUrl.startsWith('/uploads/')) {
-          this.logger.warn(`Legacy local cover path detected for user, clearing: ${coverUrl}`);
+          this.logger.warn(
+            `Legacy local cover path detected for user, clearing: ${coverUrl}`,
+          );
           coverUrl = null;
-        } else {
-          coverUrl = `/api/media/${coverUrl}`;
+        } else if (!coverUrl.startsWith('/api/')) {
+          coverUrl = `/api/media/${coverUrl.replace(/^\/+/, '')}`;
         }
       }
 
@@ -233,6 +245,10 @@ export class ProfilesService {
         coverImage: coverUrl,
         banners: bannerUrls,
         heroSettings: resolvedHeroSettings,
+        isRuknyVerified: profile.user.isRuknyVerified,
+        verifiedDisplayName: profile.user.verifiedDisplayName,
+        verifiedCategory: profile.user.verifiedCategory,
+        verificationLevel: profile.user.verificationLevel,
         _count: {
           followers: followersCount,
           following: followingCount,
@@ -258,6 +274,10 @@ export class ProfilesService {
             linkedinId: true,
             isDeactivated: true,
             deactivatedAt: true,
+            isRuknyVerified: true,
+            verifiedDisplayName: true,
+            verifiedCategory: true,
+            verificationLevel: true,
           },
         },
         socialLinks: {
@@ -274,22 +294,26 @@ export class ProfilesService {
     try {
       let avatarUrl = (profile as any)?.avatar;
       let coverUrl = (profile as any)?.coverImage;
-      
+
       // Handle legacy local paths - clear them since files don't exist
       if (avatarUrl && !avatarUrl.startsWith('http')) {
         if (avatarUrl.startsWith('/uploads/')) {
-          this.logger.warn(`Legacy local avatar path detected, clearing: ${avatarUrl}`);
+          this.logger.warn(
+            `Legacy local avatar path detected, clearing: ${avatarUrl}`,
+          );
           avatarUrl = null;
-        } else {
-          avatarUrl = `/api/media/${avatarUrl}`;
+        } else if (!avatarUrl.startsWith('/api/')) {
+          avatarUrl = `/api/media/${avatarUrl.replace(/^\/+/, '')}`;
         }
       }
       if (coverUrl && !coverUrl.startsWith('http')) {
         if (coverUrl.startsWith('/uploads/')) {
-          this.logger.warn(`Legacy local cover path detected, clearing: ${coverUrl}`);
+          this.logger.warn(
+            `Legacy local cover path detected, clearing: ${coverUrl}`,
+          );
           coverUrl = null;
-        } else {
-          coverUrl = `/api/media/${coverUrl}`;
+        } else if (!coverUrl.startsWith('/api/')) {
+          coverUrl = `/api/media/${coverUrl.replace(/^\/+/, '')}`;
         }
       }
       const resolvedHeroSettings = await this.resolveLogoUrls(
@@ -300,6 +324,10 @@ export class ProfilesService {
         avatar: avatarUrl,
         coverImage: coverUrl,
         heroSettings: resolvedHeroSettings,
+        isRuknyVerified: profile.user.isRuknyVerified,
+        verifiedDisplayName: profile.user.verifiedDisplayName,
+        verifiedCategory: profile.user.verifiedCategory,
+        verificationLevel: profile.user.verificationLevel,
       });
     } catch (e) {
       return this.serializeProfile(profile);

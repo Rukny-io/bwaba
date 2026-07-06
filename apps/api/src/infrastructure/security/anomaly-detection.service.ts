@@ -151,8 +151,7 @@ export class AnomalyDetectionService {
 
     if (lastLocation) {
       const { country: lastCountry, timestamp } = JSON.parse(lastLocation);
-      const hoursSinceLastLogin =
-        (Date.now() - timestamp) / (1000 * 60 * 60);
+      const hoursSinceLastLogin = (Date.now() - timestamp) / (1000 * 60 * 60);
 
       if (
         lastCountry !== country &&
@@ -177,7 +176,10 @@ export class AnomalyDetectionService {
     ipAddress: string,
   ): Promise<{ suspicious: boolean; reason: string; score: number }> {
     const ipKey = `anomaly:ips:${userId}`;
-    const ipHash = createHash('sha256').update(ipAddress).digest('hex').substring(0, 16);
+    const ipHash = createHash('sha256')
+      .update(ipAddress)
+      .digest('hex')
+      .substring(0, 16);
 
     // إضافة IP للمجموعة
     await this.redis.sadd(ipKey, ipHash);
@@ -274,14 +276,14 @@ export class AnomalyDetectionService {
     }
 
     const totalLogins = Object.values(hourStats).reduce<number>(
-      (sum, val) => sum + parseInt(val as string, 10),
+      (sum, val) => sum + parseInt(val, 10),
       0,
     );
     const currentHourLogins = parseInt(hourStats[currentHour] || '0', 10);
-    const percentage = (currentHourLogins / (totalLogins as number)) * 100;
+    const percentage = (currentHourLogins / totalLogins) * 100;
 
     // إذا كانت هذه الساعة نادرة جداً (<1%)
-    if (percentage < 1 && (totalLogins as number) > 20) {
+    if (percentage < 1 && totalLogins > 20) {
       return {
         suspicious: true,
         reason: `تسجيل دخول في وقت غير معتاد (${currentHour}:00)`,

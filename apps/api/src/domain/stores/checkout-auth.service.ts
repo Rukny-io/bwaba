@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -65,7 +61,9 @@ export class CheckoutAuthService {
         whatsappBusinessToken: this.configService.get('WHATSAPP_BUSINESS_TOKEN')
           ? '✓ Set'
           : '✗ Missing',
-        whatsappPhoneNumberId: this.configService.get('WHATSAPP_PHONE_NUMBER_ID')
+        whatsappPhoneNumberId: this.configService.get(
+          'WHATSAPP_PHONE_NUMBER_ID',
+        )
           ? '✓ Set'
           : '✗ Missing',
       },
@@ -75,7 +73,10 @@ export class CheckoutAuthService {
   /**
    * 📲 طلب رمز OTP للشراء عبر WhatsApp Business
    */
-  async requestOtp(dto: RequestCheckoutOtpDto, clientIp?: string): Promise<OtpRequestResponse> {
+  async requestOtp(
+    dto: RequestCheckoutOtpDto,
+    clientIp?: string,
+  ): Promise<OtpRequestResponse> {
     const { phoneNumber, email, preferEmail } = dto;
 
     if (!phoneNumber) {
@@ -96,7 +97,11 @@ export class CheckoutAuthService {
 
     // If user prefers email or no WhatsApp available, go straight to email
     if (preferEmail && email) {
-      const { otpId } = await this.sendOtpViaEmail(phoneNumber, email, externalId);
+      const { otpId } = await this.sendOtpViaEmail(
+        phoneNumber,
+        email,
+        externalId,
+      );
       verification = { id: otpId };
       sentVia = 'EMAIL';
     } else {
@@ -106,21 +111,29 @@ export class CheckoutAuthService {
       const codeHash = await bcryptLib.hash(otpCode, 10);
 
       try {
-        const result = await this.whatsappBusiness.sendOtp(phoneNumber, otpCode);
+        const result = await this.whatsappBusiness.sendOtp(
+          phoneNumber,
+          otpCode,
+        );
         verification = { id: `wa_${result.messageId || externalId}`, codeHash };
       } catch (whatsappError) {
         this.logger.warn(
           `⚠️ WhatsApp Business verification failed, falling back to Email: ${(whatsappError as Error).message}`,
         );
         // Fallback to email - use provided email or find from DB
-        const fallbackEmail = email || await this.findUserEmail(phoneNumber);
+        const fallbackEmail = email || (await this.findUserEmail(phoneNumber));
         if (!fallbackEmail) {
           throw new BadRequestException({
-            message: 'فشل إرسال الرمز عبر واتساب. يرجى إدخال بريدك الإلكتروني للاستلام عبره.',
+            message:
+              'فشل إرسال الرمز عبر واتساب. يرجى إدخال بريدك الإلكتروني للاستلام عبره.',
             code: 'WHATSAPP_FAILED_NEED_EMAIL',
           });
         }
-        const { otpId } = await this.sendOtpViaEmail(phoneNumber, fallbackEmail, externalId);
+        const { otpId } = await this.sendOtpViaEmail(
+          phoneNumber,
+          fallbackEmail,
+          externalId,
+        );
         verification = { id: otpId };
         sentVia = 'EMAIL';
       }
@@ -144,9 +157,10 @@ export class CheckoutAuthService {
 
     return {
       success: true,
-      message: sentVia === 'WHATSAPP'
-        ? 'تم إرسال رمز التحقق عبر واتساب'
-        : 'تم إرسال رمز التحقق عبر البريد الإلكتروني',
+      message:
+        sentVia === 'WHATSAPP'
+          ? 'تم إرسال رمز التحقق عبر واتساب'
+          : 'تم إرسال رمز التحقق عبر البريد الإلكتروني',
       otpId: verification.id,
       sentVia,
       expiresIn: 600,
@@ -157,7 +171,10 @@ export class CheckoutAuthService {
   /**
    * ✅ التحقق من رمز OTP
    */
-  async verifyOtp(dto: VerifyCheckoutOtpDto, clientIp?: string): Promise<OtpVerifyResponse> {
+  async verifyOtp(
+    dto: VerifyCheckoutOtpDto,
+    clientIp?: string,
+  ): Promise<OtpVerifyResponse> {
     const { phoneNumber, code, otpId } = dto;
 
     if (!phoneNumber) {
@@ -206,14 +223,20 @@ export class CheckoutAuthService {
   /**
    * � تسجيل سريع بدون OTP
    */
-  async quickLogin(dto: QuickLoginDto, clientIp?: string): Promise<OtpVerifyResponse> {
+  async quickLogin(
+    dto: QuickLoginDto,
+    clientIp?: string,
+  ): Promise<OtpVerifyResponse> {
     const { phoneNumber, fullName } = dto;
 
     // IP rate limiting for quick-login
     if (clientIp) await this.checkIpRateLimit(clientIp);
 
     // Create or get user
-    const { user, isNewUser } = await this.getOrCreateGuestUser(phoneNumber, fullName);
+    const { user, isNewUser } = await this.getOrCreateGuestUser(
+      phoneNumber,
+      fullName,
+    );
 
     // Generate JWT
     const accessToken = this.jwtService.sign(
@@ -237,7 +260,10 @@ export class CheckoutAuthService {
   /**
    * �🔄 إعادة إرسال OTP
    */
-  async resendOtp(dto: ResendCheckoutOtpDto, clientIp?: string): Promise<OtpRequestResponse> {
+  async resendOtp(
+    dto: ResendCheckoutOtpDto,
+    clientIp?: string,
+  ): Promise<OtpRequestResponse> {
     const { phoneNumber } = dto;
 
     if (!phoneNumber) {
@@ -286,16 +312,21 @@ export class CheckoutAuthService {
           code: 'WHATSAPP_FAILED_NEED_EMAIL',
         });
       }
-      const { otpId } = await this.sendOtpViaEmail(phoneNumber, fallbackEmail, externalId);
+      const { otpId } = await this.sendOtpViaEmail(
+        phoneNumber,
+        fallbackEmail,
+        externalId,
+      );
       verification = { id: otpId };
       sentVia = 'EMAIL';
     }
 
     return {
       success: true,
-      message: sentVia === 'WHATSAPP'
-        ? 'تم إعادة إرسال رمز التحقق عبر واتساب'
-        : 'تم إعادة إرسال رمز التحقق عبر البريد الإلكتروني',
+      message:
+        sentVia === 'WHATSAPP'
+          ? 'تم إعادة إرسال رمز التحقق عبر واتساب'
+          : 'تم إعادة إرسال رمز التحقق عبر البريد الإلكتروني',
       otpId: verification.id,
       sentVia,
       expiresIn: 600,
@@ -549,9 +580,10 @@ export class CheckoutAuthService {
     if (!isValid) {
       const remaining = MAX_VERIFY_ATTEMPTS_PER_OTP - (otp.attempts + 1);
       throw new BadRequestException({
-        message: remaining > 0
-          ? `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}`
-          : 'تم تجاوز الحد الأقصى لمحاولات التحقق. يرجى طلب رمز جديد.',
+        message:
+          remaining > 0
+            ? `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}`
+            : 'تم تجاوز الحد الأقصى لمحاولات التحقق. يرجى طلب رمز جديد.',
         code: 'INVALID_OTP_CODE',
       });
     }
@@ -609,9 +641,10 @@ export class CheckoutAuthService {
     if (!isValid) {
       const remaining = MAX_VERIFY_ATTEMPTS_PER_OTP - (otp.attempts + 1);
       throw new BadRequestException({
-        message: remaining > 0
-          ? `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}`
-          : 'تم تجاوز الحد الأقصى لمحاولات التحقق. يرجى طلب رمز جديد.',
+        message:
+          remaining > 0
+            ? `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}`
+            : 'تم تجاوز الحد الأقصى لمحاولات التحقق. يرجى طلب رمز جديد.',
         code: 'INVALID_OTP_CODE',
       });
     }

@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 interface TotpFormProps {
   mode: "authenticator" | "backup-code" | "whatsapp"
@@ -18,6 +19,7 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
   const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const t = useTranslations("Auth")
 
   const isAuthenticator = mode === "authenticator"
   const isWhatsapp = mode === "whatsapp"
@@ -32,10 +34,10 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
     } catch (err) {
       setError(
         isWhatsapp
-          ? "رمز الواتساب غير صحيح أو منتهي الصلاحية."
+          ? t("whatsapp_invalid")
           : isAuthenticator
-          ? "الكود غير صحيح. تحقق من تطبيق المصادقة وحاول مجدداً."
-          : "رمز الاسترداد غير صحيح أو مستخدم مسبقاً."
+          ? t("authenticator_invalid")
+          : t("backup_code_invalid")
       )
     } finally {
       setIsLoading(false)
@@ -43,15 +45,15 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
   }
 
   const getTitle = () => {
-    if (isWhatsapp) return "أدخل رمز الواتساب"
-    return isAuthenticator ? "أدخل كود التحقق" : "أدخل رمز الاسترداد"
+    if (isWhatsapp) return t("enter_whatsapp_code")
+    return isAuthenticator ? t("enter_auth_code") : t("enter_backup_code")
   }
 
   const getDescription = () => {
-    if (isWhatsapp) return "أدخل الرمز المكون من 6 أرقام المرسل إلى حسابك على الواتساب"
+    if (isWhatsapp) return t("desc_whatsapp")
     return isAuthenticator
-      ? "أدخل الكود المكون من 6 أرقام من تطبيق المصادقة"
-      : "أدخل أحد رموز الاسترداد الاحتياطية"
+      ? t("desc_auth")
+      : t("desc_backup")
   }
 
   return (
@@ -72,7 +74,7 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
         </svg>
-        رجوع
+        {t("back")}
       </button>
 
       {/* Title */}
@@ -122,7 +124,7 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
           disabled={!code.trim() || isLoading || (isAuthenticator || isWhatsapp ? code.length !== 6 : code.length < 8)}
           className="w-full h-12 rounded-full bg-primary text-primary-foreground text-base font-medium"
         >
-          {isLoading ? "جارٍ التحقق..." : "متابعة"}
+          {isLoading ? t("verifying") : t("continue")}
         </Button>
       </form>
 
@@ -132,9 +134,9 @@ export function TotpForm({ mode, onSubmit, onBack, className, isSendingWhatsapp,
             type="button"
             onClick={onResendWhatsapp}
             disabled={isSendingWhatsapp}
-            className="text-sm text-primary hover:underline font-medium disabled:opacity-50 cursor-pointer"
+            className="text-sm text-foreground hover:underline font-medium disabled:opacity-50 cursor-pointer"
           >
-            {isSendingWhatsapp ? "جاري الإرسال..." : "لم يصلك الرمز؟ إعادة الإرسال"}
+            {isSendingWhatsapp ? t("whatsapp_resending") : t("whatsapp_didnt_receive")}
           </button>
         </div>
       )}

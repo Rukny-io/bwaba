@@ -36,14 +36,10 @@ export class QueueService {
       priority?: number;
     },
   ): Promise<Job> {
-    return this.emailQueue.add(
-      type,
-      data,
-      {
-        delay: options?.delay,
-        priority: options?.priority,
-      },
-    );
+    return this.emailQueue.add(type, data, {
+      delay: options?.delay,
+      priority: options?.priority,
+    });
   }
 
   /**

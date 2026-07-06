@@ -139,10 +139,13 @@ export class SoftDeleteService {
   /**
    * الحصول على العناصر المحذوفة (غير نشطة)
    */
-  async getDeletedItems(type: 'user' | 'store' | 'event' | 'product', options?: {
-    page?: number;
-    limit?: number;
-  }): Promise<{ items: any[]; total: number }> {
+  async getDeletedItems(
+    type: 'user' | 'store' | 'event' | 'product',
+    options?: {
+      page?: number;
+      limit?: number;
+    },
+  ): Promise<{ items: any[]; total: number }> {
     const page = options?.page || 1;
     const limit = options?.limit || 20;
     const skip = (page - 1) * limit;
@@ -151,8 +154,8 @@ export class SoftDeleteService {
       case 'user':
         const [users, userCount] = await Promise.all([
           this.prisma.user.findMany({
-            where: { 
-              email: { startsWith: 'deleted_' }
+            where: {
+              email: { startsWith: 'deleted_' },
             },
             skip,
             take: limit,

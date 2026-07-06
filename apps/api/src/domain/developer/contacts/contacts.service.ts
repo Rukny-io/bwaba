@@ -1,14 +1,24 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
-import { DEVELOPER_PLAN_LIMITS } from '../subscriptions/dev-plan-limits.config';
+import { resolveLimitValue } from '../subscriptions/dev-plan-limits.config';
+import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 
 @Injectable()
 export class ContactsService {
   private readonly logger = new Logger(ContactsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private devSubscriptions: DevSubscriptionsService,
+  ) {}
 
   /**
    * إنشاء جهة اتصال
@@ -25,7 +35,9 @@ export class ContactsService {
     });
 
     if (existing) {
-      throw new ConflictException('Contact with this phone number already exists');
+      throw new ConflictException(
+        'Contact with this phone number already exists',
+      );
     }
 
     return this.prisma.developerContact.create({
@@ -140,21 +152,15 @@ export class ContactsService {
    * التحقق من حدود جهات الاتصال
    */
   private async checkContactLimit(userId: string) {
-    const subscription = await this.prisma.developerSubscription.findUnique({
-      where: { userId },
-      select: { plan: true },
-    });
-
-    const plan = subscription?.plan || 'FREE';
-    const limits = DEVELOPER_PLAN_LIMITS[plan];
-
-    const currentCount = await this.prisma.developerContact.count({
-      where: { userId },
-    });
-
-    if (currentCount >= limits.maxContacts) {
+    const allowed = await this.devSubscriptions.checkResourceLimit(
+      userId,
+      'contacts',
+    );
+    if (!allowed) {
+      const limits = await this.devSubscriptions.getPlanLimits(userId);
+      const max = resolveLimitValue(limits.maxContacts);
       throw new ForbiddenException(
-        `Contact limit reached (${limits.maxContacts}). Upgrade your plan for more.`,
+        `Contact limit reached (${max}). Upgrade to Pro for more.`,
       );
     }
   }

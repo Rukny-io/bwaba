@@ -133,7 +133,7 @@ export class ValidationService {
           const minDate = new Date(rules.min);
           if (dateValue < minDate) {
             errors.push(
-              `يجب ألا يسبق "${fieldLabel}" تاريخ ${minDate.toLocaleDateString('iq-en')}`,
+              `يجب ألا يسبق "${fieldLabel}" تاريخ ${minDate.toLocaleDateString('en-US')}`,
             );
           }
         }
@@ -141,11 +141,31 @@ export class ValidationService {
           const maxDate = new Date(rules.max);
           if (dateValue > maxDate) {
             errors.push(
-              `يجب ألا يتجاوز "${fieldLabel}" تاريخ ${maxDate.toLocaleDateString('iq-en')}`,
+              `يجب ألا يتجاوز "${fieldLabel}" تاريخ ${maxDate.toLocaleDateString('en-US')}`,
             );
           }
         }
       }
+    }
+
+    if (fieldType === 'NPS') {
+      const num = Number(value);
+      if (isNaN(num) || num < 0 || num > 10) {
+        errors.push(`اختر قيمة بين 0 و 10 في "${fieldLabel}"`);
+      }
+    }
+
+    if (fieldType === 'LEGAL_CONSENT' && required && value !== true) {
+      errors.push(`يجب الموافقة على "${fieldLabel}"`);
+    }
+
+    if (
+      fieldType === 'YES_NO' &&
+      required &&
+      value !== true &&
+      value !== false
+    ) {
+      errors.push(`حقل "${fieldLabel}" إلزامي`);
     }
 
     return {

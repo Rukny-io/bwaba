@@ -10,7 +10,8 @@ export class PushSubscriptionService {
     // Initialize web-push with VAPID keys from environment
     const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-    const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:notifications@rukny.work';
+    const vapidSubject =
+      process.env.VAPID_SUBJECT || 'mailto:notifications@rukny.work';
 
     // Only set VAPID details if keys are properly configured (not placeholders)
     if (
@@ -25,10 +26,14 @@ export class PushSubscriptionService {
         webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
         this.logger.log('Web Push notifications initialized successfully');
       } catch (error) {
-        this.logger.warn(`Invalid VAPID keys - push notifications disabled: ${error.message}`);
+        this.logger.warn(
+          `Invalid VAPID keys - push notifications disabled: ${error.message}`,
+        );
       }
     } else {
-      this.logger.warn('⚠️ VAPID keys not configured - Web Push notifications disabled. Run: npx web-push generate-vapid-keys');
+      this.logger.warn(
+        '⚠️ VAPID keys not configured - Web Push notifications disabled. Run: npx web-push generate-vapid-keys',
+      );
     }
   }
 
@@ -38,7 +43,7 @@ export class PushSubscriptionService {
   async subscribeToPush(
     userId: string,
     subscription: PushSubscriptionInput,
-    userAgent?: string
+    userAgent?: string,
   ) {
     try {
       const existing = await this.prisma.pushSubscription.findUnique({
@@ -120,15 +125,17 @@ export class PushSubscriptionService {
   /**
    * Send push notification to user
    */
-  async sendPushToUser(
-    userId: string,
-    notification: PushNotificationPayload
-  ) {
+  async sendPushToUser(userId: string, notification: PushNotificationPayload) {
     // Check if VAPID keys are configured
-    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY ||
-        process.env.VAPID_PUBLIC_KEY.includes('YOUR_VAPID') ||
-        process.env.VAPID_PRIVATE_KEY.includes('YOUR_VAPID')) {
-      this.logger.warn('VAPID keys not configured - cannot send push notifications');
+    if (
+      !process.env.VAPID_PUBLIC_KEY ||
+      !process.env.VAPID_PRIVATE_KEY ||
+      process.env.VAPID_PUBLIC_KEY.includes('YOUR_VAPID') ||
+      process.env.VAPID_PRIVATE_KEY.includes('YOUR_VAPID')
+    ) {
+      this.logger.warn(
+        'VAPID keys not configured - cannot send push notifications',
+      );
       return { sent: 0, failed: 0 };
     }
 
@@ -159,7 +166,7 @@ export class PushSubscriptionService {
                 p256dh: subscription.p256dh,
               },
             },
-            payload
+            payload,
           );
 
           // Update last used time
@@ -170,7 +177,9 @@ export class PushSubscriptionService {
 
           sent++;
         } catch (error: any) {
-          this.logger.warn(`Failed to send push notification: ${error.message}`);
+          this.logger.warn(
+            `Failed to send push notification: ${error.message}`,
+          );
 
           // Mark subscription as inactive if endpoint is invalid
           if (error.statusCode === 410 || error.statusCode === 404) {
@@ -196,10 +205,15 @@ export class PushSubscriptionService {
    */
   async broadcastPush(notification: PushNotificationPayload) {
     // Check if VAPID keys are configured
-    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY ||
-        process.env.VAPID_PUBLIC_KEY.includes('YOUR_VAPID') ||
-        process.env.VAPID_PRIVATE_KEY.includes('YOUR_VAPID')) {
-      this.logger.warn('VAPID keys not configured - cannot broadcast push notifications');
+    if (
+      !process.env.VAPID_PUBLIC_KEY ||
+      !process.env.VAPID_PRIVATE_KEY ||
+      process.env.VAPID_PUBLIC_KEY.includes('YOUR_VAPID') ||
+      process.env.VAPID_PRIVATE_KEY.includes('YOUR_VAPID')
+    ) {
+      this.logger.warn(
+        'VAPID keys not configured - cannot broadcast push notifications',
+      );
       return { sent: 0, failed: 0, total: 0 };
     }
 
@@ -229,7 +243,7 @@ export class PushSubscriptionService {
                 p256dh: subscription.p256dh,
               },
             },
-            payload
+            payload,
           );
 
           await this.prisma.pushSubscription.update({
@@ -251,7 +265,9 @@ export class PushSubscriptionService {
 
       return { sent, failed, total: subscriptions.length };
     } catch (error) {
-      this.logger.error(`Error broadcasting push notification: ${error.message}`);
+      this.logger.error(
+        `Error broadcasting push notification: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -270,10 +286,14 @@ export class PushSubscriptionService {
         },
       });
 
-      this.logger.debug(`Cleaned up ${result.count} inactive push subscriptions`);
+      this.logger.debug(
+        `Cleaned up ${result.count} inactive push subscriptions`,
+      );
       return result.count;
     } catch (error) {
-      this.logger.error(`Error cleaning up inactive subscriptions: ${error.message}`);
+      this.logger.error(
+        `Error cleaning up inactive subscriptions: ${error.message}`,
+      );
       throw error;
     }
   }

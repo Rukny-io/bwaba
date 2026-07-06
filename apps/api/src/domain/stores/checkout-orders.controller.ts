@@ -177,30 +177,31 @@ export class CheckoutOrdersController {
       }
 
       // Create a single order with all items
-      const order = await this.ordersService.createDirectMultiItem(
-        userId,
-        {
-          addressId: createOrderDto.shippingAddressId,
-          customerNote: createOrderDto.notes,
-          phoneNumber: sessionPhone || createOrderDto.phoneNumber,
-          paymentMethod: createOrderDto.paymentMethod || 'CASH',
-          items: createOrderDto.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            ...(item.variantId ? { variantId: item.variantId } : {}),
-          })),
-        },
-      );
+      const order = await this.ordersService.createDirectMultiItem(userId, {
+        addressId: createOrderDto.shippingAddressId,
+        customerNote: createOrderDto.notes,
+        phoneNumber: sessionPhone || createOrderDto.phoneNumber,
+        paymentMethod: createOrderDto.paymentMethod || 'CASH',
+        items: createOrderDto.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+        })),
+      });
 
       console.log(`✅ Order created: ${order.id}`);
 
       // 💳 If payment method is QASEH_CARD, initiate payment
-      if (createOrderDto.paymentMethod === 'QASEH_CARD' && this.qasehPayment.isConfigured()) {
+      if (
+        createOrderDto.paymentMethod === 'QASEH_CARD' &&
+        this.qasehPayment.isConfigured()
+      ) {
         try {
           const itemDescriptions = createOrderDto.items
             .map((item, i) => `${i + 1}. x${item.quantity}`)
             .join(', ');
-          const description = `طلب ${order.orderNumber}: ${itemDescriptions}`.substring(0, 250);
+          const description =
+            `طلب ${order.orderNumber}: ${itemDescriptions}`.substring(0, 250);
 
           const payment = await this.qasehPayment.createPayment({
             orderId: order.orderNumber,

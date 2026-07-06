@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 
@@ -12,6 +12,17 @@ export interface WhatsAppBusinessOtpResult {
   status: 'accepted' | 'failed';
 }
 
+export class WhatsAppBusinessError extends Error {
+  constructor(
+    message: string,
+    readonly metaCode?: number,
+    readonly userMessage?: string,
+  ) {
+    super(message);
+    this.name = 'WhatsAppBusinessError';
+  }
+}
+
 /**
  * 📱 خدمة WhatsApp Business API (Meta Cloud API)
  *
@@ -21,7 +32,7 @@ export interface WhatsAppBusinessOtpResult {
  * - يدعم One-Time Password buttons
  */
 @Injectable()
-export class WhatsAppBusinessService {
+export class WhatsAppBusinessService implements OnModuleInit {
   private readonly logger = new Logger(WhatsAppBusinessService.name);
   private readonly client: AxiosInstance;
   private readonly phoneNumberId: string;
@@ -69,6 +80,29 @@ export class WhatsAppBusinessService {
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (!this.enabled) return;
+    const status = await this.checkStatus();
+    if (!status.connected) {
+      this.logger.error(
+        '❌ WhatsApp Business token/phone ID invalid — OTP sends will fail (Meta auth error). Regenerate WHATSAPP_BUSINESS_TOKEN.',
+      );
+    }
+  }
+
+  private mapMetaError(code: number | undefined, rawMessage: string): string {
+    switch (code) {
+      case 190:
+        return 'توكن WhatsApp Business غير صالح أو منتهٍ. حدّث WHATSAPP_BUSINESS_TOKEN من Meta Business Suite.';
+      case 100:
+        return 'إعدادات القالب أو رقم الهاتف غير صحيحة. تحقق من WHATSAPP_AUTH_TEMPLATE_NAME و WHATSAPP_PHONE_NUMBER_ID.';
+      case 131026:
+        return 'تعذّر التسليم إلى هذا الرقم. تأكد من صحة الرقم مع رمز الدولة.';
+      default:
+        return rawMessage;
+    }
   }
 
   /**
@@ -127,9 +161,7 @@ export class WhatsAppBusinessService {
       const messageId =
         response.data?.messages?.[0]?.id || response.data?.message_id || '';
 
-      this.logger.log(
-        `✅ WhatsApp Business OTP sent: ${messageId}`,
-      );
+      this.logger.log(`✅ WhatsApp Business OTP sent: ${messageId}`);
 
       return { messageId, status: 'accepted' };
     } catch (error) {
@@ -145,7 +177,16 @@ export class WhatsAppBusinessService {
         `❌ WhatsApp Business OTP failed: ${errorMessage} (code: ${errorCode})`,
       );
 
-      throw new Error(`فشل إرسال رمز التحقق عبر واتساب: ${errorMessage}`);
+      const userMessage = this.mapMetaError(
+        typeof errorCode === 'number' ? errorCode : undefined,
+        errorMessage,
+      );
+
+      throw new WhatsAppBusinessError(
+        `فشل إرسال رمز التحقق عبر واتساب: ${errorMessage}`,
+        typeof errorCode === 'number' ? errorCode : undefined,
+        userMessage,
+      );
     }
   }
 
@@ -174,8 +215,7 @@ export class WhatsAppBusinessService {
         },
       );
 
-      const messageId =
-        response.data?.messages?.[0]?.id || '';
+      const messageId = response.data?.messages?.[0]?.id || '';
 
       return { messageId, status: 'accepted' };
     } catch (error) {

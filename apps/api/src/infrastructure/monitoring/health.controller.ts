@@ -36,11 +36,11 @@ export class HealthController {
   @Get('ready')
   async readinessCheck() {
     const health = await this.monitoringService.getHealthStatus();
-    
+
     if (health.status === 'unhealthy') {
       return { ready: false, reason: 'Critical services down' };
     }
-    
+
     return { ready: true };
   }
 

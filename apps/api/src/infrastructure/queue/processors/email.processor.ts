@@ -30,7 +30,10 @@ export class EmailProcessor {
 
   @Process('verification')
   async handleVerification(
-    job: Job<{ to: string; context: { code: string; name: string; ipAddress?: string } }>,
+    job: Job<{
+      to: string;
+      context: { code: string; name: string; ipAddress?: string };
+    }>,
   ) {
     this.logger.debug(`Processing verification email to ${job.data.to}`);
 
@@ -49,7 +52,10 @@ export class EmailProcessor {
 
   @Process('security-alert')
   async handleSecurityAlert(
-    job: Job<{ to: string; context: { alertType: string; [key: string]: any } }>,
+    job: Job<{
+      to: string;
+      context: { alertType: string; [key: string]: any };
+    }>,
   ) {
     this.logger.debug(`Processing security alert email to ${job.data.to}`);
 
@@ -67,7 +73,9 @@ export class EmailProcessor {
             os: details.os,
             ipAddress: details.ipAddress,
             location: details.location,
-            timestamp: details.timestamp ? new Date(details.timestamp) : new Date(),
+            timestamp: details.timestamp
+              ? new Date(details.timestamp)
+              : new Date(),
           },
         );
         break;
@@ -79,7 +87,9 @@ export class EmailProcessor {
           {
             ipAddress: details.ipAddress,
             location: details.location,
-            timestamp: details.timestamp ? new Date(details.timestamp) : new Date(),
+            timestamp: details.timestamp
+              ? new Date(details.timestamp)
+              : new Date(),
           },
         );
         break;
@@ -92,7 +102,9 @@ export class EmailProcessor {
             failedAttempts: details.failedAttempts || 1,
             ipAddress: details.ipAddress,
             timeWindow: details.timeWindow || 60,
-            timestamp: details.timestamp ? new Date(details.timestamp) : new Date(),
+            timestamp: details.timestamp
+              ? new Date(details.timestamp)
+              : new Date(),
           },
         );
         break;

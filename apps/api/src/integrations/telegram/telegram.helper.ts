@@ -45,7 +45,7 @@ export class TelegramIntegrationHelper {
       const device =
         deviceInfo.device || `${deviceInfo.browser} on ${deviceInfo.os}`;
       const location = securityInfo.location || 'Unknown';
-      const time = new Date().toLocaleString('ar-SA');
+      const time = new Date().toLocaleString('en-US');
 
       const message = TelegramMessageTemplates.getLoginNotification({
         device,
@@ -129,7 +129,7 @@ export class TelegramIntegrationHelper {
         return;
       }
 
-      const time = new Date().toLocaleString('ar-SA');
+      const time = new Date().toLocaleString('en-US');
       const message = TelegramMessageTemplates.getPasswordChangeNotification({
         time,
         device: deviceInfo?.device,

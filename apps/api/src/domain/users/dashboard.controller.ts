@@ -149,7 +149,10 @@ export class DashboardController {
     },
   })
   async getChartData(@Request() req, @Query('days') days?: number) {
-    return this.dashboardService.getChartData(req.user.id, days ? Number(days) : 7);
+    return this.dashboardService.getChartData(
+      req.user.id,
+      days ? Number(days) : 7,
+    );
   }
 
   @Get('traffic')

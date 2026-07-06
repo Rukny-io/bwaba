@@ -273,7 +273,7 @@ export class WhatsappService {
    * تنسيق السعر بالدينار العراقي
    */
   private formatPrice(price: number): string {
-    return `${price.toLocaleString('ar-IQ')} د.ع`;
+    return `${price.toLocaleString('en-US')} د.ع`;
   }
 
   /**

@@ -58,12 +58,17 @@ export class YouTubeController {
     const redirectBase = `${this.frontendUrl}/app/links`;
 
     if (error || !code) {
-      return res.redirect(`${redirectBase}?youtube=error&reason=${error ?? 'no_code'}`);
+      return res.redirect(
+        `${redirectBase}?youtube=error&reason=${error ?? 'no_code'}`,
+      );
     }
 
     try {
       const userId = Buffer.from(state, 'base64url').toString('utf8');
-      const result = await this.youtubeService.exchangeCodeAndSave(code, userId);
+      const result = await this.youtubeService.exchangeCodeAndSave(
+        code,
+        userId,
+      );
       return res.redirect(
         `${redirectBase}?youtube=success&channel=${encodeURIComponent(result.channelTitle ?? '')}`,
       );
@@ -126,7 +131,11 @@ export class YouTubeController {
     @Req() req: any,
     @Body() body: { type: 'LATEST_VIDEOS' | 'SINGLE_VIDEO'; videoUrl?: string },
   ) {
-    return this.youtubeService.createBlock(req.user.id, body.type, body.videoUrl);
+    return this.youtubeService.createBlock(
+      req.user.id,
+      body.type,
+      body.videoUrl,
+    );
   }
 
   /**

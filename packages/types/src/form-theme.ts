@@ -114,7 +114,7 @@ export const DEFAULT_FORM_THEME: FormTheme = {
     },
   },
   typography: {
-    fontFamily: 'Cairo',
+    fontFamily: 'Thmanyah Sans',
     sizes: {
       heading: '2xl',
       body: 'base',
@@ -141,6 +141,7 @@ export const DEFAULT_FORM_THEME: FormTheme = {
 
 // خيارات الخطوط العربية
 export const ARABIC_FONTS = [
+  { value: 'Thmanyah Sans', label: 'Thmanyah - ثمانية', preview: 'مرحباً بك' },
   { value: 'Cairo', label: 'Cairo - القاهرة', preview: 'مرحباً بك' },
   { value: 'Tajawal', label: 'Tajawal - تجوال', preview: 'مرحباً بك' },
   { value: 'Almarai', label: 'Almarai - المرعي', preview: 'مرحباً بك' },

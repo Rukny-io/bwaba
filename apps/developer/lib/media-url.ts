@@ -1,0 +1,46 @@
+function isS3Url(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return (
+      host.includes('.s3.') ||
+      host.includes('.s3-') ||
+      host.startsWith('s3.') ||
+      host.startsWith('s3-')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function extractS3KeyFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    let path = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+
+    if (!path || path.includes('..')) return null;
+
+    const host = parsed.hostname;
+    if (host.startsWith('s3.') || host.startsWith('s3-')) {
+      const slash = path.indexOf('/');
+      if (slash !== -1) path = path.slice(slash + 1);
+    }
+
+    return path || null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveMediaUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('/api/')) return url;
+  if (url.startsWith('/uploads/')) return null;
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (!isS3Url(url)) return url;
+    const key = extractS3KeyFromUrl(url);
+    return key ? `/api/media/${key}` : null;
+  }
+  const key = url.replace(/^\/+/, '');
+  return `/api/media/${key}`;
+}

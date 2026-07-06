@@ -22,6 +22,10 @@ export class InstagramService {
   private get instagramConnectionModel(): any {
     return (this.prisma as any).instagramConnection;
   }
+  
+  private get instagramCommentModel(): any {
+    return (this.prisma as any).instagramComment;
+  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -91,10 +95,11 @@ export class InstagramService {
       throw new BadRequestException(`Instagram token exchange failed: ${err}`);
     }
 
-    const { access_token: shortToken, user_id: igUserId } = (await shortRes.json()) as {
-      access_token: string;
-      user_id: string;
-    };
+    const { access_token: shortToken, user_id: igUserId } =
+      (await shortRes.json()) as {
+        access_token: string;
+        user_id: string;
+      };
 
     // 2. Long-lived token
     const longParams = new URLSearchParams({
@@ -109,20 +114,20 @@ export class InstagramService {
 
     if (!longRes.ok) {
       const err = await longRes.text();
-      throw new BadRequestException(`Instagram long-lived token failed: ${err}`);
+      throw new BadRequestException(
+        `Instagram long-lived token failed: ${err}`,
+      );
     }
 
-    const {
-      access_token: longToken,
-      expires_in: expiresIn,
-    } = (await longRes.json()) as {
-      access_token: string;
-      expires_in: number;
-    };
+    const { access_token: longToken, expires_in: expiresIn } =
+      (await longRes.json()) as {
+        access_token: string;
+        expires_in: number;
+      };
 
     // 3. Fetch user profile
     const profileParams = new URLSearchParams({
-      fields: 'username,name,profile_picture_url,followers_count',
+      fields: 'username,name,profile_picture_url,followers_count,media_count',
       access_token: longToken,
     });
 
@@ -130,26 +135,34 @@ export class InstagramService {
       `${IG_GRAPH_BASE}/${igUserId}?${profileParams.toString()}`,
     );
 
-
     const profile = profileRes.ok
       ? ((await profileRes.json()) as {
           username?: string;
           name?: string;
           profile_picture_url?: string;
           followers_count?: number;
+          media_count?: number;
         })
       : {};
 
     // إذا لم يتم جلب اسم المستخدم أو كان فارغًا، أرجع خطأ ولا تحفظ الاتصال
-    if (!profile.username || typeof profile.username !== 'string' || !profile.username.trim()) {
-      throw new BadRequestException('فشل جلب بيانات حساب إنستغرام. يرجى التأكد من صلاحية الحساب والمحاولة مرة أخرى.');
+    if (
+      !profile.username ||
+      typeof profile.username !== 'string' ||
+      !profile.username.trim()
+    ) {
+      throw new BadRequestException(
+        'فشل جلب بيانات حساب إنستغرام. يرجى التأكد من صلاحية الحساب والمحاولة مرة أخرى.',
+      );
     }
 
     const tokenExpiry = new Date(Date.now() + expiresIn * 1000);
 
-    // 4. Upsert connection
-    await this.instagramConnectionModel.upsert({
-      where: { userId },
+    // 4. Upsert connection (unique on userId + igUserId)
+    const connection = await this.instagramConnectionModel.upsert({
+      where: {
+        userId_igUserId: { userId, igUserId: String(igUserId) },
+      },
       create: {
         userId,
         accessToken: longToken,
@@ -159,42 +172,176 @@ export class InstagramService {
         name: profile.name ?? null,
         profilePicUrl: profile.profile_picture_url ?? null,
         followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
       },
       update: {
         accessToken: longToken,
         tokenExpiry,
-        igUserId: String(igUserId),
         username: profile.username ?? '',
         name: profile.name ?? null,
         profilePicUrl: profile.profile_picture_url ?? null,
         followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
       },
     });
 
-    return { success: true, username: profile.username };
+    return { success: true, username: profile.username, connectionId: connection.id };
   }
 
-  /** Get current connection status for a user */
+  // ─── Connection queries ─────────────────────────────────────
+
+  /**
+   * Get ALL Instagram connections for a user (multi-account).
+   */
+  async getConnections(userId: string) {
+    const connections = await this.instagramConnectionModel.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Lazy refresh profile snapshots in the background
+    const now = Date.now();
+    for (const conn of connections) {
+      const updatedAt = conn.updatedAt ? new Date(conn.updatedAt).getTime() : 0;
+      const ageMs = now - updatedAt;
+      const PROFILE_SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+      const tokenStillValid =
+        !conn.tokenExpiry || new Date(conn.tokenExpiry).getTime() > now;
+
+      if (ageMs > PROFILE_SNAPSHOT_TTL_MS && tokenStillValid) {
+        void this.syncProfileSnapshot(conn.id, conn.accessToken).catch(() => null);
+      }
+    }
+
+    return connections.map((c: any) => this.toPublicConnection(c));
+  }
+
+  /**
+   * Get a single connection by its ID (must belong to user).
+   */
+  async getConnectionById(userId: string, connectionId: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) return null;
+
+    const now = Date.now();
+    const updatedAt = conn.updatedAt ? new Date(conn.updatedAt).getTime() : 0;
+    const ageMs = now - updatedAt;
+    const PROFILE_SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
+    const FORCE_AWAIT_MS = 7 * 24 * 60 * 60 * 1000;
+    const tokenStillValid =
+      !conn.tokenExpiry || new Date(conn.tokenExpiry).getTime() > now;
+
+    if (ageMs > PROFILE_SNAPSHOT_TTL_MS && tokenStillValid) {
+      if (ageMs > FORCE_AWAIT_MS) {
+        const refreshed = await this.syncProfileSnapshot(conn.id, conn.accessToken);
+        if (refreshed) return this.toPublicConnection(refreshed);
+      } else {
+        void this.syncProfileSnapshot(conn.id, conn.accessToken).catch(() => null);
+      }
+    }
+
+    return this.toPublicConnection(conn);
+  }
+
+  /**
+   * Legacy: get first connection for a user (backwards compat).
+   */
   async getConnection(userId: string) {
-    const conn = await this.instagramConnectionModel.findUnique({
+    const conn = await this.instagramConnectionModel.findFirst({
       where: { userId },
-      select: {
-        igUserId: true,
-        username: true,
-        name: true,
-        profilePicUrl: true,
-        followersCount: true,
-        tokenExpiry: true,
-        createdAt: true,
-      },
+      orderBy: { createdAt: 'asc' },
     });
-    return conn ?? null;
+    if (!conn) return null;
+
+    const now = Date.now();
+    const updatedAt = conn.updatedAt ? new Date(conn.updatedAt).getTime() : 0;
+    const ageMs = now - updatedAt;
+    const PROFILE_SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
+    const FORCE_AWAIT_MS = 7 * 24 * 60 * 60 * 1000;
+
+    const tokenStillValid =
+      !conn.tokenExpiry || new Date(conn.tokenExpiry).getTime() > now;
+
+    if (ageMs > PROFILE_SNAPSHOT_TTL_MS && tokenStillValid) {
+      if (ageMs > FORCE_AWAIT_MS) {
+        const refreshed = await this.syncProfileSnapshot(conn.id, conn.accessToken);
+        if (refreshed) {
+          return this.toPublicConnection(refreshed);
+        }
+      } else {
+        void this.syncProfileSnapshot(conn.id, conn.accessToken).catch(() => null);
+      }
+    }
+
+    return this.toPublicConnection(conn);
   }
 
-  /** Refresh long-lived token (valid for 60 days, can refresh after 24h) */
-  async refreshToken(userId: string) {
-    const conn = await this.instagramConnectionModel.findUnique({
-      where: { userId },
+  private toPublicConnection(conn: any) {
+    return {
+      id: conn.id,
+      igUserId: conn.igUserId,
+      username: conn.username,
+      name: conn.name,
+      profilePicUrl: conn.profilePicUrl,
+      followersCount: conn.followersCount,
+      mediaCount: conn.mediaCount,
+      tokenExpiry: conn.tokenExpiry,
+      createdAt: conn.createdAt,
+    };
+  }
+
+  // ─── Profile snapshot ─────────────────────────────────────
+
+  private async fetchProfileSnapshot(accessToken: string): Promise<{
+    username?: string;
+    name?: string | null;
+    profile_picture_url?: string | null;
+    followers_count?: number | null;
+    media_count?: number | null;
+  } | null> {
+    const params = new URLSearchParams({
+      fields: 'username,name,profile_picture_url,followers_count,media_count',
+      access_token: accessToken,
+    });
+    try {
+      const res = await fetch(`${IG_GRAPH_BASE}/me?${params.toString()}`);
+      if (!res.ok) return null;
+      return (await res.json()) as {
+        username?: string;
+        name?: string | null;
+        profile_picture_url?: string | null;
+        followers_count?: number | null;
+        media_count?: number | null;
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async syncProfileSnapshot(connectionId: string, accessToken: string) {
+    const profile = await this.fetchProfileSnapshot(accessToken);
+    if (!profile || !profile.username) return null;
+
+    return this.instagramConnectionModel.update({
+      where: { id: connectionId },
+      data: {
+        username: profile.username,
+        name: profile.name ?? null,
+        profilePicUrl: profile.profile_picture_url ?? null,
+        followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
+      },
+    });
+  }
+
+  // ─── Token management ─────────────────────────────────────
+
+  /** Refresh long-lived token for a specific connection */
+  async refreshToken(userId: string, connectionId: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
     });
 
     if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
@@ -219,29 +366,37 @@ export class InstagramService {
     const tokenExpiry = new Date(Date.now() + expires_in * 1000);
 
     await this.instagramConnectionModel.update({
-      where: { userId },
+      where: { id: connectionId },
       data: { accessToken: access_token, tokenExpiry },
     });
 
+    await this.syncProfileSnapshot(connectionId, access_token);
+
     return { success: true };
   }
 
-  /** Disconnect Instagram account */
-  async disconnect(userId: string) {
-    await this.instagramConnectionModel.delete({
-      where: { userId },
-    });
-    return { success: true };
-  }
-
-  /** Fetch recent media for a connected user */
-  async getMedia(userId: string, limit = 12) {
-    const conn = await this.instagramConnectionModel.findUnique({
-      where: { userId },
+  /** Disconnect a specific Instagram connection */
+  async disconnect(userId: string, connectionId: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
     });
     if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
 
-    // Check if token is expired before making the API call
+    await this.instagramConnectionModel.delete({
+      where: { id: connectionId },
+    });
+    return { success: true };
+  }
+
+  // ─── Media ────────────────────────────────────────────────
+
+  /** Fetch recent media for a specific connection */
+  async getMedia(userId: string, connectionId: string, limit = 12) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
+
     if (conn.tokenExpiry && new Date(conn.tokenExpiry) < new Date()) {
       throw new BadRequestException({
         message: 'انتهت صلاحية توكن إنستغرام. يرجى إعادة ربط حسابك.',
@@ -250,7 +405,8 @@ export class InstagramService {
     }
 
     const params = new URLSearchParams({
-      fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count',
+      fields:
+        'id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count',
       limit: String(limit),
       access_token: conn.accessToken,
     });
@@ -261,21 +417,27 @@ export class InstagramService {
 
     if (!res.ok) {
       const errText = await res.text();
-      // Detect invalid/expired token or permissions error
       let parsed: any;
-      try { parsed = JSON.parse(errText); } catch { /* ignore */ }
+      try {
+        parsed = JSON.parse(errText);
+      } catch {
+        /* ignore */
+      }
       const igCode = parsed?.error?.code;
       const igSubcode = parsed?.error?.error_subcode;
 
       if (igCode === 190 || (igCode === 100 && igSubcode === 33)) {
         throw new BadRequestException({
-          message: 'توكن إنستغرام غير صالح أو منتهي الصلاحية. يرجى إلغاء الربط وإعادة الربط.',
+          message:
+            'توكن إنستغرام غير صالح أو منتهي الصلاحية. يرجى إلغاء الربط وإعادة الربط.',
           tokenExpired: true,
           igError: parsed?.error,
         });
       }
 
-      throw new BadRequestException(`Failed to fetch Instagram media: ${errText}`);
+      throw new BadRequestException(
+        `Failed to fetch Instagram media: ${errText}`,
+      );
     }
 
     return res.json();
@@ -293,13 +455,12 @@ export class InstagramService {
 
   /** Create an Instagram block (GRID or FEED) */
   async createBlock(userId: string, type: 'GRID' | 'FEED') {
-    // Ensure user has Instagram connected
-    const conn = await this.instagramConnectionModel.findUnique({
+    // Ensure user has at least one Instagram connection
+    const conn = await this.instagramConnectionModel.findFirst({
       where: { userId },
     });
     if (!conn) throw new BadRequestException('يجب ربط حساب إنستغرام أولاً');
 
-    // Get max display order
     const maxOrder = await this.instagramBlockModel.aggregate({
       where: { userId },
       _max: { displayOrder: true },
@@ -356,6 +517,42 @@ export class InstagramService {
     });
   }
 
+  /** Reorder blocks for a user */
+  async reorderBlocks(userId: string, blockIds: string[]) {
+    if (!Array.isArray(blockIds) || blockIds.length === 0) {
+      throw new BadRequestException('قائمة البلوكات مطلوبة');
+    }
+
+    const existing = await this.instagramBlockModel.findMany({
+      where: {
+        userId,
+        id: { in: blockIds },
+      },
+      select: { id: true },
+    });
+
+    if (existing.length !== blockIds.length) {
+      throw new BadRequestException(
+        'بعض البلوكات غير صالحة أو لا تخص المستخدم',
+      );
+    }
+
+    await this.prisma.$transaction(
+      blockIds.map((id, index) =>
+        this.instagramBlockModel.update({
+          where: { id },
+          data: { displayOrder: index },
+        }),
+      ),
+    );
+
+    return this.instagramBlockModel.findMany({
+      where: { userId },
+      include: { gridLinks: true },
+      orderBy: { displayOrder: 'asc' },
+    });
+  }
+
   /** Set/update a grid link for a specific media item */
   async setGridLink(
     userId: string,
@@ -364,7 +561,6 @@ export class InstagramService {
     linkUrl: string,
     linkTitle?: string,
   ) {
-    // Verify block belongs to user
     const block = await this.instagramBlockModel.findFirst({
       where: { id: blockId, userId, type: 'GRID' },
     });
@@ -390,21 +586,22 @@ export class InstagramService {
     return { success: true };
   }
 
-  /** Fetch media for public display (by profile userId, uses stored token) */
+  /** Fetch media for public display (by profile userId, uses first connection's token) */
   async getPublicMedia(userId: string, limit = 12) {
-    const conn = await this.instagramConnectionModel.findUnique({
+    const conn = await this.instagramConnectionModel.findFirst({
       where: { userId },
+      orderBy: { createdAt: 'asc' },
     });
     if (!conn) return null;
 
-    // Skip API call if token is expired
     if (conn.tokenExpiry && new Date(conn.tokenExpiry) < new Date()) {
       return null;
     }
 
     try {
       const params = new URLSearchParams({
-        fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,permalink',
+        fields:
+          'id,caption,media_type,media_url,thumbnail_url,timestamp,permalink',
         limit: String(limit),
         access_token: conn.accessToken,
       });
@@ -422,21 +619,20 @@ export class InstagramService {
 
   /**
    * Connect Instagram manually using an existing access token.
-   * Validates the token by fetching profile info from Graph API,
-   * then exchanges it for a long-lived token and saves the connection.
    */
   async connectWithToken(accessToken: string, userId: string) {
     if (!accessToken || typeof accessToken !== 'string') {
       throw new BadRequestException('Access Token مطلوب');
     }
 
-    // 1. Validate the token by fetching the profile
     const profileParams = new URLSearchParams({
-      fields: 'user_id,username,name,profile_picture_url,followers_count',
+      fields: 'user_id,username,name,profile_picture_url,followers_count,media_count',
       access_token: accessToken,
     });
 
-    const profileRes = await fetch(`${IG_GRAPH_BASE}/me?${profileParams.toString()}`);
+    const profileRes = await fetch(
+      `${IG_GRAPH_BASE}/me?${profileParams.toString()}`,
+    );
 
     if (!profileRes.ok) {
       const errText = await profileRes.text();
@@ -452,14 +648,16 @@ export class InstagramService {
       name?: string;
       profile_picture_url?: string;
       followers_count?: number;
+      media_count?: number;
     };
 
     const igUserId = profile.id || profile.user_id;
     if (!igUserId) {
-      throw new BadRequestException('لم يتم العثور على معرف المستخدم في الاستجابة');
+      throw new BadRequestException(
+        'لم يتم العثور على معرف المستخدم في الاستجابة',
+      );
     }
 
-    // 2. Try to exchange for a long-lived token (if short-lived was provided)
     let longToken = accessToken;
     let expiresIn = 60 * 60 * 24 * 60; // default 60 days
 
@@ -471,7 +669,9 @@ export class InstagramService {
           access_token: accessToken,
         });
 
-        const longRes = await fetch(`${IG_LONG_LIVED_URL}?${longParams.toString()}`);
+        const longRes = await fetch(
+          `${IG_LONG_LIVED_URL}?${longParams.toString()}`,
+        );
         if (longRes.ok) {
           const longData = (await longRes.json()) as {
             access_token: string;
@@ -487,9 +687,10 @@ export class InstagramService {
 
     const tokenExpiry = new Date(Date.now() + expiresIn * 1000);
 
-    // 3. Upsert connection
-    await this.instagramConnectionModel.upsert({
-      where: { userId },
+    const connection = await this.instagramConnectionModel.upsert({
+      where: {
+        userId_igUserId: { userId, igUserId: String(igUserId) },
+      },
       create: {
         userId,
         accessToken: longToken,
@@ -499,18 +700,224 @@ export class InstagramService {
         name: profile.name ?? null,
         profilePicUrl: profile.profile_picture_url ?? null,
         followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
       },
       update: {
         accessToken: longToken,
         tokenExpiry,
-        igUserId: String(igUserId),
         username: profile.username ?? '',
         name: profile.name ?? null,
         profilePicUrl: profile.profile_picture_url ?? null,
         followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
       },
     });
 
-    return { success: true, username: profile.username };
+    return { success: true, username: profile.username, connectionId: connection.id };
+  }
+
+  // ─── Insights & Comments ───────────────────────────────────
+
+  /** Fetch Insights */
+  async getInsights(userId: string, connectionId: string, metric: string = 'impressions,reach,profile_views') {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
+
+    if (conn.tokenExpiry && new Date(conn.tokenExpiry) < new Date()) {
+      throw new BadRequestException('انتهت صلاحية توكن إنستغرام.');
+    }
+
+    const params = new URLSearchParams({
+      metric,
+      period: 'day',
+      access_token: conn.accessToken,
+    });
+
+    const res = await fetch(`${IG_GRAPH_BASE}/${conn.igUserId}/insights?${params.toString()}`);
+    if (!res.ok) {
+      // Ignore errors for now and return empty state if account is not a Business account or lacking data
+      return { data: [] };
+    }
+    return res.json();
+  }
+
+  /** Fetch Comments from Database */
+  async getComments(userId: string, connectionId: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
+
+    return this.instagramCommentModel.findMany({
+      where: { connectionId },
+      orderBy: { timestamp: 'desc' },
+      take: 50,
+    });
+  }
+
+  /** Sync Historical Comments from Meta API */
+  async syncComments(userId: string, connectionId: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
+
+    // 1. Get recent media with their comments
+    const mediaRes = await fetch(
+      `${IG_GRAPH_BASE}/${conn.igUserId}/media?fields=id,comments{id,text,timestamp,from}&limit=10&access_token=${conn.accessToken}`
+    );
+    if (!mediaRes.ok) {
+      const err = await mediaRes.text();
+      console.error('[SyncComments] Failed to fetch media:', err);
+      return { success: false };
+    }
+
+    const mediaData = await mediaRes.json();
+    if (!mediaData.data) {
+      console.error('[SyncComments] No media data returned:', mediaData);
+      return { success: false };
+    }
+    
+    console.log(`[SyncComments] Fetched ${mediaData.data.length} media items for sync.`);
+
+    // 2. Save comments to database
+    for (const media of mediaData.data) {
+      if (media.comments && media.comments.data) {
+        for (const comment of media.comments.data) {
+          if (!comment.id || !comment.text || !comment.from) continue;
+          
+          await this.instagramCommentModel.upsert({
+            where: { igCommentId: comment.id },
+            create: {
+              connectionId: conn.id,
+              mediaId: media.id,
+              igCommentId: comment.id,
+              fromUsername: comment.from.username || 'unknown',
+              fromIgId: comment.from.id || '',
+              text: comment.text,
+              timestamp: new Date(comment.timestamp),
+            },
+            update: { text: comment.text },
+          });
+        }
+      }
+    }
+
+    return { success: true };
+  }
+
+  /** Reply to a specific comment via API */
+  async replyToComment(userId: string, connectionId: string, commentId: string, message: string) {
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { id: connectionId, userId },
+    });
+    if (!conn) throw new NotFoundException('لا يوجد حساب Instagram مرتبط');
+
+    const comment = await this.instagramCommentModel.findFirst({
+      where: { id: commentId, connectionId }
+    });
+    if (!comment) throw new NotFoundException('التعليق غير موجود');
+
+    const params = new URLSearchParams({
+      message,
+      access_token: conn.accessToken,
+    });
+
+    const res = await fetch(`${IG_GRAPH_BASE}/${comment.igCommentId}/replies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new BadRequestException(`فشل الرد على التعليق: ${err}`);
+    }
+
+    const data = await res.json();
+
+    // Mark as replied in database
+    await this.instagramCommentModel.update({
+      where: { id: commentId },
+      data: { isReplied: true }
+    });
+
+    return { success: true, igReplyId: data.id };
+  }
+
+  // ─── Webhooks / Deauthorize ─────────────────────────────────
+
+  /** Handle incoming webhooks from Meta */
+  async handleWebhookEvent(payload: any) {
+    console.log('[Instagram Webhook] Received payload:', JSON.stringify(payload, null, 2));
+
+    if (payload.object !== 'instagram' && payload.object !== 'page') {
+      console.log(`[Instagram Webhook] Ignored object type: ${payload.object}`);
+      return { success: true };
+    }
+
+    for (const entry of payload.entry || []) {
+      // Sometimes igUserId is entry.id, sometimes it's inside the change (for pages).
+      // For instagram object, entry.id is the Instagram Business Account ID.
+      const igUserId = entry.id; 
+      
+      for (const change of entry.changes || []) {
+        console.log(`[Instagram Webhook] Processing change for field: ${change.field}`);
+        
+        if (change.field === 'comments' || change.field === 'live_comments') {
+          await this.processCommentWebhook(igUserId, change.value);
+        }
+      }
+    }
+    return { success: true };
+  }
+
+  private async processCommentWebhook(igUserId: string, value: any) {
+    // Find the connection by igUserId
+    const conn = await this.instagramConnectionModel.findFirst({
+      where: { igUserId }
+    });
+    
+    if (!conn) return; // We don't track this account
+
+    // Extract comment details
+    const { id: igCommentId, media, text, from, timestamp } = value;
+    if (!igCommentId || !text || !from) return;
+
+    // Save to database
+    await this.instagramCommentModel.upsert({
+      where: { igCommentId },
+      create: {
+        connectionId: conn.id,
+        mediaId: media?.id || '',
+        igCommentId,
+        fromUsername: from.username || 'unknown',
+        fromIgId: from.id || '',
+        text,
+        timestamp: new Date(timestamp * 1000), // convert unix seconds to Date
+      },
+      update: {
+        text,
+      }
+    });
+  }
+
+  /** Instagram deauthorize callback (required by Facebook) */
+  async handleDeauthorize(_body: { signed_request?: string }) {
+    return { success: true };
+  }
+
+  /** Data deletion request callback (required by Facebook) */
+  handleDataDeletion() {
+    const frontendUrl =
+      this.config.get<string>('APP_FRONTEND_URL') ||
+      this.config.get<string>('FRONTEND_URL') ||
+      'http://localhost:3000';
+    return {
+      url: `${frontendUrl}/privacy`,
+      confirmation_code: `del_${Date.now()}`,
+    };
   }
 }

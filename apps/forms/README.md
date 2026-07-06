@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Forms app (creator dashboard)
 
-## Getting Started
+Next.js dashboard for building and managing Rukny forms — port **3007**.
 
-First, run the development server:
+## Local stack (docker-compose.rukny-dev.yml)
+
+| Service | Port |
+|---------|------|
+| API | 3001 |
+| Public forms (`/f/{slug}`) | 3006 |
+| Forms dashboard | 3007 |
+
+## Tests
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Unit tests (forms + packages/forms-shared)
+npm run test
+
+# E2E — once: install Chromium
+npm run test:e2e:install
+
+# E2E — requires API + public + forms running
+npm run test:e2e
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+E2E seeds **local Postgres** (`127.0.0.1:5433`) when `DB_PASSWORD` is in `.env.dev` — same DB as the Docker API. For native API on Neon: `E2E_USE_NEON=true npm run test:e2e`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Plan tiers (analytics)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Tier | Plans |
+|------|-------|
+| Basic | FREE, PRO |
+| Advanced (funnel, NPS, maps) | WHALE+ |
+| Full (CSV export) | BUSINESS |
 
-## Learn More
+## CI
 
-To learn more about Next.js, take a look at the following resources:
+Workflow `.github/workflows/forms-e2e.yml` runs unit tests on every PR. Full Playwright E2E on PR requires repository secrets:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `E2E_DATABASE_URL` — Postgres URL reachable from GitHub Actions
+- `E2E_JWT_SECRET` — must match running API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optional vars: `E2E_FORMS_URL`, `E2E_PUBLIC_APP_URL`.

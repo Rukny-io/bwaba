@@ -197,10 +197,7 @@ export class BruteForceService {
    */
   async resetOtpAttempts(userId: string): Promise<void> {
     const key = `bf:otp:user:${userId}`;
-    await Promise.all([
-      this.redis.del(key),
-      this.redis.del(`${key}:blocked`),
-    ]);
+    await Promise.all([this.redis.del(key), this.redis.del(`${key}:blocked`)]);
   }
 
   // ==================== API Rate Limiting ====================
@@ -360,9 +357,7 @@ export class BruteForceService {
   /**
    * الحصول على حالة الحظر لمستخدم
    */
-  async getBlockStatus(
-    identifier: string,
-  ): Promise<{
+  async getBlockStatus(identifier: string): Promise<{
     loginBlocked: boolean;
     resetBlocked: boolean;
     otpBlocked: boolean;

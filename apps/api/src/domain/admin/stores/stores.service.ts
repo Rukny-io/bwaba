@@ -12,12 +12,17 @@ export class StoresService {
   async getStats() {
     return this.cache.wrap('admin:stores-stats', 120, async () => {
       const now = new Date();
-      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const [storeRows, countRows, byCategory, byCityRaw] = await Promise.all([
-        this.prisma.$queryRawUnsafe<any[]>(`
+        this.prisma.$queryRawUnsafe<any[]>(
+          `
           SELECT
             COUNT(*)::int AS total,
             COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active,
@@ -25,7 +30,10 @@ export class StoresService {
             COUNT(*) FILTER (WHERE "createdAt" >= $1)::int AS new_this_month,
             COUNT(*) FILTER (WHERE "createdAt" >= $2)::int AS new_this_week
           FROM stores
-        `, monthStart, weekStart),
+        `,
+          monthStart,
+          weekStart,
+        ),
         this.prisma.$queryRawUnsafe<any[]>(`
           SELECT
             (SELECT COUNT(*)::int FROM products) AS total_products,
@@ -34,7 +42,10 @@ export class StoresService {
         this.prisma.store_categories.findMany({
           where: { isActive: true },
           select: {
-            id: true, name: true, nameAr: true, color: true,
+            id: true,
+            name: true,
+            nameAr: true,
+            color: true,
             _count: { select: { stores: true } },
           },
           orderBy: { order: 'asc' },
@@ -60,8 +71,11 @@ export class StoresService {
         totalProducts: c.total_products,
         totalOrders: c.total_orders,
         byCategory: byCategory.map((cat) => ({
-          id: cat.id, name: cat.name, nameAr: cat.nameAr,
-          color: cat.color, count: cat._count.stores,
+          id: cat.id,
+          name: cat.name,
+          nameAr: cat.nameAr,
+          color: cat.color,
+          count: cat._count.stores,
         })),
         byCity: byCityRaw.map((ct) => ({
           city: ct.city || 'غير محدد',
@@ -109,7 +123,13 @@ export class StoresService {
             },
           },
           store_categories: {
-            select: { id: true, name: true, nameAr: true, icon: true, color: true },
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              icon: true,
+              color: true,
+            },
           },
           _count: { select: { products: true, orders: true, coupons: true } },
         },

@@ -19,6 +19,10 @@ import {
   DeactivateAccountDto,
   DeleteAccountDto,
 } from './dto';
+import {
+  normalizeMediaStorageKey,
+  resolveMediaProxyUrl,
+} from '../../core/common/utils/media-path.util';
 
 @Injectable()
 export class UserService {
@@ -46,6 +50,11 @@ export class UserService {
         role: true,
         twoFactorEnabled: true,
         emailVerified: true,
+        isRuknyVerified: true,
+        verifiedDisplayName: true,
+        verifiedCategory: true,
+        ruknyVerifiedAt: true,
+        verificationLevel: true,
         createdAt: true,
         updatedAt: true,
         profile: {
@@ -59,6 +68,15 @@ export class UserService {
         },
       },
     });
+
+    if (result?.profile) {
+      result.profile.avatar = resolveMediaProxyUrl(
+        result.profile.avatar,
+      ) as typeof result.profile.avatar;
+      result.profile.coverImage = resolveMediaProxyUrl(
+        result.profile.coverImage,
+      ) as typeof result.profile.coverImage;
+    }
 
     await this.redisService.set(cacheKey, result, 60);
     return result;
@@ -77,17 +95,21 @@ export class UserService {
       }
     }
 
+    const avatarKey = updateData.avatar
+      ? normalizeMediaStorageKey(updateData.avatar)
+      : undefined;
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
         phone: updateData.phone,
         updatedAt: new Date(),
         profile:
-          updateData.name || updateData.avatar
+          updateData.name || avatarKey
             ? {
                 update: {
                   ...(updateData.name && { name: updateData.name }),
-                  ...(updateData.avatar && { avatar: updateData.avatar }),
+                  ...(avatarKey && { avatar: avatarKey }),
                 },
               }
             : undefined,
@@ -126,6 +148,14 @@ export class UserService {
       message: `تم تحديث بياناتك الشخصية بنجاح: ${changes}`,
     });
 
+    await this.redisService.del(`user:profile:${userId}`);
+
+    if (updatedUser.profile?.avatar) {
+      updatedUser.profile.avatar = resolveMediaProxyUrl(
+        updatedUser.profile.avatar,
+      ) as typeof updatedUser.profile.avatar;
+    }
+
     return updatedUser;
   }
 
@@ -141,7 +171,11 @@ export class UserService {
 
     // Generate secret using otplib
     const secret = generateSecret();
-    const otpauthUrl = generateURI({ issuer: 'Rukny.io', label: user.email, secret });
+    const otpauthUrl = generateURI({
+      issuer: 'Rukny.io',
+      label: user.email,
+      secret,
+    });
 
     // Save secret temporarily (not enabled yet)
     await this.prisma.user.update({
@@ -178,7 +212,11 @@ export class UserService {
     }
 
     // Verify code using otplib (window:1 allows ±30s clock skew)
-    const result = verifySync({ token: code, secret: user.twoFactorSecret, window: 1 } as any);
+    const result = verifySync({
+      token: code,
+      secret: user.twoFactorSecret,
+      window: 1,
+    } as any);
 
     if (!result.valid) {
       // Log failed 2FA verification
@@ -455,7 +493,9 @@ export class UserService {
     });
 
     if (pendingRequest) {
-      throw new BadRequestException('لديك طلب تغيير بريد إلكتروني قيد المراجعة بالفعل');
+      throw new BadRequestException(
+        'لديك طلب تغيير بريد إلكتروني قيد المراجعة بالفعل',
+      );
     }
 
     const oldEmail = user.email;
@@ -484,7 +524,8 @@ export class UserService {
     });
 
     return {
-      message: 'تم إرسال طلب تغيير البريد الإلكتروني بنجاح — بانتظار مراجعة المسؤول',
+      message:
+        'تم إرسال طلب تغيير البريد الإلكتروني بنجاح — بانتظار مراجعة المسؤول',
       oldEmail,
       newEmail,
       status: 'PENDING',
@@ -572,7 +613,7 @@ export class UserService {
         to: user.email,
         subject: '🔐 رمز توثيق بريدك الإلكتروني - Rukny',
         html: `
-          <div dir="rtl" style="font-family: 'IBM Plex Sans Arabic', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+          <div dir="rtl" style="font-family: 'Thmanyah Sans', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
             <h2 style="color: #1a1a1a; margin-bottom: 16px;">توثيق البريد الإلكتروني</h2>
             <p style="color: #666; font-size: 14px;">مرحباً ${user.profile?.name || 'مستخدم'}،</p>
             <p style="color: #666; font-size: 14px;">رمز التحقق الخاص بك:</p>
@@ -764,7 +805,8 @@ export class UserService {
       {
         action: 'ACCOUNT_DEACTIVATED',
         actionArabic: 'تعطيل الحساب',
-        description: 'تم تعطيل حسابك مؤقتاً. يمكنك إعادة تفعيله في أي وقت عند تسجيل الدخول.',
+        description:
+          'تم تعطيل حسابك مؤقتاً. يمكنك إعادة تفعيله في أي وقت عند تسجيل الدخول.',
         timestamp: new Date(),
       },
     );
@@ -859,4 +901,5 @@ export class UserService {
 
     return { message: 'تم حذف الحساب نهائياً' };
   }
+
 }

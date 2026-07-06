@@ -25,7 +25,9 @@ export enum OrderStatus {
 }
 
 export class CreateOrderDto {
-  @ApiPropertyOptional({ description: 'Delivery address ID (not required for digital products)' })
+  @ApiPropertyOptional({
+    description: 'Delivery address ID (not required for digital products)',
+  })
   @IsOptional()
   @IsString()
   @IsUUID()

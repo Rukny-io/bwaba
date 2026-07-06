@@ -295,7 +295,11 @@ export class RedisService implements OnModuleDestroy {
   }
 
   // Set if Not eXists - atomic operation for locking
-  async setNX(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
+  async setNX(
+    key: string,
+    value: string,
+    ttlSeconds?: number,
+  ): Promise<boolean> {
     if (!this.isConnected) return false;
     try {
       let result: 'OK' | null;

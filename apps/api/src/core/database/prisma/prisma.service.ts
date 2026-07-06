@@ -10,7 +10,7 @@ import { DB_PERFORMANCE } from '../database.constants';
 
 /**
  * ⚡ Extended Prisma Client with performance optimizations for Neon PostgreSQL
- * 
+ *
  * Features:
  * - Connection pooling for Neon PostgreSQL (serverless)
  * - Automatic reconnection on connection errors (handles Neon suspend/resume)
@@ -35,8 +35,8 @@ export class PrismaService
     if (!databaseUrl) {
       throw new Error(
         '❌ DATABASE_URL environment variable is not defined. ' +
-        'Please ensure it is set in your Railway environment variables. ' +
-        'Expected format: postgresql://user:password@host:port/database?sslmode=require'
+          'Please ensure it is set in your Railway environment variables. ' +
+          'Expected format: postgresql://user:password@host:port/database?sslmode=require',
       );
     }
 
@@ -72,7 +72,9 @@ export class PrismaService
         e.duration > DB_PERFORMANCE.SLOW_QUERY_THRESHOLD &&
         process.env.NODE_ENV !== 'production'
       ) {
-        this.logger.warn(`⚠️ Slow Query (${e.duration}ms): ${e.query.substring(0, 150)}...`);
+        this.logger.warn(
+          `⚠️ Slow Query (${e.duration}ms): ${e.query.substring(0, 150)}...`,
+        );
       }
     });
   }
@@ -82,19 +84,21 @@ export class PrismaService
     await this.connectWithRetry();
     const duration = Date.now() - startTime;
     this.logger.log(`✅ Database connected successfully (${duration}ms)`);
-    
+
     // ⚡ Start keepalive ping for Neon (prevents auto-suspend during active use)
     this.startKeepalive();
-    
+
     // ⚡ Connection warming: Pre-warm common table queries for auth/refresh
     // This helps reduce cold start latency on first real request
     if (process.env.NODE_ENV === 'production') {
-      this.warmConnectionPool().catch(err => {
-        this.logger.warn(`Connection warming failed (non-critical): ${err.message}`);
+      this.warmConnectionPool().catch((err) => {
+        this.logger.warn(
+          `Connection warming failed (non-critical): ${err.message}`,
+        );
       });
     }
   }
-  
+
   /**
    * ⚡ Warm up connection pool with common queries
    * Executes lightweight queries on frequently accessed tables
@@ -110,7 +114,7 @@ export class PrismaService
         // User table (used in auth)
         this.$queryRaw`SELECT 1 FROM "users" LIMIT 1`,
       ]);
-      
+
       const warmupDuration = Date.now() - warmupStart;
       this.logger.log(`⚡ Connection pool warmed up (${warmupDuration}ms)`);
     } catch {
@@ -121,31 +125,30 @@ export class PrismaService
   /**
    * ⚡ Keepalive ping to prevent Neon from suspending during active sessions
    * Runs every 90 seconds (Neon suspends after 5 minutes of inactivity)
-   * 
+   *
    * ⚡ Changed from 3 minutes to 90 seconds for better responsiveness
    */
   private keepaliveInterval: NodeJS.Timeout | null = null;
-  
+
   private startKeepalive(): void {
     // Only in production
     if (process.env.NODE_ENV !== 'production') return;
-    
+
     this.keepaliveInterval = setInterval(async () => {
       try {
         // Timeout the keepalive ping to prevent blocking other queries
         // If it takes more than 5 seconds, we have a serious connection issue
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Keepalive timeout')), 5000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Keepalive timeout')), 5000),
         );
-        
+
         const startTime = Date.now();
-        await Promise.race([
-          this.$queryRaw`SELECT 1`,
-          timeoutPromise
-        ]);
+        await Promise.race([this.$queryRaw`SELECT 1`, timeoutPromise]);
         const duration = Date.now() - startTime;
-        
-        this.logger.debug(`🔄 Database keepalive ping successful (${duration}ms)`);
+
+        this.logger.debug(
+          `🔄 Database keepalive ping successful (${duration}ms)`,
+        );
         // If keepalive is slow, log it to diagnose connection issues
         if (duration > 1000) {
           this.logger.warn(
@@ -153,7 +156,9 @@ export class PrismaService
           );
         }
       } catch (error) {
-        this.logger.warn('⚠️ Keepalive ping failed, will reconnect on next query');
+        this.logger.warn(
+          '⚠️ Keepalive ping failed, will reconnect on next query',
+        );
         this.isConnected = false;
       }
     }, 90 * 1000); // ⚡ 90 seconds (reduced from 3 minutes) for better Neon responsiveness
@@ -163,7 +168,10 @@ export class PrismaService
    * ⚡ Connect with retry logic for Neon PostgreSQL
    * Handles connection pool timeouts and serverless cold starts
    */
-  private async connectWithRetry(maxRetries = 5, delayMs = 2000): Promise<void> {
+  private async connectWithRetry(
+    maxRetries = 5,
+    delayMs = 2000,
+  ): Promise<void> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await this.$connect();
@@ -171,22 +179,25 @@ export class PrismaService
         this.reconnectAttempts = 0;
         return;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const isNeonColdStart = errorMessage.includes('Closed') || 
-                                errorMessage.includes('connection') ||
-                                errorMessage.includes('timeout');
-        
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        const isNeonColdStart =
+          errorMessage.includes('Closed') ||
+          errorMessage.includes('connection') ||
+          errorMessage.includes('timeout');
+
         this.logger.warn(
           `Database connection attempt ${attempt}/${maxRetries} failed: ${errorMessage}` +
-          (isNeonColdStart ? ' (Neon cold start detected)' : ''),
+            (isNeonColdStart ? ' (Neon cold start detected)' : ''),
         );
-        
+
         if (attempt === maxRetries) {
           throw error;
         }
-        
+
         // Exponential backoff with jitter for Neon cold starts
-        const backoffDelay = delayMs * Math.pow(1.5, attempt - 1) + Math.random() * 1000;
+        const backoffDelay =
+          delayMs * Math.pow(1.5, attempt - 1) + Math.random() * 1000;
         await new Promise((resolve) => setTimeout(resolve, backoffDelay));
       }
     }
@@ -219,8 +230,9 @@ export class PrismaService
       try {
         return await operation();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const isConnectionError = 
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        const isConnectionError =
           errorMessage.includes('Closed') ||
           errorMessage.includes('connection') ||
           errorMessage.includes('ECONNREFUSED') ||
@@ -233,16 +245,16 @@ export class PrismaService
         this.logger.warn(
           `Query failed (attempt ${attempt}/${maxRetries}): ${errorMessage}. Reconnecting...`,
         );
-        
+
         // Reconnect before retry
         this.isConnected = false;
         await this.connectWithRetry(2, 1000);
-        
+
         // Small delay before retry
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
     }
-    
+
     throw new Error('Max retries exceeded');
   }
 
@@ -251,7 +263,7 @@ export class PrismaService
     if (this.keepaliveInterval) {
       clearInterval(this.keepaliveInterval);
     }
-    
+
     await this.$disconnect();
     this.logger.log('🔌 Database disconnected');
   }
@@ -305,7 +317,10 @@ export class PrismaService
     return Promise.race([
       query(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Query timeout after ${timeoutMs}ms`)), timeoutMs),
+        setTimeout(
+          () => reject(new Error(`Query timeout after ${timeoutMs}ms`)),
+          timeoutMs,
+        ),
       ),
     ]);
   }

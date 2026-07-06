@@ -1,0 +1,205 @@
+name: Forms E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/forms/**'
+      - 'apps/public/**'
+      - 'packages/forms-shared/**'
+      - 'apps/api/test/e2e-seed.ts'
+      - 'apps/api/test/helpers/e2e-*.ts'
+      - 'apps/api/src/domain/forms/**'
+      - 'apps/api/src/domain/subscriptions/form-feature-tier.util.ts'
+      - '.github/workflows/forms-e2e.yml'
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  validate:
+    name: Playwright — validate specs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/forms
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/forms/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
+      - name: List Playwright tests
+        run: npx playwright test --list
+
+  forms-unit:
+    name: Forms — unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/forms
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/forms/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+
+  api-unit:
+    name: API — forms unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run forms plan & conditional logic unit tests
+        run: npx jest --testPathPatterns="form-feature-tier|conditional-logic-eval" --passWithNoTests
+
+  shared-unit:
+    name: forms-shared — unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/forms
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/forms/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run shared package tests
+        run: npx vitest run ../../packages/forms-shared/src
+
+  e2e:
+    name: Playwright — full run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/forms
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/forms/package-lock.json
+
+      - name: Install forms dependencies
+        run: npm ci
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E (requires DATABASE_URL secret + running stack)
+        env:
+          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
+          E2E_FORMS_URL: ${{ vars.E2E_FORMS_URL }}
+          E2E_PUBLIC_APP_URL: ${{ vars.E2E_PUBLIC_APP_URL }}
+        run: |
+          if [ -z "$E2E_DATABASE_URL" ]; then
+            echo "Set repository secret E2E_DATABASE_URL for full E2E run."
+            exit 1
+          fi
+          npm run test:e2e
+
+  e2e-pr:
+    name: Playwright — PR (when secrets configured)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: apps/forms
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/forms/package-lock.json
+
+      - name: Install forms dependencies
+        run: npm ci
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E when E2E_DATABASE_URL is set
+        env:
+          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
+          E2E_FORMS_URL: ${{ vars.E2E_FORMS_URL }}
+          E2E_PUBLIC_APP_URL: ${{ vars.E2E_PUBLIC_APP_URL }}
+        run: |
+          if [ -z "$E2E_DATABASE_URL" ]; then
+            echo "E2E_DATABASE_URL not configured — skipping PR E2E."
+            echo "Set secrets E2E_DATABASE_URL + E2E_JWT_SECRET and vars E2E_FORMS_URL / E2E_PUBLIC_APP_URL for live stack E2E."
+            exit 0
+          fi
+          npm run test:e2e

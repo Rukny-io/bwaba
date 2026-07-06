@@ -8,6 +8,10 @@
       {
         "include": "integrations/email/templates/**/*",
         "outDir": "dist"
+      },
+      {
+        "include": "domain/forms/data/*.geojson",
+        "outDir": "dist"
       }
     ]
   },

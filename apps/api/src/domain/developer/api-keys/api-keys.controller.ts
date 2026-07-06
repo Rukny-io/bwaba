@@ -33,10 +33,7 @@ export class ApiKeysController {
 
   @Post()
   @ApiOperation({ summary: 'إنشاء مفتاح API جديد' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateApiKeyDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateApiKeyDto) {
     return this.apiKeysService.create(userId, dto);
   }
 
@@ -61,10 +58,7 @@ export class ApiKeysController {
 
   @Delete(':slug')
   @ApiOperation({ summary: 'إلغاء مفتاح API' })
-  revoke(
-    @CurrentUser('id') userId: string,
-    @Param('slug') keySlug: string,
-  ) {
+  revoke(@CurrentUser('id') userId: string, @Param('slug') keySlug: string) {
     return this.apiKeysService.revoke(userId, keySlug);
   }
 

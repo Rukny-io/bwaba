@@ -30,12 +30,7 @@ import { MetaWebhookService } from './webhooks/meta-webhook.service';
 import { MetaWebhookController } from './webhooks/meta-webhook.controller';
 
 @Module({
-  imports: [
-    PrismaModule,
-    RedisModule,
-    ConfigModule,
-    DeveloperModule,
-  ],
+  imports: [PrismaModule, RedisModule, ConfigModule, DeveloperModule],
   controllers: [
     WabaController,
     MessagingController,

@@ -38,13 +38,13 @@ export class ResendService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    
+
     if (apiKey) {
       this.resend = new Resend(apiKey);
       this.emailEnabled = true;
       this.defaultFrom = this.configService.get<string>(
         'RESEND_FROM_EMAIL',
-        'Rukny <notifications@rukny.store>'
+        'Rukny <notifications@rukny.store>',
       );
       this.logger.log('✅ Resend email service enabled');
     } else {
@@ -65,8 +65,16 @@ export class ResendService {
     footerText?: string;
     additionalContent?: string;
   }): string {
-    const { greeting, title, message, buttonText, buttonUrl, footerText, additionalContent } = content;
-    
+    const {
+      greeting,
+      title,
+      message,
+      buttonText,
+      buttonUrl,
+      footerText,
+      additionalContent,
+    } = content;
+
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -104,23 +112,31 @@ export class ResendService {
             </td>
           </tr>
           
-          ${additionalContent ? `
+          ${
+            additionalContent
+              ? `
           <!-- Additional Content -->
           <tr>
             <td style="padding: 24px 40px 0 40px;">
               ${additionalContent}
             </td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
           
-          ${buttonText && buttonUrl ? `
+          ${
+            buttonText && buttonUrl
+              ? `
           <!-- Button -->
           <tr>
             <td align="center" style="padding: 32px 40px 0 40px;">
               <a href="${buttonUrl}" target="_blank" style="display: inline-block; background-color: #1a73e8; color: #ffffff; font-size: 14px; font-weight: 500; text-decoration: none; padding: 12px 24px; border-radius: 4px; min-width: 120px; text-align: center;">${buttonText}</a>
             </td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
           
           <!-- Footer -->
           <tr>
@@ -153,7 +169,8 @@ export class ResendService {
    * Send email using Resend
    */
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
-    const { to, subject, html, text, from, replyTo, cc, bcc, attachments } = options;
+    const { to, subject, html, text, from, replyTo, cc, bcc, attachments } =
+      options;
 
     if (!this.emailEnabled || !this.resend) {
       this.logger.log(`📧 [Email Disabled] To: ${to}, Subject: ${subject}`);
@@ -170,7 +187,7 @@ export class ResendService {
         replyTo,
         cc: cc ? (Array.isArray(cc) ? cc : [cc]) : undefined,
         bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
-        attachments: attachments?.map(att => ({
+        attachments: attachments?.map((att) => ({
           filename: att.filename,
           content: att.content,
         })),
@@ -214,7 +231,8 @@ export class ResendService {
     const html = this.getBaseTemplate({
       greeting: `Hi ${userName},`,
       title: 'Sign in to your Rukny account',
-      message: 'Click the button below to securely sign in to your account. This link will expire in 15 minutes.',
+      message:
+        'Click the button below to securely sign in to your account. This link will expire in 15 minutes.',
       buttonText: 'Sign in',
       buttonUrl: quickSignLink,
       footerText: `This email was sent to ${to} because a sign-in was requested. If you didn't request this, you can safely ignore this email.`,
@@ -261,7 +279,8 @@ export class ResendService {
     const html = this.getBaseTemplate({
       greeting: 'Welcome to Rukny!',
       title: 'Complete your account setup',
-      message: 'You\'re just one click away from creating your online store. Click the button below to get started.',
+      message:
+        "You're just one click away from creating your online store. Click the button below to get started.",
       buttonText: 'Get started',
       buttonUrl: quickSignLink,
       footerText: `This email was sent to ${to} because an account was created with this email address.`,
@@ -296,13 +315,14 @@ export class ResendService {
       message: alertData.description,
       buttonText: 'Review activity',
       buttonUrl: `${this.configService.get<string>('FRONTEND_URL', 'https://rukny.store')}/app/settings/security`,
-      footerText: 'If you didn\'t perform this action, please change your password immediately.',
+      footerText:
+        "If you didn't perform this action, please change your password immediately.",
       additionalContent: `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #fef7e0; border-radius: 8px; border-left: 4px solid #f9ab00;">
           <tr>
             <td style="padding: 16px;">
               <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 500; color: #202124;">⚠️ ${alertData.action}</p>
-              <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Time:</strong> ${alertData.timestamp.toLocaleString()}</p>
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Time:</strong> ${alertData.timestamp.toLocaleString('en-US')}</p>
               ${alertData.ipAddress ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>IP Address:</strong> ${alertData.ipAddress}</p>` : ''}
               ${alertData.browser ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Browser:</strong> ${alertData.browser}</p>` : ''}
               ${alertData.location ? `<p style="margin: 0; font-size: 12px; color: #5f6368;"><strong>Location:</strong> ${alertData.location}</p>` : ''}
@@ -323,12 +343,16 @@ export class ResendService {
    * Send welcome email
    */
   async sendWelcomeEmail(to: string, userName: string): Promise<EmailResult> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'https://rukny.store');
-    
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'https://rukny.store',
+    );
+
     const html = this.getBaseTemplate({
       greeting: `Hi ${userName},`,
       title: 'Welcome to Rukny!',
-      message: 'Thanks for joining Rukny. We\'re excited to help you build your online presence. Start by creating your store or organizing your events.',
+      message:
+        "Thanks for joining Rukny. We're excited to help you build your online presence. Start by creating your store or organizing your events.",
       buttonText: 'Get started',
       buttonUrl: `${frontendUrl}/app`,
     });
@@ -348,16 +372,21 @@ export class ResendService {
     userName: string,
     resetToken: string,
   ): Promise<EmailResult> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'https://rukny.store');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'https://rukny.store',
+    );
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     const html = this.getBaseTemplate({
       greeting: `Hi ${userName},`,
       title: 'Reset your password',
-      message: 'We received a request to reset your password. Click the button below to create a new password. This link expires in 1 hour.',
+      message:
+        'We received a request to reset your password. Click the button below to create a new password. This link expires in 1 hour.',
       buttonText: 'Reset password',
       buttonUrl: resetUrl,
-      footerText: 'If you didn\'t request a password reset, you can safely ignore this email.',
+      footerText:
+        "If you didn't request a password reset, you can safely ignore this email.",
     });
 
     return this.sendEmail({
@@ -381,18 +410,22 @@ export class ResendService {
     },
   ): Promise<EmailResult> {
     const currency = orderData.currency || 'IQD';
-    
-    const itemsHtml = orderData.items.map(item => `
+
+    const itemsHtml = orderData.items
+      .map(
+        (item) => `
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
           <p style="margin: 0; font-size: 14px; color: #202124;">${item.name}</p>
           <p style="margin: 4px 0 0 0; font-size: 12px; color: #5f6368;">Qty: ${item.quantity}</p>
         </td>
         <td align="right" style="padding: 12px 0; border-bottom: 1px solid #e8eaed;">
-          <p style="margin: 0; font-size: 14px; color: #202124;">${item.price.toLocaleString()} ${currency}</p>
+          <p style="margin: 0; font-size: 14px; color: #202124;">${item.price.toLocaleString('en-US')} ${currency}</p>
         </td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     const html = this.getBaseTemplate({
       greeting: `Hi ${orderData.customerName},`,
@@ -408,7 +441,7 @@ export class ResendService {
               <p style="margin: 0; font-size: 16px; font-weight: 500; color: #202124;">Total</p>
             </td>
             <td align="right" style="padding: 16px 0 0 0;">
-              <p style="margin: 0; font-size: 16px; font-weight: 500; color: #1a73e8;">${orderData.total.toLocaleString()} ${currency}</p>
+              <p style="margin: 0; font-size: 16px; font-weight: 500; color: #1a73e8;">${orderData.total.toLocaleString('en-US')} ${currency}</p>
             </td>
           </tr>
         </table>
@@ -433,7 +466,10 @@ export class ResendService {
     const html = this.getBaseTemplate({
       greeting: 'Verification code',
       title: 'Enter this code to verify your identity',
-      message: 'This code expires in ' + expiresIn + '. Don\'t share this code with anyone.',
+      message:
+        'This code expires in ' +
+        expiresIn +
+        ". Don't share this code with anyone.",
       additionalContent: `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           <tr>
@@ -470,7 +506,7 @@ export class ResendService {
   ): Promise<EmailResult> {
     const html = this.getBaseTemplate({
       greeting: `Hi ${data.userName},`,
-      title: 'You\'re registered!',
+      title: "You're registered!",
       message: `Your registration for "${data.eventTitle}" is confirmed.`,
       buttonText: 'View event details',
       buttonUrl: `${this.configService.get<string>('FRONTEND_URL', 'https://rukny.store')}/events`,
@@ -507,15 +543,20 @@ export class ResendService {
       submissionCount: number;
     },
   ): Promise<EmailResult> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'https://rukny.store');
-    
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'https://rukny.store',
+    );
+
     const html = this.getBaseTemplate({
       greeting: 'New form response',
       title: `"${data.formTitle}" received a response`,
       message: `You have ${data.submissionCount} total responses.`,
       buttonText: 'View responses',
       buttonUrl: `${frontendUrl}/app/forms`,
-      additionalContent: data.submitterName || data.submitterEmail ? `
+      additionalContent:
+        data.submitterName || data.submitterEmail
+          ? `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #e3f2fd; border-radius: 8px;">
           <tr>
             <td style="padding: 16px;">
@@ -524,7 +565,8 @@ export class ResendService {
             </td>
           </tr>
         </table>
-      ` : '',
+      `
+          : '',
     });
 
     return this.sendEmail({
@@ -553,15 +595,17 @@ export class ResendService {
     const html = this.getBaseTemplate({
       greeting: `Hi ${userName},`,
       title: 'New sign-in to your account',
-      message: 'A new sign-in was detected on your Rukny account. If this was you, no action is needed.',
+      message:
+        'A new sign-in was detected on your Rukny account. If this was you, no action is needed.',
       buttonText: 'Review activity',
       buttonUrl: `${this.configService.get<string>('FRONTEND_URL', 'https://rukny.store')}/app/settings/security`,
-      footerText: 'If you didn\'t sign in, please secure your account immediately.',
+      footerText:
+        "If you didn't sign in, please secure your account immediately.",
       additionalContent: `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fa; border-radius: 8px;">
           <tr>
             <td style="padding: 16px;">
-              <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Time:</strong> ${loginData.timestamp.toLocaleString()}</p>
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Time:</strong> ${loginData.timestamp.toLocaleString('en-US')}</p>
               <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>Device:</strong> ${loginData.browser || 'Unknown'} on ${loginData.os || 'Unknown'}</p>
               <p style="margin: 0 0 8px 0; font-size: 12px; color: #5f6368;"><strong>IP Address:</strong> ${loginData.ipAddress || 'Unknown'}</p>
               ${loginData.location ? `<p style="margin: 0; font-size: 12px; color: #5f6368;"><strong>Location:</strong> ${loginData.location}</p>` : ''}
@@ -591,10 +635,10 @@ export class ResendService {
     },
   ): Promise<EmailResult> {
     const statusColors: Record<string, string> = {
-      'processing': '#1a73e8',
-      'shipped': '#34a853',
-      'delivered': '#188038',
-      'cancelled': '#ea4335',
+      processing: '#1a73e8',
+      shipped: '#34a853',
+      delivered: '#188038',
+      cancelled: '#ea4335',
     };
 
     const html = this.getBaseTemplate({
@@ -646,7 +690,7 @@ export class ResendService {
           <tr>
             <td style="padding: 20px;">
               <p style="margin: 0 0 8px 0; font-size: 14px; color: #2e7d32;"><strong>Plan:</strong> ${data.planName}</p>
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #2e7d32;"><strong>Price:</strong> ${data.price.toLocaleString()} ${data.currency}/${data.billingPeriod}</p>
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #2e7d32;"><strong>Price:</strong> ${data.price.toLocaleString('en-US')} ${data.currency}/${data.billingPeriod}</p>
               <p style="margin: 0; font-size: 14px; color: #2e7d32;"><strong>Next billing:</strong> ${data.nextBillingDate}</p>
             </td>
           </tr>
@@ -704,8 +748,11 @@ export class ResendService {
       formId: string;
     },
   ): Promise<EmailResult> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'https://rukny.store');
-    const formUrl = `${frontendUrl}/f/${formData.formSlug}`;
+    const publicBase = (
+      this.configService.get<string>('FORM_PUBLIC_BASE_URL') ||
+      this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000')
+    ).replace(/\/$/, '');
+    const formUrl = `${publicBase}/f/${encodeURIComponent(formData.formSlug)}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(formUrl)}`;
 
     const html = this.getBaseTemplate({

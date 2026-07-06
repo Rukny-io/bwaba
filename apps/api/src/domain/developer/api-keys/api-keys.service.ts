@@ -1,11 +1,23 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHash, createCipheriv, createDecipheriv } from 'crypto';
+import {
+  randomBytes,
+  createHash,
+  createCipheriv,
+  createDecipheriv,
+} from 'crypto';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
-import { DEVELOPER_PLAN_LIMITS } from '../subscriptions/dev-plan-limits.config';
+import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 
 @Injectable()
 export class ApiKeysService {
@@ -17,6 +29,7 @@ export class ApiKeysService {
     private prisma: PrismaService,
     private redis: RedisService,
     private configService: ConfigService,
+    private devSubscriptionsService: DevSubscriptionsService,
   ) {
     const key = this.configService.get<string>('TWO_FACTOR_ENCRYPTION_KEY');
     if (key && /^[0-9a-fA-F]{64}$/.test(key)) {
@@ -25,14 +38,20 @@ export class ApiKeysService {
       this.ENCRYPTION_KEY = Buffer.from(key.substring(0, 32), 'utf8');
     } else {
       this.ENCRYPTION_KEY = Buffer.alloc(0);
-      this.logger.warn('TWO_FACTOR_ENCRYPTION_KEY not set — API key reveal will be unavailable');
+      this.logger.warn(
+        'TWO_FACTOR_ENCRYPTION_KEY not set — API key reveal will be unavailable',
+      );
     }
   }
 
   private encryptKey(text: string): string {
     if (this.ENCRYPTION_KEY.length === 0) return '';
     const iv = randomBytes(16);
-    const cipher = createCipheriv(this.ENCRYPTION_ALGORITHM, this.ENCRYPTION_KEY, iv);
+    const cipher = createCipheriv(
+      this.ENCRYPTION_ALGORITHM,
+      this.ENCRYPTION_KEY,
+      iv,
+    );
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag();
@@ -40,13 +59,19 @@ export class ApiKeysService {
   }
 
   private decryptKey(encryptedText: string): string {
-    if (!encryptedText) throw new NotFoundException('المفتاح المشفّر غير متوفر');
+    if (!encryptedText)
+      throw new NotFoundException('المفتاح المشفّر غير متوفر');
     const parts = encryptedText.split(':');
-    if (parts.length !== 3) throw new NotFoundException('تنسيق المفتاح المشفّر غير صالح');
+    if (parts.length !== 3)
+      throw new NotFoundException('تنسيق المفتاح المشفّر غير صالح');
     const [ivHex, authTagHex, encrypted] = parts;
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = createDecipheriv(this.ENCRYPTION_ALGORITHM, this.ENCRYPTION_KEY, iv);
+    const decipher = createDecipheriv(
+      this.ENCRYPTION_ALGORITHM,
+      this.ENCRYPTION_KEY,
+      iv,
+    );
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
@@ -59,7 +84,9 @@ export class ApiKeysService {
   private async generateUniqueSlug(): Promise<string> {
     for (let i = 0; i < 10; i++) {
       const slug = String(Math.floor(100000 + Math.random() * 900000));
-      const exists = await this.prisma.developerApiKey.findUnique({ where: { slug } });
+      const exists = await this.prisma.developerApiKey.findUnique({
+        where: { slug },
+      });
       if (!exists) return slug;
     }
     // fallback: 8 digits
@@ -100,7 +127,8 @@ export class ApiKeysService {
         keyPrefix,
         keySuffix,
         keyHash,
-        encryptedKey: this.ENCRYPTION_KEY.length > 0 ? this.encryptKey(rawKey) : null,
+        encryptedKey:
+          this.ENCRYPTION_KEY.length > 0 ? this.encryptKey(rawKey) : null,
         scopes: dto.scopes || [
           'whatsapp:send',
           'whatsapp:read',
@@ -170,7 +198,7 @@ export class ApiKeysService {
       data: {
         ...(dto.name && { name: dto.name }),
         ...(dto.scopes && { scopes: dto.scopes }),
-        ...(dto.ipAllowlist && { ipAllowlist: dto.ipAllowlist }),
+        ...(dto.ipAllowlist !== undefined && { ipAllowlist: dto.ipAllowlist }),
       },
       select: {
         id: true,
@@ -223,8 +251,12 @@ export class ApiKeysService {
       select: { id: true, name: true, encryptedKey: true, status: true },
     });
     if (!key) throw new NotFoundException('API key not found');
-    if (key.status !== 'ACTIVE') throw new ForbiddenException('لا يمكن كشف مفتاح ملغي أو منتهي');
-    if (!key.encryptedKey) throw new NotFoundException('المفتاح المشفّر غير متوفر — أنشئ مفتاحاً جديداً');
+    if (key.status !== 'ACTIVE')
+      throw new ForbiddenException('لا يمكن كشف مفتاح ملغي أو منتهي');
+    if (!key.encryptedKey)
+      throw new NotFoundException(
+        'المفتاح المشفّر غير متوفر — أنشئ مفتاحاً جديداً',
+      );
 
     const rawKey = this.decryptKey(key.encryptedKey);
     return { key: rawKey };
@@ -305,21 +337,13 @@ export class ApiKeysService {
    * التحقق من حدود API Keys حسب الخطة
    */
   private async checkApiKeyLimit(userId: string) {
-    const subscription = await this.prisma.developerSubscription.findUnique({
-      where: { userId },
-      select: { plan: true },
-    });
+    const quota = await this.devSubscriptionsService.getApiKeyQuota(userId);
 
-    const plan = subscription?.plan || 'FREE';
-    const limits = DEVELOPER_PLAN_LIMITS[plan];
-
-    const currentCount = await this.prisma.developerApiKey.count({
-      where: { userId, status: 'ACTIVE' },
-    });
-
-    if (currentCount >= limits.maxApiKeys) {
+    if (quota.used >= quota.limit) {
+      const limitLabel =
+        quota.limit >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : String(quota.limit);
       throw new ForbiddenException(
-        `API key limit reached (${limits.maxApiKeys}). Upgrade your plan for more.`,
+        `API key limit reached (${quota.used}/${limitLabel}). Upgrade to Pro for unlimited keys.`,
       );
     }
   }

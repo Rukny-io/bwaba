@@ -42,22 +42,35 @@ export class WallpapersController {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
-        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+        if (
+          file.mimetype.startsWith('image/') ||
+          file.mimetype.startsWith('video/')
+        ) {
           cb(null, true);
         } else {
-          cb(new BadRequestException('Only images and videos are allowed'), false);
+          cb(
+            new BadRequestException('Only images and videos are allowed'),
+            false,
+          );
         }
       },
     }),
   )
   async upload(
-    @UploadedFile(new FileValidationPipe({
-      allowedTypes: [
-        'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-        'video/mp4', 'video/webm',
-      ],
-      maxSize: MAX_FILE_SIZE,
-    })) file: Express.Multer.File,
+    @UploadedFile(
+      new FileValidationPipe({
+        allowedTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/gif',
+          'video/mp4',
+          'video/webm',
+        ],
+        maxSize: MAX_FILE_SIZE,
+      }),
+    )
+    file: Express.Multer.File,
     @Body('nameAr') nameAr?: string,
   ) {
     if (!file) throw new BadRequestException('File is required');

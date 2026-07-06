@@ -49,7 +49,10 @@ import { CheckoutAddressesController } from './checkout-addresses.controller';
 import { CheckoutOrdersController } from './checkout-orders.controller';
 // 📥 نظام المنتجات الرقمية
 import { DigitalAssetsService } from './digital-assets.service';
-import { DigitalAssetsController, DownloadsController } from './digital-assets.controller';
+import {
+  DigitalAssetsController,
+  DownloadsController,
+} from './digital-assets.controller';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { RedisModule } from '../../core/cache/redis.module';
 import { JwtModule } from '@nestjs/jwt';

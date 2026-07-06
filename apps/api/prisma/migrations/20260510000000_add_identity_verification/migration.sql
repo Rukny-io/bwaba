@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN "verificationLevel" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "verificationLevel" INTEGER NOT NULL DEFAULT 0;
 
 -- CreateTable
 CREATE TABLE "identity_verifications" (
@@ -25,4 +25,4 @@ CREATE INDEX "identity_verifications_userId_idx" ON "identity_verifications"("us
 CREATE INDEX "identity_verifications_status_idx" ON "identity_verifications"("status");
 
 -- AddForeignKey
-ALTER TABLE "identity_verifications" ADD CONSTRAINT "identity_verifications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "identity_verifications" ADD CONSTRAINT "identity_verifications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

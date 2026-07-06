@@ -1,15 +1,19 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
-import { DEVELOPER_PLAN_LIMITS } from '../../developer/subscriptions/dev-plan-limits.config';
+import {
+  normalizeDeveloperPlan,
+  platformPlanGrantsDeveloperPro,
+  resolveLimitValue,
+  DEVELOPER_PLAN_LIMITS,
+  type DeveloperPlanTier,
+} from '../../developer/subscriptions/dev-plan-limits.config';
 
 /**
  * 📊 خدمة التحقق من الحصص
  *
- * تتحقق من حدود المطوّر قبل كل عملية:
- * - عدد الرسائل الشهرية
- * - عدد الأرقام
- * - Rate limit
+ * الرسائل: الفوترة عبر المحفظة (usage) — لا حد شهري على الاشتراك
+ * الموارد الأخرى: حسب Free / Pro
  */
 @Injectable()
 export class QuotaService {
@@ -20,25 +24,43 @@ export class QuotaService {
     private redis: RedisService,
   ) {}
 
-  /**
-   * التحقق من حصة الرسائل
-   */
-  async checkMessageQuota(userId: string): Promise<boolean> {
+  private async resolveEffectivePlan(userId: string): Promise<DeveloperPlanTier> {
     const subscription = await this.prisma.developerSubscription.findUnique({
       where: { userId },
+      select: { plan: true },
     });
 
-    if (!subscription) return false;
+    if (subscription && normalizeDeveloperPlan(subscription.plan) === 'PRO') {
+      return 'PRO';
+    }
 
-    const limits = DEVELOPER_PLAN_LIMITS[subscription.plan];
-    if (limits.maxMessagesPerMonth === -1) return true; // unlimited
+    const platform = await this.prisma.subscription.findUnique({
+      where: { userId },
+      select: { plan: true, status: true },
+    });
 
-    return subscription.messagesUsed < limits.maxMessagesPerMonth;
+    if (
+      platform?.status === 'ACTIVE' &&
+      platformPlanGrantsDeveloperPro(platform.plan)
+    ) {
+      return 'PRO';
+    }
+
+    return 'FREE';
+  }
+
+  private async getEffectiveLimits(userId: string) {
+    const plan = await this.resolveEffectivePlan(userId);
+    return DEVELOPER_PLAN_LIMITS[plan];
   }
 
   /**
-   * زيادة عداد الرسائل
+   * الرسائل تُفوتر عبر المحفظة — لا حد اشتراك شهري
    */
+  async checkMessageQuota(_userId: string): Promise<boolean> {
+    return true;
+  }
+
   async incrementMessageCount(userId: string) {
     await this.prisma.developerSubscription.update({
       where: { userId },
@@ -46,16 +68,9 @@ export class QuotaService {
     });
   }
 
-  /**
-   * التحقق من Rate Limit لـ API Key
-   */
   async checkRateLimit(userId: string, apiKeyId: string): Promise<boolean> {
-    const subscription = await this.prisma.developerSubscription.findUnique({
-      where: { userId },
-      select: { rateLimitPerMinute: true },
-    });
-
-    const rateLimit = subscription?.rateLimitPerMinute || 30;
+    const limits = await this.getEffectiveLimits(userId);
+    const rateLimit = limits.rateLimitPerMinute;
     const key = `ratelimit:${apiKeyId}`;
 
     const current = await this.redis.get<number>(key);
@@ -63,7 +78,6 @@ export class QuotaService {
       return false;
     }
 
-    // Increment counter with 60s TTL
     const pipeline = await this.redis.getClient();
     if (pipeline) {
       const multi = pipeline.multi();
@@ -75,33 +89,20 @@ export class QuotaService {
     return true;
   }
 
-  /**
-   * التحقق من حد مورد محدد ورمي استثناء
-   */
-  async enforceQuota(
-    userId: string,
-    resource: 'messages' | 'phoneNumbers',
-  ) {
+  async enforceQuota(userId: string, resource: 'messages' | 'phoneNumbers') {
     if (resource === 'messages') {
-      const allowed = await this.checkMessageQuota(userId);
-      if (!allowed) {
-        throw new ForbiddenException(
-          'Monthly message quota exceeded. Please upgrade your plan or wait for the next billing period.',
-        );
-      }
+      return;
     }
 
     if (resource === 'phoneNumbers') {
-      const subscription = await this.prisma.developerSubscription.findUnique({
-        where: { userId },
-      });
-      const limits = DEVELOPER_PLAN_LIMITS[subscription?.plan || 'FREE'];
+      const limits = await this.getEffectiveLimits(userId);
+      const max = resolveLimitValue(limits.maxPhoneNumbers);
       const count = await this.prisma.developerPhoneNumber.count({
         where: { account: { userId }, status: { not: 'BANNED' } },
       });
-      if (count >= limits.maxPhoneNumbers) {
+      if (count >= max) {
         throw new ForbiddenException(
-          `Phone number limit reached (${limits.maxPhoneNumbers}). Upgrade your plan.`,
+          `Phone number limit reached (${max === Number.MAX_SAFE_INTEGER ? 'unlimited' : max}). Upgrade to Pro.`,
         );
       }
     }

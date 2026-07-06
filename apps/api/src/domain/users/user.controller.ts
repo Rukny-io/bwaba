@@ -101,7 +101,11 @@ export class UserController {
   async deleteSession(@Request() req, @Param('sessionId') sessionId: string) {
     // استخراج sessionId من JWT للتأكد من عدم حذف الجلسة الحالية
     const currentSessionId = req.user?.sessionId;
-    return this.userService.deleteSession(req.user.id, sessionId, currentSessionId);
+    return this.userService.deleteSession(
+      req.user.id,
+      sessionId,
+      currentSessionId,
+    );
   }
 
   @Delete('sessions')
@@ -382,8 +386,10 @@ export class UserController {
   })
   async getIPAlertSettings(@Request() req) {
     const currentIP = req.ip || req.socket?.remoteAddress || '';
-    const settings = await this.ipVerificationService.getAlertSettings(req.user.id);
-    
+    const settings = await this.ipVerificationService.getAlertSettings(
+      req.user.id,
+    );
+
     return {
       alertOnNewIP: settings.alertOnNewIP,
       trustedIpCount: settings.trustedIpCount,
@@ -398,7 +404,10 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        alertOnNewIP: { type: 'boolean', description: 'إرسال تنبيه عند تسجيل دخول من IP جديد' },
+        alertOnNewIP: {
+          type: 'boolean',
+          description: 'إرسال تنبيه عند تسجيل دخول من IP جديد',
+        },
       },
     },
   })
@@ -411,7 +420,7 @@ export class UserController {
     @Body() body: { alertOnNewIP?: boolean },
   ) {
     await this.ipVerificationService.updateAlertSettings(req.user.id, body);
-    
+
     await this.securityLogService.createLog({
       userId: req.user.id,
       action: 'SECURITY_SETTINGS_CHANGED',
@@ -434,10 +443,12 @@ export class UserController {
     description: 'تم جلب عدد IPs الموثوقة بنجاح',
   })
   async getTrustedIPsCount(@Request() req) {
-    const count = await this.ipVerificationService.getTrustedIPCount(req.user.id);
-    return { 
+    const count = await this.ipVerificationService.getTrustedIPCount(
+      req.user.id,
+    );
+    return {
       count,
-      message: 'لا يمكن عرض قائمة IPs لأنها مخزنة كـ fingerprints مشفرة'
+      message: 'لا يمكن عرض قائمة IPs لأنها مخزنة كـ fingerprints مشفرة',
     };
   }
 
@@ -449,13 +460,16 @@ export class UserController {
   })
   async addCurrentIPToTrusted(@Request() req) {
     const currentIP = req.ip || req.socket?.remoteAddress || '';
-    
+
     if (!currentIP) {
       return { message: 'لم يتم التعرف على عنوان IP الحالي' };
     }
 
-    const result = await this.ipVerificationService.addCurrentIPToTrusted(req.user.id, currentIP);
-    
+    const result = await this.ipVerificationService.addCurrentIPToTrusted(
+      req.user.id,
+      currentIP,
+    );
+
     if (result.success) {
       await this.securityLogService.createLog({
         userId: req.user.id,
@@ -466,7 +480,7 @@ export class UserController {
         userAgent: req.headers['user-agent'],
       });
 
-      return { 
+      return {
         message: 'تم إضافة IP الحالي للقائمة الموثوقة بنجاح',
         maskedIP: result.maskedIP,
       };
@@ -483,7 +497,7 @@ export class UserController {
   })
   async clearTrustedIPs(@Request() req) {
     await this.ipVerificationService.clearTrustedIPs(req.user.id);
-    
+
     await this.securityLogService.createLog({
       userId: req.user.id,
       action: 'SECURITY_SETTINGS_CHANGED',
@@ -504,10 +518,7 @@ export class UserController {
     status: 200,
     description: 'تم تعطيل الحساب بنجاح',
   })
-  async deactivateAccount(
-    @Request() req,
-    @Body() dto: DeactivateAccountDto,
-  ) {
+  async deactivateAccount(@Request() req, @Body() dto: DeactivateAccountDto) {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     return this.userService.deactivateAccount(req.user.id, dto, ipAddress);
   }

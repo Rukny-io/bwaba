@@ -52,11 +52,14 @@ export const CACHE_PREFIX = {
 // ===== Cache Key Builders =====
 export const CacheKeys = {
   // Dashboard
-  dashboardStats: (userId: string) => `${CACHE_PREFIX.DASHBOARD}:stats:${userId}`,
-  dashboardActivity: (userId: string) => `${CACHE_PREFIX.DASHBOARD}:activity:${userId}`,
+  dashboardStats: (userId: string) =>
+    `${CACHE_PREFIX.DASHBOARD}:stats:${userId}`,
+  dashboardActivity: (userId: string) =>
+    `${CACHE_PREFIX.DASHBOARD}:activity:${userId}`,
 
   // Profile
-  profileByUsername: (username: string) => `${CACHE_PREFIX.PROFILE}:username:${username}`,
+  profileByUsername: (username: string) =>
+    `${CACHE_PREFIX.PROFILE}:username:${username}`,
   profileByUserId: (userId: string) => `${CACHE_PREFIX.PROFILE}:user:${userId}`,
 
   // Store
@@ -70,7 +73,8 @@ export const CacheKeys = {
   // Products
   productById: (id: string) => `${CACHE_PREFIX.PRODUCT}:id:${id}`,
   productBySlug: (slug: string) => `${CACHE_PREFIX.PRODUCT}:slug:${slug}`,
-  productsByStore: (storeId: string) => `${CACHE_PREFIX.PRODUCT}:store:${storeId}`,
+  productsByStore: (storeId: string) =>
+    `${CACHE_PREFIX.PRODUCT}:store:${storeId}`,
   myProducts: (userId: string, filters?: string) =>
     `${CACHE_PREFIX.PRODUCT}:my:${userId}${filters ? `:${filters}` : ''}`,
 
@@ -92,13 +96,15 @@ export const CacheKeys = {
 
   // Notifications
   notificationsList: (userId: string) => `notifications:list:${userId}`,
-  notificationsUnreadCount: (userId: string) => `notifications:unread:${userId}`,
+  notificationsUnreadCount: (userId: string) =>
+    `notifications:unread:${userId}`,
 
   // Generic pattern matcher for invalidation
   pattern: {
     userAll: (userId: string) => `*:*:${userId}*`,
     storeAll: (storeId: string) => `${CACHE_PREFIX.STORE}:*:${storeId}*`,
-    productAll: (productId: string) => `${CACHE_PREFIX.PRODUCT}:*:${productId}*`,
+    productAll: (productId: string) =>
+      `${CACHE_PREFIX.PRODUCT}:*:${productId}*`,
     eventAll: (eventId: string) => `${CACHE_PREFIX.EVENT}:*:${eventId}*`,
     formAll: (formId: string) => `${CACHE_PREFIX.FORM}:*:${formId}*`,
   },

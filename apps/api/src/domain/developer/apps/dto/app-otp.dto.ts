@@ -2,7 +2,10 @@ import { IsString, MinLength, MaxLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SendAppOtpDto {
-  @ApiProperty({ description: 'رقم الهاتف مع رمز الدولة', example: '9647701234567' })
+  @ApiProperty({
+    description: 'رقم الهاتف مع رمز الدولة',
+    example: '9647701234567',
+  })
   @IsString()
   @MinLength(10)
   @MaxLength(15)

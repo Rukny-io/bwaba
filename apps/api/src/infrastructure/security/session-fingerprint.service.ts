@@ -187,7 +187,7 @@ export class SessionFingerprintService {
     if (!fingerprints) return [];
 
     return Object.entries(fingerprints).map(([fp, data]) => {
-      const parsed = JSON.parse(data as string);
+      const parsed = JSON.parse(data);
       return {
         fingerprint: fp,
         firstSeen: new Date(parsed.firstSeen),

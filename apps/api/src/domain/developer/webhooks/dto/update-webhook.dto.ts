@@ -1,8 +1,18 @@
-import { IsString, IsArray, IsOptional, IsUrl, IsIn, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsOptional,
+  IsUrl,
+  IsIn,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateWebhookDto {
   @IsOptional()
-  @IsUrl({ require_tld: true, require_protocol: true, protocols: ['https'] }, { message: 'Webhook URL must use HTTPS' })
+  @IsUrl(
+    { require_tld: true, require_protocol: true, protocols: ['https'] },
+    { message: 'Webhook URL must use HTTPS' },
+  )
   url?: string;
 
   @IsOptional()

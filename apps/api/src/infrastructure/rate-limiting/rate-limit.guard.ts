@@ -61,7 +61,10 @@ export class RateLimitGuard implements CanActivate {
     if (await this.rateLimitingService.isWhitelisted(`ip:${ipHash}`)) {
       return true;
     }
-    if (userId && await this.rateLimitingService.isWhitelisted(`user:${userId}`)) {
+    if (
+      userId &&
+      (await this.rateLimitingService.isWhitelisted(`user:${userId}`))
+    ) {
       return true;
     }
 
@@ -122,6 +125,10 @@ export class RateLimitGuard implements CanActivate {
 
   private hashIp(ip: string): string {
     const salt = process.env.IP_HASH_SALT || 'rukny-salt';
-    return crypto.createHash('sha256').update(`${ip}:${salt}`).digest('hex').substring(0, 16);
+    return crypto
+      .createHash('sha256')
+      .update(`${ip}:${salt}`)
+      .digest('hex')
+      .substring(0, 16);
   }
 }

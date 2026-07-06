@@ -28,7 +28,13 @@ export class ThrottlerUserGuard extends ThrottlerGuard {
     const userAgent = req.headers?.['user-agent'] || '';
 
     // Skip throttling for internal requests (Next.js SSR on localhost)
-    if ((ip.startsWith('172.') || ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') && userAgent === 'node') {
+    if (
+      (ip.startsWith('172.') ||
+        ip === '127.0.0.1' ||
+        ip === '::1' ||
+        ip === '::ffff:127.0.0.1') &&
+      userAgent === 'node'
+    ) {
       return true;
     }
 

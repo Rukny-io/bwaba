@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsArray, IsIn, IsUUID, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsIn,
+  IsUUID,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateTemplateDto {
   @IsString()

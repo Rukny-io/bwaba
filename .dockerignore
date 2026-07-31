@@ -1,0 +1,29 @@
+# Build context is the monorepo root (docker-compose.rukny-dev.yml).
+# App-level .dockerignore files are ignored when context is `.`.
+
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+**/.git
+**/.cursor
+**/agent-transcripts
+
+**/*.md
+!**/*/README.md
+
+**/.env
+**/.env.*
+!**/.env.production
+!**/.env.production.*
+
+**/tmp
+**/temp
+**/*.log
+**/npm-debug.log*
+
+# Local IDE / OS
+**/.DS_Store
+**/.idea
+**/.vscode

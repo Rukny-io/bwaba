@@ -1,0 +1,35 @@
+{
+  "name": "@rukny/public-profile-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./profile-themes": "./src/profile-themes.ts",
+    "./platform-icon-assets": "./src/platform-icon-assets.ts",
+    "./map-profile-data": "./src/map-profile-data.ts",
+    "./media-url-context": "./src/media-url-context.tsx",
+    "./resolve-media-url": "./src/resolve-media-url.ts",
+    "./profile-page-view": "./src/components/profile-page-view.tsx",
+    "./public-profile-shell": "./src/components/public-profile-shell.tsx",
+    "./profile-preview-frame": "./src/components/profile-preview-frame.tsx",
+    "./profile-themes.css": "./src/profile-themes.css"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "lucide-react": "^1.17.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.6.0"
+  }
+}

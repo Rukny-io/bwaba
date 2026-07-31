@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "VerificationType" ADD VALUE IF NOT EXISTS 'EMAIL_VERIFICATION';

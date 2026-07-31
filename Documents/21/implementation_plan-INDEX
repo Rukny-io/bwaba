@@ -1,0 +1,335 @@
+# خطة بناء قسم الرسائل الموحد (Instagram Inbox)
+
+## الهدف
+بناء نظام رسائل موحد يسمح لأصحاب الأعمال بالرد على رسائل Instagram DM والتعليقات من داخل منصة Rukny، مع ميزات ذكية تميّز المنصة عن المنافسين.
+
+---
+
+## المتطلبات الإلزامية من Meta
+
+> [!CAUTION]
+> **قبل البدء بالتنفيذ، يجب استيفاء هذه المتطلبات من Meta:**
+>
+> 1. **حساب Instagram Business أو Creator** مرتبط بصفحة Facebook
+> 2. **تطبيق Meta من نوع "Business"** في [Meta Developer Portal](https://developers.facebook.com/)
+> 3. **صلاحية `instagram_business_manage_messages`** — نحن نطلبها أصلاً في OAuth ✅
+> 4. **HTTPS Endpoint** لاستقبال الـ Webhooks — `api.rukny.io` جاهز ✅
+> 5. **Meta App Review** — مطلوب للإنتاج (يمكن التطوير مع 25 مستخدم تجريبي بدون مراجعة)
+> 6. **نافذة 24 ساعة** — يمكن الرد فقط خلال 24 ساعة من آخر رسالة من المستخدم
+
+---
+
+## البنية المعمارية
+
+```mermaid
+graph TB
+    subgraph "Meta Platform"
+        IG["Instagram User يرسل رسالة"]
+    end
+    
+    subgraph "Rukny API (NestJS)"
+        WH["Webhook Controller<br/>POST /webhooks/instagram"]
+        SVC["Instagram Messaging Service"]
+        DB["PostgreSQL<br/>Conversations + Messages"]
+        WS["WebSocket Gateway<br/>Real-time Push"]
+    end
+    
+    subgraph "Rukny Business (Next.js)"
+        INBOX["صفحة Inbox"]
+        CHAT["عرض المحادثة"]
+        AI["AI Suggestions"]
+    end
+    
+    IG -->|"Webhook POST"| WH
+    WH --> SVC
+    SVC --> DB
+    SVC --> WS
+    WS -->|"Real-time"| INBOX
+    INBOX --> CHAT
+    CHAT -->|"Send Reply API"| SVC
+    SVC -->|"Instagram Graph API"| IG
+    CHAT --> AI
+```
+
+---
+
+## المراحل التنفيذية
+
+---
+
+### المرحلة 1: إعداد Meta Webhooks (Backend)
+
+#### [NEW] `instagram-webhook.controller.ts`
+```
+POST /api/v1/webhooks/instagram          → استقبال الأحداث (messages, comments)
+GET  /api/v1/webhooks/instagram          → Meta Verification Challenge
+```
+
+**المنطق:**
+1. **GET** (Verification): Meta ترسل `hub.mode=subscribe` + `hub.verify_token` + `hub.challenge`
+   - نتحقق من `verify_token` (متغير بيئة `INSTAGRAM_WEBHOOK_VERIFY_TOKEN`)
+   - نرجع `hub.challenge` كـ plain text
+   
+2. **POST** (Event): Meta ترسل JSON payload مع الأحداث
+   - نتحقق من `x-hub-signature-256` header باستخدام `INSTAGRAM_APP_SECRET`
+   - نحلل الـ payload ونحفظ الرسالة في قاعدة البيانات
+   - نرسل إشعار عبر WebSocket للـ Frontend
+
+**أنواع الأحداث المدعومة:**
+| الحقل | الوصف |
+|---|---|
+| `messages` | رسالة جديدة من مستخدم |
+| `messaging_postbacks` | المستخدم نقر على زر |
+| `message_reactions` | تفاعل على رسالة |
+| `message_reads` | المستخدم قرأ الرسالة |
+
+#### [NEW] `instagram-webhook.guard.ts`
+- Guard يتحقق من توقيع الـ Webhook (`x-hub-signature-256`) باستخدام HMAC-SHA256
+
+#### تحديث `.env.production`
+```env
+INSTAGRAM_WEBHOOK_VERIFY_TOKEN=<random-string>
+```
+
+---
+
+### المرحلة 2: قاعدة البيانات (Prisma Schema)
+
+#### [MODIFY] `schema.prisma` — إضافة 3 models جديدة:
+
+```prisma
+model InstagramConversation {
+  id               String    @id @default(uuid())
+  connectionId     String                         // ربط بـ InstagramConnection
+  participantIgId  String                         // igUserId للمتحدث
+  participantName  String?
+  participantPic   String?
+  lastMessageAt    DateTime  @default(now())
+  lastMessageText  String?
+  unreadCount      Int       @default(0)
+  status           String    @default("open")     // open | archived | spam
+  tags             String[]  @default([])         // ["طلب شراء", "شكوى"]
+  assignedTo       String?                        // userId of team member
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  connection       InstagramConnection @relation(...)
+  messages         InstagramMessage[]
+  
+  @@unique([connectionId, participantIgId])
+  @@index([connectionId, lastMessageAt])
+  @@index([status])
+  @@map("instagram_conversations")
+}
+
+model InstagramMessage {
+  id               String    @id @default(uuid())
+  conversationId   String
+  igMessageId      String?   @unique              // Meta message ID
+  direction        String                         // "inbound" | "outbound"
+  contentType      String    @default("text")     // text | image | video | audio | story_reply | story_mention
+  text             String?
+  mediaUrl         String?
+  storyUrl         String?
+  isRead           Boolean   @default(false)
+  sentAt           DateTime  @default(now())
+  deliveredAt      DateTime?
+  readAt           DateTime?
+  metadata         Json?                          // بيانات إضافية
+  createdAt        DateTime  @default(now())
+  
+  conversation     InstagramConversation @relation(...)
+  
+  @@index([conversationId, sentAt])
+  @@map("instagram_messages")
+}
+
+model InstagramWebhookLog {
+  id          String   @id @default(uuid())
+  eventType   String
+  payload     Json
+  status      String   @default("processed")      // processed | failed | ignored
+  error       String?
+  processedAt DateTime @default(now())
+  
+  @@index([eventType])
+  @@index([processedAt])
+  @@map("instagram_webhook_logs")
+}
+```
+
+---
+
+### المرحلة 3: Backend Service + WebSocket
+
+#### [NEW] `instagram-messaging.service.ts`
+```
+// استقبال الرسائل
+handleIncomingMessage(payload)     → حفظ + إشعار WebSocket
+handleMessageRead(payload)        → تحديث حالة القراءة
+handleReaction(payload)           → حفظ التفاعل
+
+// إرسال الرسائل
+sendTextReply(connectionId, recipientIgId, text)
+sendMediaReply(connectionId, recipientIgId, mediaUrl)
+sendQuickReplies(connectionId, recipientIgId, text, buttons[])
+
+// إدارة المحادثات
+getConversations(userId, filters)  → قائمة المحادثات مع pagination
+getMessages(conversationId)        → رسائل محادثة معينة
+archiveConversation(conversationId)
+markAsRead(conversationId)
+tagConversation(conversationId, tags[])
+```
+
+**إرسال الرسالة عبر Instagram API:**
+```
+POST https://graph.instagram.com/v21.0/me/messages
+Headers: { Authorization: Bearer <access_token> }
+Body: {
+  "recipient": { "id": "<ig_user_id>" },
+  "message": { "text": "مرحباً! شكراً لتواصلك معنا" }
+}
+```
+
+#### [NEW] `instagram-messaging.gateway.ts` (WebSocket)
+```
+// NestJS WebSocket Gateway
+@WebSocketGateway({ namespace: '/instagram-inbox' })
+
+// الأحداث:
+'new_message'        → رسالة جديدة وصلت
+'message_read'       → المستخدم قرأ الرسالة
+'conversation_update' → تحديث محادثة (tag, archive, etc.)
+'typing'             → المستخدم يكتب (إذا دعمته Meta)
+```
+
+#### [NEW] API Endpoints:
+```
+GET    /api/v1/integrations/instagram/inbox/conversations
+GET    /api/v1/integrations/instagram/inbox/conversations/:id/messages
+POST   /api/v1/integrations/instagram/inbox/conversations/:id/reply
+PATCH  /api/v1/integrations/instagram/inbox/conversations/:id/archive
+PATCH  /api/v1/integrations/instagram/inbox/conversations/:id/read
+PATCH  /api/v1/integrations/instagram/inbox/conversations/:id/tags
+```
+
+---
+
+### المرحلة 4: واجهة المستخدم (Frontend)
+
+#### التصميم المقترح:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  📥 صندوق الوارد  ·  3 غير مقروءة  │  🔍 بحث       │
+├──────────┬───────────────────────────────────────────┤
+│          │                                           │
+│ 📋 قائمة │  💬 المحادثة المفتوحة                     │
+│ المحادثات│                                           │
+│          │  [صورة] أحمد محمد                         │
+│ ● أحمد   │  ─────────────────────                    │
+│   "مرحبا │  أحمد: مرحباً، هل المنتج متوفر؟          │
+│   هل..." │                                           │
+│          │  أنت: نعم متوفر! يمكنك الطلب من الرابط   │
+│ ○ سارة   │                                           │
+│   "شكراً │  أحمد: كم السعر؟                          │
+│   على.." │                                           │
+│          │  ┌─────────────────────────────────────┐   │
+│ ○ علي    │  │ 💡 اقتراح AI: "السعر 25,000 د.ع..."│   │
+│   "أريد  │  └─────────────────────────────────────┘   │
+│   أن..." │                                           │
+│          │  [📝 اكتب رداً...]  [📷] [⚡ ردود سريعة] │
+├──────────┴───────────────────────────────────────────┤
+│  ⚡ ردود سريعة  │  🏷️ تصنيفات  │  📊 إحصائيات      │
+└──────────────────────────────────────────────────────┘
+```
+
+#### الملفات:
+
+| الملف | الوظيفة |
+|---|---|
+| `app/(dashboard)/app/instagram/inbox/page.tsx` | صفحة الـ Inbox الرئيسية |
+| `app/(dashboard)/app/instagram/inbox/[conversationId]/page.tsx` | عرض محادثة محددة (اختياري — يمكن عرضها في نفس الصفحة) |
+| `components/instagram/inbox/conversation-list.tsx` | قائمة المحادثات (يسار/يمين) |
+| `components/instagram/inbox/conversation-item.tsx` | عنصر محادثة واحدة |
+| `components/instagram/inbox/chat-view.tsx` | عرض الرسائل |
+| `components/instagram/inbox/message-bubble.tsx` | فقاعة رسالة واحدة |
+| `components/instagram/inbox/reply-composer.tsx` | صندوق كتابة الرد |
+| `components/instagram/inbox/quick-replies.tsx` | أزرار الردود السريعة |
+| `components/instagram/inbox/ai-suggestion.tsx` | اقتراح الذكاء الاصطناعي |
+| `components/instagram/inbox/conversation-filters.tsx` | فلاتر (الكل، غير مقروء، مؤرشف) |
+| `components/instagram/inbox/conversation-tags.tsx` | تصنيفات المحادثة |
+
+#### ميزات الواجهة:
+- **Real-time**: تحديث فوري عبر WebSocket (رسائل جديدة، حالة القراءة)
+- **Responsive**: على الهاتف تعرض القائمة أو المحادثة (وليس كلاهما)
+- **Keyboard shortcuts**: Enter للإرسال، Escape للعودة
+- **Media support**: عرض الصور والفيديوهات المرسلة
+- **Story replies**: عرض الـ Story التي تم الرد عليها
+- **Infinite scroll**: تحميل رسائل أقدم عند السحب للأعلى
+- **Unread badge**: شارة عدد الرسائل غير المقروءة في Sidebar
+
+---
+
+### المرحلة 5: الذكاء الاصطناعي (اختياري — مرحلة متقدمة)
+
+#### [NEW] `instagram-ai.service.ts`
+- **تصنيف الرسائل**: عند وصول رسالة، نرسلها لنموذج AI (OpenAI / Gemini) مع prompt:
+  ```
+  صنف هذه الرسالة إلى واحد مما يلي: طلب_شراء, استفسار, شكوى, إطراء, أخرى
+  الرسالة: "{message_text}"
+  ```
+- **اقتراح الردود**: بناءً على سياق المحادثة + معلومات المتجر، نقترح رد جاهز
+- **الردود السريعة (Templates)**: قوالب يمكن للمستخدم إنشاؤها وتخصيصها
+
+---
+
+### المرحلة 6: التحسينات المتقدمة (مستقبلاً)
+
+- **Unified Inbox**: دمج رسائل Instagram + WhatsApp + Telegram في واجهة واحدة
+- **CRM Integration**: ربط المحادثات بالعملاء في نظام إدارة العملاء
+- **Analytics**: إحصائيات وقت الرد، عدد الرسائل، الأكثر تكراراً
+- **Auto-reply Rules**: ردود تلقائية بناءً على كلمات مفتاحية
+- **Team Assignment**: توزيع المحادثات على أعضاء الفريق
+- **Canned Responses**: ردود محفوظة يمكن إدراجها بنقرة واحدة
+
+---
+
+## ترتيب التنفيذ المقترح
+
+| # | المهمة | المدة التقريبية | الأولوية |
+|---|---|---|---|
+| 1 | Webhook Controller + Verification | ساعة واحدة | 🔴 عالية |
+| 2 | Prisma Schema (3 models) | 30 دقيقة | 🔴 عالية |
+| 3 | Messaging Service (receive + send) | ساعتان | 🔴 عالية |
+| 4 | WebSocket Gateway | ساعة واحدة | 🟡 متوسطة |
+| 5 | Frontend Inbox UI | 3-4 ساعات | 🔴 عالية |
+| 6 | Quick Replies + Templates | ساعة واحدة | 🟡 متوسطة |
+| 7 | AI Classification + Suggestions | ساعتان | 🟢 منخفضة |
+| 8 | Meta App Review Submission | خارجي | 🔴 عالية |
+
+> [!IMPORTANT]
+> **سؤال مهم:** هل تريد أن نبدأ بالتنفيذ؟ إذا نعم، هل تفضل أن نبدأ بـ:
+> - **(أ)** Backend أولاً (Webhook + Database + Service) ثم الواجهة
+> - **(ب)** الواجهة أولاً (مع بيانات وهمية) لنرى التصميم، ثم نربطها بالـ Backend
+>
+> كذلك، هل لديك **Meta App** جاهز في Developer Portal ولا نحتاج ننشئ واحد؟
+
+## Verification Plan
+
+### اختبار الـ Webhook
+1. استخدام Meta Webhook Test Tool في Developer Portal لإرسال أحداث تجريبية
+2. التحقق من وصول الأحداث وحفظها في قاعدة البيانات
+3. التحقق من إشعار WebSocket في المتصفح
+
+### اختبار إرسال الرسائل
+1. إرسال رسالة من حساب تجريبي إلى حساب Instagram المرتبط
+2. التحقق من ظهورها في الـ Inbox
+3. الرد عليها والتحقق من وصول الرد في Instagram
+
+### Build Check
+```bash
+npx next build  # Frontend
+npm run build    # Backend
+```

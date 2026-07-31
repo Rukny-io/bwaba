@@ -1,0 +1,49 @@
+# ============================================
+# رفع apps/app فقط — rukny.work + تضمين النموذج
+#
+#   cd docker-test
+#   cp .env.app.example .env
+#   .\up-app.ps1 -Tunnel
+# ============================================
+
+name: rukny-app-eu
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: apps/app/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://rukny.work}
+        NEXT_PUBLIC_FORM_PUBLIC_ORIGIN: ${NEXT_PUBLIC_FORM_PUBLIC_ORIGIN:-https://rukny.io}
+        NEXT_PUBLIC_EMBED_FORM_SLUG: ${NEXT_PUBLIC_EMBED_FORM_SLUG:-ku0h3r}
+        NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.work}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://rukny.work}
+      NEXT_PUBLIC_FORM_PUBLIC_ORIGIN: ${NEXT_PUBLIC_FORM_PUBLIC_ORIGIN:-https://rukny.io}
+      NEXT_PUBLIC_EMBED_FORM_SLUG: ${NEXT_PUBLIC_EMBED_FORM_SLUG:-ku0h3r}
+    ports:
+      - '127.0.0.1:3000:3000'
+    networks:
+      - app_eu_network
+
+  cloudflared:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+      TUNNEL_TRANSPORT_PROTOCOL: http2
+    depends_on:
+      - app
+    networks:
+      - app_eu_network
+
+networks:
+  app_eu_network:
+    driver: bridge

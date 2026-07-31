@@ -1,0 +1,14 @@
+{
+  "name": "@rukny/forms-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./conditional-logic-eval": "./src/conditional-logic-eval.ts",
+    "./public-form-utils": "./src/public-form-utils.ts",
+    "./security-headers": "./src/security-headers.ts",
+    "./apply-security-headers": "./src/apply-security-headers.ts",
+    "./pricing-plans": "./src/pricing-plans.ts",
+    "./matrix-field-utils": "./src/matrix-field-utils.ts"
+  }
+}

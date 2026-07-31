@@ -1,0 +1,40 @@
+import type { Metadata } from "next"
+import { thmanyahSans } from "@rukny/thmanyah-font/next"
+
+import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
+import { cn } from "@/lib/utils"
+
+export const metadata: Metadata = {
+  title: "Rukny - App",
+  description: "App for Rukny platform",
+  icons: {
+    icon: "/rukny-logo.svg",
+  },
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html
+      lang="ar"
+      dir="rtl"
+      suppressHydrationWarning
+      className={cn(thmanyahSans.variable, "h-full font-sans font-arabic antialiased")}
+    >
+      <body
+        className={cn(
+          thmanyahSans.className,
+          "min-h-full font-sans font-arabic antialiased"
+        )}
+      >
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}

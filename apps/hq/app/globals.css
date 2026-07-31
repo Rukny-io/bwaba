@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "@heroui/styles/css";
+@custom-variant dark (&:is(.dark *));
+@source "./**/*.{js,ts,jsx,tsx}";
+@source "../packages/react/src/**/*.{js,ts,jsx,tsx}";
+
+:root,
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  --brand-indigo: #6366f1;
+  --brand-indigo-soft: #e0e7ff;
+
+  --background: #f6f8fb;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --muted-foreground: #475569;
+  --border: #dbe3ee;
+  --separator: #e8edf3;
+
+  --primary: var(--brand-indigo);
+  --primary-foreground: #ffffff;
+  --secondary: var(--brand-indigo-soft);
+  --secondary-foreground: #3730a3;
+
+  --accent: var(--brand-indigo);
+  --accent-foreground: #ffffff;
+
+  --surface: #ffffff;
+  --surface-foreground: #0f172a;
+  --surface-secondary: #f1f5f9;
+  --surface-secondary-foreground: #0f172a;
+  --surface-tertiary: #e8edf3;
+  --surface-tertiary-foreground: #0f172a;
+
+  --overlay: #ffffff;
+  --overlay-foreground: #0f172a;
+
+  --field-background: #ffffff;
+  --field-foreground: #0f172a;
+  --field-placeholder: var(--muted);
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+  --success: #10b981;
+  --success-foreground: #064e3b;
+  --warning: #f59e0b;
+  --warning-foreground: #78350f;
+
+  --default: #f1f5f9;
+  --default-foreground: #0f172a;
+  --focus: var(--brand-indigo);
+  --scrollbar: #cbd5e1;
+
+  --radius: 0.875rem;
+  --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", ui-sans-serif, system-ui, sans-serif;
+  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-indigo: #8b9cff;
+  --brand-indigo-soft: #1e2440;
+
+  --background: #0d1117;
+  --foreground: #f8fafc;
+  --muted: #9aa8bc;
+  --muted-foreground: #c2cedd;
+  --border: #2f3b52;
+  --separator: #243044;
+
+  --primary: var(--brand-indigo);
+  --primary-foreground: #ffffff;
+  --secondary: #1a2233;
+  --secondary-foreground: #e8edf5;
+
+  --accent: var(--brand-indigo);
+  --accent-foreground: #e8edf5;
+
+  --surface: #151b27;
+  --surface-foreground: #f8fafc;
+  --surface-secondary: #1b2332;
+  --surface-secondary-foreground: #e8edf5;
+  --surface-tertiary: #243044;
+  --surface-tertiary-foreground: #e8edf5;
+
+  --overlay: #181f2e;
+  --overlay-foreground: #f8fafc;
+
+  --field-background: #1b2332;
+  --field-foreground: #f8fafc;
+  --field-placeholder: #8b9bb0;
+
+  --danger: #fb7185;
+  --danger-foreground: #ffffff;
+  --success: #4ade80;
+  --success-foreground: #052e16;
+  --warning: #fcd34d;
+  --warning-foreground: #78350f;
+
+  --default: #1b2332;
+  --default-foreground: #f8fafc;
+  --focus: var(--brand-indigo);
+  --scrollbar: #3d4f68;
+
+  --card-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 4px 20px rgba(0, 0, 0, 0.22);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.dashboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+}
+
+.dashboard-shell {
+  box-shadow: none;
+}
+
+@media (min-width: 640px) {
+  .dashboard-shell {
+    box-shadow: var(--card-shadow);
+  }
+}
+
+.dashboard-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .dashboard-section-stack {
+    gap: 2rem;
+  }
+}
+
+.liquid-glass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.liquid-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .liquid-glass,
+[data-theme="dark"] .liquid-glass {
+  background-color: rgba(21, 27, 39, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 4px 20px rgba(0, 0, 0, 0.28);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .liquid-glass {
+    background-color: #ffffff;
+  }
+
+  .dark .liquid-glass,
+  [data-theme="dark"] .liquid-glass {
+    background-color: #151b27;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

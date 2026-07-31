@@ -1,0 +1,121 @@
+# Generated from env: APP_HOST, API_HOST, ACCOUNTS_HOST, PUBLIC_HOST, DEVELOPER_HOST, FORMS_HOST
+
+upstream app_upstream {
+    server app:3000 max_fails=3 fail_timeout=5s;
+}
+
+upstream api_upstream {
+    server api:3001;
+}
+
+upstream accounts_upstream {
+    server accounts:3005 max_fails=3 fail_timeout=5s;
+}
+
+upstream public_upstream {
+    server public:3006 max_fails=3 fail_timeout=5s;
+}
+
+upstream developer_upstream {
+    server developer:3004 max_fails=3 fail_timeout=5s;
+}
+
+upstream forms_upstream {
+    server forms:3007 max_fails=3 fail_timeout=5s;
+}
+
+# ─── App: ${APP_HOST} ───
+server {
+    listen 80;
+    server_name ${APP_HOST};
+
+    location / {
+        limit_req zone=web burst=150;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://app_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── API: ${API_HOST} ───
+server {
+    listen 80;
+    server_name ${API_HOST};
+
+    location / {
+        limit_req zone=api burst=60;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── Accounts: ${ACCOUNTS_HOST} ───
+server {
+    listen 80;
+    server_name ${ACCOUNTS_HOST};
+
+    location / {
+        limit_req zone=web burst=150;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://accounts_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── Public forms site: ${PUBLIC_HOST} ───
+server {
+    listen 80;
+    server_name ${PUBLIC_HOST};
+
+    location / {
+        limit_req zone=web burst=150;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://public_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── Developer portal: ${DEVELOPER_HOST} ───
+server {
+    listen 80;
+    server_name ${DEVELOPER_HOST};
+
+    location / {
+        limit_req zone=web burst=150;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://developer_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── Forms dashboard: ${FORMS_HOST} ───
+server {
+    listen 80;
+    server_name ${FORMS_HOST};
+
+    location / {
+        limit_req zone=web burst=150;
+        include /etc/nginx/includes/proxy-cloudflare.conf;
+        proxy_pass http://forms_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
+}

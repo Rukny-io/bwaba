@@ -1,0 +1,17 @@
+# Used when build context is ./apps/forms only (local quick build).
+# Production compose uses repo root context — see Dockerfile header.
+
+node_modules
+.next
+.git
+*.md
+.env*
+!.env.example
+packages
+app/components
+react
+**/storybook
+**/*.stories.tsx
+**/*.stories.ts
+**/*.test.ts
+**/*.test.tsx

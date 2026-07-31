@@ -1,0 +1,22 @@
+// Config - Shared authentication configuration
+
+export {
+  IS_PRODUCTION,
+  IS_DEVELOPMENT,
+  COOKIE_DOMAIN,
+  COOKIE_SECURE,
+  COOKIE_SAME_SITE,
+  COOKIE_NAMES,
+  TOKEN_EXPIRY,
+  AUTH_COOKIES,
+  APP_URLS,
+  DEFAULT_REDIRECTS,
+  ROLE_APP_REDIRECTS,
+  RATE_LIMIT,
+  SESSION_CONFIG,
+  DEFAULT_PROTECTED_PATHS,
+  DEFAULT_AUTH_PAGES,
+  getAppUrl,
+  getRedirectUrlByRole,
+  getSafeRedirectUrl,
+} from './config';

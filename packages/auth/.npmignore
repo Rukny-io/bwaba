@@ -1,0 +1,33 @@
+# Source
+src/
+*.ts
+*.tsx
+!*.d.ts
+
+# Config
+tsconfig.json
+.eslintrc.js
+.prettierrc
+
+# Build
+node_modules/
+.npm/
+.eslintcache
+*.log
+
+# Dev
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test
+coverage/
+.nyc_output/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx

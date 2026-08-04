@@ -9,6 +9,8 @@ export interface DashboardMetricCardProps {
   comparisonSecondary: string;
   trend?: string;
   trendPositive?: boolean;
+  /** Tighter spacing/type — used on forms list mobile density */
+  compact?: boolean;
 }
 
 function TrendBadge({
@@ -23,7 +25,7 @@ function TrendBadge({
   return (
     <span
       className={cn(
-        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums sm:px-2.5 sm:py-1 sm:text-[11px]',
+        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums sm:px-2.5 sm:py-1 sm:text-[11px]',
         trendPositive
           ? 'bg-[var(--brand-soft-lime)] text-[var(--success)]'
           : 'bg-[var(--danger)]/15 text-[var(--danger)]',
@@ -45,16 +47,34 @@ export function DashboardMetricCard({
   comparisonSecondary,
   trend,
   trendPositive = true,
+  compact = false,
 }: DashboardMetricCardProps) {
   return (
-    <article className="dashboard-card flex min-h-[9.75rem] flex-col rounded-3xl p-[1.125rem] sm:min-h-0 sm:gap-4 sm:rounded-3xl sm:p-5">
+    <article
+      className={cn(
+        'flex flex-col rounded-2xl border border-[var(--border)]',
+        compact
+          ? 'min-h-[7.25rem] gap-1.5 p-3 sm:min-h-0 sm:gap-4 sm:p-5'
+          : 'min-h-[9.75rem] p-[1.125rem] sm:min-h-0 sm:gap-4 sm:p-5',
+      )}
+    >
       {/* ── Mobile ── */}
       <div className="flex min-h-0 flex-1 flex-col sm:hidden">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
-            <Icon size={17} strokeWidth={1.85} />
+        <div className={cn('flex items-center', compact ? 'gap-2' : 'gap-2.5')}>
+          <div
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40',
+              compact ? 'size-8' : 'size-10',
+            )}
+          >
+            <Icon size={compact ? 15 : 17} strokeWidth={1.85} />
           </div>
-          <p className="min-w-0 flex-1 text-[13px] font-semibold leading-snug text-[var(--muted-foreground)]">
+          <p
+            className={cn(
+              'min-w-0 flex-1 font-semibold leading-snug text-[var(--muted-foreground)]',
+              compact ? 'text-[11px]' : 'text-[13px]',
+            )}
+          >
             {label}
           </p>
           {trend ? (
@@ -62,13 +82,28 @@ export function DashboardMetricCard({
           ) : null}
         </div>
 
-        <div className="mt-auto flex min-h-[4.25rem] w-full flex-col justify-end pt-4">
-          <p className="text-right text-[2.25rem] font-bold leading-none tracking-tight tabular-nums text-[var(--foreground)]">
+        <div
+          className={cn(
+            'mt-auto flex w-full flex-col justify-end',
+            compact ? 'min-h-[2.75rem] pt-2.5' : 'min-h-[4.25rem] pt-4',
+          )}
+        >
+          <p
+            className={cn(
+              'text-right font-bold leading-none tracking-tight tabular-nums text-[var(--foreground)]',
+              compact ? 'text-[1.65rem]' : 'text-[2.25rem]',
+            )}
+          >
             <span dir="ltr" lang="en">
               {value}
             </span>
           </p>
-          <p className="mt-1.5 line-clamp-2 text-right text-[10px] leading-relaxed text-[var(--muted-foreground)]/75">
+          <p
+            className={cn(
+              'line-clamp-2 text-right leading-relaxed text-[var(--muted-foreground)]/75',
+              compact ? 'mt-1 text-[10px]' : 'mt-1.5 text-[10px]',
+            )}
+          >
             {comparisonPrimary}
           </p>
         </div>

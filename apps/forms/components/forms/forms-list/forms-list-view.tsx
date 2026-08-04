@@ -48,7 +48,7 @@ import { DashboardSurface } from '@/components/app/dashboard-surface';
 function FormsListSectionDivider({ label }: { label: string }) {
   return (
     <div
-      className="col-span-full flex items-center gap-3 py-3 sm:py-4"
+      className="col-span-full flex items-center gap-3 py-2 sm:py-4"
       role="separator"
       aria-label={label}
     >
@@ -74,8 +74,9 @@ function FormsListSummary({
 }) {
   if (viewMode === 'trash') {
     return (
-      <div className="grid grid-cols-1 gap-3.5 sm:gap-3">
+      <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
         <DashboardMetricCard
+          compact
           icon={Trash2}
           label="في السلة"
           value={String(listTotal)}
@@ -92,8 +93,9 @@ function FormsListSummary({
       : 'نماذج منشورة';
 
   return (
-    <div className="grid auto-rows-fr grid-cols-2 gap-3.5 sm:gap-3 xl:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
       <DashboardMetricCard
+        compact
         icon={FileText}
         label="النماذج النشطة"
         value={metrics.activeForms.value}
@@ -103,6 +105,7 @@ function FormsListSummary({
         comparisonSecondary="مقابل الشهر الماضي"
       />
       <DashboardMetricCard
+        compact
         icon={Inbox}
         label="إجمالي الاستجابات"
         value={metrics.submissions.value}
@@ -112,6 +115,7 @@ function FormsListSummary({
         comparisonSecondary="مقابل الشهر الماضي"
       />
       <DashboardMetricCard
+        compact
         icon={LayoutTemplate}
         label="نماذج مخصّصة"
         value={metrics.themedForms.value}
@@ -121,6 +125,7 @@ function FormsListSummary({
         comparisonSecondary="من إجمالي نماذجك"
       />
       <DashboardMetricCard
+        compact
         icon={BarChart2}
         label="معدل الإكمال"
         value={metrics.completionRate.value}
@@ -282,14 +287,14 @@ export function FormsListView({
           viewMode === 'active' ? (
             <Link
               href={FORMS_CREATE_ENTRY_PATH}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--primary)] px-4 py-3 text-[14px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 sm:w-auto sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-[13px]"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 sm:w-auto sm:px-3.5 sm:py-2"
             >
-              <Plus size={16} strokeWidth={2.2} />
+              <Plus size={15} strokeWidth={2.2} />
               إنشاء نموذج
             </Link>
           ) : null
         }
-        className="mb-0 [&_h1]:text-2xl sm:[&_h1]:text-2xl"
+        className="mb-0 [&_h1]:text-xl sm:[&_h1]:text-2xl"
       />
 
       <FormsListSummary
@@ -299,7 +304,7 @@ export function FormsListView({
         viewMode={viewMode}
       />
 
-      <DashboardSurface padding="md" className="sm:px-4 sm:py-3">
+      <DashboardSurface padding="sm" className="px-3 py-2.5 sm:px-4 sm:py-3">
         <FormsListToolbar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -354,7 +359,7 @@ export function FormsListView({
         </DashboardEmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             <AnimatePresence mode="popLayout">
               {ownForms.map((form) => renderFormCard(form))}
               {ownForms.length > 0 && sharedForms.length > 0 ? (

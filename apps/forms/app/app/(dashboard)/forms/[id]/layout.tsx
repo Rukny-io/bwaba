@@ -14,7 +14,7 @@ export default async function FormWorkspaceLayout({
   const form = await fetchFormServer(id);
 
   return (
-    <div className="dashboard-section-stack w-full">
+    <div className="dashboard-page flex w-full flex-col gap-5 sm:gap-6 dashboard-brand">
       <FormWorkspaceNav
         formId={id}
         formSlug={form?.slug}

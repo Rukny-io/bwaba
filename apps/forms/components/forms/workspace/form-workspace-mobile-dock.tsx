@@ -2,27 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  BarChart2,
-  Inbox,
-  LayoutGrid,
-  Plug,
-  Settings,
-} from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import { APP_BASE } from '@/components/app/nav-config';
 import {
   canAccessFormWorkspaceTab,
   type FormAccessRole,
 } from '@/lib/form-team-permissions';
 import type { FormTeamRole } from '@/lib/form-team-api';
+import {
+  FORM_WORKSPACE_TABS,
+  isFormWorkspacePathTabActive,
+} from '@/lib/form-workspace-tabs';
 import { cn } from '@/lib/utils';
-
-const FORM_TABS = [
-  { suffix: '', label: 'إعدادات', icon: Settings },
-  { suffix: '/submissions', label: 'الاستجابات', icon: Inbox },
-  { suffix: '/analytics', label: 'التحليلات', icon: BarChart2 },
-  { suffix: '/integrations', label: 'التكاملات', icon: Plug },
-] as const;
 
 function resolveNavAccessRole(
   isShared: boolean,
@@ -38,12 +29,6 @@ function resolveNavAccessRole(
     return sharedRole;
   }
   return 'VIEWER';
-}
-
-function isFormTabActive(pathname: string, base: string, suffix: string) {
-  const href = `${base}${suffix}`;
-  if (suffix === '') return pathname === base;
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function DockTab({
@@ -75,7 +60,11 @@ function DockTab({
         gap: isActive ? 6 : 0,
       }}
     >
-      <Icon size={18} strokeWidth={isActive ? 2.2 : 1.7} style={{ flexShrink: 0 }} />
+      <Icon
+        size={18}
+        strokeWidth={isActive ? 2.2 : 1.7}
+        style={{ flexShrink: 0 }}
+      />
       {isActive ? (
         <span className="inline-block whitespace-nowrap text-[12px] font-bold tracking-tight">
           {label}
@@ -97,7 +86,7 @@ export function FormWorkspaceMobileDock({
   const pathname = usePathname();
   const base = `${APP_BASE}/forms/${formId}`;
   const accessRole = resolveNavAccessRole(isShared, sharedRole);
-  const visibleTabs = FORM_TABS.filter((tab) =>
+  const visibleTabs = FORM_WORKSPACE_TABS.filter((tab) =>
     canAccessFormWorkspaceTab(accessRole, tab.suffix),
   );
 
@@ -121,11 +110,11 @@ export function FormWorkspaceMobileDock({
         >
           {visibleTabs.map(({ suffix, label, icon }) => (
             <DockTab
-              key={suffix}
+              key={suffix || 'settings'}
               href={`${base}${suffix}`}
               icon={icon}
               label={label}
-              isActive={isFormTabActive(pathname, base, suffix)}
+              isActive={isFormWorkspacePathTabActive(pathname, formId, suffix)}
             />
           ))}
           <div className="mx-0.5 h-4 w-px shrink-0 rounded-[1px] bg-[var(--border)]" />

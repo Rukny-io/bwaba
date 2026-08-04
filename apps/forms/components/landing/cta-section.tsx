@@ -201,7 +201,7 @@ export function CtaSection() {
   const TabIcon = tab.icon;
 
   return (
-    <section className="mx-auto w-full max-w-[var(--max-content-width)] px-5 py-20 min-[720px]:px-6 min-[720px]:py-28 min-[1280px]:px-0">
+    <section className="mx-auto w-full max-w-6xl px-5 py-16 min-[720px]:px-6 min-[720px]:py-24">
       <motion.div
         variants={fadeUp}
         initial="hidden"
@@ -211,7 +211,8 @@ export function CtaSection() {
       >
         {/* Header */}
         <div className="text-center">
-          <p className="mx-auto max-w-[640px] text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-base">
+          <span className="landing-section-eyebrow">المنصة</span>
+          <p className="mx-auto mt-5 max-w-[640px] text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
             أنشئ نماذجك، أدر استجاباتك، واربط أدواتك — كل ذلك من لوحة تحكم
             واحدة سهلة وقابلة للتخصيص.
           </p>
@@ -249,7 +250,7 @@ export function CtaSection() {
         {/* Tab panel: preview + content */}
         <div
           role="tabpanel"
-          className="landing-panel grid overflow-hidden rounded-[32px] min-[960px]:grid-cols-2"
+          className="landing-panel grid overflow-hidden rounded-2xl border border-[var(--border)] min-[960px]:grid-cols-2"
         >
           {/* Preview */}
           <div className="border-b border-[var(--border)]/60 bg-[var(--surface)] min-[960px]:border-b-0 min-[960px]:border-e">
@@ -325,16 +326,14 @@ export function CtaSection() {
         {/* Community CTA + social proof */}
         <div className="grid gap-4 min-[960px]:grid-cols-[1.35fr_1fr]">
           {/* Main CTA card */}
-          <div className="landing-panel relative overflow-hidden rounded-[28px] p-8 min-[720px]:p-10">
+          <div className="landing-panel relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] p-8 min-[720px]:p-10">
             <div className="relative">
               <div className="inline-flex items-center gap-3">
-                <span className="landing-surface-btn rounded-full px-3.5 py-1 text-[11px] font-semibold">
-                  ابدأ اليوم
-                </span>
+                <span className="landing-section-eyebrow">ابدأ اليوم</span>
                 <span className="h-px w-12 bg-[var(--border)]" aria-hidden />
               </div>
 
-              <h2 className="mt-5 max-w-md text-2xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[34px] min-[720px]:leading-[1.15]">
+              <h2 className="mt-5 max-w-md text-2xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[2.125rem] min-[720px]:leading-[1.15]">
                 جاهز لإطلاق نموذجك الأول؟
               </h2>
               <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-[var(--muted-foreground)]">
@@ -345,7 +344,7 @@ export function CtaSection() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href={APP_BASE}
-                  className="group inline-flex h-12 items-center gap-2 rounded-full bg-[var(--primary)] px-6 text-sm font-semibold text-[var(--primary-foreground)] shadow-lg shadow-[var(--primary)]/20 transition-[transform,opacity] hover:opacity-95 active:scale-[0.98]"
+                  className="landing-invert-btn group inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-semibold transition-opacity hover:opacity-95"
                 >
                   <span>ابدأ مجاناً</span>
                   <span className="flex size-8 items-center justify-center rounded-full bg-[var(--primary-foreground)]/15 transition-transform group-hover:-translate-x-0.5">
@@ -374,7 +373,7 @@ export function CtaSection() {
 
           {/* Stats cards */}
           <div className="flex flex-col gap-4">
-            <div className="landing-panel relative flex flex-1 flex-col justify-between overflow-hidden rounded-[28px] p-7">
+            <div className="landing-panel relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-[var(--border)] bg-white p-7">
               <div>
                 <p className="text-4xl font-bold tracking-tight text-[var(--foreground)] min-[720px]:text-5xl">
                   <AnimatedNumber value={8500} />
@@ -399,7 +398,7 @@ export function CtaSection() {
               </svg>
             </div>
 
-            <div className="landing-panel rounded-[28px] p-7">
+            <div className="landing-panel rounded-2xl border border-[var(--border)] bg-white p-7">
               <div className="flex -space-x-2 space-x-reverse">
                 {AVATARS.map((a) => (
                   <div

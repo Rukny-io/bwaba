@@ -25,7 +25,7 @@ export function HeroTrustLogos() {
             alt={alt}
             width={width}
             height={height}
-            className="h-auto w-auto max-h-full max-w-full object-contain opacity-45 grayscale dark:opacity-65 dark:brightness-125"
+            className="h-auto w-auto max-h-full max-w-full object-contain opacity-40 grayscale"
           />
         </li>
       ))}

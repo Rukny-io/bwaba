@@ -139,7 +139,12 @@ export class RedisOAuthCodeService implements OnModuleInit, OnModuleDestroy {
    * 🔒 F-03: When `presentedIp` is provided it is validated against the IP that
    * initiated the OAuth flow (`initiatedFromIp`). A mismatch means the code was
    * likely leaked (Referer, history, proxy logs) and replayed elsewhere, so we
-   * reject it. Set OAUTH_EXCHANGE_IP_BINDING=off to disable (e.g. mobile NAT).
+   * reject it.
+   *
+   * Modes via `OAUTH_EXCHANGE_IP_BINDING`:
+   * - `strict` (production default): exact IP match after normalization
+   * - `relaxed` (non-production default): loopback + private RFC1918 match each other
+   * - `off`: disable binding (e.g. mobile NAT)
    */
   async exchange(code: string, presentedIp?: string): Promise<CodePayload> {
     const key = this.KEY_PREFIX + code;
@@ -168,14 +173,24 @@ export class RedisOAuthCodeService implements OnModuleInit, OnModuleDestroy {
       }
 
       // 🔒 F-03: IP binding enforcement
-      const bindingMode = (
-        this.configService.get<string>('OAUTH_EXCHANGE_IP_BINDING') || 'strict'
-      ).toLowerCase();
+      // Modes: strict | relaxed | off
+      // relaxed (default in non-production): treat loopback + RFC1918 as the same
+      // local hop so Docker host→API (172.x) matches Next BFF→API (127.0.0.1).
+      const configured = this.configService
+        .get<string>('OAUTH_EXCHANGE_IP_BINDING')
+        ?.toLowerCase();
+      const bindingMode =
+        configured ||
+        (process.env.NODE_ENV === 'production' ? 'strict' : 'relaxed');
       if (
         bindingMode !== 'off' &&
         record.initiatedFromIp &&
         presentedIp &&
-        this.normalizeIp(record.initiatedFromIp) !== this.normalizeIp(presentedIp)
+        !this.ipsMatchForBinding(
+          record.initiatedFromIp,
+          presentedIp,
+          bindingMode,
+        )
       ) {
         this.logger.warn(
           `OAuth code IP mismatch: initiated=${record.initiatedFromIp} presented=${presentedIp} user=${record.userId}`,
@@ -221,6 +236,29 @@ export class RedisOAuthCodeService implements OnModuleInit, OnModuleDestroy {
       return '127.0.0.1';
     }
     return clean;
+  }
+
+  private isLocalOrPrivateIp(ip: string): boolean {
+    const clean = this.normalizeIp(ip);
+    if (clean === '127.0.0.1') return true;
+    if (clean.startsWith('10.')) return true;
+    if (clean.startsWith('192.168.')) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(clean)) return true;
+    return false;
+  }
+
+  private ipsMatchForBinding(
+    initiated: string,
+    presented: string,
+    mode: string,
+  ): boolean {
+    const a = this.normalizeIp(initiated);
+    const b = this.normalizeIp(presented);
+    if (a === b) return true;
+    if (mode === 'relaxed') {
+      return this.isLocalOrPrivateIp(a) && this.isLocalOrPrivateIp(b);
+    }
+    return false;
   }
 
   /**

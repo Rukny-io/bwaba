@@ -725,9 +725,9 @@ export class AuthController {
         },
         needsProfileCompletion: !fullUser.profileCompleted,
         userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.socket.remoteAddress,
+        ipAddress: getClientIp(req),
       },
-      req.ip || req.socket.remoteAddress,
+      getClientIp(req),
     );
 
     return { success: true, code };

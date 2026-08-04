@@ -4,7 +4,7 @@ import { AlertDialog } from '@heroui/react';
 import { useFormsDashboard } from '@/components/app/forms-dashboard-context';
 import { NotificationsPanelContent } from '@/components/app/notifications-panel';
 
-/** Mobile / tablet — bottom sheet. Desktop uses NotificationsDesktopPopover. */
+/** Mobile / tablet — bottom sheet. Desktop uses NotificationsDesktopPanel. */
 export function NotificationsAlertDialog() {
   const { mobileNotificationsOpen, setMobileNotificationsOpen } =
     useFormsDashboard();

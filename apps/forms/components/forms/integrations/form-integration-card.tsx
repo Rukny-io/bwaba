@@ -59,7 +59,7 @@ export function FormIntegrationCard({
         'dashboard-card flex h-full flex-col rounded-2xl p-4 transition-all duration-200 sm:rounded-3xl sm:p-6',
         !comingSoon &&
           'dashboard-card-interactive hover:shadow-[var(--card-shadow-hover)]',
-        comingSoon && 'opacity-60',
+        comingSoon && 'opacity-70',
       )}
     >
       <div className="mb-4 flex items-start justify-between gap-2">

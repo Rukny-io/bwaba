@@ -21,7 +21,7 @@ function Tooltip({ label }: { label: string }) {
     <span
       className="
         pointer-events-none absolute top-1/2 z-50 -translate-y-1/2
-        whitespace-nowrap rounded-xl bg-[var(--foreground)] px-2.5 py-1.5 text-xs font-medium text-[var(--background)]
+        whitespace-nowrap rounded-lg bg-[var(--foreground)] px-2.5 py-1.5 text-xs font-medium text-[var(--background)]
         opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100
         left-0 -translate-x-[calc(100%+10px)]
         after:absolute after:right-[-5px] after:top-1/2 after:-translate-y-1/2
@@ -36,8 +36,8 @@ function Tooltip({ label }: { label: string }) {
 function getNavClasses(isActive: boolean) {
   return `relative group flex size-10 items-center justify-center transition-all duration-200 ${
     isActive
-      ? 'rounded-full bg-[var(--foreground)] text-[var(--background)]'
-      : 'rounded-2xl text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]'
+      ? 'rounded-lg bg-[var(--foreground)] text-[var(--background)]'
+      : 'rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]'
   }`;
 }
 
@@ -124,7 +124,7 @@ export function Sidebar({ avatarUrl, userName }: SidebarProps) {
       </Link>
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-4">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-[var(--surface)] px-2 py-4">
           <nav className="flex flex-col items-center gap-1.5" aria-label="القائمة الرئيسية">
             {primaryNavItems.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />

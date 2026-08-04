@@ -4,9 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
+import { Button } from '@heroui/react';
 import {
-  Button,
-} from '@heroui/react';
+  BarChart2,
+  FileText,
+  Inbox,
+  LayoutTemplate,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
 import {
@@ -18,8 +24,13 @@ import {
   type FormsPagination,
   type FormStatus,
 } from '@/lib/forms-api';
+import type { FormsDashboardMetrics } from '@/lib/forms-dashboard-data';
 import { getDefaultFormWorkspacePath } from '@/lib/form-team-permissions';
-import { FormCard, FormsGridSkeleton } from '@/components/forms/forms-list/form-card';
+import { FORMS_CREATE_ENTRY_PATH } from '@/lib/forms-paths';
+import {
+  FormCard,
+  FormsGridSkeleton,
+} from '@/components/forms/forms-list/form-card';
 import {
   FormDeleteDialog,
   FormRestoreDialog,
@@ -32,6 +43,7 @@ import { DashboardErrorState } from '@/components/app/dashboard-error-state';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { cn } from '@/lib/utils';
 
 function FormsListSectionDivider({ label }: { label: string }) {
   return (
@@ -40,16 +52,113 @@ function FormsListSectionDivider({ label }: { label: string }) {
       role="separator"
       aria-label={label}
     >
-      <div className="h-px flex-1 bg-[var(--border)]" />
+      <div className="h-px flex-1 bg-[var(--separator)]" />
       <span className="shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
         {label}
       </span>
-      <div className="h-px flex-1 bg-[var(--border)]" />
+      <div className="h-px flex-1 bg-[var(--separator)]" />
     </div>
   );
 }
 
-export function FormsListView() {
+function FormsListSummary({
+  metrics,
+  listTotal,
+  sharedCount,
+  viewMode,
+}: {
+  metrics: FormsDashboardMetrics;
+  listTotal: number;
+  sharedCount: number;
+  viewMode: FormsListViewMode;
+}) {
+  const items =
+    viewMode === 'trash'
+      ? [
+          {
+            icon: Trash2,
+            label: 'في السلة',
+            value: String(listTotal),
+            hint: 'تُحذف نهائياً بعد 30 يوماً',
+          },
+        ]
+      : [
+          {
+            icon: FileText,
+            label: 'نماذج نشطة',
+            value: metrics.activeForms.value,
+            hint: 'منشورة حالياً',
+          },
+          {
+            icon: Inbox,
+            label: 'الاستجابات',
+            value: metrics.submissions.value,
+            hint: 'إجمالي الردود',
+          },
+          {
+            icon: LayoutTemplate,
+            label: 'مخصّصة',
+            value: metrics.themedForms.value,
+            hint: 'بتصميم مخصص',
+          },
+          {
+            icon: BarChart2,
+            label: 'معدل الإكمال',
+            value: metrics.completionRate.value,
+            hint: 'عبر نماذجك',
+          },
+        ];
+
+  return (
+    <div
+      className={cn(
+        'grid gap-3',
+        items.length === 1
+          ? 'grid-cols-1'
+          : 'grid-cols-2 xl:grid-cols-4',
+      )}
+    >
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <DashboardSurface
+            key={item.label}
+            padding="sm"
+            className="flex items-center gap-3"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
+              <Icon size={16} strokeWidth={1.7} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] text-[var(--muted-foreground)]">
+                {item.label}
+              </p>
+              <p
+                className="text-base font-bold tabular-nums text-[var(--foreground)] sm:text-lg"
+                dir="ltr"
+                lang="en"
+              >
+                {item.value}
+              </p>
+              <p className="truncate text-[10px] text-[var(--muted-foreground)]/80">
+                {item.hint}
+                {sharedCount > 0 && item.label === 'نماذج نشطة'
+                  ? ` · ${sharedCount} مشترك`
+                  : ''}
+              </p>
+            </div>
+          </DashboardSurface>
+        );
+      })}
+    </div>
+  );
+}
+
+export function FormsListView({
+  metrics,
+}: {
+  metrics: FormsDashboardMetrics;
+}) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<FormsListViewMode>('active');
   const [statusFilter, setStatusFilter] = useState<'' | FormStatus>('');
@@ -75,7 +184,9 @@ export function FormsListView() {
         page,
         limit: 20,
         visibility: viewMode === 'trash' ? 'deleted' : 'active',
-        ...(viewMode === 'active' && statusFilter ? { status: statusFilter } : {}),
+        ...(viewMode === 'active' && statusFilter
+          ? { status: statusFilter }
+          : {}),
       });
       setForms(res.forms);
       setPagination(res.pagination);
@@ -107,9 +218,9 @@ export function FormsListView() {
   );
 
   function openFormWorkspace(form: FormListItem) {
-    const accessRole = (form.isShared
-      ? (form.sharedWorkspace?.role ?? 'VIEWER')
-      : 'OWNER') as any;
+    const accessRole = (
+      form.isShared ? (form.sharedWorkspace?.role ?? 'VIEWER') : 'OWNER'
+    ) as 'OWNER' | 'EDITOR' | 'VIEWER' | 'ANALYST';
     router.push(getDefaultFormWorkspacePath(form.id, accessRole));
   }
 
@@ -181,24 +292,41 @@ export function FormsListView() {
     <>
       <DashboardPageHeader
         title="نماذجي"
-        description={`إنشاء وإدارة نماذجك ونشرها للجمهور${
-          sharedForms.length > 0
-            ? ` · ${sharedForms.length} نموذج مشترك معك`
-            : ''
-        }.`}
+        description={
+          viewMode === 'trash'
+            ? 'النماذج المحذوفة تبقى 30 يوماً قبل الحذف النهائي.'
+            : sharedForms.length > 0
+              ? `إدارة نماذجك ونشرها · ${sharedForms.length} نموذج مشترك معك عبر الفريق.`
+              : 'إنشاء وإدارة نماذجك ونشرها للجمهور.'
+        }
         actions={
-          <Link href="/forms/n/new">
-            <Button variant="primary">إنشاء نموذج</Button>
-          </Link>
+          viewMode === 'active' ? (
+            <Link
+              href={FORMS_CREATE_ENTRY_PATH}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            >
+              <Plus size={15} strokeWidth={2.2} />
+              إنشاء نموذج
+            </Link>
+          ) : null
         }
       />
 
-      <FormsListToolbar
+      <FormsListSummary
+        metrics={metrics}
+        listTotal={pagination.total}
+        sharedCount={sharedForms.length}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        status={statusFilter}
-        onStatusChange={setStatusFilter}
       />
+
+      <DashboardSurface padding="sm" className="sm:px-4 sm:py-3">
+        <FormsListToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          status={statusFilter}
+          onStatusChange={setStatusFilter}
+        />
+      </DashboardSurface>
 
       {error ? (
         <DashboardErrorState
@@ -212,6 +340,7 @@ export function FormsListView() {
         <FormsGridSkeleton count={8} />
       ) : forms.length === 0 ? (
         <DashboardEmptyState
+          icon={viewMode === 'trash' ? Trash2 : FileText}
           title={
             viewMode === 'trash'
               ? 'سلة المحذوفات فارغة'
@@ -227,11 +356,18 @@ export function FormsListView() {
         >
           {viewMode === 'active' ? (
             <>
-              <Link href="/forms/n/new">
-                <Button variant="primary">إنشاء نموذج</Button>
+              <Link
+                href={FORMS_CREATE_ENTRY_PATH}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+              >
+                <Plus size={15} strokeWidth={2.2} />
+                إنشاء نموذج
               </Link>
-              <Link href="/app/templates">
-                <Button variant="tertiary">تصفح القوالب</Button>
+              <Link
+                href="/app/templates"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+              >
+                تصفح القوالب
               </Link>
             </>
           ) : null}
@@ -289,7 +425,9 @@ export function FormsListView() {
         }}
         formTitle={deleteTarget?.title ?? ''}
         submissionCount={
-          deleteTarget?._count?.submissions ?? deleteTarget?.submissionCount ?? 0
+          deleteTarget?._count?.submissions ??
+          deleteTarget?.submissionCount ??
+          0
         }
         busy={!!busyId}
         onConfirm={confirmDelete}

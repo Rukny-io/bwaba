@@ -106,8 +106,8 @@ export function BillingUpgradeModal({
               </p>
             </Modal.Header>
 
-            <Modal.Body className="manage-billing-modal-body">
-              <ManageNotice className="px-5 py-4">
+            <Modal.Body className="manage-billing-modal-body space-y-3">
+              <ManageNotice>
                 {t("billing.upgrade_support_notice")}
               </ManageNotice>
 
@@ -169,7 +169,7 @@ export function BillingUpgradeModal({
                       onClick={() => setSelectedPlan(plan.id)}
                       aria-pressed={isSelected}
                       className={cn(
-                        "manage-surface w-full px-5 py-4 text-start transition-all",
+                        "manage-surface w-full px-5 py-4 text-start transition-colors",
                         "hover:border-border hover:bg-muted/25",
                         isSelected && "border-primary/45 bg-primary/5 shadow-[inset_0_0_0_1px] shadow-primary/20",
                       )}

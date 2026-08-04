@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, UserPlus, Mail, Building2 } from 'lucide-react';
+import {
+  Users,
+  UserPlus,
+  Mail,
+  Building2,
+  Clock3,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { Button, AlertDialog } from '@heroui/react';
 import { ApiException } from '@/lib/api-client';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
@@ -35,9 +43,61 @@ import { FormTeamRoleIcon, FormTeamRoleSelect } from '@/components/team/form-tea
 import { TeamUpgradeDialog } from '@/components/team/team-upgrade-dialog';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
+import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { ACCOUNTS_URL } from '@/lib/config';
+import { cn } from '@/lib/utils';
 
 const BILLING_URL = `${ACCOUNTS_URL.replace(/\/$/, '')}/manage/billing`;
+
+function TeamSummaryCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  accent = false,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string | number;
+  hint: string;
+  accent?: boolean;
+}) {
+  return (
+    <DashboardSurface
+      padding="sm"
+      className={cn('flex items-center gap-3', accent && 'ring-1 ring-[var(--primary)]/10')}
+    >
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
+        <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] text-[var(--muted-foreground)]">{label}</p>
+        <p
+          className="text-lg font-bold tabular-nums text-[var(--foreground)]"
+          dir="ltr"
+          lang="en"
+        >
+          {value}
+        </p>
+        <p className="text-[10px] text-[var(--muted-foreground)]/80">{hint}</p>
+      </div>
+    </DashboardSurface>
+  );
+}
+
+function statusPillClassName(status: string) {
+  return cn(
+    'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold',
+    status === 'ACCEPTED' && 'bg-[var(--success)]/15 text-[var(--success)]',
+    status === 'PENDING' && 'bg-[var(--warning)]/15 text-[var(--warning)]',
+    status !== 'ACCEPTED' &&
+      status !== 'PENDING' &&
+      'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+  );
+}
+
+const teamRowClassName =
+  'flex flex-col gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/30 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between';
 
 function memberDisplayName(member: FormTeamMember): string {
   return (
@@ -246,18 +306,53 @@ export function TeamView() {
     <>
       <DashboardPageHeader
         title="الفريق"
-        description="ادعُ زملاءك للتعاون على نماذجك وحدّد صلاحيات كل عضو."
+        description="نظّم التعاون على نماذجك، تابع الدعوات، وحدّد صلاحيات كل عضو بوضوح."
         actions={
-          <Button
-            className="shrink-0 rounded-xl"
-            onPress={openInviteFlow}
-            isDisabled={planLoading}
-          >
-            <UserPlus className="size-4" aria-hidden />
-            دعوة عضو
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/app/forms">
+              <Button variant="secondary" className="shrink-0 rounded-xl">
+                النماذج
+              </Button>
+            </Link>
+            <Button
+              className="shrink-0 rounded-xl"
+              onPress={openInviteFlow}
+              isDisabled={planLoading}
+            >
+              <UserPlus className="size-4" aria-hidden />
+              دعوة عضو
+            </Button>
+          </div>
         }
       />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <TeamSummaryCard
+          icon={Users}
+          label="أعضاء نشطون"
+          value={accepted.length}
+          hint="يملكون وصولاً فعلياً إلى نماذجك"
+          accent
+        />
+        <TeamSummaryCard
+          icon={Clock3}
+          label="دعوات صادرة"
+          value={pendingOutgoing.length}
+          hint="بانتظار قبول من دعوتهم"
+        />
+        <TeamSummaryCard
+          icon={Mail}
+          label="دعوات واردة"
+          value={invitations.length}
+          hint="مساحات عمل دعتك للانضمام"
+        />
+        <TeamSummaryCard
+          icon={Building2}
+          label="فرق منضم إليها"
+          value={joinedWorkspaces.length}
+          hint="مساحات عمل تشاركك الوصول"
+        />
+      </div>
 
       {!planLoading && !teamEnabled ? (
         <PlanUpgradeBanner
@@ -278,14 +373,19 @@ export function TeamView() {
             {invitations.map((inv) => (
               <li
                 key={inv.id}
-                className="flex flex-col gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/30 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                className={teamRowClassName}
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {workspaceDisplayName(inv)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {workspaceDisplayName(inv)}
+                    </p>
+                    <span className={statusPillClassName(inv.status)}>
+                      {FORM_TEAM_STATUS_LABELS[inv.status]}
+                    </span>
+                  </div>
                   <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-                    دور {FORM_TEAM_ROLE_LABELS[inv.role]} ·{' '}
+                    دور {FORM_TEAM_ROLE_LABELS[inv.role]} · من{' '}
                     {inv.inviter?.profile?.name || 'عضو الفريق'}
                   </p>
                 </div>
@@ -327,14 +427,19 @@ export function TeamView() {
               return (
                 <li
                   key={membership.workspaceId}
-                  className="flex flex-col gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/25 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                  className={teamRowClassName}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {joinedWorkspaceName(membership)}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {joinedWorkspaceName(membership)}
+                      </p>
+                      <span className="inline-flex rounded-full bg-[var(--surface-tertiary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)]">
+                        {FORM_TEAM_ROLE_LABELS[membership.role]}
+                      </span>
+                    </div>
                     <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-                      دورك: {FORM_TEAM_ROLE_LABELS[membership.role]}
+                      مساحة عمل تشاركك الوصول إلى النماذج
                     </p>
                     <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted-foreground)]">
                       {FORM_TEAM_ROLE_DESCRIPTIONS[membership.role]}
@@ -367,7 +472,7 @@ export function TeamView() {
       <SettingsSectionCard
         icon={Users}
         title="أعضاء الفريق"
-        description="المستخدمون الذين يمكنهم الوصول لنماذجك."
+        description="كل الأعضاء المرتبطين بمساحة عملك، مع حالة الدعوة والدور الحالي."
       >
         {loading ? (
           <p className="text-sm text-[var(--muted-foreground)]">جاري التحميل…</p>
@@ -395,14 +500,19 @@ export function TeamView() {
                 className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {memberDisplayName(member)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {memberDisplayName(member)}
+                    </p>
+                    <span className={statusPillClassName(member.status)}>
+                      {FORM_TEAM_STATUS_LABELS[member.status]}
+                    </span>
+                  </div>
                   <p className="mt-0.5 truncate text-[12px] text-[var(--muted-foreground)]" dir="ltr">
                     {member.user.email}
                   </p>
-                  <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">
-                    {FORM_TEAM_STATUS_LABELS[member.status]}
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted-foreground)]">
+                    {FORM_TEAM_ROLE_DESCRIPTIONS[member.role]}
                   </p>
                 </div>
 
@@ -434,27 +544,103 @@ export function TeamView() {
 
       <SettingsSectionCard
         icon={Users}
-        title="الأدوار والصلاحيات"
-        description="ملخص ما يمكن لكل دور القيام به."
+        title="حالة الفريق والعمل"
+        description="ملخص تشغيلي سريع يساعدك تعرف أين تركز الآن."
       >
-        <ul className="space-y-3">
-          {(Object.keys(FORM_TEAM_ROLE_LABELS) as FormTeamRole[]).map((role) => (
-            <li
-              key={role}
-              className="flex items-start gap-3 rounded-xl bg-[var(--surface-secondary)]/40 px-4 py-3"
-            >
-              <FormTeamRoleIcon role={role} className="mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[var(--foreground)]">
-                  {FORM_TEAM_ROLE_LABELS[role]}
-                </p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
-                  {FORM_TEAM_ROLE_DESCRIPTIONS[role]}
-                </p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+            <DashboardSurface padding="sm" className="space-y-1.5">
+              <p className="text-[11px] text-[var(--muted-foreground)]">أعضاء نشطون</p>
+              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{accepted.length}</p>
+            </DashboardSurface>
+            <DashboardSurface padding="sm" className="space-y-1.5">
+              <p className="text-[11px] text-[var(--muted-foreground)]">دعوات صادرة</p>
+              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{pendingOutgoing.length}</p>
+            </DashboardSurface>
+            <DashboardSurface padding="sm" className="space-y-1.5">
+              <p className="text-[11px] text-[var(--muted-foreground)]">دعوات واردة</p>
+              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{invitations.length}</p>
+            </DashboardSurface>
+            <DashboardSurface padding="sm" className="space-y-1.5">
+              <p className="text-[11px] text-[var(--muted-foreground)]">فرق منضم إليها</p>
+              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{joinedWorkspaces.length}</p>
+            </DashboardSurface>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <DashboardSurface as="article" padding="md" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">مؤشر التعاون</h3>
+                <Clock3 className="size-4 text-[var(--muted-foreground)]" />
               </div>
-            </li>
-          ))}
-        </ul>
+              <p className="text-3xl font-bold tabular-nums text-[var(--foreground)]" dir="ltr" lang="en">
+                {pendingOutgoing.length + accepted.length > 0
+                  ? `${Math.round((accepted.length / (accepted.length + pendingOutgoing.length)) * 100)}%`
+                  : '0%'}
+              </p>
+              <p className="text-[12px] text-[var(--muted-foreground)]">
+                نسبة الدعوات التي تحولت إلى أعضاء نشطين.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[var(--surface-tertiary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                  {accepted.length > 0 ? 'الفريق يعمل' : 'فردي حالياً'}
+                </span>
+                <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-1 text-[11px] text-[var(--muted-foreground)]">
+                  الخطة: {planDisplayName(plan)}
+                </span>
+              </div>
+            </DashboardSurface>
+
+            <DashboardSurface as="article" padding="md" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">أولويات العمل الآن</h3>
+                {(invitations.length > 0 || pendingOutgoing.length > 0 || accepted.length === 0 || (!teamEnabled && !planLoading)) ? (
+                  <AlertCircle className="size-4 text-[var(--warning)]" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-[var(--success)]" />
+                )}
+              </div>
+              <ul className="space-y-2 text-[12px] text-[var(--muted-foreground)]">
+                {invitations.length > 0 ? (
+                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">لديك دعوات واردة تحتاج قبول/رفض.</li>
+                ) : null}
+                {pendingOutgoing.length > 0 ? (
+                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">تابع الدعوات الصادرة المعلّقة مع الأعضاء.</li>
+                ) : null}
+                {accepted.length === 0 ? (
+                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">ابدأ بدعوة أول عضو لتفعيل التعاون.</li>
+                ) : null}
+                {!teamEnabled && !planLoading ? (
+                  <li className="rounded-xl bg-[var(--warning)]/10 px-3 py-2">الترقية مطلوبة لفتح ميزات الفريق المتقدمة.</li>
+                ) : null}
+                {invitations.length === 0 &&
+                pendingOutgoing.length === 0 &&
+                accepted.length > 0 &&
+                (teamEnabled || planLoading) ? (
+                  <li className="rounded-xl bg-[var(--success)]/10 px-3 py-2">لا يوجد إجراء عاجل، فريقك مستقر حالياً.</li>
+                ) : null}
+              </ul>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" className="rounded-xl" onPress={openInviteFlow}>
+                  <UserPlus className="size-4" aria-hidden />
+                  دعوة عضو
+                </Button>
+                <Link href="/app/analytics">
+                  <Button size="sm" variant="secondary" className="rounded-xl">
+                    متابعة الأداء
+                  </Button>
+                </Link>
+                {!teamEnabled && !planLoading ? (
+                  <Link href={BILLING_URL} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="secondary" className="rounded-xl">
+                      ترقية الخطة
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
+            </DashboardSurface>
+          </div>
+        </div>
       </SettingsSectionCard>
 
       <TeamInviteDialog

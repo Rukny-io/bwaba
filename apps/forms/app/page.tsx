@@ -1,5 +1,3 @@
-'use client';
-
 import { CtaSection } from '@/components/landing/cta-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { HeroSection } from '@/components/landing/hero-section';
@@ -10,10 +8,13 @@ import { PricingSection } from '@/components/landing/pricing-section';
 
 export default function HomePage() {
   return (
-    <div className="landing-page isolate flex min-h-screen flex-col [--max-content-width:1280px]">
+    <div
+      dir="rtl"
+      className="landing-page isolate flex min-h-screen flex-col bg-white text-[#132327]"
+    >
       <LandingNav />
 
-      <main className="flex flex-1 flex-col overflow-clip">
+      <main className="flex flex-1 flex-col">
         <HeroSection />
         <FeaturesSection />
         <IntegrationsSection />

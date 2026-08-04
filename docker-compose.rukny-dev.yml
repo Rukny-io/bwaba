@@ -89,6 +89,8 @@ services:
       QASEH_WEBHOOK_URL: http://localhost:3001/api/v1/payments/qaseh/webhook
       # Trust Docker BFF containers so X-Forwarded-For reaches getClientIp()
       TRUSTED_PROXY_CIDRS: 172.16.0.0/12,10.0.0.0/8
+      # Local: browser→API (172.x) vs Next BFF→API (127.0.0.1) must not break login
+      OAUTH_EXCHANGE_IP_BINDING: off
     networks:
       - rukny_dev_network
 

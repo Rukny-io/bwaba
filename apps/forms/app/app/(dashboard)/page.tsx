@@ -1,22 +1,45 @@
-import { BarChart2, FileText, Inbox, LayoutTemplate, Plus } from 'lucide-react';
+import Link from 'next/link';
+import {
+  BarChart2,
+  FileText,
+  Inbox,
+  LayoutTemplate,
+  Plus,
+} from 'lucide-react';
+import {
+  DashboardHomeActivity,
+  DashboardHomeRecentForms,
+  DashboardHomeRecentSubmissions,
+} from '@/components/app/dashboard-home-panels';
 import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardQuickAction } from '@/components/app/dashboard-quick-action';
 import { getDashboardUser } from '@/lib/dal';
-import { getFormsDashboardMetrics } from '@/lib/forms-dashboard-data';
+import { getFormsDashboardHomeData } from '@/lib/forms-dashboard-data';
+import { FORMS_CREATE_ENTRY_PATH } from '@/lib/forms-paths';
 
 export default async function AppHomePage() {
-  const [user, metrics] = await Promise.all([
+  const [user, home] = await Promise.all([
     getDashboardUser(),
-    getFormsDashboardMetrics(),
+    getFormsDashboardHomeData(),
   ]);
   const greeting = user.name ?? user.email;
+  const { metrics, recentForms, recentSubmissions, recentActivity } = home;
 
   return (
-    <section className="dashboard-page dashboard-section-stack">
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6 dashboard-brand">
       <DashboardPageHeader
         title="لوحة التحكم"
         description={`مرحباً، ${greeting} — نظرة عامة على نماذجك واستجاباتك.`}
+        actions={
+          <Link
+            href={FORMS_CREATE_ENTRY_PATH}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+          >
+            <Plus size={15} strokeWidth={2.2} />
+            إنشاء نموذج
+          </Link>
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -58,6 +81,12 @@ export default async function AppHomePage() {
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+        <DashboardHomeRecentForms forms={recentForms} />
+        <DashboardHomeRecentSubmissions items={recentSubmissions} />
+        <DashboardHomeActivity items={recentActivity} />
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         <DashboardQuickAction
           href="/app/forms"
@@ -72,7 +101,7 @@ export default async function AppHomePage() {
           description="مكتبة قوالب جاهزة — تواصل، استبيان، تسجيل، والمزيد."
         />
         <DashboardQuickAction
-          href="/forms/n/new"
+          href={FORMS_CREATE_ENTRY_PATH}
           icon={Plus}
           title="إنشاء نموذج"
           description="ابدأ نموذجاً جديداً من الصفر أو من قالب جاهز."

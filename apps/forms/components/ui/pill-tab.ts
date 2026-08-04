@@ -13,7 +13,7 @@ export function pillTabClassName(active: boolean, className?: string) {
   );
 }
 
-/** Primary section tabs (form workspace: تحرير · استجابات · تحليلات · تكاملات) */
+/** Primary section tabs (form workspace: إعدادات · استجابات · تحليلات · تكاملات) */
 export const formWorkspaceTabGroupClassName = cn(
   pillTabGroupClassName,
   'w-full gap-2 sm:gap-2.5',

@@ -1,14 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Button, Skeleton, Spinner } from '@heroui/react';
 import {
-  Button,
-  Skeleton,
-  Spinner,
-} from '@heroui/react';
-import { Copy, ExternalLink, Trash2 } from 'lucide-react';
+  Copy,
+  ExternalLink,
+  FileText,
+  Inbox,
+  Layers,
+  Trash2,
+} from 'lucide-react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
 import {
@@ -24,6 +26,7 @@ import {
 import { FormDeleteDialog } from '@/components/forms/forms-list/form-delete-dialog';
 import {
   formatFormDate,
+  getFormStatusLabel,
   getFormTypeLabel,
   getPublicFormUrl,
 } from '@/lib/forms-format';
@@ -40,6 +43,27 @@ import {
   getDefaultFormWorkspacePath,
   resolveFormAccessRole,
 } from '@/lib/form-team-permissions';
+
+function SectionHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="mb-4">
+      <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
+        {title}
+      </h2>
+      {description ? (
+        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)] sm:text-[13px]">
+          {description}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function FormDetailView({ formId }: { formId: string }) {
   const router = useRouter();
@@ -150,9 +174,14 @@ export function FormDetailView({ formId }: { formId: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full rounded-3xl" />
+      <div className="flex flex-col gap-5 sm:gap-6">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[4.5rem] rounded-2xl sm:rounded-3xl" />
+          ))}
+        </div>
+        <Skeleton className="h-48 w-full rounded-2xl sm:rounded-3xl" />
+        <Skeleton className="h-40 w-full rounded-2xl sm:rounded-3xl" />
       </div>
     );
   }
@@ -172,60 +201,127 @@ export function FormDetailView({ formId }: { formId: string }) {
   const submissionCount =
     form._count?.submissions ?? form.submissionCount ?? 0;
   const isShared = Boolean(form.isShared);
+  const fieldCount = form.fields?.length ?? 0;
+
+  const summaryItems = [
+    {
+      icon: FileText,
+      label: 'الحالة',
+      value: getFormStatusLabel(form.status),
+      hint: getFormTypeLabel(form.type),
+      tabular: false,
+    },
+    {
+      icon: Inbox,
+      label: 'الاستجابات',
+      value: String(submissionCount),
+      hint: 'إجمالي الردود',
+      tabular: true,
+    },
+    {
+      icon: Layers,
+      label: 'الحقول',
+      value: String(fieldCount),
+      hint: form.isMultiStep ? 'متعدد الخطوات' : 'خطوة واحدة',
+      tabular: true,
+    },
+    {
+      icon: ExternalLink,
+      label: 'آخر تحديث',
+      value: formatFormDate(form.updatedAt),
+      hint: `/${form.slug}`,
+      tabular: false,
+    },
+  ];
 
   return (
-    <div className="dashboard-section-stack">
-      <DashboardSurface
-        padding="sm"
-        className="bg-[var(--surface-secondary)]/40"
-      >
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {summaryItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <DashboardSurface
+              key={item.label}
+              padding="sm"
+              className="flex items-center gap-3"
+            >
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
+                <Icon size={16} strokeWidth={1.7} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-[var(--muted-foreground)]">
+                  {item.label}
+                </p>
+                <p
+                  className={cn(
+                    'truncate text-base font-bold text-[var(--foreground)] sm:text-lg',
+                    item.tabular && 'tabular-nums',
+                  )}
+                  dir={item.tabular ? 'ltr' : undefined}
+                  lang={item.tabular ? 'en' : undefined}
+                >
+                  {item.value}
+                </p>
+                <p className="truncate text-[10px] text-[var(--muted-foreground)]/80">
+                  {item.hint}
+                </p>
+              </div>
+            </DashboardSurface>
+          );
+        })}
+      </div>
+
+      <DashboardSurface padding="sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm text-[var(--muted-foreground)]">
-            {getFormTypeLabel(form.type)} · {submissionCount} استجابة ·{' '}
-            {formatFormDate(form.updatedAt)}
+          <p className="text-[13px] text-[var(--muted-foreground)]">
+            إجراءات سريعة للنموذج
           </p>
           <div className="flex flex-wrap gap-2">
-          {form.status === 'PUBLISHED' && (
-            <a
-              href={getPublicFormUrl(form.slug)}
-              target="_blank"
-              rel="noopener noreferrer"
+            {form.status === 'PUBLISHED' ? (
+              <a
+                href={getPublicFormUrl(form.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="tertiary" size="sm" className="rounded-xl">
+                  <ExternalLink className="size-4" />
+                  معاينة
+                </Button>
+              </a>
+            ) : null}
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="rounded-xl"
+              onPress={() => void handleDuplicate()}
+              isDisabled={isShared}
             >
-              <Button variant="tertiary" size="sm" className="rounded-xl">
-                <ExternalLink className="size-4" />
-                معاينة
-              </Button>
-            </a>
-          )}
-          <Button
-            variant="tertiary"
-            size="sm"
-            className="rounded-xl"
-            onPress={() => void handleDuplicate()}
-            isDisabled={isShared}
-          >
-            <Copy className="size-4" />
-            نسخ
-          </Button>
-          <Button
-            variant="tertiary"
-            size="sm"
-            className="rounded-xl"
-            onPress={() => setDeleteOpen(true)}
-            isDisabled={isShared}
-          >
-            <Trash2 className="size-4" />
-            حذف
-          </Button>
-        </div>
+              <Copy className="size-4" />
+              نسخ
+            </Button>
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="rounded-xl"
+              onPress={() => setDeleteOpen(true)}
+              isDisabled={isShared}
+            >
+              <Trash2 className="size-4" />
+              حذف
+            </Button>
+          </div>
         </div>
       </DashboardSurface>
 
       <DashboardSurface>
-        <h2 className="mb-4 text-base font-semibold text-[var(--foreground)] sm:text-lg">
-          الإعدادات الأساسية
-        </h2>
-        <form onSubmit={(e) => void handleSave(e)} className="max-w-lg space-y-4">
+        <SectionHeading
+          title="الإعدادات الأساسية"
+          description="عنوان النموذج ووصفه الظاهر للمستجيبين"
+        />
+        <form
+          onSubmit={(e) => void handleSave(e)}
+          className="max-w-lg space-y-4"
+        >
           <div className="space-y-2">
             <label htmlFor="edit-title" className="text-sm font-medium">
               العنوان
@@ -275,15 +371,17 @@ export function FormDetailView({ formId }: { formId: string }) {
       />
 
       <DashboardSurface>
-        <h2 className="mb-4 text-base font-semibold text-[var(--foreground)] sm:text-lg">
-          الحالة والنشر
-        </h2>
+        <SectionHeading
+          title="الحالة والنشر"
+          description="غيّر حالة النموذج بين مسودة ومنشور ومغلق"
+        />
         <div className="flex flex-wrap gap-2">
           {(['DRAFT', 'PUBLISHED', 'CLOSED'] as FormStatus[]).map((s) => (
             <Button
               key={s}
               variant={form.status === s ? 'primary' : 'tertiary'}
               size="sm"
+              className="rounded-xl"
               isDisabled={statusBusy || form.status === s}
               onPress={() => void setStatus(s)}
             >
@@ -299,9 +397,10 @@ export function FormDetailView({ formId }: { formId: string }) {
       </DashboardSurface>
 
       <DashboardSurface>
-        <h2 className="mb-4 text-base font-semibold text-[var(--foreground)] sm:text-lg">
-          الحقول ({form.fields?.length ?? 0})
-        </h2>
+        <SectionHeading
+          title={`الحقول (${fieldCount})`}
+          description="عرض الحقول الحالية — عدّلها من المحرّر"
+        />
         <FormFieldsList fields={form.fields ?? []} formSlug={form.slug} />
       </DashboardSurface>
 

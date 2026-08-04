@@ -9,9 +9,7 @@ import {
   ExternalLink,
   Eye,
   FormInput,
-  Globe,
   Link2,
-  Lock,
   MessageSquare,
   MoreHorizontal,
   RotateCcw,
@@ -26,7 +24,6 @@ import {
   FORM_TYPE_LABELS,
   getPublicFormUrl,
 } from '@/lib/forms-format';
-import { FORM_TYPE_STYLES } from '@/lib/form-type-styles';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { cn } from '@/lib/utils';
 
@@ -94,7 +91,6 @@ function FormCardComponent({
   onDuplicate,
 }: FormCardProps) {
   const statusConfig = FORM_STATUS_CONFIG[form.status];
-  const typeStyle = FORM_TYPE_STYLES[form.type] ?? FORM_TYPE_STYLES.OTHER;
   const submissionsCount = form._count?.submissions ?? form.submissionCount ?? 0;
   const fieldsCount = form._count?.fields ?? 0;
   const [copied, setCopied] = useState(false);
@@ -148,10 +144,9 @@ function FormCardComponent({
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group dashboard-card cursor-pointer rounded-3xl p-3',
-        'transition-all duration-300 hover:border-[color-mix(in_srgb,var(--border)_70%,var(--foreground)_30%)] hover:shadow-[var(--card-shadow-hover)]',
+        'group dashboard-card dashboard-card-interactive cursor-pointer rounded-2xl p-3 sm:rounded-3xl',
         form.isShared
-          ? 'border-dashed border-[var(--primary)]/35 bg-[var(--surface-secondary)]/10 hover:border-[var(--primary)]/50'
+          ? 'border-dashed border-[var(--primary)]/30 bg-[var(--surface-secondary)]/40'
           : '',
         (form.status === 'ARCHIVED' || isTrash) && 'opacity-[0.92]',
         busy && 'pointer-events-none opacity-60',
@@ -185,12 +180,12 @@ function FormCardComponent({
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--surface-secondary)]/50 via-[var(--surface)] to-[var(--surface-secondary)]/70">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(6,44,48,0.08),transparent_55%),linear-gradient(160deg,var(--surface-secondary)_0%,var(--surface)_55%,var(--surface-tertiary)_100%)]">
             <img
               src="/rukny-logo.svg"
               alt=""
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 size-[34%] max-h-12 max-w-12 -translate-x-1/2 -translate-y-1/2 opacity-[0.05] dark:opacity-[0.08]"
+              className="pointer-events-none absolute left-1/2 top-1/2 size-[34%] max-h-12 max-w-12 -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
             />
           </div>
         )}
@@ -278,19 +273,12 @@ function FormCardComponent({
         </div>
       </div>
 
-      <div className="px-1 text-right">
+      <div className="px-0.5 text-right sm:px-1">
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 flex-1 truncate text-[14px] font-bold leading-tight text-[var(--foreground)]">
+          <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-[var(--foreground)] sm:text-[14px]">
             {form.title}
           </h3>
-          <span
-            className={cn(
-              'shrink-0 whitespace-nowrap rounded-md border px-2 py-0.5 text-[10px] font-semibold',
-              typeStyle.color,
-              `${typeStyle.bg}/10`,
-              'border-current/15',
-            )}
-          >
+          <span className="shrink-0 whitespace-nowrap rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)]">
             {FORM_TYPE_LABELS[form.type]}
           </span>
         </div>
@@ -309,19 +297,20 @@ function FormCardComponent({
         {isTrash && form.purgeScheduledAt ? (
           <p className="mb-2 text-[10px] text-[var(--danger)]">
             حذف نهائي:{' '}
-            {new Date(form.purgeScheduledAt).toLocaleDateString('ar', {
+            {new Date(form.purgeScheduledAt).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
             })}
           </p>
         ) : null}
 
-        <div className="flex items-center justify-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--separator)] pt-2.5 text-[11px] text-[var(--muted-foreground)]">
           <span
             className={cn(
-              'flex items-center gap-1',
-              submissionsCount > 0 && 'font-medium text-violet-500',
+              'inline-flex items-center gap-1',
+              submissionsCount > 0 && 'font-medium text-[var(--primary)]',
             )}
+            title="الاستجابات"
           >
             <MessageSquare className="size-3" aria-hidden />
             <span dir="ltr" lang="en">
@@ -329,18 +318,17 @@ function FormCardComponent({
             </span>
           </span>
 
-          <span className="h-3 w-px bg-[var(--border)]" aria-hidden />
-
-          <span className="flex items-center gap-1">
+          <span
+            className="inline-flex items-center gap-1"
+            title="المشاهدات"
+          >
             <Eye className="size-3" aria-hidden />
             <span dir="ltr" lang="en">
               {form.viewCount ?? 0}
             </span>
           </span>
 
-          <span className="h-3 w-px bg-[var(--border)]" aria-hidden />
-
-          <span className="flex items-center gap-1">
+          <span className="inline-flex items-center gap-1" title="الحقول">
             <FormInput className="size-3" aria-hidden />
             <span dir="ltr" lang="en">
               {fieldsCount}
@@ -354,8 +342,8 @@ function FormCardComponent({
 
 export function FormCardSkeleton() {
   return (
-    <div className="dashboard-card animate-pulse rounded-[1.75rem] p-3">
-      <div className="relative mb-3 aspect-[4/3] rounded-3xl bg-gradient-to-br from-[var(--surface-secondary)]/60 to-[var(--surface-secondary)]/30" />
+    <div className="dashboard-card animate-pulse rounded-2xl p-3 sm:rounded-3xl">
+      <div className="relative mb-3 aspect-[4/3] rounded-2xl bg-[var(--surface-secondary)]" />
 
       <div className="px-1 text-right">
         <div className="mb-1.5 flex items-center justify-between gap-2">

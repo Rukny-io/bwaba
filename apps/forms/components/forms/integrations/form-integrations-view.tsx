@@ -201,11 +201,11 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
 
   if (loading && !form) {
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <Skeleton className="h-5 w-64 max-w-full rounded-lg" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Skeleton key={i} className="h-44 rounded-3xl" />
+            <Skeleton key={i} className="h-44 rounded-2xl sm:rounded-3xl" />
           ))}
         </div>
       </div>
@@ -235,7 +235,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
 
   if (selected) {
     return (
-      <div className="dashboard-section-stack">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <DashboardSurface padding="md">
           <button
             type="button"
@@ -342,19 +342,21 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
     : 'inactive';
 
   return (
-    <div className="dashboard-section-stack">
-      <div>
-        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-          اربط هذا النموذج بالتطبيقات الخارجية — الاستجابات تُرسل تلقائياً دون
-          تصدير يدوي.
-        </p>
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <DashboardSurface padding="sm" className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
+            اربط هذا النموذج بالتطبيقات الخارجية — الاستجابات تُرسل تلقائياً دون
+            تصدير يدوي.
+          </p>
+        </div>
         {connectedCount > 0 ? (
-          <p className="mt-1.5 text-xs font-medium text-[var(--foreground)]">
+          <span className="shrink-0 rounded-full bg-[var(--primary)]/10 px-3 py-1 text-[12px] font-semibold text-[var(--primary)]">
             {formatNumber(connectedCount)} تكامل{' '}
             {connectedCount === 1 ? 'مفعّل' : 'مفعّلة'}
-          </p>
+          </span>
         ) : null}
-      </div>
+      </DashboardSurface>
 
       {sheetsOAuthError ? (
         <DashboardErrorState
@@ -373,103 +375,120 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
         />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <FormIntegrationCard
-          logo={INTEGRATION_LOGOS.googleSheets}
-          title="Google Sheets"
-          description="كل استجابة جديدة تُضاف للجدول — يدوياً أو تلقائياً"
-          status={sheetsStatus}
-          statusLabel={
-            sheets.connected
-              ? sheets.isAutoSync
-                ? 'متصل · تلقائي'
-                : 'متصل'
-              : 'غير مفعّل'
-          }
-          detailLine={
-            sheets.connected && sheets.syncedCount > 0
-              ? `${formatNumber(sheets.syncedCount)} صف مُزامَن${
-                  sheets.lastSyncAt
-                    ? ` · آخر مزامنة ${formatRelativeTime(sheets.lastSyncAt)}`
-                    : ''
-                }`
-              : null
-          }
-          onAction={() => setSelected('sheets')}
-          actionLabel={sheets.connected ? 'إدارة' : 'ربط'}
-        />
-
-        <FormIntegrationCard
-          logo={INTEGRATION_LOGOS.googleDrive}
-          title="Google Drive"
-          description="تخزين المرفقات والتوقيعات في Drive بدل التخزين المحلي"
-          status={driveStatus}
-          statusLabel={driveConnected ? 'متصل' : 'غير مفعّل'}
-          onAction={() => setSelected('drive')}
-          actionLabel={driveConnected ? 'إدارة' : 'ربط'}
-        />
-
-        <FormIntegrationCard
-          icon={Webhook}
-          title="Webhook"
-          description="أرسل كل استجابة إلى أي رابط يقبل POST"
-          status={webhookStatus}
-          statusLabel={form.webhook.configured ? 'نشط' : 'غير مفعّل'}
-          detailLine={
-            form.webhook.configured && form.webhook.url
-              ? form.webhook.url.length > 48
-                ? `${form.webhook.url.slice(0, 48)}…`
-                : form.webhook.url
-              : null
-          }
-          onAction={() => setSelected('webhook')}
-          actionLabel={form.webhook.configured ? 'إدارة' : 'إعداد'}
-        />
-
-        <FormIntegrationCard
-          logo={INTEGRATION_LOGOS.gmail}
-          title="تنبيهات البريد"
-          description="استلم بريداً فورياً عند كل استجابة جديدة"
-          status={emailStatus}
-          statusLabel={form.email.configured ? 'مفعّل' : 'غير مفعّل'}
-          detailLine={form.email.address ?? null}
-          onAction={() => setSelected('email')}
-          actionLabel={form.email.configured ? 'إدارة' : 'تفعيل'}
-        />
-
-        <FormIntegrationCard
-          logo={INTEGRATION_LOGOS.developers}
-          title="تضمين في موقعك"
-          description="اربط النموذج بتطبيقك واعرضه في موقعك عبر iframe"
-          status={developerStatus}
-          statusLabel={
-            developerLinked
-              ? developerEmbedReady
-                ? 'مربوط · جاهز'
-                : 'مربوط'
-              : 'غير مربوط'
-          }
-          detailLine={
-            developerLinked && developerEmbed?.linked
-              ? developerEmbed.app.name
-              : null
-          }
-          onAction={() => setSelected('developer')}
-          actionLabel={developerLinked ? 'إدارة' : 'ربط'}
-        />
-
-        {COMING_SOON.map((item) => (
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">
+          التكاملات المتاحة
+        </h2>
+        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 xl:grid-cols-4">
           <FormIntegrationCard
-            key={item.title}
-            logo={item.logo}
-            title={item.title}
-            description={item.description}
-            status="coming_soon"
-            statusLabel="قريباً"
-            comingSoon
+            logo={INTEGRATION_LOGOS.googleSheets}
+            title="Google Sheets"
+            description="كل استجابة جديدة تُضاف للجدول — يدوياً أو تلقائياً"
+            status={sheetsStatus}
+            statusLabel={
+              sheets.connected
+                ? sheets.isAutoSync
+                  ? 'متصل · تلقائي'
+                  : 'متصل'
+                : 'غير مفعّل'
+            }
+            detailLine={
+              sheets.connected && sheets.syncedCount > 0
+                ? `${formatNumber(sheets.syncedCount)} صف مُزامَن${
+                    sheets.lastSyncAt
+                      ? ` · آخر مزامنة ${formatRelativeTime(sheets.lastSyncAt)}`
+                      : ''
+                  }`
+                : null
+            }
+            onAction={() => setSelected('sheets')}
+            actionLabel={sheets.connected ? 'إدارة' : 'ربط'}
           />
-        ))}
-      </div>
+
+          <FormIntegrationCard
+            logo={INTEGRATION_LOGOS.googleDrive}
+            title="Google Drive"
+            description="تخزين المرفقات والتوقيعات في Drive بدل التخزين المحلي"
+            status={driveStatus}
+            statusLabel={driveConnected ? 'متصل' : 'غير مفعّل'}
+            onAction={() => setSelected('drive')}
+            actionLabel={driveConnected ? 'إدارة' : 'ربط'}
+          />
+
+          <FormIntegrationCard
+            icon={Webhook}
+            title="Webhook"
+            description="أرسل كل استجابة إلى أي رابط يقبل POST"
+            status={webhookStatus}
+            statusLabel={form.webhook.configured ? 'نشط' : 'غير مفعّل'}
+            detailLine={
+              form.webhook.configured && form.webhook.url
+                ? form.webhook.url.length > 48
+                  ? `${form.webhook.url.slice(0, 48)}…`
+                  : form.webhook.url
+                : null
+            }
+            onAction={() => setSelected('webhook')}
+            actionLabel={form.webhook.configured ? 'إدارة' : 'إعداد'}
+          />
+
+          <FormIntegrationCard
+            logo={INTEGRATION_LOGOS.gmail}
+            title="تنبيهات البريد"
+            description="استلم بريداً فورياً عند كل استجابة جديدة"
+            status={emailStatus}
+            statusLabel={form.email.configured ? 'مفعّل' : 'غير مفعّل'}
+            detailLine={form.email.address ?? null}
+            onAction={() => setSelected('email')}
+            actionLabel={form.email.configured ? 'إدارة' : 'تفعيل'}
+          />
+
+          <FormIntegrationCard
+            logo={INTEGRATION_LOGOS.developers}
+            title="تضمين في موقعك"
+            description="اربط النموذج بتطبيقك واعرضه في موقعك عبر iframe"
+            status={developerStatus}
+            statusLabel={
+              developerLinked
+                ? developerEmbedReady
+                  ? 'مربوط · جاهز'
+                  : 'مربوط'
+                : 'غير مربوط'
+            }
+            detailLine={
+              developerLinked && developerEmbed?.linked
+                ? developerEmbed.app.name
+                : null
+            }
+            onAction={() => setSelected('developer')}
+            actionLabel={developerLinked ? 'إدارة' : 'ربط'}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">
+            قريباً
+          </h2>
+          <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
+            تكاملات إضافية قيد التحضير
+          </p>
+        </div>
+        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 xl:grid-cols-4">
+          {COMING_SOON.map((item) => (
+            <FormIntegrationCard
+              key={item.title}
+              logo={item.logo}
+              title={item.title}
+              description={item.description}
+              status="coming_soon"
+              statusLabel="قريباً"
+              comingSoon
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

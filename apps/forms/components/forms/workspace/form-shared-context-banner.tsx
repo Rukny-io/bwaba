@@ -1,6 +1,5 @@
 'use client';
 
-import { Users } from 'lucide-react';
 import {
   FORM_TEAM_ROLE_DESCRIPTIONS,
   FORM_TEAM_ROLE_LABELS,
@@ -24,7 +23,7 @@ export function FormSharedContextBanner({
     <div
       dir="rtl"
       className={cn(
-        'rounded-2xl border border-dashed border-[var(--primary)]/30 bg-[var(--primary)]/[0.04] px-4 py-3.5 sm:px-5',
+        'dashboard-card rounded-2xl border border-[var(--primary)]/20 bg-[var(--primary)]/[0.04] px-4 py-3.5 sm:rounded-3xl sm:px-5',
         className,
       )}
     >

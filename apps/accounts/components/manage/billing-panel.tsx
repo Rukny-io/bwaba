@@ -7,8 +7,8 @@ import {
   Blocks,
   Calendar,
   CreditCard,
+  ExternalLink,
   Receipt,
-  Wallet,
   XCircle,
 } from "lucide-react";
 import { Modal, useOverlayState } from "@heroui/react";
@@ -32,34 +32,19 @@ import {
   ManageGroup,
   ManageIconCircle,
   ManageInfoRow,
+  ManageLinkButton,
   ManageListItem,
+  ManageNotice,
   ManagePageHeader,
   ManagePageStack,
   ManageRow,
+  ManageSection,
   ManageSpinner,
-  ManageSubheading,
   ManageSuccessBanner,
   ui,
 } from "./manage-ui";
 import { cn } from "@/lib/utils";
 import { status } from "@/lib/status-colors";
-
-function BillingSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <ManageSubheading title={title} description={description} />
-      {children}
-    </section>
-  );
-}
 
 const KNOWN_PLANS = ["FREE", "PRO", "WHALE", "BUSINESS", "ENTERPRISE"] as const;
 const KNOWN_STATUSES = ["active", "cancelled", "canceled", "past_due", "trialing", "expired"] as const;
@@ -102,6 +87,14 @@ function isFreePlan(plan: string): boolean {
   return plan.trim().toUpperCase() === "FREE";
 }
 
+function paymentStatusVariant(
+  paymentStatus: string,
+): "secondary" | "outline" | "destructive" {
+  if (paymentStatus === "COMPLETED") return "secondary";
+  if (paymentStatus === "FAILED") return "destructive";
+  return "outline";
+}
+
 function PaymentRow({
   payment,
   locale,
@@ -124,13 +117,31 @@ function PaymentRow({
 
   return (
     <ManageRow>
-      <div className="min-w-0">
-        <p className="text-sm font-medium tabular-nums">{formattedAmount} د.ع</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{formattedDate}</p>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <ManageIconCircle icon={Receipt} tone="blue" muted />
+        <div className="min-w-0">
+          <p className="text-sm font-medium tabular-nums">
+            {formattedAmount} {locale === "ar" ? "د.ع" : "IQD"}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{formattedDate}</p>
+        </div>
       </div>
-      <Badge variant={payment.status === "COMPLETED" ? "secondary" : "outline"}>
-        {statusLabel}
-      </Badge>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge variant={paymentStatusVariant(payment.status)} className="text-[10px]">
+          {statusLabel}
+        </Badge>
+        {payment.receiptUrl ? (
+          <a
+            href={payment.receiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            aria-label={t("billing.view_receipt")}
+          >
+            <ExternalLink className="size-3.5" strokeWidth={1.75} />
+          </a>
+        ) : null}
+      </div>
     </ManageRow>
   );
 }
@@ -224,12 +235,9 @@ export function BillingPanel() {
         <ManageSpinner />
       ) : subscription ? (
         <>
-          <BillingSection
-            title={t("billing.section_plan.title")}
-            description={t("billing.section_plan.description")}
-          >
+          <ManageSection title={t("billing.section_plan.title")}>
             <ManageGroup>
-              <div className="flex gap-3 px-4 py-4">
+              <div className={cn("flex gap-3.5 px-5 py-4", ui.divider)}>
                 <ManageIconCircle icon={CreditCard} tone="purple" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -238,8 +246,10 @@ export function BillingPanel() {
                       {resolveStatus(t, subscription.status)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{planDesc}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {planDesc}
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     {isFreePlan(subscription.plan)
                       ? t("billing.free_plan")
                       : subscription.currentPeriodEnd
@@ -248,19 +258,13 @@ export function BillingPanel() {
                   </p>
                 </div>
               </div>
+
               {subscription.cancelledAt && (
-                <div className={cn("px-4 py-3 text-sm", status.warning, ui.divider)}>
+                <div className={cn("px-5 py-3 text-sm", status.warning, ui.divider)}>
                   {t("billing.cancel_pending")}
                 </div>
               )}
-            </ManageGroup>
-          </BillingSection>
 
-          <BillingSection
-            title={t("billing.section_details.title")}
-            description={t("billing.section_details.description")}
-          >
-            <ManageGroup>
               {billingCycleLabel && (
                 <ManageInfoRow
                   icon={Calendar}
@@ -282,20 +286,10 @@ export function BillingPanel() {
                   value={formatDate(subscription.currentPeriodEnd)}
                 />
               )}
-              {!billingCycleLabel &&
-                !subscription.currentPeriodStart &&
-                !subscription.currentPeriodEnd && (
-                  <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    {t("billing.no_billing_details")}
-                  </div>
-                )}
             </ManageGroup>
-          </BillingSection>
+          </ManageSection>
 
-          <BillingSection
-            title={t("billing.section_invoices.title")}
-            description={t("billing.section_invoices.description")}
-          >
+          <ManageSection title={t("billing.section_invoices.title")}>
             {payments.length > 0 ? (
               <ManageGroup>
                 {payments.map((payment) => (
@@ -319,12 +313,10 @@ export function BillingPanel() {
                 }
               />
             )}
-          </BillingSection>
+          </ManageSection>
 
-          <BillingSection
-            title={t("billing.section_actions.title")}
-            description={t("billing.section_actions.description")}
-          >
+          <ManageSection title={t("billing.section_actions.title")}>
+            <ManageNotice>{t("billing.payment_methods_info")}</ManageNotice>
             <ManageGroup>
               <ManageListItem
                 icon={ArrowUpCircle}
@@ -333,23 +325,12 @@ export function BillingPanel() {
                 subtitle={t("billing.actions.upgrade_desc_support")}
                 onClick={() => setUpgradeOpen(true)}
               />
-              <ManageRow>
-                <div className="flex min-w-0 items-center gap-3">
-                  <ManageIconCircle icon={Wallet} tone="blue" muted />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{t("billing.actions.payment_methods")}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {t("billing.payment_methods_info")}
-                    </p>
-                  </div>
-                </div>
-              </ManageRow>
               {canCancel && (
                 <ManageListItem
                   icon={XCircle}
                   tone="red"
-                  title={t("billing.cancel_confirm_title")}
-                  subtitle={t("billing.cancel_confirm_desc")}
+                  title={t("billing.actions.cancel")}
+                  subtitle={t("billing.actions.cancel_desc")}
                   onClick={() => cancelModal.open()}
                 />
               )}
@@ -361,7 +342,7 @@ export function BillingPanel() {
                 href="/manage/linked-apps"
               />
             </ManageGroup>
-          </BillingSection>
+          </ManageSection>
 
           <BillingUpgradeModal
             open={upgradeOpen}
@@ -380,7 +361,7 @@ export function BillingPanel() {
                     <Modal.Heading>{t("billing.cancel_confirm_title")}</Modal.Heading>
                   </Modal.Header>
                   <Modal.Body>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
                       {t("billing.cancel_confirm_desc")}
                     </p>
                   </Modal.Body>
@@ -407,12 +388,9 @@ export function BillingPanel() {
           title={t("billing.empty_title")}
           description={t("billing.empty_desc")}
           action={
-            <a
-              href="/manage/support/tickets/new"
-              className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
-            >
+            <ManageLinkButton href="/manage/support/tickets/new">
               {t("billing.empty_cta")}
-            </a>
+            </ManageLinkButton>
           }
         />
       ) : null}

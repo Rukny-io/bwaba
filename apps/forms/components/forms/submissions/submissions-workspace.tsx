@@ -22,6 +22,7 @@ import { collectRespondentEmails } from '@/lib/submission-utils';
 import { appToast } from '@/lib/app-toast';
 import { FormPermissionDeniedState } from '@/components/forms/shared/form-permission-denied-state';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
+import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { SubmissionsTabBar, useSubmissionsTab } from '@/components/forms/submissions/submissions-tab-bar';
 import { SubmissionsSummaryTab } from '@/components/forms/submissions/submissions-summary-tab';
 import { SubmissionsQuestionTab } from '@/components/forms/submissions/submissions-question-tab';
@@ -252,26 +253,29 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
   }
 
   return (
-    <div className="dashboard-section-stack">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <SubmissionsTabBar
         total={displayTotal}
         exporting={exporting}
         canExport={canExportSubmissions}
         onExport={() => void handleExport()}
+        emailCount={respondentEmails.length}
       />
 
-      <SubmissionsSearchBar
-        value={searchInput}
-        onChange={(value) => {
-          setSearchInput(value);
-          if (!value.trim() && activeSearch) {
-            setActiveSearch('');
-            void loadCore('');
-          }
-        }}
-        onSubmit={() => void runSearch()}
-        busy={searching}
-      />
+      <DashboardSurface padding="md">
+        <SubmissionsSearchBar
+          value={searchInput}
+          onChange={(value) => {
+            setSearchInput(value);
+            if (!value.trim() && activeSearch) {
+              setActiveSearch('');
+              void loadCore('');
+            }
+          }}
+          onSubmit={() => void runSearch()}
+          busy={searching}
+        />
+      </DashboardSurface>
 
       {activeSearch ? (
         <p className="text-[12px] text-[var(--muted-foreground)]">

@@ -85,14 +85,14 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
 
   if ((loading || planLoading) && !data) {
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <Skeleton className="mx-auto h-11 w-full max-w-2xl rounded-full" />
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-3xl" />
+            <Skeleton key={i} className="h-28 rounded-2xl sm:rounded-3xl" />
           ))}
         </div>
-        <Skeleton className="h-56 rounded-3xl" />
+        <Skeleton className="h-56 rounded-2xl sm:rounded-3xl" />
       </div>
     );
   }
@@ -124,9 +124,14 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
       panels={{
         filters: (
           <DashboardSurface className="space-y-5">
-            <p className="text-sm text-[var(--muted-foreground)]">
-              اختر الفترة الزمنية لعرض التحليلات
-            </p>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
+                الفترة الزمنية
+              </h2>
+              <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)] sm:text-[13px]">
+                اختر الفترة الزمنية لعرض التحليلات
+              </p>
+            </div>
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
               <AnalyticsPeriodPicker value={days} onChange={setDays} />
               {data.period ? (

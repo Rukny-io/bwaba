@@ -73,14 +73,14 @@
   --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.03);
   --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
 
-  /* Landing page — light */
-  --landing-glass-bg: rgba(255, 255, 255, 0.88);
-  --landing-glass-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-  --landing-glass-ring: rgba(15, 23, 42, 0.06);
-  --landing-preview-fade: rgba(255, 255, 255, 0.92);
-  --landing-card-inset: inset 0 1px 1px rgba(255, 255, 255, 0.55);
-  --landing-subtle-hover: rgba(15, 23, 42, 0.04);
-  --landing-outline-inset: rgba(15, 23, 42, 0.1);
+  /* Landing page — light (public-aligned defaults; .landing-page scopes overrides) */
+  --landing-glass-bg: #ffffff;
+  --landing-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --landing-glass-ring: #e8ecf0;
+  --landing-preview-fade: rgba(255, 255, 255, 0.94);
+  --landing-card-inset: none;
+  --landing-subtle-hover: rgba(19, 35, 39, 0.04);
+  --landing-outline-inset: rgba(19, 35, 39, 0.12);
 
   /* ── Geometry & Typography ── */
   --radius: 1rem;
@@ -200,7 +200,7 @@ body {
   --color-foreground: var(--foreground);
 }
 
-/* iOS 26–style Liquid Glass (translucent + saturate blur + specular edge) */
+/* iOS 26–style Liquid Glass — kept for non-landing use; landing overrides below */
 @layer components {
   .liquid-glass {
     position: relative;
@@ -260,20 +260,6 @@ body {
   }
 }
 
-@keyframes hero-btn-shine {
-  0% {
-    left: -120%;
-  }
-
-  100% {
-    left: 120%;
-  }
-}
-
-.hero-btn-shine {
-  animation: hero-btn-shine 4s ease-in-out infinite;
-}
-
 @keyframes liquid-menu-item-in {
   from {
     opacity: 0;
@@ -286,32 +272,96 @@ body {
   }
 }
 
-/* ── Landing page utilities ── */
+/* ── Landing page — public Rukny identity (scoped; dashboard tokens unchanged) ── */
 @layer components {
   .landing-page {
-    background: var(--background);
+    --background: #ffffff;
+    --foreground: #132327;
+    --muted: rgba(19, 35, 39, 0.55);
+    --muted-foreground: rgba(19, 35, 39, 0.55);
+    --border: #e8ecf0;
+    --separator: #e8ecf0;
+    --primary: #062c30;
+    --primary-foreground: #ffffff;
+    --secondary: #eef2f2;
+    --secondary-foreground: #062c30;
+    --accent: #062c30;
+    --accent-foreground: #ffffff;
+    --surface: #ffffff;
+    --surface-foreground: #132327;
+    --surface-secondary: #f6f7f8;
+    --surface-secondary-foreground: #132327;
+    --surface-tertiary: #eef2f2;
+    --surface-tertiary-foreground: #062c30;
+    --default: #f6f7f8;
+    --default-foreground: #132327;
+    --focus: #062c30;
+    --success: #062c30;
+    --brand-soft-lime: #eef2f2;
+    --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.03);
+    --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+    --landing-glass-bg: rgba(255, 255, 255, 0.92);
+    --landing-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --landing-glass-ring: #e8ecf0;
+    --landing-preview-fade: rgba(255, 255, 255, 0.94);
+    --landing-card-inset: none;
+    --landing-subtle-hover: rgba(19, 35, 39, 0.04);
+    --landing-outline-inset: rgba(19, 35, 39, 0.12);
+    --max-content-width: 72rem;
+    background-color: #ffffff;
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      rgba(6, 44, 48, 0.07),
+      transparent
+    );
+    color: #132327;
   }
 
   .dark .landing-page,
   [data-theme="dark"] .landing-page {
-    background:
-      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(96, 165, 250, 0.09) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 40% at 85% 8%, rgba(52, 211, 153, 0.05) 0%, transparent 50%),
-      var(--background);
+    background-color: #ffffff;
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      rgba(6, 44, 48, 0.07),
+      transparent
+    );
+    color: #132327;
+  }
+
+  .landing-nav-shell {
+    background-color: transparent;
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      box-shadow 0.25s ease,
+      backdrop-filter 0.25s ease;
+  }
+
+  .landing-nav-shell.is-scrolled {
+    background-color: rgba(255, 255, 255, 0.78);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid #e8ecf0;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
   }
 
   .landing-glass {
-    background-color: var(--landing-glass-bg);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    backdrop-filter: blur(20px) saturate(160%);
-    box-shadow: var(--landing-glass-shadow);
-    outline: 1px solid var(--landing-glass-ring);
+    background-color: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: var(--card-shadow);
+    outline: 1px solid var(--border);
     outline-offset: -1px;
   }
 
   .landing-invert-btn {
-    background: var(--foreground);
-    color: var(--background);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 8px 24px rgba(6, 44, 48, 0.18);
+  }
+
+  .landing-invert-btn:hover {
+    opacity: 0.92;
   }
 
   .landing-outline-btn {
@@ -329,7 +379,7 @@ body {
   }
 
   .landing-surface-btn:hover {
-    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
     background: color-mix(in srgb, var(--primary) 4%, var(--surface));
   }
 
@@ -342,18 +392,18 @@ body {
   }
 
   .landing-tab-inactive:hover {
-    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    background: var(--landing-subtle-hover);
     color: var(--foreground);
   }
 
   .landing-panel {
-    background: color-mix(in srgb, var(--surface-secondary) 72%, transparent);
-    outline: 1px solid var(--landing-glass-ring);
+    background: var(--surface-secondary);
+    outline: 1px solid var(--border);
     outline-offset: -1px;
   }
 
   .landing-feature-inner {
-    box-shadow: var(--landing-card-inset);
+    box-shadow: none;
   }
 
   .landing-preview-fade {
@@ -363,17 +413,162 @@ body {
   .landing-subtle-hover:hover {
     background: var(--landing-subtle-hover);
   }
-}
 
-.dark .liquid-menu-panel,
-[data-theme="dark"] .liquid-menu-panel {
-  border-top-color: var(--landing-glass-ring);
+  .landing-section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    border: 1px solid rgba(19, 35, 39, 0.12);
+    background: #fafbfc;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(19, 35, 39, 0.6);
+  }
 }
 
 @supports not (backdrop-filter: blur(1px)) {
   .liquid-glass,
-  .landing-glass {
+  .landing-glass,
+  .landing-nav-shell.is-scrolled,
+  .notifications-liquid-sheet,
+  .notifications-liquid-header-card {
     background-color: var(--surface);
+  }
+}
+
+/* iOS 26 Liquid Glass — notifications desktop sheet */
+@layer components {
+  .notifications-liquid-sheet {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 12px 48px rgba(15, 23, 42, 0.12),
+      0 2px 10px rgba(15, 23, 42, 0.05);
+    -webkit-backdrop-filter: blur(72px) saturate(220%);
+    backdrop-filter: blur(72px) saturate(220%);
+  }
+
+  .notifications-liquid-sheet > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dark .notifications-liquid-sheet,
+  [data-theme='dark'] .notifications-liquid-sheet {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(18, 22, 30, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 16px 56px rgba(0, 0, 0, 0.5),
+      0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Sticky chrome — transparent host; glass lives on inner card */
+  .notifications-liquid-chrome {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .notifications-liquid-chrome > * {
+    pointer-events: auto;
+  }
+
+  /* Title + tabs in one iOS 26 glass card */
+  .notifications-liquid-header-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 8px 28px rgba(15, 23, 42, 0.1);
+    -webkit-backdrop-filter: blur(56px) saturate(220%);
+    backdrop-filter: blur(56px) saturate(220%);
+  }
+
+  .dark .notifications-liquid-header-card,
+  [data-theme='dark'] .notifications-liquid-header-card {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(22, 27, 38, 0.55);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 10px 36px rgba(0, 0, 0, 0.35);
+  }
+
+  .notifications-liquid-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.75rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    background: transparent;
+    padding: 0.28rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .notifications-liquid-chip:hover {
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .notifications-liquid-chip[aria-selected='true'] {
+    border-color: transparent;
+    background: #132327;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+  }
+
+  .dark .notifications-liquid-chip,
+  [data-theme='dark'] .notifications-liquid-chip {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .dark .notifications-liquid-chip:hover,
+  [data-theme='dark'] .notifications-liquid-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .notifications-liquid-chip[aria-selected='true'],
+  [data-theme='dark'] .notifications-liquid-chip[aria-selected='true'] {
+    border-color: transparent;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .notifications-liquid-group {
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(255, 255, 255, 0.14);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+  }
+
+  .dark .notifications-liquid-group,
+  [data-theme='dark'] .notifications-liquid-group {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.04);
   }
 }
 
@@ -423,21 +618,14 @@ body {
   }
 
   .notifications-feed-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   .notifications-feed-scroll::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .notifications-feed-scroll::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background-color: var(--scrollbar);
-  }
-
-  .notifications-feed-scroll::-webkit-scrollbar-track {
-    background: transparent;
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   @media (min-width: 640px) {
@@ -447,7 +635,7 @@ body {
   }
 
   .dashboard-panel {
-    border-radius: 1rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--border);
     background: var(--surface);
     padding: 1rem;
@@ -458,6 +646,79 @@ body {
       border-radius: 1.5rem;
       padding: 1.5rem;
     }
+  }
+
+  /* Teal/white brand surface within dashboard chrome (home, forms list, …) */
+  .dashboard-brand {
+    --foreground: #132327;
+    --muted: rgba(19, 35, 39, 0.55);
+    --muted-foreground: rgba(19, 35, 39, 0.55);
+    --border: #e8ecf0;
+    --separator: #e8ecf0;
+    --primary: #062c30;
+    --primary-foreground: #ffffff;
+    --secondary: #eef2f2;
+    --secondary-foreground: #062c30;
+    --accent: #062c30;
+    --accent-foreground: #ffffff;
+    --surface: #ffffff;
+    --surface-foreground: #132327;
+    --surface-secondary: #f6f7f8;
+    --surface-secondary-foreground: #132327;
+    --surface-tertiary: #eef2f2;
+    --surface-tertiary-foreground: #062c30;
+    --focus: #062c30;
+    --success: #0d6b5c;
+    --brand-soft-lime: #e8f5f2;
+    --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+      0 4px 16px rgba(15, 23, 42, 0.03);
+    --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+    color: #132327;
+  }
+
+  /* Dark mode: keep cards light (white/teal), but header text readable on dark background */
+  .dark .dashboard-brand,
+  [data-theme="dark"] .dashboard-brand {
+    /* Match default dark tokens for text outside cards */
+    --foreground: #f1f5f9;
+    --muted: #94a3b8;
+    --muted-foreground: #94a3b8;
+
+    /* Use dark surfaces so cards don't become pure white */
+    --border: #2a3140;
+    --separator: #252b38;
+
+    --primary: #0d6b5c;
+    --primary-foreground: #ffffff;
+    --accent: #0d6b5c;
+    --accent-foreground: #ffffff;
+
+    --surface: #12161e;
+    --surface-foreground: #f1f5f9;
+    --surface-secondary: #1a2030;
+    --surface-secondary-foreground: #e2e8f0;
+    --surface-tertiary: #222a3a;
+    --surface-tertiary-foreground: #e2e8f0;
+
+    --secondary: #1a2030;
+    --secondary-foreground: #e2e8f0;
+  }
+
+  .dark .dashboard-brand .dashboard-card,
+  [data-theme="dark"] .dashboard-brand .dashboard-card {
+    --foreground: #f1f5f9;
+    --muted: #94a3b8;
+    --muted-foreground: #94a3b8;
+    --separator: #252b38;
+  }
+
+  .dashboard-brand .dashboard-card {
+    border-color: var(--border);
+  }
+
+  .dashboard-brand .dashboard-card-interactive:hover {
+    border-color: color-mix(in srgb, var(--border) 55%, var(--primary) 45%);
+    background: var(--surface-secondary);
   }
 
   @media (min-width: 640px) {

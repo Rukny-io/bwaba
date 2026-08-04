@@ -41,7 +41,7 @@ export function FormAnalyticsSectionTabs({
   const [active, setActive] = useState<FormAnalyticsSectionId>(defaultSection);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <nav
         className={cn(formWorkspaceTabGroupClassName, 'gap-1.5 sm:gap-2')}
         aria-label="أقسام التحليلات"

@@ -6,7 +6,7 @@ import {
 } from '@/components/app/forms-dashboard-context';
 import { DashboardNav } from '@/components/app/dashboard-nav';
 import type { AccessibleWorkspace } from '@/lib/workspace';
-import { NotificationsDesktopPopover } from '@/components/app/notifications-desktop-popover';
+import { NotificationsDesktopPanel } from '@/components/app/notifications-desktop-panel';
 import { DashboardMobileDock } from '@/components/app/dashboard-mobile-dock';
 import { NotificationsQueryOpener } from '@/components/app/notifications-query-opener';
 import { NotificationsLiveListener } from '@/components/app/notifications-live-listener';
@@ -41,7 +41,7 @@ function FormsDashboardShellInner({
         </div>
       </div>
 
-      <NotificationsDesktopPopover />
+      <NotificationsDesktopPanel />
     </>
   );
 }

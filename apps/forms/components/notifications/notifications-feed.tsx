@@ -290,6 +290,7 @@ function NotificationItem({
   busy,
   showAction,
   embedded = false,
+  showInlineDelete = false,
   onMarkRead,
   onDelete,
   onOpen,
@@ -298,6 +299,7 @@ function NotificationItem({
   busy: boolean;
   showAction?: boolean;
   embedded?: boolean;
+  showInlineDelete?: boolean;
   onMarkRead: (n: AppNotification) => void;
   onDelete: (id: string) => void;
   onOpen: (n: EnrichedNotification) => void;
@@ -317,8 +319,8 @@ function NotificationItem({
         'group relative flex w-full items-start gap-3 cursor-pointer text-start transition-colors',
         embedded
           ? cn(
-              'border-b border-[var(--border)]/45 px-4 py-3.5 last:border-b-0 active:bg-[var(--surface-secondary)]/70',
-              !notif.isRead && 'bg-[var(--primary)]/[0.03]',
+              'border-b border-black/[0.06] px-4 py-3.5 last:border-b-0 active:bg-black/[0.04] dark:border-white/[0.08] dark:active:bg-white/[0.06]',
+              !notif.isRead && 'bg-[var(--primary)]/[0.04]',
             )
           : cn(
               'rounded-xl px-3 py-3 hover:bg-[var(--surface-secondary)]/80',
@@ -351,7 +353,7 @@ function NotificationItem({
             {!notif.isRead ? (
               <span className={cn('size-2 rounded-full', styles.dot)} />
             ) : null}
-            {!embedded ? (
+            {showInlineDelete ? (
               <button
                 type="button"
                 disabled={busy}
@@ -393,12 +395,15 @@ export function NotificationsFeed({
   className,
   embedded,
   fullPage,
+  desktopPanel,
 }: {
   onClose?: () => void;
   className?: string;
   embedded?: boolean;
   /** Mobile full-screen route (`/app/notifications`) */
   fullPage?: boolean;
+  /** Desktop slide-in panel (lg+) */
+  desktopPanel?: boolean;
 }) {
   const router = useRouter();
   const { data, isLoading, error, markRead, markAllRead, remove, removeAll } =
@@ -489,7 +494,9 @@ export function NotificationsFeed({
     }
   }, [removeAll]);
 
-  const isListMode = embedded || fullPage;
+  const isListMode = embedded || fullPage || desktopPanel;
+  const showFilters = !embedded && !desktopPanel;
+  const showInlineDelete = !embedded && !desktopPanel;
 
   const listContent = (
     <>
@@ -517,20 +524,36 @@ export function NotificationsFeed({
           />
         </div>
       ) : (
-        <div className={cn(isListMode ? 'pb-2' : 'space-y-4 px-3 pb-4')}>
+        <div
+          className={cn(
+            desktopPanel ? 'space-y-3 px-3 pb-3' : isListMode ? 'pb-2' : 'space-y-4 px-3 pb-4',
+          )}
+        >
           {grouped.map((group) => (
             <section key={group.key}>
-              <h3 className="px-4 pb-1 pt-2 text-[11px] font-semibold text-[var(--muted-foreground)] first:pt-1">
+              <h3
+                className={cn(
+                  'px-4 pb-1 pt-2 text-[11px] font-semibold text-[var(--muted-foreground)] first:pt-1',
+                  desktopPanel &&
+                    'px-2 pb-1.5 pt-0.5 text-[11px] font-medium tracking-wide text-[var(--muted-foreground)]/80',
+                )}
+              >
                 {group.label}
               </h3>
-              <div className={cn(!isListMode && 'space-y-1')}>
+              <div
+                className={cn(
+                  !isListMode && 'space-y-1',
+                  desktopPanel && 'notifications-liquid-group',
+                )}
+              >
                 {group.items.map((notif) => (
                   <NotificationItem
                     key={notif.id}
                     notif={notif}
                     busy={busy === notif.id}
-                    showAction={!isListMode}
+                    showAction={desktopPanel || !isListMode}
                     embedded={isListMode}
+                    showInlineDelete={showInlineDelete}
                     onMarkRead={(n) => void handleMarkRead(n)}
                     onDelete={(id) => void handleDelete(id)}
                     onOpen={handleOpen}
@@ -575,6 +598,81 @@ export function NotificationsFeed({
     );
   }
 
+  if (desktopPanel) {
+    return (
+      <div className={cn('relative flex min-h-0 flex-1 flex-col', className)}>
+        <div className="notifications-feed-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <header className="notifications-liquid-chrome px-3 pb-3 pt-3">
+            <div className="relative">
+              {onClose ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute end-2.5 top-2.5 z-10 flex items-center justify-center rounded-full bg-black/[0.08] text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.14] hover:text-[var(--foreground)] dark:bg-white/15 dark:text-white/80 dark:hover:bg-white/25 dark:hover:text-white"
+                  style={{ width: 26, height: 26 }}
+                  aria-label="إغلاق"
+                >
+                  <X className="size-3.5" strokeWidth={2.75} />
+                </button>
+              ) : null}
+
+              <div className="notifications-liquid-header-card px-3.5 pb-3 pt-3">
+                <div className="flex items-center justify-between gap-3 pe-8">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)] dark:text-white">
+                    الإشعارات
+                  </h2>
+                  {unreadCount > 0 ? (
+                    <button
+                      type="button"
+                      disabled={busy === 'all'}
+                      onClick={() => void handleMarkAllRead()}
+                      className="rounded-full px-2 py-1 text-[11px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] disabled:opacity-50 dark:text-white/55 dark:hover:text-white"
+                    >
+                      {busy === 'all' ? '…' : 'قراءة الكل'}
+                    </button>
+                  ) : null}
+                </div>
+
+                <div
+                  className="mt-3 flex flex-wrap gap-2"
+                  role="tablist"
+                  aria-label="تصفية الإشعارات"
+                >
+                  {PRIMARY_FILTERS.map((key) => {
+                    const meta = NOTIFICATION_FILTERS.find((f) => f.key === key)!;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={filter === key}
+                        onClick={() => setFilter(key)}
+                        className="notifications-liquid-chip"
+                      >
+                        {meta.label}
+                        {key === 'unread' && unreadCount > 0 ? (
+                          <span
+                            className="ms-1.5 tabular-nums opacity-80"
+                            dir="ltr"
+                            lang="en"
+                          >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="px-1.5 pb-4 pt-1">{listContent}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div
@@ -583,18 +681,20 @@ export function NotificationsFeed({
           embedded ? 'py-3' : 'pb-3 pt-4',
         )}
       >
-        <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
-          الإشعارات
-          {unreadCount > 0 ? (
-            <span
-              className="inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-[var(--danger)] px-1.5 py-0.5 text-[10px] font-bold text-white"
-              dir="ltr"
-              lang="en"
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          ) : null}
-        </h2>
+        <div className="min-w-0">
+          <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+            الإشعارات
+            {unreadCount > 0 ? (
+              <span
+                className="inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-[var(--danger)] px-1.5 py-0.5 text-[10px] font-bold text-white"
+                dir="ltr"
+                lang="en"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            ) : null}
+          </h2>
+        </div>
 
         {!embedded ? (
           <div className="flex shrink-0 items-center gap-1">
@@ -623,7 +723,7 @@ export function NotificationsFeed({
         ) : null}
       </div>
 
-      {!embedded ? (
+      {showFilters ? (
         <div className="shrink-0 border-b border-[var(--border)]/50 px-4 py-3">
           <div
             className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-secondary)] p-1"
@@ -673,7 +773,7 @@ export function NotificationsFeed({
         <div
           className={cn(
             'notifications-feed-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain',
-            !embedded && 'px-2 pb-2 pt-1',
+            !isListMode && 'px-2 pb-2 pt-1',
           )}
         >
           {listContent}

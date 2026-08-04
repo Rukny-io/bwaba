@@ -53,6 +53,7 @@ import {
   generateCsrfToken,
   getTrustedDeviceId,
 } from './cookie.config';
+import { getClientIp } from '../../core/common/utils/client-ip.util';
 
 // Throttle policies:
 // - Production: strict limits to prevent abuse
@@ -110,7 +111,7 @@ export class QuickSignController {
     @Req() req: Request,
   ) {
     const userAgent = req.headers['user-agent'];
-    const ipAddress = req.ip || req.socket.remoteAddress;
+    const ipAddress = getClientIp(req);
 
     // Parse device info (sync - fast)
     const parser = new UAParser(userAgent);
@@ -312,7 +313,7 @@ export class QuickSignController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
-    const ipAddress = req.ip || req.socket.remoteAddress;
+    const ipAddress = getClientIp(req);
     const frontendUrl =
       process.env.AUTH_FRONTEND_URL ||
       process.env.FRONTEND_URL ||
@@ -633,7 +634,7 @@ export class QuickSignController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
-    const ipAddress = req.ip || req.socket.remoteAddress;
+    const ipAddress = getClientIp(req);
 
     // التحقق من QuickSign token (login/signup verification may include userId)
     const verification = await this.quickSignService.verifyQuickSign(
@@ -780,7 +781,7 @@ export class QuickSignController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
-    const ipAddress = req.ip || req.socket.remoteAddress;
+    const ipAddress = getClientIp(req);
 
     // التحقق من QuickSign token — نستخدم verifySignupToken الذي لا يحتاج قفل
     // ويتحقق من أن التوكن من نوع SIGNUP ولم يُسجَّل المستخدم بعد

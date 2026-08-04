@@ -5,6 +5,7 @@ import {
   formatPercent,
   formatTrendPercent,
 } from '@/lib/dashboard-format';
+import type { FormListItem } from '@/lib/forms-api';
 
 interface DashboardFormsStats {
   active: number;
@@ -38,6 +39,22 @@ export interface FormsDashboardMetrics {
   completionRate: MetricCardData;
 }
 
+export interface DashboardActivityItem {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  href: string;
+  createdAt: string;
+}
+
+export interface FormsDashboardHomeData {
+  metrics: FormsDashboardMetrics;
+  recentForms: FormListItem[];
+  recentSubmissions: DashboardActivityItem[];
+  recentActivity: DashboardActivityItem[];
+}
+
 const EMPTY_FORMS: DashboardFormsStats = {
   active: 0,
   total: 0,
@@ -53,28 +70,95 @@ const EMPTY_FORMS: DashboardFormsStats = {
   createdLastMonth: 0,
 };
 
+const FORM_ACTIVITY_TYPES = new Set([
+  'form_created',
+  'form_updated',
+  'form_submission',
+]);
+
 function buildCookieHeader(items: { name: string; value: string }[]): string {
   return items.map((c) => `${c.name}=${c.value}`).join('; ');
 }
 
-async function fetchDashboardStats(): Promise<DashboardStatsResponse | null> {
-  const cookieStore = await cookies();
-  const cookieHeader = buildCookieHeader(cookieStore.getAll());
-  const backendUrl =
+function getBackendUrl(): string {
+  return (
     process.env.API_BACKEND_URL ||
     process.env.API_URL ||
-    'http://localhost:3001';
+    'http://localhost:3001'
+  );
+}
 
+async function getAuthCookieHeader(): Promise<string> {
+  const cookieStore = await cookies();
+  return buildCookieHeader(cookieStore.getAll());
+}
+
+async function fetchDashboardStats(): Promise<DashboardStatsResponse | null> {
   try {
-    const res = await fetch(`${backendUrl}/api/v1/dashboard/stats`, {
-      headers: await getServerAuthHeaders(cookieHeader),
+    const res = await fetch(`${getBackendUrl()}/api/v1/dashboard/stats`, {
+      headers: await getServerAuthHeaders(await getAuthCookieHeader()),
       cache: 'no-store',
     });
-
     if (!res.ok) return null;
     return (await res.json()) as DashboardStatsResponse;
   } catch {
     return null;
+  }
+}
+
+async function fetchRecentForms(): Promise<FormListItem[]> {
+  try {
+    const url = new URL(`${getBackendUrl()}/api/v1/forms`);
+    url.searchParams.set('page', '1');
+    url.searchParams.set('limit', '3');
+    url.searchParams.set('visibility', 'active');
+
+    const res = await fetch(url.toString(), {
+      headers: await getServerAuthHeaders(await getAuthCookieHeader()),
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { forms?: FormListItem[] };
+    return Array.isArray(data.forms) ? data.forms : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeActivityHref(href: string): string {
+  return href
+    .replace(/\/responses\/?$/, '/submissions')
+    .replace(/\/responses\//, '/submissions/');
+}
+
+async function fetchRecentActivity(
+  limit = 12,
+): Promise<DashboardActivityItem[]> {
+  try {
+    const url = new URL(`${getBackendUrl()}/api/v1/dashboard/activity`);
+    url.searchParams.set('limit', String(limit));
+
+    const res = await fetch(url.toString(), {
+      headers: await getServerAuthHeaders(await getAuthCookieHeader()),
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as DashboardActivityItem[];
+    if (!Array.isArray(data)) return [];
+
+    return data
+      .filter((item) => FORM_ACTIVITY_TYPES.has(item.type))
+      .map((item) => ({
+        ...item,
+        href: normalizeActivityHref(item.href || '#'),
+        createdAt:
+          typeof item.createdAt === 'string'
+            ? item.createdAt
+            : new Date(item.createdAt).toISOString(),
+      }));
+  } catch {
+    return [];
   }
 }
 
@@ -89,10 +173,7 @@ function toMetricCard(
   };
 }
 
-export async function getFormsDashboardMetrics(): Promise<FormsDashboardMetrics> {
-  const stats = await fetchDashboardStats();
-  const forms = stats?.forms ?? EMPTY_FORMS;
-
+function buildMetrics(forms: DashboardFormsStats): FormsDashboardMetrics {
   const activeTrend = formatTrendPercent(
     forms.createdThisMonth,
     forms.createdLastMonth,
@@ -119,5 +200,43 @@ export async function getFormsDashboardMetrics(): Promise<FormsDashboardMetrics>
       completionTrend,
       formatPercent(forms.completionRate),
     ),
+  };
+}
+
+export async function getFormsDashboardMetrics(): Promise<FormsDashboardMetrics> {
+  const stats = await fetchDashboardStats();
+  return buildMetrics(stats?.forms ?? EMPTY_FORMS);
+}
+
+export async function getFormsDashboardHomeData(): Promise<FormsDashboardHomeData> {
+  const [stats, recentForms, activity] = await Promise.all([
+    fetchDashboardStats(),
+    fetchRecentForms(),
+    fetchRecentActivity(16),
+  ]);
+
+  const sortedForms = [...recentForms]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+    .slice(0, 3);
+
+  const recentSubmissions = activity
+    .filter((item) => item.type === 'form_submission')
+    .slice(0, 3);
+
+  const recentActivity = [...activity]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, 3);
+
+  return {
+    metrics: buildMetrics(stats?.forms ?? EMPTY_FORMS),
+    recentForms: sortedForms,
+    recentSubmissions,
+    recentActivity,
   };
 }

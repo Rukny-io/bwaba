@@ -4,11 +4,11 @@ import { FormIntegrationsView } from '@/components/forms/integrations/form-integ
 
 function IntegrationsFallback() {
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <Skeleton className="h-5 w-64 max-w-full rounded-lg" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-44 rounded-3xl" />
+          <Skeleton key={i} className="h-44 rounded-2xl sm:rounded-3xl" />
         ))}
       </div>
     </div>

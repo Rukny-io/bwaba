@@ -158,19 +158,17 @@ function FeatureCard({ feature }: { feature: Feature }) {
   return (
     <motion.article
       variants={fadeUp}
-      className={`group relative flex flex-col rounded-[28px] bg-[var(--surface)]/5 p-1.5 ring-1 ring-[var(--border)] transition-shadow duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[var(--card-shadow-hover)] ${feature.span}`}
+      className={`group relative flex flex-col rounded-2xl border border-[var(--border)] bg-white p-6 transition-shadow duration-300 hover:shadow-[var(--card-shadow-hover)] min-[720px]:p-7 ${feature.span}`}
     >
-      <div className="landing-feature-inner flex h-full flex-col rounded-[22px] bg-[var(--surface)] p-6 min-[720px]:p-7">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-[var(--secondary)] text-[var(--secondary-foreground)] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-y-0.5 group-hover:scale-105">
-          <Icon className="size-6" />
-        </div>
-        <h3 className="mt-5 text-lg font-bold tracking-tight text-[var(--foreground)]">
-          {feature.title}
-        </h3>
-        <p className="mt-2 text-[14px] leading-relaxed text-[var(--muted-foreground)]">
-          {feature.description}
-        </p>
+      <div className="flex size-11 items-center justify-center rounded-full bg-[var(--secondary)] text-[var(--primary)]">
+        <Icon className="size-5" />
       </div>
+      <h3 className="mt-5 text-lg font-bold tracking-tight text-[var(--foreground)]">
+        {feature.title}
+      </h3>
+      <p className="mt-2 text-[14px] leading-relaxed text-[var(--muted-foreground)]">
+        {feature.description}
+      </p>
     </motion.article>
   );
 }
@@ -179,29 +177,27 @@ export function FeaturesSection() {
   return (
     <section
       id="features"
-      className="mx-auto w-full max-w-[var(--max-content-width)] scroll-mt-24 px-5 py-20 min-[720px]:px-6 min-[720px]:py-28 min-[1280px]:px-0"
+      className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-16 min-[720px]:px-6 min-[720px]:py-24"
     >
       <motion.div
-        className="grid place-items-center"
+        className="grid place-items-center text-center"
         variants={fadeUp}
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.3 }}
       >
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)] shadow-sm">
-          المميزات
-        </span>
-        <h2 className="mt-5 max-w-[640px] text-center text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[44px] min-[720px]:leading-[1.12]">
+        <span className="landing-section-eyebrow">المميزات</span>
+        <h2 className="mt-5 max-w-[640px] text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[2.75rem] min-[720px]:leading-[1.15]">
           كل ما تحتاجه لبناء نماذج تُنجز المهمة
         </h2>
-        <p className="mt-4 max-w-[540px] text-center text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
+        <p className="mt-4 max-w-[540px] text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
           أدوات قوية بواجهة بسيطة — من أول حقل حتى آخر تحليل، كل شيء في منصة
           واحدة مصمّمة للعربية.
         </p>
       </motion.div>
 
       <motion.div
-        className="mt-12 grid grid-cols-1 gap-4 min-[900px]:mt-16 min-[900px]:grid-cols-6"
+        className="mt-12 grid grid-cols-1 gap-4 min-[900px]:mt-14 min-[900px]:grid-cols-6"
         variants={stagger}
         initial="hidden"
         whileInView="show"

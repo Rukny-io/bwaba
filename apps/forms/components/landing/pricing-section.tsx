@@ -144,10 +144,10 @@ function PlanCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded-3xl p-6 transition-shadow min-[720px]:p-7 ${
+      className={`relative flex flex-col rounded-2xl border bg-white p-6 transition-shadow min-[720px]:p-7 ${
         plan.popular
-          ? 'bg-[var(--surface)] shadow-[var(--card-shadow-hover)] ring-2 ring-[var(--primary)]'
-          : 'bg-[var(--surface)] shadow-[var(--card-shadow)] ring-1 ring-[var(--border)] hover:shadow-[var(--card-shadow-hover)]'
+          ? 'border-[var(--primary)] shadow-[var(--card-shadow-hover)]'
+          : 'border-[var(--border)] shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]'
       }`}
     >
       {plan.badge ? (
@@ -482,22 +482,20 @@ export function PricingSection() {
   return (
     <section
       id="pricing"
-      className="mx-auto w-full max-w-[var(--max-content-width)] scroll-mt-24 px-5 py-20 min-[720px]:px-6 min-[720px]:py-28 min-[1280px]:px-0"
+      className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-16 min-[720px]:px-6 min-[720px]:py-24"
     >
       <motion.div
-        className="grid place-items-center"
+        className="grid place-items-center text-center"
         variants={fadeUp}
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.3 }}
       >
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-1.5 text-sm font-semibold text-[var(--foreground)] shadow-sm">
-          خطط الأسعار
-        </span>
-        <h2 className="mt-5 max-w-[640px] text-center text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[44px] min-[720px]:leading-[1.12]">
+        <span className="landing-section-eyebrow">خطط الأسعار</span>
+        <h2 className="mt-5 max-w-[640px] text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[2.75rem] min-[720px]:leading-[1.15]">
           باقات تناسب كل مرحلة من نمو عملك
         </h2>
-        <p className="mt-4 max-w-[540px] text-center text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
+        <p className="mt-4 max-w-[540px] text-[15px] leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
           ابدأ مجاناً وارتقِ متى احتجت. كل الباقات تشمل النماذج والمتجر والروابط
           والتحليلات بحدود مختلفة.
         </p>

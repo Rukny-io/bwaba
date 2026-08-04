@@ -4,7 +4,7 @@ import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-ske
 
 export default function TemplatesPage() {
   return (
-    <section className="dashboard-page dashboard-section-stack">
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6 dashboard-brand">
       <Suspense fallback={<TemplatesGridSkeleton count={6} />}>
         <TemplatesView />
       </Suspense>

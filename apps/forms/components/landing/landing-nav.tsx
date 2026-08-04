@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { href: '#features', label: 'المميزات' },
   { href: '#integrations', label: 'التكاملات' },
   { href: '#pricing', label: 'الأسعار' },
-  { href: '/login', label: 'تسجيل الدخول' },
 ] as const;
 
 function RuknyLogoIcon({ className }: { className?: string }) {
@@ -37,13 +37,6 @@ function RuknyLogoIcon({ className }: { className?: string }) {
 function MenuIcon({ open }: { open: boolean }) {
   const lineClass =
     'origin-center transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
-  const topLineClass = open
-    ? `${lineClass} translate-y-[4px] rotate-45`
-    : lineClass;
-  const bottomLineClass = open
-    ? `${lineClass} -translate-y-[4px] -rotate-45`
-    : lineClass;
-
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -58,41 +51,48 @@ function MenuIcon({ open }: { open: boolean }) {
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
-        className={topLineClass}
+        className={cn(lineClass, open && 'translate-y-[4px] rotate-45')}
       />
       <path
         d="M4 14H16"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
-        className={bottomLineClass}
+        className={cn(lineClass, open && '-translate-y-[4px] -rotate-45')}
       />
     </svg>
   );
 }
 
-function BrandLink({ showWordmark = true }: { showWordmark?: boolean }) {
+function BrandLink() {
   return (
     <Link
       href="/"
-      className="flex min-w-0 items-center gap-3 rounded-full py-2 ps-3 pe-4 outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--foreground)]/20"
+      className="flex min-w-0 items-center gap-2.5 rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25"
     >
-      <RuknyLogoIcon className="h-6 w-auto shrink-0 text-[var(--foreground)]" />
-      <div className="min-w-0">
-        {showWordmark ? (
-          <span className="block truncate text-[13px] font-medium text-[var(--muted-foreground)]">
-            Forms
-          </span>
-        ) : null}
-      </div>
+      <RuknyLogoIcon className="h-[22px] w-auto shrink-0 text-[var(--primary)]" />
+      <span className="text-[15px] font-bold tracking-tight text-[var(--foreground)]">
+        ركني
+      </span>
+      <span className="hidden text-[12px] font-medium text-[var(--muted-foreground)] min-[480px]:inline">
+        Forms
+      </span>
     </Link>
   );
 }
 
 export function LandingNav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -108,74 +108,93 @@ export function LandingNav() {
   }, [menuOpen, closeMenu]);
 
   return (
-    <header className="sticky top-0 z-50 bg-transparent">
-      {/* Desktop — pill centered (≥720px) */}
-      <div className="mx-auto hidden max-w-[1280px] justify-center px-4 pt-5 min-[720px]:flex sm:pt-6">
+    <header
+      className={cn(
+        'landing-nav-shell sticky top-0 z-50',
+        scrolled && 'is-scrolled',
+      )}
+    >
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 min-[720px]:h-[72px] min-[720px]:px-6">
+        <BrandLink />
+
         <nav
           aria-label="التنقل الرئيسي"
-          className="liquid-glass flex h-[64px] w-full max-w-[680px] items-center justify-between gap-4 rounded-[32px] px-5"
+          className="hidden items-center gap-1 min-[720px]:flex"
         >
-          <div className="flex grow items-center">
-            <BrandLink showWordmark />
-          </div>
-          <div className="flex items-center gap-6">
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-full px-3.5 py-2 text-sm font-medium text-[var(--foreground)]/75 transition-colors hover:bg-[var(--landing-subtle-hover)] hover:text-[var(--foreground)]"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2.5 min-[720px]:flex">
+          <Link
+            href="/login"
+            className="rounded-full px-4 py-2 text-sm font-medium text-[var(--foreground)]/80 transition-colors hover:text-[var(--foreground)]"
+          >
+            تسجيل الدخول
+          </Link>
+          <Link
+            href="/app"
+            className="landing-invert-btn inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold"
+          >
+            لوحة التحكم
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="landing-subtle-hover relative z-10 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full outline-none transition-transform active:scale-95 focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 min-[720px]:hidden"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav-menu"
+          aria-label={menuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <MenuIcon open={menuOpen} />
+        </button>
+      </div>
+
+      {menuOpen ? (
+        <div
+          id="mobile-nav-menu"
+          className="border-t border-[var(--border)] bg-white px-5 py-5 min-[720px]:hidden"
+        >
+          <ul className="flex flex-col gap-1">
             {NAV_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="text-sm font-semibold text-[var(--foreground)] transition-opacity hover:opacity-70 whitespace-nowrap"
-              >
-                {label}
-              </Link>
+              <li key={href}>
+                <Link
+                  href={href}
+                  className="block rounded-xl px-3 py-3 text-base font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--landing-subtle-hover)]"
+                  onClick={closeMenu}
+                >
+                  {label}
+                </Link>
+              </li>
             ))}
-          </div>
-        </nav>
-      </div>
-
-      {/* Mobile — bar in layout flow; menu overlays page (like Mobbin) */}
-      <div className="relative z-50 h-14 shrink-0 px-3 pt-2 min-[720px]:hidden">
-        <nav
-          aria-label="التنقل الرئيسي"
-          className={`liquid-glass absolute top-2 right-3 left-3 z-50 w-[calc(100%-1.5rem)] rounded-[22px] ${
-            menuOpen ? 'liquid-glass-expanded rounded-[28px]' : ''
-          }`}
-        >
-          <div className="flex items-center justify-between py-3 ps-5 pe-3">
-            <BrandLink />
-            <button
-              type="button"
-              className="landing-subtle-hover relative z-10 flex h-9 w-10 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-xl outline-none transition-[background-color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95 focus-visible:ring-2 focus-visible:ring-[var(--foreground)]/20"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-nav-menu"
-              aria-label={menuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
-              onClick={() => setMenuOpen((open) => !open)}
+          </ul>
+          <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
+            <Link
+              href="/login"
+              onClick={closeMenu}
+              className="flex h-11 items-center justify-center rounded-full border border-[var(--border)] text-sm font-semibold text-[var(--foreground)]"
             >
-              <MenuIcon open={menuOpen} />
-            </button>
-          </div>
-
-          {menuOpen ? (
-            <div
-              id="mobile-nav-menu"
-              className="liquid-menu-panel flex flex-col gap-6 px-5 pt-4 pb-5"
+              تسجيل الدخول
+            </Link>
+            <Link
+              href="/app"
+              onClick={closeMenu}
+              className="landing-invert-btn flex h-11 items-center justify-center rounded-full text-sm font-semibold"
             >
-              <ul className="flex flex-col gap-3">
-                {NAV_LINKS.map(({ href, label }) => (
-                  <li key={href} className="liquid-menu-item">
-                    <Link
-                      href={href}
-                      className="landing-subtle-hover block rounded-xl px-2 py-2.5 text-base font-semibold text-[var(--foreground)] transition-[background-color,opacity] duration-200 active:opacity-80"
-                      onClick={closeMenu}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </nav>
-      </div>
+              لوحة التحكم
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart2,
+  Clock,
   Eye,
   Inbox,
   TrendingUp,
@@ -76,7 +77,7 @@ export function AnalyticsOverviewView() {
       <div className="space-y-4">
         <Skeleton className="h-10 w-64 rounded-full" />
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-[7.25rem] rounded-2xl sm:h-28 sm:rounded-3xl" />
           ))}
         </div>
@@ -96,6 +97,10 @@ export function AnalyticsOverviewView() {
   }
 
   const { summary } = data;
+  const avgTimeLabel =
+    summary.avgTimeToComplete >= 60
+      ? `${(summary.avgTimeToComplete / 60).toFixed(1)} د`
+      : `${summary.avgTimeToComplete} ث`;
 
   return (
     <>
@@ -148,18 +153,25 @@ export function AnalyticsOverviewView() {
           comparisonPrimary="منشورة"
           comparisonSecondary={`من ${data.forms.length}`}
         />
+        <DashboardMetricCard
+          icon={Clock}
+          label="متوسط وقت الإكمال"
+          value={avgTimeLabel}
+          comparisonPrimary="في الفترة"
+          comparisonSecondary="متوسط وقت وصول الإكمال"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
         <DashboardSurface as="article" className="xl:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)] sm:mb-4">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--foreground)] sm:mb-3">
             الاتجاه اليومي
           </h2>
           <AnalyticsTrendChart data={data.dailyTrend} height={220} />
         </DashboardSurface>
 
         <DashboardSurface as="article">
-          <h2 className="mb-4 text-sm font-semibold text-[var(--foreground)]">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--foreground)] sm:mb-3">
             الأجهزة
           </h2>
           <AnalyticsDeviceBreakdown items={data.deviceBreakdown} />
@@ -172,7 +184,7 @@ export function AnalyticsOverviewView() {
 
       <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <DashboardSurface as="article">
-          <h2 className="mb-4 text-sm font-semibold text-[var(--foreground)]">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--foreground)] sm:mb-3">
             أفضل النماذج
           </h2>
           {data.topForms.length === 0 ? (
@@ -214,7 +226,7 @@ export function AnalyticsOverviewView() {
         </DashboardSurface>
 
         <DashboardSurface as="article">
-          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] sm:mb-3">
             <AlertTriangle className="size-4 text-[var(--warning)]" />
             يحتاج انتباهك
           </h2>
@@ -245,7 +257,7 @@ export function AnalyticsOverviewView() {
       </div>
 
       <DashboardSurface as="article">
-        <h2 className="mb-4 text-sm font-semibold text-[var(--foreground)]">
+        <h2 className="mb-2 text-sm font-semibold text-[var(--foreground)] sm:mb-3">
           كل النماذج
         </h2>
         {data.forms.length === 0 ? (

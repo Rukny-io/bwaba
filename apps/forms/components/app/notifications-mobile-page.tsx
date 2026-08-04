@@ -9,7 +9,7 @@ import {
 } from '@/components/app/forms-dashboard-context';
 import { APP_BASE } from '@/components/app/nav-config';
 
-/** Full-screen notifications — mobile/tablet only. Desktop redirects once to popover. */
+/** Full-screen notifications — mobile/tablet only. Desktop opens slide-in panel. */
 export function NotificationsMobilePage() {
   const router = useRouter();
   const { openDesktopNotifications } = useFormsDashboard();

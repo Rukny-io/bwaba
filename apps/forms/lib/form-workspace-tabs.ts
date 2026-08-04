@@ -2,8 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import {
   BarChart2,
   Inbox,
-  Pencil,
   Plug,
+  Settings,
 } from 'lucide-react';
 
 export type FormWorkspaceTabSuffix =
@@ -18,7 +18,7 @@ export const FORM_WORKSPACE_TABS: {
   icon: LucideIcon;
   showCount?: boolean;
 }[] = [
-  { suffix: '', label: 'تحرير', icon: Pencil },
+  { suffix: '', label: 'إعدادات', icon: Settings },
   { suffix: '/submissions', label: 'الاستجابات', icon: Inbox, showCount: true },
   { suffix: '/analytics', label: 'التحليلات', icon: BarChart2 },
   { suffix: '/integrations', label: 'التكاملات', icon: Plug },
@@ -56,4 +56,15 @@ export function formWorkspaceHref(
   suffix: FormWorkspaceTabSuffix,
 ): string {
   return `/app/forms/${formId}${suffix}`;
+}
+
+export function isFormWorkspacePathTabActive(
+  pathname: string,
+  formId: string,
+  suffix: FormWorkspaceTabSuffix,
+): boolean {
+  const base = `/app/forms/${formId}`;
+  const href = `${base}${suffix}`;
+  if (suffix === '') return pathname === base;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

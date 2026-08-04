@@ -27,7 +27,7 @@ export function DashboardSurface({
   return (
     <Component
       className={cn(
-        'dashboard-card rounded-2xl sm:rounded-3xl',
+        'rounded-2xl sm:rounded-3xl border border-[var(--border)]',
         paddingClasses[padding],
         interactive && 'dashboard-card-interactive',
         className,

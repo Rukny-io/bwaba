@@ -19,7 +19,6 @@ import { Avatar, Button, Dropdown, Label, Tooltip } from '@heroui/react';
 import type { FormListItem, FormSharedWorkspace } from '@/lib/forms-api';
 import { recordFormShare } from '@/lib/forms-api';
 import {
-  FORM_STATUS_CONFIG,
   FORM_STATUS_LABELS,
   FORM_TYPE_LABELS,
   getPublicFormUrl,
@@ -52,31 +51,27 @@ function FormCardSharedOwnerBadge({
   const avatarSrc = resolveMediaUrl(workspace.avatar);
 
   return (
-    <div
-      className="absolute top-2.5 end-2.5 z-20"
-      onClick={stopActivation}
-      onPointerDown={stopActivation}
-    >
-      <Tooltip delay={200}>
-        <Tooltip.Trigger
-          aria-label={displayName}
-          className="rounded-full ring-2 ring-[var(--surface)]/95"
-        >
-          <Avatar size="sm" color="accent" variant="soft">
-            {avatarSrc ? (
-              <Avatar.Image src={avatarSrc} alt={displayName} />
-            ) : null}
-            <Avatar.Fallback delayMs={avatarSrc ? 600 : 0}>
-              {initials}
-            </Avatar.Fallback>
-          </Avatar>
-        </Tooltip.Trigger>
-        <Tooltip.Content placement="bottom" showArrow offset={8}>
-          <Tooltip.Arrow />
-          <span className="text-xs font-semibold">{displayName}</span>
-        </Tooltip.Content>
-      </Tooltip>
-    </div>
+    <Tooltip delay={200}>
+      <Tooltip.Trigger
+        aria-label={displayName}
+        className="rounded-full ring-1 ring-[var(--border)]"
+        onClick={stopActivation}
+        onPointerDown={stopActivation}
+      >
+        <Avatar size="sm" variant="soft">
+          {avatarSrc ? (
+            <Avatar.Image src={avatarSrc} alt={displayName} />
+          ) : null}
+          <Avatar.Fallback delayMs={avatarSrc ? 600 : 0}>
+            {initials}
+          </Avatar.Fallback>
+        </Avatar>
+      </Tooltip.Trigger>
+      <Tooltip.Content placement="bottom" showArrow offset={8}>
+        <Tooltip.Arrow />
+        <span className="text-xs font-semibold">{displayName}</span>
+      </Tooltip.Content>
+    </Tooltip>
   );
 }
 
@@ -90,12 +85,9 @@ function FormCardComponent({
   onRestore,
   onDuplicate,
 }: FormCardProps) {
-  const statusConfig = FORM_STATUS_CONFIG[form.status];
   const submissionsCount = form._count?.submissions ?? form.submissionCount ?? 0;
   const fieldsCount = form._count?.fields ?? 0;
   const [copied, setCopied] = useState(false);
-  const [coverFailed, setCoverFailed] = useState(false);
-  const showCover = Boolean(form.coverImage) && !coverFailed;
 
   const copyFormLink = useCallback(async () => {
     try {
@@ -144,10 +136,8 @@ function FormCardComponent({
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group dashboard-card dashboard-card-interactive cursor-pointer rounded-2xl p-3 sm:rounded-3xl',
-        form.isShared
-          ? 'border-dashed border-[var(--primary)]/30 bg-[var(--surface-secondary)]/40'
-          : '',
+        'group dashboard-card dashboard-card-interactive cursor-pointer rounded-3xl p-4 sm:p-3',
+        form.isShared && 'border-dashed',
         (form.status === 'ARCHIVED' || isTrash) && 'opacity-[0.92]',
         busy && 'pointer-events-none opacity-60',
       )}
@@ -162,70 +152,34 @@ function FormCardComponent({
         }
       }}
     >
-      <div
-        className={cn(
-          'relative mb-3 aspect-[4/3] overflow-hidden rounded-2xl',
-          form.status === 'ARCHIVED' && 'grayscale-[40%]',
-        )}
-      >
-        {showCover ? (
-          <>
-            <img
-              src={form.coverImage!}
-              alt={form.title}
-              loading="lazy"
-              onError={() => setCoverFailed(true)}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(6,44,48,0.08),transparent_55%),linear-gradient(160deg,var(--surface-secondary)_0%,var(--surface)_55%,var(--surface-tertiary)_100%)]">
-            <img
-              src="/rukny-logo.svg"
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 size-[34%] max-h-12 max-w-12 -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
-            />
-          </div>
-        )}
-
-        <span
-          className={cn(
-            'absolute top-2.5 start-2.5 z-20 rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-sm backdrop-blur-md',
-            isTrash
-              ? 'bg-[var(--danger)]/92 text-white'
-              : statusConfig.bg,
-            !isTrash && statusConfig.color,
-          )}
-        >
+      <div className="mb-3 flex items-center justify-between gap-2 sm:mb-2.5">
+        <span className="rounded-lg bg-[var(--surface-secondary)] px-2.5 py-1 text-[10px] font-semibold text-[var(--muted-foreground)] sm:text-[11px]">
           {isTrash ? 'محذوف' : FORM_STATUS_LABELS[form.status]}
         </span>
 
-        {form.isShared && form.sharedWorkspace ? (
-          <FormCardSharedOwnerBadge workspace={form.sharedWorkspace} />
-        ) : null}
-
         <div
-          className="absolute bottom-2.5 start-2.5 z-30"
+          className="flex items-center gap-1.5"
           onClick={stopActivation}
           onPointerDown={stopActivation}
         >
+          {form.isShared && form.sharedWorkspace ? (
+            <FormCardSharedOwnerBadge workspace={form.sharedWorkspace} />
+          ) : null}
+
           <Dropdown>
             <Button
               isIconOnly
               size="sm"
-              variant="secondary"
+              variant="tertiary"
               aria-label="إجراءات النموذج"
               className={cn(
-                'size-7 min-w-7 rounded-lg bg-[var(--surface)]/90 text-[var(--muted-foreground)] shadow-sm backdrop-blur-sm',
-                'opacity-100 transition-all duration-200 hover:bg-[var(--surface)] hover:text-[var(--foreground)]',
-                'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-[pressed]:opacity-100',
+                'size-8 min-w-8 rounded-lg text-[var(--muted-foreground)] sm:size-7 sm:min-w-7',
+                'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-[pressed]:opacity-100',
               )}
             >
               <MoreHorizontal className="size-4" />
             </Button>
-            <Dropdown.Popover placement="top end">
+            <Dropdown.Popover placement="bottom end">
               <Dropdown.Menu onAction={handleMenuAction}>
                 {!isTrash && onEdit && (
                   <Dropdown.Item id="edit" textValue="تحرير">
@@ -236,7 +190,7 @@ function FormCardComponent({
                 {!isTrash && (
                   <Dropdown.Item id="copy" textValue="نسخ الرابط">
                     {copied ? (
-                      <Check className="size-3.5 text-[var(--success)]" />
+                      <Check className="size-3.5" />
                     ) : (
                       <Link2 className="size-3.5" />
                     )}
@@ -274,18 +228,18 @@ function FormCardComponent({
       </div>
 
       <div className="px-0.5 text-right sm:px-1">
-        <div className="mb-1.5 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-[var(--foreground)] sm:text-[14px]">
+        <div className="mb-2 flex items-center justify-between gap-2 sm:mb-1.5">
+          <h3 className="min-w-0 flex-1 truncate text-[16px] font-semibold leading-snug text-[var(--foreground)] sm:text-[14px]">
             {form.title}
           </h3>
-          <span className="shrink-0 whitespace-nowrap rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)]">
+          <span className="shrink-0 whitespace-nowrap rounded-lg bg-[var(--surface-secondary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted-foreground)] sm:rounded-md sm:px-2 sm:py-0.5 sm:text-[10px]">
             {FORM_TYPE_LABELS[form.type]}
           </span>
         </div>
 
         <p
           className={cn(
-            'mb-3 line-clamp-2 text-[12px] leading-relaxed',
+            'mb-3.5 line-clamp-2 text-[13px] leading-relaxed sm:mb-3 sm:text-[12px]',
             form.description
               ? 'text-[var(--muted-foreground)]'
               : 'text-[var(--muted-foreground)]/55 italic',
@@ -295,7 +249,7 @@ function FormCardComponent({
         </p>
 
         {isTrash && form.purgeScheduledAt ? (
-          <p className="mb-2 text-[10px] text-[var(--danger)]">
+          <p className="mb-2 text-[11px] text-[var(--muted-foreground)] sm:text-[10px]">
             حذف نهائي:{' '}
             {new Date(form.purgeScheduledAt).toLocaleDateString('en-US', {
               month: 'short',
@@ -304,32 +258,23 @@ function FormCardComponent({
           </p>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--separator)] pt-2.5 text-[11px] text-[var(--muted-foreground)]">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1',
-              submissionsCount > 0 && 'font-medium text-[var(--primary)]',
-            )}
-            title="الاستجابات"
-          >
-            <MessageSquare className="size-3" aria-hidden />
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--separator)] pt-3 text-[12px] text-[var(--muted-foreground)] sm:pt-2.5 sm:text-[11px]">
+          <span className="inline-flex items-center gap-1.5" title="الاستجابات">
+            <MessageSquare className="size-3.5 sm:size-3" aria-hidden />
             <span dir="ltr" lang="en">
               {submissionsCount}
             </span>
           </span>
 
-          <span
-            className="inline-flex items-center gap-1"
-            title="المشاهدات"
-          >
-            <Eye className="size-3" aria-hidden />
+          <span className="inline-flex items-center gap-1.5" title="المشاهدات">
+            <Eye className="size-3.5 sm:size-3" aria-hidden />
             <span dir="ltr" lang="en">
               {form.viewCount ?? 0}
             </span>
           </span>
 
-          <span className="inline-flex items-center gap-1" title="الحقول">
-            <FormInput className="size-3" aria-hidden />
+          <span className="inline-flex items-center gap-1.5" title="الحقول">
+            <FormInput className="size-3.5 sm:size-3" aria-hidden />
             <span dir="ltr" lang="en">
               {fieldsCount}
             </span>
@@ -342,25 +287,26 @@ function FormCardComponent({
 
 export function FormCardSkeleton() {
   return (
-    <div className="dashboard-card animate-pulse rounded-2xl p-3 sm:rounded-3xl">
-      <div className="relative mb-3 aspect-[4/3] rounded-2xl bg-[var(--surface-secondary)]" />
+    <div className="dashboard-card animate-pulse rounded-3xl p-4 sm:p-3">
+      <div className="mb-3 flex items-center justify-between gap-2 sm:mb-2.5">
+        <div className="h-6 w-16 rounded-lg bg-[var(--surface-secondary)]/70 sm:h-5 sm:w-14" />
+        <div className="size-8 rounded-lg bg-[var(--surface-secondary)]/40 sm:size-7" />
+      </div>
 
       <div className="px-1 text-right">
-        <div className="mb-1.5 flex items-center justify-between gap-2">
-          <div className="h-4 flex-1 rounded-md bg-[var(--surface-secondary)]/70" />
-          <div className="h-5 w-14 rounded-md bg-[var(--surface-secondary)]/40" />
+        <div className="mb-2 flex items-center justify-between gap-2 sm:mb-1.5">
+          <div className="h-5 flex-1 rounded-md bg-[var(--surface-secondary)]/70 sm:h-4" />
+          <div className="h-6 w-16 rounded-lg bg-[var(--surface-secondary)]/40 sm:h-5 sm:w-14 sm:rounded-md" />
         </div>
 
-        <div className="mb-3 space-y-1.5">
-          <div className="h-3 w-full rounded-md bg-[var(--surface-secondary)]/40" />
-          <div className="h-3 w-3/4 rounded-md bg-[var(--surface-secondary)]/40" />
+        <div className="mb-3.5 space-y-1.5 sm:mb-3">
+          <div className="h-3.5 w-full rounded-md bg-[var(--surface-secondary)]/40 sm:h-3" />
+          <div className="h-3.5 w-3/4 rounded-md bg-[var(--surface-secondary)]/40 sm:h-3" />
         </div>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--separator)] pt-3 sm:pt-2.5">
           <div className="h-3 w-8 rounded-md bg-[var(--surface-secondary)]/40" />
-          <div className="h-3 w-px bg-[var(--border)]/40" />
           <div className="h-3 w-8 rounded-md bg-[var(--surface-secondary)]/40" />
-          <div className="h-3 w-px bg-[var(--border)]/40" />
           <div className="h-3 w-8 rounded-md bg-[var(--surface-secondary)]/40" />
         </div>
       </div>
@@ -370,7 +316,7 @@ export function FormCardSkeleton() {
 
 export function FormsGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <FormCardSkeleton key={index} />
       ))}

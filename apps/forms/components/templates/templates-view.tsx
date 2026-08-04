@@ -11,10 +11,10 @@ import {
 import { TemplateCard } from '@/components/templates/template-card';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesToolbar } from '@/components/templates/templates-toolbar';
+import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { ApiException } from '@/lib/api-client';
 import {
   createFormFromTemplate,
@@ -46,59 +46,44 @@ function TemplatesSummary() {
       icon: LayoutTemplate,
       label: 'إجمالي القوالب',
       value: String(catalog.length),
-      hint: 'جاهزة للاستخدام',
+      comparisonPrimary: 'جاهزة للاستخدام',
+      comparisonSecondary: 'في المكتبة',
     },
     {
       icon: Sparkles,
-      label: 'مميزة',
+      label: 'قوالب مميزة',
       value: String(featuredCount),
-      hint: 'موصى بها للبدء',
+      comparisonPrimary: 'موصى بها للبدء',
+      comparisonSecondary: 'مختارة بعناية',
     },
     {
       icon: TrendingUp,
-      label: 'شائعة',
+      label: 'قوالب شائعة',
       value: String(popularCount),
-      hint: 'الأكثر اختياراً',
+      comparisonPrimary: 'الأكثر اختياراً',
+      comparisonSecondary: 'من المستخدمين',
     },
     {
       icon: FolderKanban,
-      label: 'الفئات',
+      label: 'فئات القوالب',
       value: String(categoryCount),
-      hint: Object.values(TEMPLATE_CATEGORY_LABELS).slice(0, 2).join(' · '),
+      comparisonPrimary: Object.values(TEMPLATE_CATEGORY_LABELS).slice(0, 2).join(' · '),
+      comparisonSecondary: 'تصنيفات متنوعة',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <DashboardSurface
-            key={item.label}
-            padding="sm"
-            className="flex items-center gap-3"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-              <Icon size={16} strokeWidth={1.7} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] text-[var(--muted-foreground)]">
-                {item.label}
-              </p>
-              <p
-                className="text-base font-bold tabular-nums text-[var(--foreground)] sm:text-lg"
-                dir="ltr"
-                lang="en"
-              >
-                {item.value}
-              </p>
-              <p className="truncate text-[10px] text-[var(--muted-foreground)]/80">
-                {item.hint}
-              </p>
-            </div>
-          </DashboardSurface>
-        );
-      })}
+    <div className="grid auto-rows-fr grid-cols-2 gap-3.5 sm:gap-3 xl:grid-cols-4">
+      {items.map((item) => (
+        <DashboardMetricCard
+          key={item.label}
+          icon={item.icon}
+          label={item.label}
+          value={item.value}
+          comparisonPrimary={item.comparisonPrimary}
+          comparisonSecondary={item.comparisonSecondary}
+        />
+      ))}
     </div>
   );
 }

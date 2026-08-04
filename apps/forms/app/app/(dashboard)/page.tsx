@@ -42,7 +42,7 @@ export default async function AppHomePage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-3.5 sm:gap-3 xl:grid-cols-4">
         <DashboardMetricCard
           icon={FileText}
           label="النماذج النشطة"

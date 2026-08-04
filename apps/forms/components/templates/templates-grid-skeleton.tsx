@@ -8,7 +8,7 @@ export function TemplatesGridSkeleton({ count = 8 }: { count?: number }) {
           key={i}
           className="dashboard-card flex h-full flex-col gap-3 rounded-2xl p-3.5 sm:rounded-3xl sm:p-4"
         >
-          <Skeleton className="h-[4.75rem] w-full shrink-0 rounded-2xl sm:h-[5.25rem]" />
+          <Skeleton className="h-6 w-20 shrink-0 rounded-lg" />
           <Skeleton className="h-4 w-3/4 rounded-lg" />
           <Skeleton className="h-10 w-full rounded-lg" />
           <Skeleton className="h-3 w-4/5 rounded-lg" />

@@ -27,7 +27,7 @@ const CATEGORY_FILTERS: { value: TemplateCategory | ''; label: string }[] = [
 
 function filterChipClass(active: boolean) {
   return cn(
-    'rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors',
+    'min-h-10 rounded-full border px-4 py-2.5 text-[13px] font-semibold transition-colors sm:min-h-9 sm:px-3.5 sm:py-2 sm:text-[12px]',
     active
       ? 'border-transparent bg-[var(--foreground)] text-[var(--background)]'
       : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]',
@@ -54,10 +54,10 @@ export function TemplatesToolbar({
   className,
 }: TemplatesToolbarProps) {
   return (
-    <DashboardSurface padding="md" className={cn('space-y-4', className)}>
+    <DashboardSurface padding="md" className={cn('space-y-4 sm:space-y-4', className)}>
       <div className="relative">
         <Search
-          className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+          className="pointer-events-none absolute start-4 top-1/2 size-[18px] -translate-y-1/2 text-[var(--muted-foreground)] sm:start-3.5 sm:size-4"
           strokeWidth={1.8}
         />
         <input
@@ -65,17 +65,17 @@ export function TemplatesToolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="ابحث في القوالب…"
-          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] py-2.5 pe-4 ps-10 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)]/35 focus:bg-[var(--surface)]"
+          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] py-3 pe-4 ps-11 text-[14px] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)]/35 focus:bg-[var(--surface)] sm:py-2.5 sm:ps-10 sm:text-sm"
           aria-label="بحث في القوالب"
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
+      <div className="space-y-2.5">
+        <p className="text-xs font-semibold text-[var(--muted-foreground)] sm:text-[11px] sm:font-medium">
           نوع النموذج
         </p>
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-2.5 sm:gap-2"
           role="group"
           aria-label="تصفية حسب نوع النموذج"
         >
@@ -93,12 +93,12 @@ export function TemplatesToolbar({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
+      <div className="space-y-2.5">
+        <p className="text-xs font-semibold text-[var(--muted-foreground)] sm:text-[11px] sm:font-medium">
           الفئة
         </p>
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-2.5 sm:gap-2"
           role="group"
           aria-label="تصفية حسب الفئة"
         >

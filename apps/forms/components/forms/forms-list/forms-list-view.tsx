@@ -41,9 +41,9 @@ import {
 } from '@/components/forms/forms-list/forms-list-toolbar';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
+import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardSurface } from '@/components/app/dashboard-surface';
-import { cn } from '@/lib/utils';
 
 function FormsListSectionDivider({ label }: { label: string }) {
   return (
@@ -72,84 +72,63 @@ function FormsListSummary({
   sharedCount: number;
   viewMode: FormsListViewMode;
 }) {
-  const items =
-    viewMode === 'trash'
-      ? [
-          {
-            icon: Trash2,
-            label: 'في السلة',
-            value: String(listTotal),
-            hint: 'تُحذف نهائياً بعد 30 يوماً',
-          },
-        ]
-      : [
-          {
-            icon: FileText,
-            label: 'نماذج نشطة',
-            value: metrics.activeForms.value,
-            hint: 'منشورة حالياً',
-          },
-          {
-            icon: Inbox,
-            label: 'الاستجابات',
-            value: metrics.submissions.value,
-            hint: 'إجمالي الردود',
-          },
-          {
-            icon: LayoutTemplate,
-            label: 'مخصّصة',
-            value: metrics.themedForms.value,
-            hint: 'بتصميم مخصص',
-          },
-          {
-            icon: BarChart2,
-            label: 'معدل الإكمال',
-            value: metrics.completionRate.value,
-            hint: 'عبر نماذجك',
-          },
-        ];
+  if (viewMode === 'trash') {
+    return (
+      <div className="grid grid-cols-1 gap-3.5 sm:gap-3">
+        <DashboardMetricCard
+          icon={Trash2}
+          label="في السلة"
+          value={String(listTotal)}
+          comparisonPrimary="نماذج محذوفة"
+          comparisonSecondary="تُحذف نهائياً بعد 30 يوماً"
+        />
+      </div>
+    );
+  }
+
+  const activeComparisonPrimary =
+    sharedCount > 0
+      ? `منشورة · ${sharedCount} مشترك`
+      : 'نماذج منشورة';
 
   return (
-    <div
-      className={cn(
-        'grid gap-3',
-        items.length === 1
-          ? 'grid-cols-1'
-          : 'grid-cols-2 xl:grid-cols-4',
-      )}
-    >
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <DashboardSurface
-            key={item.label}
-            padding="sm"
-            className="flex items-center gap-3"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-              <Icon size={16} strokeWidth={1.7} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] text-[var(--muted-foreground)]">
-                {item.label}
-              </p>
-              <p
-                className="text-base font-bold tabular-nums text-[var(--foreground)] sm:text-lg"
-                dir="ltr"
-                lang="en"
-              >
-                {item.value}
-              </p>
-              <p className="truncate text-[10px] text-[var(--muted-foreground)]/80">
-                {item.hint}
-                {sharedCount > 0 && item.label === 'نماذج نشطة'
-                  ? ` · ${sharedCount} مشترك`
-                  : ''}
-              </p>
-            </div>
-          </DashboardSurface>
-        );
-      })}
+    <div className="grid auto-rows-fr grid-cols-2 gap-3.5 sm:gap-3 xl:grid-cols-4">
+      <DashboardMetricCard
+        icon={FileText}
+        label="النماذج النشطة"
+        value={metrics.activeForms.value}
+        trend={metrics.activeForms.trend}
+        trendPositive={metrics.activeForms.trendPositive}
+        comparisonPrimary={activeComparisonPrimary}
+        comparisonSecondary="مقابل الشهر الماضي"
+      />
+      <DashboardMetricCard
+        icon={Inbox}
+        label="إجمالي الاستجابات"
+        value={metrics.submissions.value}
+        trend={metrics.submissions.trend}
+        trendPositive={metrics.submissions.trendPositive}
+        comparisonPrimary="استجابات"
+        comparisonSecondary="مقابل الشهر الماضي"
+      />
+      <DashboardMetricCard
+        icon={LayoutTemplate}
+        label="نماذج مخصّصة"
+        value={metrics.themedForms.value}
+        trend={metrics.themedForms.trend}
+        trendPositive={metrics.themedForms.trendPositive}
+        comparisonPrimary="بتصميم مخصص"
+        comparisonSecondary="من إجمالي نماذجك"
+      />
+      <DashboardMetricCard
+        icon={BarChart2}
+        label="معدل الإكمال"
+        value={metrics.completionRate.value}
+        trend={metrics.completionRate.trend}
+        trendPositive={metrics.completionRate.trendPositive}
+        comparisonPrimary="إكمال"
+        comparisonSecondary="مقابل الشهر الماضي"
+      />
     </div>
   );
 }
@@ -303,13 +282,14 @@ export function FormsListView({
           viewMode === 'active' ? (
             <Link
               href={FORMS_CREATE_ENTRY_PATH}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--primary)] px-4 py-3 text-[14px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 sm:w-auto sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-[13px]"
             >
-              <Plus size={15} strokeWidth={2.2} />
+              <Plus size={16} strokeWidth={2.2} />
               إنشاء نموذج
             </Link>
           ) : null
         }
+        className="mb-0 [&_h1]:text-2xl sm:[&_h1]:text-2xl"
       />
 
       <FormsListSummary
@@ -319,7 +299,7 @@ export function FormsListView({
         viewMode={viewMode}
       />
 
-      <DashboardSurface padding="sm" className="sm:px-4 sm:py-3">
+      <DashboardSurface padding="md" className="sm:px-4 sm:py-3">
         <FormsListToolbar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -374,7 +354,7 @@ export function FormsListView({
         </DashboardEmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             <AnimatePresence mode="popLayout">
               {ownForms.map((form) => renderFormCard(form))}
               {ownForms.length > 0 && sharedForms.length > 0 ? (

@@ -34,7 +34,7 @@ function FormsDashboardShellInner({
             currentUserId={currentUserId}
           />
           <main className="flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="mx-auto w-full max-w-5xl px-4 pt-10 pb-[5.75rem] sm:px-4 sm:pt-12 sm:pb-6 md:px-6">
+            <div className="mx-auto w-full min-w-0 max-w-5xl px-4 pt-10 pb-[6.75rem] sm:px-4 sm:pt-12 sm:pb-6 md:px-6">
               {children}
             </div>
           </main>

@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
@@ -44,6 +51,35 @@ import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { cn } from '@/lib/utils';
+
+type ListCacheEntry = {
+  forms: FormListItem[];
+  pagination: FormsPagination;
+};
+
+const EMPTY_PAGINATION: FormsPagination = {
+  total: 0,
+  page: 1,
+  limit: 20,
+  pages: 1,
+};
+
+const PREFETCH_STATUSES: Array<'' | FormStatus> = [
+  '',
+  'DRAFT',
+  'PUBLISHED',
+  'CLOSED',
+  'ARCHIVED',
+];
+
+function listCacheKey(
+  viewMode: FormsListViewMode,
+  status: '' | FormStatus,
+  page: number,
+) {
+  return `${viewMode}:${status || 'all'}:${page}`;
+}
 
 function FormsListSectionDivider({ label }: { label: string }) {
   return (
@@ -139,53 +175,189 @@ export function FormsListView({
   metrics: FormsDashboardMetrics;
 }) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
+  const cacheRef = useRef(new Map<string, ListCacheEntry>());
+  const requestSeqRef = useRef(0);
+  const prefetchDoneRef = useRef(false);
+
   const [viewMode, setViewMode] = useState<FormsListViewMode>('active');
   const [statusFilter, setStatusFilter] = useState<'' | FormStatus>('');
   const [page, setPage] = useState(1);
   const [forms, setForms] = useState<FormListItem[]>([]);
-  const [pagination, setPagination] = useState<FormsPagination>({
-    total: 0,
-    page: 1,
-    limit: 20,
-    pages: 1,
-  });
-  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] =
+    useState<FormsPagination>(EMPTY_PAGINATION);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FormListItem | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<FormListItem | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const applyCacheEntry = useCallback((entry: ListCacheEntry) => {
+    setForms(entry.forms);
+    setPagination(entry.pagination);
     setError(null);
-    try {
-      const res = await listForms({
-        page,
-        limit: 20,
-        visibility: viewMode === 'trash' ? 'deleted' : 'active',
-        ...(viewMode === 'active' && statusFilter
-          ? { status: statusFilter }
-          : {}),
-      });
-      setForms(res.forms);
-      setPagination(res.pagination);
-    } catch (e) {
-      setError(
-        e instanceof ApiException ? e.message : 'تعذّر تحميل النماذج',
-      );
+    setInitialLoading(false);
+  }, []);
+
+  const fetchList = useCallback(
+    async (
+      nextView: FormsListViewMode,
+      nextStatus: '' | FormStatus,
+      nextPage: number,
+      opts?: { soft?: boolean },
+    ) => {
+      const key = listCacheKey(nextView, nextStatus, nextPage);
+      const seq = ++requestSeqRef.current;
+      const soft = opts?.soft ?? false;
+
+      if (soft) setRefreshing(true);
+      else setInitialLoading(true);
+      setError(null);
+
+      try {
+        const res = await listForms({
+          page: nextPage,
+          limit: 20,
+          visibility: nextView === 'trash' ? 'deleted' : 'active',
+          ...(nextView === 'active' && nextStatus
+            ? { status: nextStatus }
+            : {}),
+        });
+
+        if (seq !== requestSeqRef.current) return;
+
+        const entry: ListCacheEntry = {
+          forms: res.forms,
+          pagination: res.pagination,
+        };
+        cacheRef.current.set(key, entry);
+        applyCacheEntry(entry);
+      } catch (e) {
+        if (seq !== requestSeqRef.current) return;
+        setError(
+          e instanceof ApiException ? e.message : 'تعذّر تحميل النماذج',
+        );
+        if (!soft) {
+          setForms([]);
+          setPagination(EMPTY_PAGINATION);
+        }
+      } finally {
+        if (seq === requestSeqRef.current) {
+          setInitialLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [applyCacheEntry],
+  );
+
+  const selectList = useCallback(
+    (
+      nextView: FormsListViewMode,
+      nextStatus: '' | FormStatus,
+      nextPage: number,
+    ) => {
+      const key = listCacheKey(nextView, nextStatus, nextPage);
+      const cached = cacheRef.current.get(key);
+
+      if (cached) {
+        applyCacheEntry(cached);
+        void fetchList(nextView, nextStatus, nextPage, { soft: true });
+        return;
+      }
+
       setForms([]);
-    } finally {
-      setLoading(false);
+      setPagination(EMPTY_PAGINATION);
+      void fetchList(nextView, nextStatus, nextPage, { soft: false });
+    },
+    [applyCacheEntry, fetchList],
+  );
+
+  useEffect(() => {
+    selectList('active', '', 1);
+    // initial mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Prefetch other tabs so first click feels instant */
+  useEffect(() => {
+    if (initialLoading || prefetchDoneRef.current) return;
+    prefetchDoneRef.current = true;
+
+    const run = () => {
+      void listForms({
+        page: 1,
+        limit: 20,
+        visibility: 'deleted',
+      }).then((res) => {
+        cacheRef.current.set(listCacheKey('trash', '', 1), {
+          forms: res.forms,
+          pagination: res.pagination,
+        });
+      });
+
+      for (const status of PREFETCH_STATUSES) {
+        if (status === '') continue;
+        const key = listCacheKey('active', status, 1);
+        if (cacheRef.current.has(key)) continue;
+        void listForms({
+          page: 1,
+          limit: 20,
+          visibility: 'active',
+          status,
+        }).then((res) => {
+          cacheRef.current.set(key, {
+            forms: res.forms,
+            pagination: res.pagination,
+          });
+        });
+      }
+    };
+
+    const win = window as Window & {
+      requestIdleCallback?: (
+        cb: () => void,
+        opts?: { timeout: number },
+      ) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (win.requestIdleCallback) {
+      const id = win.requestIdleCallback(run, { timeout: 1500 });
+      return () => win.cancelIdleCallback?.(id);
     }
-  }, [page, statusFilter, viewMode]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+    const t = window.setTimeout(run, 400);
+    return () => window.clearTimeout(t);
+  }, [initialLoading]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter, viewMode]);
+  function invalidateListCache() {
+    cacheRef.current.clear();
+    prefetchDoneRef.current = false;
+  }
+
+  function handleViewModeChange(mode: FormsListViewMode) {
+    startTransition(() => {
+      setViewMode(mode);
+      setStatusFilter('');
+      setPage(1);
+      selectList(mode, '', 1);
+    });
+  }
+
+  function handleStatusChange(status: '' | FormStatus) {
+    startTransition(() => {
+      setStatusFilter(status);
+      setPage(1);
+      selectList(viewMode, status, 1);
+    });
+  }
+
+  function handlePageChange(nextPage: number) {
+    setPage(nextPage);
+    selectList(viewMode, statusFilter, nextPage);
+  }
 
   const ownForms = useMemo(
     () => forms.filter((form) => !form.isShared),
@@ -223,6 +395,7 @@ export function FormsListView({
     setBusyId(form.id);
     try {
       const copy = await duplicateForm(form.id);
+      invalidateListCache();
       appToast.success('تم نسخ النموذج');
       router.push(`/app/forms/${copy.id}`);
     } catch (e) {
@@ -241,10 +414,11 @@ export function FormsListView({
     try {
       const result = await deleteForm(deleteTarget.id, payload);
       setDeleteTarget(null);
+      invalidateListCache();
       appToast.success(
         `تم نقل النموذج إلى سلة المحذوفات (${result.retentionDays} يوماً)`,
       );
-      await load();
+      await fetchList(viewMode, statusFilter, page, { soft: false });
     } catch (e) {
       appToast.fromError(e, 'تعذّر حذف النموذج');
     } finally {
@@ -258,8 +432,9 @@ export function FormsListView({
     try {
       await restoreForm(restoreTarget.id, confirmTitle);
       setRestoreTarget(null);
+      invalidateListCache();
       appToast.success('تم استعادة النموذج');
-      await load();
+      await fetchList(viewMode, statusFilter, page, { soft: false });
     } catch (e) {
       appToast.fromError(e, 'تعذّر استعادة النموذج');
     } finally {
@@ -299,24 +474,29 @@ export function FormsListView({
         viewMode={viewMode}
       />
 
-      <DashboardSurface padding="sm" className="px-3.5 py-3 sm:px-4 sm:py-3">
-        <FormsListToolbar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          status={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
-      </DashboardSurface>
+      <FormsListToolbar
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        status={statusFilter}
+        onStatusChange={handleStatusChange}
+        activeCount={viewMode === 'active' ? pagination.total : undefined}
+        trashCount={viewMode === 'trash' ? pagination.total : undefined}
+        filterCount={
+          viewMode === 'active' && statusFilter ? pagination.total : undefined
+        }
+      />
 
       {error ? (
         <DashboardErrorState
           variant="inline"
           message={error}
-          onRetry={() => void load()}
+          onRetry={() =>
+            void fetchList(viewMode, statusFilter, page, { soft: false })
+          }
         />
       ) : null}
 
-      {loading ? (
+      {initialLoading ? (
         <FormsGridSkeleton count={8} />
       ) : forms.length === 0 ? (
         <DashboardEmptyState
@@ -354,7 +534,13 @@ export function FormsListView({
         </DashboardEmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          <div
+            className={cn(
+              'grid grid-cols-2 gap-3 transition-opacity duration-150 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4',
+              refreshing && 'opacity-60',
+            )}
+            aria-busy={refreshing || undefined}
+          >
             <AnimatePresence mode="popLayout">
               {ownForms.map((form) => renderFormCard(form))}
               {ownForms.length > 0 && sharedForms.length > 0 ? (
@@ -376,8 +562,8 @@ export function FormsListView({
                 <Button
                   variant="tertiary"
                   size="sm"
-                  isDisabled={page <= 1}
-                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+                  isDisabled={page <= 1 || refreshing}
+                  onPress={() => handlePageChange(Math.max(1, page - 1))}
                 >
                   السابق
                 </Button>
@@ -387,8 +573,8 @@ export function FormsListView({
                 <Button
                   variant="tertiary"
                   size="sm"
-                  isDisabled={page >= (pagination.pages ?? 1)}
-                  onPress={() => setPage((p) => p + 1)}
+                  isDisabled={page >= (pagination.pages ?? 1) || refreshing}
+                  onPress={() => handlePageChange(page + 1)}
                 >
                   التالي
                 </Button>

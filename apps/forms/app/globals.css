@@ -670,6 +670,21 @@ body {
     --focus: #062c30;
     --success: #0d6b5c;
     --brand-soft-lime: #e8f5f2;
+    /* Soft pastel accents for list/metric cards (teal-family, not purple) */
+    --soft-mint: #e8f5f2;
+    --soft-mint-deep: #0d6b5c;
+    --soft-sand: #f3efe6;
+    --soft-sand-deep: #8a7355;
+    --soft-sky: #e8f1f5;
+    --soft-sky-deep: #3d6b7a;
+    --soft-rose: #f5ebe8;
+    --soft-rose-deep: #9a5f52;
+    --progress-fill: linear-gradient(
+      90deg,
+      #0d6b5c 0%,
+      #2a9d8f 55%,
+      #e9c46a 100%
+    );
     --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
       0 4px 16px rgba(15, 23, 42, 0.03);
     --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);

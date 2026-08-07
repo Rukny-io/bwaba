@@ -30,7 +30,7 @@ function CustomizeSection({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 border-b border-[var(--border)]/50 pb-5 last:border-b-0 last:pb-0">
+    <section className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 p-4 last:mb-0">
       <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
       {children}
     </section>
@@ -163,7 +163,7 @@ export function DesignCustomizeSections({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-4">
       <CustomizeSection title="تخطيط الصفحة">
         <div className="space-y-3">
           <FieldRow label="الخط">

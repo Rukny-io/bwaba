@@ -77,11 +77,11 @@ export function FormFieldEditorRow({
   const TypeIcon = catalogItem?.icon;
 
   const gripClassName = cn(
-    'flex size-8 shrink-0 touch-none select-none items-center justify-center rounded-xl',
+    'flex size-8 shrink-0 touch-none select-none items-center justify-center rounded-lg',
     'text-[var(--muted-foreground)] transition-colors',
     'cursor-grab active:cursor-grabbing',
-    'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
-    isDragging && 'cursor-grabbing bg-[var(--surface-secondary)] text-[var(--foreground)]',
+    'hover:bg-black/[0.05] hover:text-[var(--foreground)] dark:hover:bg-white/10',
+    isDragging && 'cursor-grabbing bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] text-[var(--foreground)]',
   );
 
   const gripLabel = usePointerDrag
@@ -89,6 +89,7 @@ export function FormFieldEditorRow({
     : `سحب الحقل ${index + 1} لإعادة الترتيب`;
 
   const fieldLabel = field.label.trim() || 'حقل جديد';
+  const typeLabel = WIZARD_FIELD_TYPE_LABELS[field.type];
 
   const editorBody = (
     <>
@@ -263,16 +264,15 @@ export function FormFieldEditorRow({
   return (
     <div
       className={cn(
-        'p-4 transition-[padding]',
+        'transition-[padding]',
         isDragging && 'opacity-95',
-        isCollapsed && 'px-4 py-3.5',
+        isCollapsed ? 'px-3 py-2.5 sm:px-3.5 sm:py-3' : 'p-4 sm:p-5',
       )}
     >
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2',
-          !isCollapsed && 'mb-4',
-          isCanvas && 'opacity-100',
+          'flex items-center gap-2 sm:gap-2.5',
+          !isCollapsed && 'border-b border-[var(--border)]/60 pb-4',
         )}
       >
         {usePointerDrag ? (
@@ -302,7 +302,7 @@ export function FormFieldEditorRow({
           </button>
         )}
 
-        <span className="text-xs font-medium tabular-nums text-[var(--muted-foreground)]">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[var(--surface-secondary)] text-[10px] font-bold tabular-nums text-[var(--muted-foreground)] sm:size-7 sm:text-[11px]">
           {index + 1}
         </span>
 
@@ -310,54 +310,59 @@ export function FormFieldEditorRow({
           <button
             type="button"
             onClick={() => onCollapsedChange?.(false)}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 text-start transition-colors hover:bg-[var(--surface-secondary)]/60"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-0.5 text-start transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05] sm:gap-3"
           >
-            <span
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border)]',
-                'bg-[var(--surface-secondary)]/50 px-2 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]',
-              )}
-            >
-              {TypeIcon ? (
-                <TypeIcon className="size-3 shrink-0 opacity-80" aria-hidden />
-              ) : null}
-              {WIZARD_FIELD_TYPE_LABELS[field.type]}
-            </span>
-            <span className="truncate text-sm font-medium text-[var(--foreground)]">
-              {fieldLabel}
+            {TypeIcon ? (
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-soft-lime)_75%,var(--surface))] text-[var(--brand-carbon)] dark:text-[var(--foreground)] sm:size-9">
+                <TypeIcon className="size-4" strokeWidth={1.9} aria-hidden />
+              </span>
+            ) : null}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate text-sm font-semibold leading-tight text-[var(--foreground)]">
+                {fieldLabel}
+              </span>
+              <span className="truncate text-[11px] text-[var(--muted-foreground)]">
+                {typeLabel}
+              </span>
             </span>
             {field.required ? (
-              <span className="shrink-0 rounded-full bg-[var(--primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)]">
+              <span className="hidden shrink-0 rounded-full bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)] sm:inline">
                 مطلوب
               </span>
             ) : null}
           </button>
         ) : (
-          <>
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]',
-                'bg-[var(--surface-secondary)]/50 px-2.5 py-1 text-xs font-medium text-[var(--foreground)]',
-              )}
-            >
-              {TypeIcon ? (
-                <TypeIcon className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              ) : null}
-              {WIZARD_FIELD_TYPE_LABELS[field.type]}
-            </span>
-
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {TypeIcon ? (
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-soft-lime)_75%,var(--surface))] text-[var(--brand-carbon)] dark:text-[var(--foreground)] sm:size-9">
+                <TypeIcon className="size-4" strokeWidth={1.9} aria-hidden />
+              </span>
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate text-sm font-semibold leading-tight text-[var(--foreground)] sm:text-[15px]">
+                {fieldLabel}
+              </span>
+              <span className="text-[11px] text-[var(--muted-foreground)] sm:text-xs">
+                {typeLabel}
+              </span>
+            </div>
+            {field.required ? (
+              <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)]">
+                مطلوب
+              </span>
+            ) : null}
             {onChangeType ? (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 onPress={onChangeType}
-                className="h-7 rounded-full px-2.5 text-xs"
+                className="ms-auto h-7 rounded-full px-2.5 text-xs sm:ms-0"
               >
                 تغيير النوع
               </Button>
             ) : null}
-          </>
+          </div>
         )}
 
         {isCanvas ? (
@@ -370,7 +375,7 @@ export function FormFieldEditorRow({
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? 'توسيع الحقل' : 'طي الحقل'}
             className={cn(
-              'inline-flex size-8 shrink-0 items-center justify-center rounded-xl',
+              'inline-flex size-8 shrink-0 items-center justify-center rounded-lg',
               'text-[var(--muted-foreground)] transition-colors',
               'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
             )}
@@ -385,23 +390,21 @@ export function FormFieldEditorRow({
           </button>
         ) : null}
 
-        <div className="relative z-10 ms-auto flex shrink-0">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            aria-label="حذف الحقل"
-            className={cn(
-              'inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[var(--border)]',
-              'bg-[var(--surface)] px-2 text-[var(--danger)] transition-colors',
-              'hover:border-[var(--danger)]/30 hover:bg-[var(--danger)]/8 active:scale-95',
-            )}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label="حذف الحقل"
+          className={cn(
+            'inline-flex size-8 shrink-0 items-center justify-center rounded-lg',
+            'text-[var(--muted-foreground)] transition-colors',
+            'hover:bg-[var(--danger)]/10 hover:text-[var(--danger)] active:scale-95',
+          )}
+        >
+          <Trash2 className="size-4" aria-hidden />
+        </button>
       </div>
 
       {isCanvas ? (
@@ -412,11 +415,11 @@ export function FormFieldEditorRow({
           )}
         >
           <div className="overflow-hidden">
-            <div className={cn(!isCollapsed && 'pt-0')}>{editorBody}</div>
+            <div className={cn(!isCollapsed && 'pt-4')}>{editorBody}</div>
           </div>
         </div>
       ) : (
-        editorBody
+        <div className="mt-4">{editorBody}</div>
       )}
     </div>
   );

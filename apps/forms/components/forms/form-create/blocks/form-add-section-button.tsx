@@ -26,7 +26,7 @@ export function FormAddSectionButton({
         isDisabled={disabled}
         onPress={onAdd}
         className={cn(
-          'h-10 w-full gap-2 rounded-2xl border-dashed border-[var(--border)] bg-[var(--surface)]/60 text-sm font-medium sm:w-auto sm:min-w-[12rem]',
+          'h-9 w-full gap-2 rounded-full border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] text-sm font-medium sm:w-auto sm:min-w-[12rem]',
           className,
         )}
       >

@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
 import { resolveClientNext } from '@/lib/auth-redirect';
+import { resolveAccountsUrl } from '@/lib/dev-urls';
 import {
   clearOAuthParamsFromUrl,
   clearStashedOAuthParams,
@@ -13,20 +14,15 @@ import {
   stashOAuthParams,
 } from '@/lib/oauth-callback';
 
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
-
-/** Survives React Strict Mode remounts within the same document load. */
-let callbackBootstrapped = false;
-
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    if (callbackBootstrapped) return;
-    callbackBootstrapped = true;
+    if (hasRun.current) return;
+    hasRun.current = true;
 
     const fromUrl = readOAuthCallbackParams(searchParams);
     if (fromUrl.code) {
@@ -39,7 +35,7 @@ function CallbackContent() {
     const nextRaw = fromUrl.next || stashed.next;
 
     if (!code) {
-      callbackBootstrapped = false;
+      hasRun.current = false;
       router.replace('/login');
       return;
     }
@@ -57,7 +53,7 @@ function CallbackContent() {
         }
 
         if (result.needsProfileCompletion) {
-          const complete = new URL('/complete-profile', ACCOUNTS_URL);
+          const complete = new URL('/complete-profile', resolveAccountsUrl());
           complete.searchParams.set(
             'next',
             `${window.location.origin}${nextPath}`,
@@ -67,7 +63,7 @@ function CallbackContent() {
         }
 
         if (result.requires2FA && result.pendingSessionId) {
-          const verify = new URL('/verify-2fa', ACCOUNTS_URL);
+          const verify = new URL('/verify-2fa', resolveAccountsUrl());
           verify.searchParams.set('sessionId', result.pendingSessionId);
           window.location.href = verify.toString();
           return;
@@ -95,8 +91,12 @@ function CallbackContent() {
           return;
         }
 
-        const message =
-          err instanceof Error ? err.message : 'حدث خطأ أثناء تسجيل الدخول';
+        const apiError = err as { message?: string; data?: { message?: string | string[] } };
+        const raw =
+          apiError.data?.message ??
+          apiError.message ??
+          'حدث خطأ أثناء تسجيل الدخول';
+        const message = Array.isArray(raw) ? raw[0] : raw;
         setError(message);
       }
     })();

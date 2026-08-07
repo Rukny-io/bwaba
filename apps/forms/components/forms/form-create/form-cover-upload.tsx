@@ -110,7 +110,7 @@ export function FormCoverUpload({
               }
         }
         className={cn(
-          'relative overflow-hidden rounded-2xl border border-[var(--border)]',
+          'relative overflow-hidden rounded-2xl border border-[var(--border)] sm:rounded-3xl',
           !coverUrl &&
             'cursor-pointer transition-colors hover:border-[var(--muted-foreground)]/35 hover:bg-[var(--surface-secondary)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40',
           coverUrl

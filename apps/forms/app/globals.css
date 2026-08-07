@@ -444,7 +444,8 @@ body {
   .landing-glass,
   .landing-nav-shell.is-scrolled,
   .notifications-liquid-sheet,
-  .notifications-liquid-header-card {
+  .notifications-liquid-header-card,
+  .form-create-toolbar-glass {
     background-color: var(--surface);
   }
 }
@@ -772,6 +773,228 @@ body {
       var(--surface) 100%
     );
     border-color: var(--border);
+  }
+
+  /* ── Form create editor (Carbon/Lime + cool dark) ── */
+  .form-create-brand {
+    --foreground: var(--brand-carbon);
+    --muted: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --muted-foreground: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --border: color-mix(in srgb, var(--brand-carbon) 12%, white);
+    --separator: color-mix(in srgb, var(--brand-carbon) 10%, white);
+    --primary: var(--brand-lime);
+    --primary-foreground: var(--brand-carbon);
+    --secondary: var(--brand-lime-soft);
+    --secondary-foreground: var(--brand-carbon);
+    --accent: var(--brand-lime);
+    --accent-foreground: var(--brand-carbon);
+    --surface: #ffffff;
+    --surface-foreground: var(--brand-carbon);
+    --surface-secondary: #f2f2f0;
+    --surface-secondary-foreground: var(--brand-carbon);
+    --surface-tertiary: var(--brand-lime-soft);
+    --surface-tertiary-foreground: var(--brand-carbon);
+    --focus: var(--brand-lime);
+    --success: #7a9a1f;
+    --brand-soft-lime: var(--brand-lime-soft);
+    --card-shadow: none;
+    --card-shadow-hover: none;
+    color: var(--brand-carbon);
+  }
+
+  .dark .form-create-brand,
+  [data-theme="dark"] .form-create-brand {
+    --foreground: #f1f5f9;
+    --muted: #94a3b8;
+    --muted-foreground: #94a3b8;
+    --border: #2a3140;
+    --separator: #252b38;
+    --primary: #b5d43b;
+    --primary-foreground: #0b0e13;
+    --accent: #b5d43b;
+    --accent-foreground: #0b0e13;
+    --surface: #12161e;
+    --surface-foreground: #f1f5f9;
+    --surface-secondary: #1a2030;
+    --surface-secondary-foreground: #e2e8f0;
+    --surface-tertiary: #222a3a;
+    --surface-tertiary-foreground: #e2e8f0;
+    --secondary: #1a2030;
+    --secondary-foreground: #e2e8f0;
+    --success: #a3e635;
+    --brand-soft-lime: color-mix(in srgb, #b5d43b 14%, #1a2030);
+    color: #f1f5f9;
+  }
+
+  .form-create-shell {
+    background: transparent;
+  }
+
+  .form-create-document {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .form-create-field-card {
+    border: 1px solid transparent;
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--surface-secondary) 48%, var(--surface));
+    box-shadow: none;
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .form-create-field-card--expanded {
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent);
+  }
+
+  .form-create-field-card:hover {
+    border-color: color-mix(in srgb, var(--border) 55%, var(--primary) 45%);
+  }
+
+  .form-create-field-card--dragging {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .form-create-section-shell {
+    border: 1px solid transparent;
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--surface-secondary) 48%, var(--surface));
+    box-shadow: none;
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .form-create-section-shell--drop-target {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--brand-soft-lime) 40%, var(--surface));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+
+  .form-create-section-block {
+    border-radius: 1.5rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .form-create-section-block--active {
+    background: color-mix(in srgb, var(--primary) 4%, transparent);
+  }
+
+  .form-create-field-drop-indicator {
+    border-radius: 1.5rem;
+    transition:
+      height 0.18s ease,
+      margin 0.18s ease,
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .form-create-field-drop-indicator--active {
+    height: 3rem;
+    margin-block: 0.375rem;
+    border: 2px dashed color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .form-create-field-drop-indicator--idle {
+    height: 0.5rem;
+  }
+
+  .form-create-type-picker {
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--surface-secondary) 42%, var(--surface));
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .form-create-type-picker {
+      padding: 1.125rem 1.25rem 1.25rem;
+    }
+  }
+
+  .form-create-blocks-empty,
+  .form-create-blocks-footer {
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--surface-secondary) 42%, var(--surface));
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .form-create-blocks-empty,
+    .form-create-blocks-footer {
+      padding: 1.125rem 1.25rem 1.25rem;
+    }
+  }
+
+  /* Form create toolbar — transparent host + iOS 26 liquid glass clusters */
+  .form-create-toolbar-shell {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: 30;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .form-create-toolbar-glass {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.38),
+      0 8px 32px rgba(15, 23, 42, 0.07);
+    -webkit-backdrop-filter: blur(56px) saturate(220%);
+    backdrop-filter: blur(56px) saturate(220%);
+  }
+
+  .form-create-toolbar-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.04) 42%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .form-create-toolbar-glass > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dark .form-create-brand .form-create-toolbar-glass,
+  [data-theme='dark'] .form-create-brand .form-create-toolbar-glass {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(18, 22, 30, 0.32);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 10px 36px rgba(0, 0, 0, 0.32);
+  }
+
+  .dark .form-create-brand .form-create-toolbar-glass::before,
+  [data-theme='dark'] .form-create-brand .form-create-toolbar-glass::before {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      transparent 100%
+    );
   }
 }
 

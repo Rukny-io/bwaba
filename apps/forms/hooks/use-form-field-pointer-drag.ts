@@ -85,6 +85,7 @@ export function useFormFieldPointerDrag({
       if (!enabled || e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
+      e.currentTarget.setPointerCapture?.(e.pointerId);
 
       draggingRef.current = fieldId;
       setDraggingFieldId(fieldId);

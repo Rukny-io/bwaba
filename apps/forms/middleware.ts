@@ -7,6 +7,7 @@ import {
   type SecurityHeadersContext,
 } from '@rukny/forms-shared/apply-security-headers';
 import { parseApiConnectOrigins } from '@rukny/forms-shared/security-headers';
+import { resolveApiBaseUrl } from './lib/dev-urls';
 import { checkFormsAuth } from './lib/middleware-auth';
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -14,9 +15,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 const SECURITY_OPTS = {
   isDev,
   allowMapTiles: true,
-  apiConnectOrigins: parseApiConnectOrigins(
-    process.env.NEXT_PUBLIC_API_URL || process.env.API_BACKEND_URL,
-  ),
+  apiConnectOrigins: parseApiConnectOrigins(resolveApiBaseUrl()),
 } as const;
 
 const PROTECTED_PREFIXES = ['/app', '/forms/n'];

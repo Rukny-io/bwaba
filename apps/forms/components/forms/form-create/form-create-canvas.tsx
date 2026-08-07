@@ -28,12 +28,12 @@ import {
 import { FormCreateBlocksEditor } from '@/components/forms/form-create/blocks/form-create-blocks-editor';
 import { FormCreateCustomizePanel } from '@/components/forms/form-create/form-create-customize-panel';
 import { FormCreateHeader } from '@/components/forms/form-create/form-create-header';
-import { FormCreateReadiness } from '@/components/forms/form-create/form-create-readiness';
 import { FormCreateSubmitPreview } from '@/components/forms/form-create/form-create-submit-preview';
 import {
   FormCreateToolbar,
   type FormSaveStatus,
 } from '@/components/forms/form-create/form-create-toolbar';
+import { FormCreateWorkspace } from '@/components/forms/form-create/form-create-workspace';
 import { FormThemeProvider } from '@/components/forms/theme/form-theme-provider';
 import { PublicFormBrand } from '@/components/public-form/public-form-brand';
 import { usePlanLimits } from '@/hooks/use-plan-limits';
@@ -437,26 +437,22 @@ export function FormCreateCanvas({ form: initial, slug }: FormCreateCanvasProps)
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const hasTitle = title.trim().length > 0;
-
   return (
     <>
       <FormCreateToolbar
         saveStatus={saveStatus}
         loading={busy}
         fieldCount={draftFields.length}
+        sectionCount={sections.length}
         backHref={`/app/forms/${initial.id}`}
         onCustomize={() => setCustomizeOpen(true)}
-        onSteps={scrollToSections}
+        onSections={sections.length > 1 ? scrollToSections : undefined}
         onPreview={() => void openFullPreview()}
         onPublish={() => void handlePublish()}
       />
 
-      <FormThemeProvider
-        theme={formTheme}
-        embedded
-        className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-2 sm:px-6"
-      >
+      <FormThemeProvider theme={formTheme} embedded className="flex flex-1 flex-col">
+        <FormCreateWorkspace>
         <FormCreateHeader
           formId={initial.id}
           title={title}
@@ -481,7 +477,7 @@ export function FormCreateCanvas({ form: initial, slug }: FormCreateCanvasProps)
           }}
         />
 
-        <div id="form-sections-anchor" className="scroll-mt-28">
+        <div id="form-sections-anchor" className="scroll-mt-28 pt-6 sm:pt-8">
           <FormCreateBlocksEditor
             formId={initial.id}
             submissionCount={
@@ -509,15 +505,9 @@ export function FormCreateCanvas({ form: initial, slug }: FormCreateCanvasProps)
           }
         />
 
-        <FormCreateReadiness
-          hasTitle={hasTitle}
-          fieldCount={draftFields.length}
-          className="mt-5 sm:mt-8"
-        />
-
         {error ? (
           <p
-            className="mt-6 rounded-2xl bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]"
+            className="mt-6 rounded-3xl bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]"
             role="alert"
           >
             {error}
@@ -525,6 +515,7 @@ export function FormCreateCanvas({ form: initial, slug }: FormCreateCanvasProps)
         ) : null}
 
         {showBranding ? <PublicFormBrand /> : null}
+        </FormCreateWorkspace>
       </FormThemeProvider>
 
       <FormCreateCustomizePanel

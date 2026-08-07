@@ -29,6 +29,7 @@ interface FormCreateInsertLineProps {
   onOpenCatalog?: () => void;
   onUseTemplate?: () => void;
   autoFocus?: boolean;
+  variant?: 'default' | 'empty';
   className?: string;
 }
 
@@ -38,6 +39,7 @@ export function FormCreateInsertLine({
   onOpenCatalog,
   onUseTemplate,
   autoFocus = false,
+  variant = 'default',
   className,
 }: FormCreateInsertLineProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,18 +87,29 @@ export function FormCreateInsertLine({
   return (
     <div
       ref={containerRef}
-      className={cn('group relative flex items-start gap-1.5 py-1', className)}
+      className={cn(
+        'group relative flex items-center gap-2',
+        variant === 'empty'
+          ? 'rounded-xl bg-[var(--surface-secondary)]/45 px-3 py-1 sm:px-4'
+          : 'items-start gap-1.5 py-1',
+        className,
+      )}
     >
       <div
         className={cn(
-          'flex shrink-0 items-center pt-1 transition-opacity',
-          'opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100',
+          'flex shrink-0 items-center transition-opacity',
+          variant === 'empty'
+            ? 'opacity-100'
+            : 'pt-1 opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100',
         )}
       >
         <button
           type="button"
           onClick={openCatalog}
-          className="flex size-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+          className={cn(
+            'flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]',
+            variant === 'empty' ? 'size-9' : 'size-8',
+          )}
           aria-label="فتح كatalog الحقول"
         >
           <Plus className="size-4" />
@@ -109,13 +122,16 @@ export function FormCreateInsertLine({
       >
         {showHint ? (
           <div
-            className="pointer-events-none absolute inset-y-0 start-0 z-0 flex items-center gap-1.5 py-2 text-xs text-[var(--muted-foreground)]/55 sm:text-sm"
+            className={cn(
+              'pointer-events-none absolute inset-y-0 start-0 z-0 flex items-center gap-1.5 text-[var(--muted-foreground)]/60',
+              variant === 'empty' ? 'py-2.5 text-xs sm:text-[13px]' : 'py-2 text-xs sm:text-sm',
+            )}
             aria-hidden
           >
-            <span className="sm:hidden">اضغط + {hint}…</span>
+            <span className="sm:hidden">اضغط + {hint}</span>
             <span className="hidden items-center gap-1.5 sm:flex">
-              <span>اضغط</span>
-              <kbd className="rounded-md bg-[var(--surface-secondary)] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[var(--muted-foreground)]">
+              <span>اكتب</span>
+              <kbd className="rounded-md bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[var(--muted-foreground)]">
                 /
               </kbd>
               <span>{hint}…</span>
@@ -132,8 +148,9 @@ export function FormCreateInsertLine({
           onBlur={handleBlur}
           autoFocus={autoFocus}
           className={cn(
-            'relative z-[1] w-full border-0 bg-transparent py-2 text-sm outline-none',
-            'text-[var(--foreground)] caret-[var(--foreground)]',
+            'relative z-[1] w-full border-0 bg-transparent outline-none',
+            'text-[var(--foreground)] caret-[var(--primary)]',
+            variant === 'empty' ? 'py-2.5 text-sm' : 'py-2 text-sm',
           )}
           aria-label="إدراج حقل جديد"
         />

@@ -11,7 +11,6 @@ import {
   Save,
   type LucideIcon,
 } from 'lucide-react';
-import { formsNavGlassClass } from '@/components/app/nav-glass';
 import { cn } from '@/lib/utils';
 
 export type FormSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -20,74 +19,128 @@ interface FormCreateToolbarProps {
   saveStatus: FormSaveStatus;
   loading?: boolean;
   fieldCount: number;
+  sectionCount?: number;
   backHref?: string;
   onCustomize: () => void;
-  onSteps: () => void;
+  onSections?: () => void;
   onPreview: () => void;
   onPublish: () => void;
 }
 
+const toolbarClusterClass =
+  'form-create-toolbar-glass inline-flex min-h-10 min-w-0 items-center gap-1 p-1.5 sm:gap-1.5';
+
+const toolbarIconButtonClass =
+  'inline-flex h-8 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.06] hover:text-[var(--foreground)] dark:hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40';
+
+const toolbarMetaClass =
+  'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium leading-none sm:text-xs';
+
+function ToolbarDivider() {
+  return (
+    <span
+      className="mx-0.5 hidden h-5 w-px shrink-0 bg-black/10 dark:bg-white/15 sm:block"
+      aria-hidden
+    />
+  );
+}
+
 function SaveStatusBadge({
   status,
-  compact = false,
+  iconOnly = false,
 }: {
   status: FormSaveStatus;
-  compact?: boolean;
+  iconOnly?: boolean;
 }) {
   if (status === 'saving') {
     return (
       <span
-        className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]"
+        className={cn(toolbarMetaClass, 'text-[var(--muted-foreground)]')}
         title="جاري الحفظ"
       >
-        <Loader2 className="size-3 animate-spin" />
-        {!compact ? 'جاري الحفظ…' : null}
+        <Loader2 className="size-3.5 shrink-0 animate-spin" />
+        {!iconOnly ? <span className="whitespace-nowrap">جاري الحفظ…</span> : null}
       </span>
     );
   }
+
   if (status === 'saved') {
     return (
       <span
-        className="inline-flex items-center gap-1.5 text-xs text-[var(--success)]"
+        className={cn(toolbarMetaClass, 'text-[var(--success)]')}
         title="تم الحفظ"
       >
-        <Save className="size-3" />
-        {!compact ? 'تم الحفظ' : null}
+        <Save className="size-3.5 shrink-0" />
+        {!iconOnly ? <span className="whitespace-nowrap">تم الحفظ</span> : null}
       </span>
     );
   }
+
   if (status === 'error') {
     return (
-      <span className="text-xs text-[var(--danger)]" title="تعذّر الحفظ">
-        {compact ? '!' : 'تعذّر الحفظ'}
+      <span
+        className={cn(toolbarMetaClass, 'text-[var(--danger)]')}
+        title="تعذّر الحفظ"
+      >
+        {!iconOnly ? <span className="whitespace-nowrap">تعذّر الحفظ</span> : <span>!</span>}
       </span>
     );
   }
+
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]"
+      className={cn(toolbarMetaClass, 'text-[var(--muted-foreground)]')}
       title="يُحفظ تلقائياً"
     >
-      <Save className="size-3 opacity-50" />
-      {!compact ? 'يُحفظ تلقائياً' : null}
+      <Save className="size-3.5 shrink-0 opacity-55" />
+      {!iconOnly ? <span className="whitespace-nowrap">يُحفظ تلقائياً</span> : null}
     </span>
   );
 }
 
-function NavActionButton({
+function FieldCountMeta({ count }: { count: number }) {
+  return (
+    <span className={cn(toolbarMetaClass, 'text-[var(--muted-foreground)]')}>
+      {count} {count === 1 ? 'حقل' : 'حقول'}
+    </span>
+  );
+}
+
+function ToolbarActionButton({
   label,
   icon: Icon,
   onClick,
   disabled,
-  filled,
-  showLabel = true,
 }: {
   label: string;
   icon: LucideIcon;
   onClick: () => void;
   disabled?: boolean;
-  filled?: boolean;
-  showLabel?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={toolbarIconButtonClass}
+    >
+      <Icon className="size-4" strokeWidth={1.85} />
+    </button>
+  );
+}
+
+function PublishButton({
+  label,
+  loading,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  loading?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
 }) {
   return (
     <button
@@ -96,16 +149,12 @@ function NavActionButton({
       disabled={disabled}
       aria-label={label}
       className={cn(
-        'flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium transition-colors sm:px-3',
-        filled
-          ? 'bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 disabled:opacity-60'
-          : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-50',
+        'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold leading-none transition-opacity sm:px-3.5',
+        'bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-40',
       )}
     >
-      <Icon className="size-4 shrink-0" strokeWidth={filled ? 2.2 : 1.8} />
-      {showLabel ? (
-        <span className="hidden sm:inline">{label}</span>
-      ) : null}
+      <CircleCheck className="size-4 shrink-0" strokeWidth={2.2} />
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }
@@ -114,69 +163,74 @@ export function FormCreateToolbar({
   saveStatus,
   loading = false,
   fieldCount,
+  sectionCount = 1,
   backHref = '/app/forms',
   onCustomize,
-  onSteps,
+  onSections,
   onPreview,
   onPublish,
 }: FormCreateToolbarProps) {
+  const showSections = sectionCount > 1 && onSections;
+
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-30 font-sans">
-      <div className="pointer-events-auto flex items-center justify-between gap-2 px-3 pt-2.5 pb-1.5 sm:px-6 lg:pt-4">
-        <div
-          className={cn(
-            'flex min-w-0 items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2 lg:px-4 lg:py-2.5',
-            formsNavGlassClass,
-          )}
-        >
+    <header className="form-create-toolbar-shell">
+      <div className="pointer-events-auto mx-auto flex max-w-3xl items-center justify-between gap-2.5 px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 sm:pb-2.5 sm:pt-[max(0.625rem,env(safe-area-inset-top))]">
+        <div className={toolbarClusterClass}>
           <Link
             href={backHref}
-            className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] sm:gap-1 sm:px-2"
+            className={cn(
+              toolbarIconButtonClass,
+              'gap-1 px-2.5 text-xs font-medium sm:px-3',
+            )}
             aria-label="العودة لتفاصيل النموذج"
           >
             <ChevronRight className="size-4 shrink-0" strokeWidth={2} />
-            <span className="hidden sm:inline">رجوع</span>
+            <span className="hidden whitespace-nowrap sm:inline">رجوع</span>
           </Link>
-          <div className="h-4 w-px shrink-0 bg-[var(--border)]/40" aria-hidden />
+
+          <ToolbarDivider />
+
           <span className="sm:hidden">
-            <SaveStatusBadge status={saveStatus} compact />
+            <SaveStatusBadge status={saveStatus} iconOnly />
           </span>
-          <span className="hidden sm:inline">
+          <span className="hidden sm:inline-flex">
             <SaveStatusBadge status={saveStatus} />
           </span>
+
           {fieldCount > 0 ? (
-            <span className="hidden text-xs text-[var(--muted-foreground)] sm:inline">
-              · {fieldCount} {fieldCount === 1 ? 'حقل' : 'حقول'}
-            </span>
+            <>
+              <ToolbarDivider />
+              <FieldCountMeta count={fieldCount} />
+            </>
           ) : null}
         </div>
 
-        <div
-          className={cn(
-            'ms-auto flex shrink-0 items-center gap-1 px-1.5 py-1 sm:gap-1.5 sm:px-2 sm:py-1.5',
-            formsNavGlassClass,
-          )}
-        >
-          <NavActionButton
+        <div className={cn(toolbarClusterClass, 'shrink-0')}>
+          {showSections ? (
+            <ToolbarActionButton
+              label="الأقسام"
+              icon={Layers}
+              onClick={onSections}
+              disabled={loading}
+            />
+          ) : null}
+          <ToolbarActionButton
             label="تخصيص"
             icon={Palette}
             onClick={onCustomize}
             disabled={loading}
           />
-          <div className="h-5 w-px bg-[var(--border)]/30" aria-hidden />
-          <NavActionButton
+          <ToolbarActionButton
             label="معاينة"
             icon={Eye}
             onClick={onPreview}
             disabled={loading}
           />
-          <div className="h-5 w-px bg-[var(--border)]/30" aria-hidden />
-          <NavActionButton
+          <PublishButton
             label={loading ? 'جاري النشر…' : 'نشر'}
-            icon={CircleCheck}
+            loading={loading}
+            disabled={loading || fieldCount === 0}
             onClick={onPublish}
-            disabled={loading}
-            filled
           />
         </div>
       </div>

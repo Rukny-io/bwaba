@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { api } from '@/lib/api-client';
+import { resolveApiBaseUrl } from '@/lib/dev-urls';
 
 function stripApiPath(url: string): string {
   return url.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
@@ -11,14 +12,7 @@ function getSocketBaseUrl(): string {
   const wsEnv = process.env.NEXT_PUBLIC_API_WS_URL;
   if (wsEnv) return stripApiPath(wsEnv);
 
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return stripApiPath(process.env.NEXT_PUBLIC_API_URL);
-  }
-
-  const { protocol, hostname } = window.location;
-  const port = hostname === 'localhost' ? ':3001' : '';
-  const scheme = protocol === 'https:' ? 'https' : 'http';
-  return `${scheme}://${hostname}${port}`;
+  return stripApiPath(resolveApiBaseUrl());
 }
 
 export type NotificationsSocketHandlers = {

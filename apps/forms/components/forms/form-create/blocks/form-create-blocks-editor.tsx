@@ -29,7 +29,6 @@ import {
   isLayoutWizardField,
   type WizardFieldType,
 } from '@/lib/form-field-types';
-import { cn } from '@/lib/utils';
 
 type CatalogTarget =
   | { mode: 'add'; sectionKey?: string }
@@ -228,7 +227,7 @@ export function FormCreateBlocksEditor({
       ) : (
         <>
           {isMultiSection && onShowProgressBarChange ? (
-            <div className="mb-3 flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-secondary)]/20 px-4 py-3">
+            <div className="mb-3 flex items-center justify-between gap-4 rounded-3xl bg-[var(--surface-secondary)]/50 px-4 py-3 sm:mb-4">
               <div>
                 <p className="text-sm font-medium">شريط التقدم</p>
                 <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
@@ -261,12 +260,7 @@ export function FormCreateBlocksEditor({
             enableCrossSectionDrag={isMultiSection}
           />
 
-          <div
-            className={cn(
-              'space-y-3 rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-secondary)]/20 p-3',
-              'sm:space-y-2 sm:rounded-none sm:border-0 sm:border-t sm:border-[var(--border)]/50 sm:bg-transparent sm:p-0 sm:pt-3',
-            )}
-          >
+          <div className="form-create-blocks-footer space-y-4 sm:space-y-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <FormCreateTypeFieldsButton
                 formType={formType}
@@ -287,7 +281,7 @@ export function FormCreateBlocksEditor({
               onInsert={addFieldToLastSection}
               onOpenCatalog={openAddCatalog}
               onUseTemplate={requestUseTemplate}
-              className="rounded-xl border border-[var(--border)]/40 bg-[var(--surface)] px-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0"
+              variant="empty"
             />
           </div>
         </>

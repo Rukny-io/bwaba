@@ -1,15 +1,11 @@
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-const FORMS_ORIGIN =
-  process.env.NEXT_PUBLIC_FORMS_URL || 'http://localhost:3007';
+import {
+  resolveAccountsUrl,
+  resolveApiBaseUrl,
+  resolveFormsOrigin,
+} from '@/lib/dev-urls';
 
 export function getFormsOrigin(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return FORMS_ORIGIN;
+  return resolveFormsOrigin();
 }
 
 /** Callback URL on Forms after Accounts login */
@@ -23,7 +19,7 @@ export function buildFormsCallbackUrl(nextPath: string): string {
 /** Full Accounts login with return to Forms */
 export function getAccountsLoginUrl(nextPath = '/app'): string {
   const returnTo = buildFormsCallbackUrl(nextPath);
-  const url = new URL('/login', ACCOUNTS_URL);
+  const url = new URL('/login', resolveAccountsUrl());
   url.searchParams.set('next', returnTo);
   return url.toString();
 }
@@ -42,7 +38,7 @@ export function getGoogleOAuthUrl(nextPath = '/app'): string {
     redirect_origin: origin,
     next,
   });
-  return `${API_BASE}/auth/google?${params.toString()}`;
+  return `${resolveApiBaseUrl()}/auth/google?${params.toString()}`;
 }
 
 export function resolveClientNext(

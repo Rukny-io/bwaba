@@ -7,5 +7,5 @@ export default function FormPreviewLayout({
 }: {
   children: ReactNode;
 }) {
-  return <CreateFormChrome className="bg-white">{children}</CreateFormChrome>;
+  return <CreateFormChrome>{children}</CreateFormChrome>;
 }

@@ -36,16 +36,35 @@ const ALLOWED_AUTH_PREFIXES = [
 ];
 
 function normalizeIp(ip: string): string {
-  return ip.trim().replace(/^::ffff:/i, '');
+  const clean = ip.trim().replace(/^::ffff:/i, '');
+  if (
+    clean === '::1' ||
+    clean === '0:0:0:0:0:0:0:1' ||
+    clean === 'localhost'
+  ) {
+    return '127.0.0.1';
+  }
+  return clean;
 }
 
+/** Match accounts BFF — stable loopback IP for OAuth code binding in local dev. */
 function resolveBffClientIp(request: NextRequest): string | null {
+  if (process.env.NODE_ENV !== 'production') {
+    return '127.0.0.1';
+  }
+
+  const cfIp = request.headers.get('cf-connecting-ip')?.trim();
+  if (cfIp) return normalizeIp(cfIp);
+
   const xff = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   if (xff) return normalizeIp(xff);
+
   const xri = request.headers.get('x-real-ip')?.trim();
   if (xri) return normalizeIp(xri);
+
   const reqIp = (request as NextRequest & { ip?: string }).ip;
   if (reqIp) return normalizeIp(reqIp);
+
   return null;
 }
 
@@ -71,6 +90,7 @@ async function proxyToApi(request: NextRequest, pathSegments: string[]) {
   if (clientIp) {
     headers.set('x-forwarded-for', clientIp);
     headers.set('x-real-ip', clientIp);
+    headers.set('cf-connecting-ip', clientIp);
   }
 
   const init: RequestInit = {

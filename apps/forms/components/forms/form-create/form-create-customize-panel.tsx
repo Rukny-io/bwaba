@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, Palette, X } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { DesignCustomizeSections } from '@/components/forms/form-create/design/design-customize-sections';
+import { FormCreatePill } from '@/components/forms/form-create/form-create-primitives';
 import type { FormTheme } from '@/lib/form-theme';
 import { cn } from '@/lib/utils';
 
@@ -83,20 +84,18 @@ export function FormCreateCustomizePanel({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 360 }}
             className={cn(
-              'fixed inset-y-0 start-0 z-[110] flex w-full max-w-[22rem] flex-col sm:max-w-md m-4 rounded-2xl',
-              'max-h-[calc(100dvh-3rem)] border-e border-[var(--border)] bg-[var(--background)] shadow-2xl',
+              'fixed inset-y-0 start-0 z-[110] m-3 flex w-full max-w-[22rem] flex-col sm:m-4 sm:max-w-lg',
+              'max-h-[calc(100dvh-1.5rem)] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-h-[calc(100dvh-2rem)]',
             )}
             role="dialog"
             aria-modal="true"
             aria-label="تخصيص التصميم"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:px-5">
-              <div className="min-w-0 text-right">
-                <h2 className="text-base font-semibold text-[var(--foreground)]">
-                  تخصيص التصميم
-                </h2>
-                <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                  الألوان والتخطيط
+              <div className="min-w-0">
+                <FormCreatePill icon={Palette} label="تخصيص التصميم" />
+                <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                  الألوان والتخطيط والخطوط
                 </p>
               </div>
               <Button
@@ -137,7 +136,7 @@ export function FormCreateCustomizePanel({
                     className="pointer-events-none absolute inset-x-0 bottom-0"
                     aria-hidden
                   >
-                    <div className="h-20 rounded-b-2xl bg-gradient-to-t from-[var(--background)] via-[var(--background)]/80 to-transparent" />
+                    <div className="h-20 rounded-b-2xl bg-gradient-to-t from-[var(--surface)] via-[var(--surface)]/80 to-transparent" />
                     <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1 text-[11px] text-[var(--muted-foreground)]">
                       <ChevronDown className="size-3.5 animate-bounce" />
                       <span>المزيد بالأسفل</span>

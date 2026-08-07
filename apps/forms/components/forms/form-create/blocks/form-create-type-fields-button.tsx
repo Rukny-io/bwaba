@@ -50,8 +50,8 @@ export function FormCreateTypeFieldsButton({
       <Button
         variant="outline"
         className={cn(
-          'h-9 gap-2 rounded-full border-[var(--border)] bg-[var(--surface)] px-3.5 text-sm font-medium',
-          'text-[var(--foreground)] shadow-sm hover:bg-[var(--surface-secondary)]',
+          'h-9 gap-2 rounded-full border-[var(--border)] bg-[var(--surface-secondary)] px-3.5 text-sm font-medium',
+          'text-[var(--foreground)] hover:bg-[var(--surface-tertiary)]',
           className,
         )}
       >

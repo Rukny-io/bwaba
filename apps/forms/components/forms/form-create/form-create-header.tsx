@@ -15,21 +15,57 @@ import {
 } from 'lucide-react';
 import type { FormType } from '@/lib/forms-api';
 import { FormCoverUpload } from '@/components/forms/form-create/form-cover-upload';
-import { pillTabClassName, pillTabGroupClassName } from '@/components/ui/pill-tab';
+import {
+  FormCreatePill,
+  FormCreateTypeTile,
+} from '@/components/forms/form-create/form-create-primitives';
 import { cn } from '@/lib/utils';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 2000;
 
-const FORM_TYPE_OPTIONS: { value: FormType; label: string; icon: LucideIcon }[] = [
-  { value: 'FEEDBACK', label: 'ملاحظات', icon: MessageSquare },
-  { value: 'SURVEY', label: 'استبيان', icon: ClipboardList },
-  { value: 'CONTACT', label: 'تواصل', icon: Phone },
-  { value: 'REGISTRATION', label: 'تسجيل', icon: UserPlus },
-  { value: 'ORDER', label: 'طلب', icon: Package },
-  { value: 'QUIZ', label: 'اختبار', icon: GraduationCap },
-  { value: 'APPLICATION', label: 'التحاق', icon: BookOpen },
-  { value: 'OTHER', label: 'أخرى', icon: FileQuestion },
+const FORM_TYPE_OPTIONS: {
+  value: FormType;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    value: 'FEEDBACK',
+    label: 'ملاحظات',
+    hint: 'آراء وتقييمات العملاء',
+    icon: MessageSquare,
+  },
+  {
+    value: 'SURVEY',
+    label: 'استبيان',
+    hint: 'أسئلة واستطلاعات الرأي',
+    icon: ClipboardList,
+  },
+  {
+    value: 'CONTACT',
+    label: 'تواصل',
+    hint: 'رسائل وطلبات التواصل',
+    icon: Phone,
+  },
+  {
+    value: 'REGISTRATION',
+    label: 'تسجيل',
+    hint: 'حضور، اشتراك، أو فعاليات',
+    icon: UserPlus,
+  },
+  {
+    value: 'ORDER',
+    label: 'طلب',
+    hint: 'طلبات شراء ومنتجات',
+    icon: Package,
+  },
+  {
+    value: 'OTHER',
+    label: 'أخرى',
+    hint: 'نموذج مخصّص حسب حاجتك',
+    icon: FileQuestion,
+  },
 ];
 
 interface FormCreateHeaderProps {
@@ -72,7 +108,6 @@ export function FormCreateHeader({
   onDescriptionBlur,
 }: FormCreateHeaderProps) {
   const [coverExpanded, setCoverExpanded] = useState(Boolean(coverUrl));
-  const [hovered, setHovered] = useState(false);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useAutoResizeTextarea(description, descriptionRef);
@@ -80,13 +115,9 @@ export function FormCreateHeader({
   const showCoverEditor = Boolean(coverUrl) || coverExpanded;
 
   return (
-    <header
-      className="group/header relative mb-10"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <header className="group/header relative mb-6 sm:mb-8">
       {showCoverEditor ? (
-        <div className="relative -mx-4 mb-6 sm:-mx-6">
+        <div className="relative -mx-1 mb-5 sm:-mx-2 sm:mb-6">
           <FormCoverUpload
             formId={formId}
             coverUrl={coverUrl}
@@ -97,28 +128,20 @@ export function FormCreateHeader({
             embedded
           />
         </div>
-      ) : null}
-
-      {!showCoverEditor ? (
-        <div
-          className={cn(
-            'mb-1 h-6 overflow-hidden transition-opacity duration-200',
-            'opacity-100 sm:opacity-0 sm:group-hover/header:opacity-100',
-            hovered && 'sm:opacity-100',
-          )}
-        >
+      ) : (
+        <div className="mb-3">
           <button
             type="button"
             onClick={() => setCoverExpanded(true)}
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
           >
             <ImageIcon className="size-3.5" />
             إضافة غلاف
           </button>
         </div>
-      ) : null}
+      )}
 
-      <div className="space-y-1">
+      <div className="mb-6 space-y-1 sm:mb-8">
         <input
           id="form-title"
           value={title}
@@ -128,7 +151,7 @@ export function FormCreateHeader({
           placeholder="عنوان النموذج"
           maxLength={TITLE_MAX}
           className={cn(
-            'w-full border-0 bg-transparent p-0 text-3xl font-bold leading-[1.15] tracking-tight outline-none sm:text-[2.75rem]',
+            'w-full border-0 bg-transparent p-0 text-2xl font-bold leading-[1.15] tracking-tight outline-none sm:text-[2.25rem]',
             title.trim()
               ? 'text-[var(--foreground)]'
               : 'text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/35',
@@ -153,37 +176,31 @@ export function FormCreateHeader({
         />
       </div>
 
-      <div className="mt-6 space-y-2.5">
-        <p className="text-xs font-medium text-[var(--muted-foreground)]">
-          نوع النموذج
-        </p>
+      <section className="form-create-type-picker mt-6 space-y-3.5 sm:mt-7 sm:space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <FormCreatePill label="نوع النموذج" />
+          <p className="text-xs leading-relaxed text-[var(--muted-foreground)] sm:max-w-[16rem] sm:text-end sm:text-[13px]">
+            اختر التصنيف الأنسب — سنقترح حقولاً جاهزة
+          </p>
+        </div>
+
         <div
-          className={cn(pillTabGroupClassName, 'justify-start gap-1.5 sm:gap-2')}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5"
           role="radiogroup"
           aria-label="نوع النموذج"
         >
-          {FORM_TYPE_OPTIONS.map((opt) => {
-            const selected = type === opt.value;
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => onTypeChange(opt.value)}
-                className={pillTabClassName(
-                  selected,
-                  'inline-flex items-center gap-1.5 px-3 py-2 sm:gap-2 sm:px-4 sm:py-2',
-                )}
-              >
-                <Icon className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.8} />
-                {opt.label}
-              </button>
-            );
-          })}
+          {FORM_TYPE_OPTIONS.map((opt) => (
+            <FormCreateTypeTile
+              key={opt.value}
+              label={opt.label}
+              hint={opt.hint}
+              icon={opt.icon}
+              isActive={type === opt.value}
+              onClick={() => onTypeChange(opt.value)}
+            />
+          ))}
         </div>
-      </div>
+      </section>
     </header>
   );
 }

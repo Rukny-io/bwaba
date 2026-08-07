@@ -47,10 +47,10 @@ function FieldDropIndicator({
       data-section-key={sectionKey}
       data-drop-index={index}
       className={cn(
-        'pointer-events-auto rounded-xl transition-all duration-150',
+        'form-create-field-drop-indicator pointer-events-auto',
         active
-          ? 'my-1.5 h-11 border-2 border-dashed border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_8%,transparent)]'
-          : 'h-4',
+          ? 'form-create-field-drop-indicator--active'
+          : 'form-create-field-drop-indicator--idle',
       )}
       aria-hidden
     />
@@ -93,15 +93,10 @@ function PointerFieldCard({
       data-field-index={fieldIndex}
       {...(isSourceDragging ? { 'data-dragging': '' } : {})}
       className={cn(
-        'group/block relative list-none rounded-2xl border bg-transparent transition-[border-color,background-color,box-shadow,opacity,transform]',
-        collapsed
-          ? 'border-[var(--border)]/50 bg-[var(--surface)]/50 shadow-sm'
-          : 'border-transparent',
-        !isSourceDragging &&
-          !collapsed &&
-          'hover:border-[var(--border)]/60 hover:bg-[var(--surface)]/40',
-        isSourceDragging &&
-          'scale-[0.98] border-[var(--foreground)]/15 bg-[var(--surface-secondary)]/50 opacity-40 shadow-none',
+        'group/block relative list-none transition-[border-color,background-color,opacity,transform]',
+        'form-create-field-card',
+        collapsed ? undefined : 'form-create-field-card--expanded',
+        isSourceDragging && 'form-create-field-card--dragging scale-[0.97] opacity-35',
         isDragSessionActive && !isSourceDragging && 'pointer-events-auto',
       )}
     >
@@ -152,19 +147,15 @@ function ReorderFieldRow({
       onDragStart={() => setIsDragging(true)}
       onDragEnd={() => setIsDragging(false)}
       className={cn(
-        'group/block relative list-none rounded-2xl border bg-transparent transition-[border-color,background-color,box-shadow]',
-        collapsed
-          ? 'border-[var(--border)]/50 bg-[var(--surface)]/50 shadow-sm'
-          : 'border-transparent',
-        !isDragging &&
-          !collapsed &&
-          'hover:border-[var(--border)]/60 hover:bg-[var(--surface)]/40',
-        isDragging &&
-          'z-10 border-[var(--foreground)]/20 bg-[var(--surface)] shadow-lg ring-2 ring-[var(--accent)]/30',
+        'group/block relative list-none transition-[border-color,background-color,box-shadow]',
+        'form-create-field-card',
+        collapsed ? undefined : 'form-create-field-card--expanded',
+        isDragging && 'form-create-field-card--dragging z-10 ring-2 ring-[var(--primary)]/25',
       )}
       whileDrag={{
-        scale: 1.015,
-        boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+        scale: 1.02,
+        borderRadius: '1.5rem',
+        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
       }}
       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
     >
@@ -212,13 +203,13 @@ export function FormSectionCanvas({
   onChangeFieldType,
   enableCrossSectionDrag = false,
 }: FormSectionCanvasProps) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
   const setFieldCollapsed = useCallback((clientId: string, collapsed: boolean) => {
-    setCollapsedIds((prev) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (collapsed) next.add(clientId);
-      else next.delete(clientId);
+      if (collapsed) next.delete(clientId);
+      else next.add(clientId);
       return next;
     });
   }, []);
@@ -306,14 +297,18 @@ export function FormSectionCanvas({
     sectionFields: DraftFormField[],
     collapsed: boolean,
   ) {
-    setCollapsedIds((prev) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       for (const field of sectionFields) {
-        if (collapsed) next.add(field.clientId);
-        else next.delete(field.clientId);
+        if (collapsed) next.delete(field.clientId);
+        else next.add(field.clientId);
       }
       return next;
     });
+  }
+
+  function isFieldCollapsed(clientId: string): boolean {
+    return !expandedIds.has(clientId);
   }
 
   function renderFieldsBlock(
@@ -323,7 +318,7 @@ export function FormSectionCanvas({
   ) {
     const isDropSection = dropTarget?.sectionKey === sectionKey;
     const sectionCollapsedCount = sectionFields.filter((f) =>
-      collapsedIds.has(f.clientId),
+      isFieldCollapsed(f.clientId),
     ).length;
     const allSectionCollapsed =
       sectionFields.length > 0 && sectionCollapsedCount === sectionFields.length;
@@ -346,15 +341,15 @@ export function FormSectionCanvas({
           data-section-drop
           data-section-key={sectionKey}
           className={cn(
-            'min-h-[2rem] rounded-2xl transition-colors',
+            'min-h-[2rem] rounded-3xl transition-colors',
             isDragSessionActive &&
               isDropSection &&
-              'bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]',
+              'bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]',
           )}
         >
           {fieldsToolbar}
           {sectionFields.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {sectionFields.map((field, fieldIndex) => {
                 const globalIndex = fields.findIndex(
                   (f) => f.clientId === field.clientId,
@@ -380,7 +375,7 @@ export function FormSectionCanvas({
                       fieldIndex={fieldIndex}
                       isSourceDragging={isSourceDragging}
                       isDragSessionActive={isDragSessionActive}
-                      collapsed={collapsedIds.has(field.clientId)}
+                      collapsed={isFieldCollapsed(field.clientId)}
                       onCollapsedChange={(c) => setFieldCollapsed(field.clientId, c)}
                       onFieldChange={(next) => onFieldChange(globalIndex, next)}
                       onRemove={() => onRemoveField(field.clientId)}
@@ -406,10 +401,10 @@ export function FormSectionCanvas({
               data-section-key={sectionKey}
               data-drop-index={0}
               className={cn(
-                'rounded-xl border border-dashed px-4 py-8 text-center text-xs transition-colors',
+                'rounded-3xl border border-dashed px-4 py-8 text-center text-xs transition-colors',
                 isDragSessionActive && isDropSection && dropTarget?.index === 0
-                  ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] text-[var(--primary)]'
-                  : 'border-[var(--border)]/60 text-[var(--muted-foreground)]',
+                  ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[var(--primary)]'
+                  : 'border-[var(--border)]/50 text-[var(--muted-foreground)]',
               )}
             >
               {isDragSessionActive && isDropSection && dropTarget?.index === 0
@@ -422,14 +417,14 @@ export function FormSectionCanvas({
     }
 
     return (
-      <div className="min-h-[2rem] rounded-2xl">
+      <div className="min-h-[2rem] rounded-3xl">
         {fieldsToolbar}
         {sectionFields.length > 0 ? (
           <Reorder.Group
             axis="y"
             values={sectionFields}
             onReorder={(next) => handleSectionFieldsReorder(sectionKey, next)}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-2.5"
           >
             {sectionFields.map((field) => {
               const globalIndex = fields.findIndex(
@@ -441,7 +436,7 @@ export function FormSectionCanvas({
                   field={field}
                   globalIndex={globalIndex}
                   fields={fields}
-                  collapsed={collapsedIds.has(field.clientId)}
+                  collapsed={isFieldCollapsed(field.clientId)}
                   onCollapsedChange={(c) => setFieldCollapsed(field.clientId, c)}
                   onFieldChange={(next) => onFieldChange(globalIndex, next)}
                   onRemove={() => onRemoveField(field.clientId)}
@@ -457,7 +452,7 @@ export function FormSectionCanvas({
 
   return (
     <div
-      className={cn('space-y-4', isDragSessionActive && 'select-none')}
+      className={cn('space-y-5 sm:space-y-6', isDragSessionActive && 'select-none')}
       aria-live={isDragSessionActive ? 'polite' : undefined}
     >
       {isDragSessionActive ? (
@@ -467,6 +462,8 @@ export function FormSectionCanvas({
       {sections.map((section, sectionIndex) => {
         const sectionFields = grouped.get(section.clientKey) ?? [];
         const showSectionChrome = sections.length > 1;
+        const isSectionDropActive =
+          isDragSessionActive && dropTarget?.sectionKey === section.clientKey;
         const fieldsBlock = renderFieldsBlock(
           section.clientKey,
           sectionFields,
@@ -478,27 +475,25 @@ export function FormSectionCanvas({
         }
 
         const block = (
-          <div className="space-y-3">
+          <div
+            className={cn(
+              'form-create-section-block space-y-2.5 sm:space-y-3',
+              isSectionDropActive && 'form-create-section-block--active',
+            )}
+          >
             <div
               data-field-drop
               data-section-key={section.clientKey}
               data-drop-index={0}
-              className={cn(
-                isDragSessionActive &&
-                  dropTarget?.sectionKey === section.clientKey &&
-                  dropTarget.index === 0 &&
-                  'rounded-2xl ring-2 ring-[var(--primary)]/20',
-              )}
             >
               <FormSectionHeaderCard
                 section={section}
                 index={sectionIndex}
                 total={sections.length}
+                fieldCount={sectionFields.length}
                 canRemove={sections.length > 1}
                 isDropTarget={
-                  isDragSessionActive &&
-                  dropTarget?.sectionKey === section.clientKey &&
-                  dropTarget.index === 0
+                  isSectionDropActive && dropTarget?.index === 0
                 }
                 onChange={(next) => updateSection(sectionIndex, next)}
                 onRemove={() => removeSection(section.clientKey)}

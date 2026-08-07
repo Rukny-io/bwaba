@@ -29,6 +29,16 @@ function loadRootEnv(): void {
 
 loadRootEnv();
 
+/** Root `.env` targets production; local `next dev` must hit localhost services. */
+function applyLocalDevOverrides(): void {
+  if (process.env.NODE_ENV !== "development") return;
+  process.env.NEXT_PUBLIC_ACCOUNTS_URL = "http://localhost:3005";
+  process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_FORMS_URL = "http://localhost:3007";
+}
+
+applyLocalDevOverrides();
+
 const monorepoAliases = {
   ...formsSharedResolveAliases(),
   ...authResolveAliases(),
@@ -41,8 +51,18 @@ const API_BACKEND_URL =
 const ACCOUNTS_URL =
   process.env.NEXT_PUBLIC_ACCOUNTS_URL || "http://localhost:3005";
 
+const DEV_PUBLIC_ENV =
+  process.env.NODE_ENV === "development"
+    ? {
+        NEXT_PUBLIC_ACCOUNTS_URL: "http://localhost:3005",
+        NEXT_PUBLIC_API_URL: "http://localhost:3001/api/v1",
+        NEXT_PUBLIC_FORMS_URL: "http://localhost:3007",
+      }
+    : undefined;
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  ...(DEV_PUBLIC_ENV ? { env: DEV_PUBLIC_ENV } : {}),
   transpilePackages: ["@rukny/forms-shared", "@rukny/auth", "@rukny/thmanyah-font"],
   turbopack: {
     root: path.resolve(__dirname),

@@ -141,40 +141,77 @@ export function FormCreateHeader({
         </div>
       )}
 
-      <div className="mb-6 space-y-1 sm:mb-8">
-        <input
-          id="form-title"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          onBlur={onTitleBlur}
-          autoFocus
-          placeholder="عنوان النموذج"
-          maxLength={TITLE_MAX}
-          className={cn(
-            'w-full border-0 bg-transparent p-0 text-2xl font-bold leading-[1.15] tracking-tight outline-none sm:text-[2.25rem]',
-            title.trim()
-              ? 'text-[var(--foreground)]'
-              : 'text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/35',
-          )}
-        />
+      <section className="form-create-header-fields mb-6 space-y-4 sm:mb-8 sm:space-y-5">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="form-title"
+              className="text-xs font-semibold text-[var(--foreground)] sm:text-[13px]"
+            >
+              عنوان النموذج
+            </label>
+            {title.trim() ? (
+              <span className="text-[10px] tabular-nums text-[var(--muted-foreground)] sm:text-[11px]">
+                {title.length}/{TITLE_MAX}
+              </span>
+            ) : null}
+          </div>
+          <input
+            id="form-title"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            onBlur={onTitleBlur}
+            autoFocus
+            placeholder="مثال: استبيان رضا العملاء"
+            maxLength={TITLE_MAX}
+            className={cn(
+              'w-full rounded-2xl border border-transparent bg-[var(--surface)] px-3.5 py-3 text-xl font-bold leading-[1.2] tracking-tight outline-none transition-colors sm:px-4 sm:py-3.5 sm:text-[2rem]',
+              'placeholder:text-[var(--muted-foreground)]/45',
+              'focus:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_12%,transparent)]',
+              title.trim()
+                ? 'text-[var(--foreground)]'
+                : 'text-[var(--foreground)]',
+            )}
+          />
+        </div>
 
-        <textarea
-          ref={descriptionRef}
-          id="form-description"
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          onBlur={onDescriptionBlur}
-          placeholder="وصف قصير (اختياري)"
-          maxLength={DESCRIPTION_MAX}
-          rows={1}
-          className={cn(
-            'w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-base leading-relaxed outline-none',
-            description.trim()
-              ? 'text-[var(--muted-foreground)]'
-              : 'text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/40',
-          )}
-        />
-      </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="form-description"
+              className="text-xs font-semibold text-[var(--foreground)] sm:text-[13px]"
+            >
+              الوصف
+              <span className="ms-1 font-normal text-[var(--muted-foreground)]">
+                (اختياري)
+              </span>
+            </label>
+            {description.trim() ? (
+              <span className="text-[10px] tabular-nums text-[var(--muted-foreground)] sm:text-[11px]">
+                {description.length}/{DESCRIPTION_MAX}
+              </span>
+            ) : null}
+          </div>
+          <textarea
+            ref={descriptionRef}
+            id="form-description"
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            onBlur={onDescriptionBlur}
+            placeholder="يظهر للمستجيب تحت العنوان — سطر أو سطرين يكفي عادةً"
+            maxLength={DESCRIPTION_MAX}
+            rows={2}
+            className={cn(
+              'w-full resize-none overflow-hidden rounded-2xl border border-transparent bg-[var(--surface)] px-3.5 py-3 text-sm leading-relaxed outline-none transition-colors sm:px-4 sm:py-3.5 sm:text-[15px]',
+              'placeholder:text-[var(--muted-foreground)]/45',
+              'focus:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_12%,transparent)]',
+              description.trim()
+                ? 'text-[var(--muted-foreground)]'
+                : 'text-[var(--foreground)]',
+            )}
+          />
+        </div>
+      </section>
 
       <section className="form-create-type-picker mt-6 space-y-3.5 sm:mt-7 sm:space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

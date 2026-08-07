@@ -915,8 +915,15 @@ body {
     padding: 1rem;
   }
 
+  .form-create-header-fields {
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--surface-secondary) 42%, var(--surface));
+    padding: 1rem 1rem 1.125rem;
+  }
+
   @media (min-width: 640px) {
-    .form-create-type-picker {
+    .form-create-type-picker,
+    .form-create-header-fields {
       padding: 1.125rem 1.25rem 1.25rem;
     }
   }

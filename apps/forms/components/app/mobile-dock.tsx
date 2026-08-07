@@ -9,6 +9,7 @@ import {
   X,
   LogOut,
   Plus,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   primaryNavItems,
@@ -24,6 +25,7 @@ import {
 } from '@/components/app/mobile-dock-primitives';
 import { FORMS_CREATE_ENTRY_PATH } from '@/lib/forms-paths';
 import { logoutWithNotification } from '@/lib/auth-notify';
+import { cn } from '@/lib/utils';
 
 const dockItems = [
   primaryNavItems[0],
@@ -52,12 +54,13 @@ export function MobileDock() {
             key="backdrop"
             className="fixed inset-0 z-40 sm:hidden"
             style={{
-              background: 'rgba(0, 0, 0, 0.45)',
-              backdropFilter: 'blur(12px)',
+              background: 'rgba(15, 23, 42, 0.28)',
+              backdropFilter: 'blur(8px)',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={handleClose}
           />
         )}
@@ -68,38 +71,79 @@ export function MobileDock() {
           <motion.div
             key="drawer"
             dir="rtl"
-            className="fixed inset-x-3 bottom-[5.75rem] z-50 flex max-h-[65vh] flex-col gap-0.5 overflow-y-auto rounded-[28px] border border-white/40 bg-white/80 p-3 shadow-2xl backdrop-blur-2xl sm:hidden dark:border-white/10 dark:bg-[var(--surface)]/90"
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            role="menu"
+            aria-label="المزيد"
+            className="fixed inset-x-0 bottom-[5.85rem] z-50 mx-auto w-[min(100%-1.5rem,22rem)] overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)]/95 shadow-[var(--card-shadow)] backdrop-blur-2xl sm:hidden"
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            exit={{ opacity: 0, y: 10, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
           >
-            {drawerItems.map(({ href, icon: Icon, label }) => {
-              const active = isNavItemActive(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={handleClose}
-                  className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors ${
-                    active
-                      ? 'bg-[var(--surface-secondary)]'
-                      : 'hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  <Icon size={18} strokeWidth={1.8} />
-                  {label}
-                </Link>
-              );
-            })}
-            <div className="mx-1 my-1 h-px bg-[var(--border)]" />
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-            >
-              <LogOut size={16} />
-              تسجيل الخروج
-            </button>
+            <div className="border-b border-[var(--border)] px-4 pb-2.5 pt-3.5">
+              <p className="text-[11px] font-semibold tracking-wide text-[var(--muted-foreground)]">
+                المزيد من الخيارات
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1 p-2">
+              {drawerItems.map(({ href, icon: Icon, label }, index) => {
+                const active = isNavItemActive(pathname, href);
+                return (
+                  <motion.div
+                    key={href}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 * index, duration: 0.22 }}
+                  >
+                    <Link
+                      href={href}
+                      role="menuitem"
+                      onClick={handleClose}
+                      className={cn(
+                        'flex items-center gap-3 rounded-2xl px-2.5 py-2.5 transition-colors',
+                        active
+                          ? 'bg-[var(--surface-secondary)]'
+                          : 'hover:bg-[var(--surface-secondary)]/80',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-2xl',
+                          active
+                            ? 'bg-[var(--brand-lime)] text-[var(--primary-foreground)]'
+                            : 'bg-[var(--surface-secondary)] text-[var(--foreground)]',
+                        )}
+                      >
+                        <Icon size={18} strokeWidth={1.9} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 text-[14px] font-semibold text-[var(--foreground)]">
+                        {label}
+                      </span>
+                      <ChevronLeft
+                        size={16}
+                        strokeWidth={2}
+                        className="shrink-0 text-[var(--muted-foreground)]/70"
+                        aria-hidden
+                      />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-[var(--border)] p-2">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void handleLogout()}
+                className="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--danger)_14%,transparent)] text-[var(--danger)]">
+                  <LogOut size={17} strokeWidth={1.9} aria-hidden />
+                </span>
+                <span className="text-[14px] font-semibold">تسجيل الخروج</span>
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -119,6 +163,7 @@ export function MobileDock() {
             icon={open ? X : MoreHorizontal}
             label="المزيد"
             isActive={open}
+            showLabel={false}
             onClick={() => setOpen((v) => !v)}
           />
         </MobileDockPill>

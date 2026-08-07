@@ -137,13 +137,12 @@ function FormCardComponent({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -1 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group dashboard-card cursor-pointer rounded-2xl p-2.5 sm:rounded-3xl sm:p-3',
-        'transition-[background-color,border-color,box-shadow] duration-200',
-        'hover:border-[color-mix(in_srgb,var(--primary)_28%,var(--border))]',
-        'hover:bg-[color-mix(in_srgb,var(--primary)_5%,var(--surface))]',
+        'group dashboard-card cursor-pointer rounded-2xl bg-[var(--surface)] p-2.5 sm:rounded-3xl sm:p-3',
+        'transition-[border-color,box-shadow] duration-200',
+        'hover:border-[color-mix(in_srgb,var(--foreground)_10%,var(--border))]',
         'hover:shadow-[var(--card-shadow-hover)]',
         form.isShared && 'border-dashed',
         (form.status === 'ARCHIVED' || isTrash) && 'opacity-[0.92]',
@@ -178,17 +177,17 @@ function FormCardComponent({
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-black/5" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[linear-gradient(160deg,var(--surface-secondary)_0%,var(--surface)_55%,var(--surface-tertiary)_100%)]">
+          <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--foreground)_5%,var(--surface))] transition-colors duration-200 group-hover:bg-[color-mix(in_srgb,var(--foreground)_7%,var(--surface))]">
             <img
               src="/rukny-logo.svg"
               alt=""
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 size-[30%] max-h-10 max-w-10 -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
+              className="pointer-events-none absolute left-1/2 top-1/2 size-[30%] max-h-10 max-w-10 -translate-x-1/2 -translate-y-1/2 opacity-[0.1] dark:opacity-[0.14] dark:brightness-0 dark:invert"
             />
           </div>
         )}
 
-        <span className="absolute top-2 start-2 z-20 rounded-lg bg-[var(--surface)]/92 px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)] shadow-sm backdrop-blur-sm sm:top-2.5 sm:start-2.5 sm:px-2.5 sm:py-1">
+        <span className="absolute top-2 start-2 z-20 rounded-lg bg-[var(--surface)]/95 px-2 py-0.5 text-[10px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm sm:top-2.5 sm:start-2.5 sm:px-2.5 sm:py-1">
           {isTrash ? 'محذوف' : FORM_STATUS_LABELS[form.status]}
         </span>
 

@@ -21,24 +21,25 @@ export function DashboardQuickAction({
     <Link
       href={href}
       className={cn(
-        'group dashboard-card dashboard-card-interactive flex items-center gap-4 rounded-2xl p-4 sm:rounded-3xl sm:p-5',
+        'group dashboard-card dashboard-card-interactive flex items-center gap-3.5 rounded-[1.75rem] border-[var(--border)] p-4 sm:gap-4 sm:rounded-[2rem] sm:p-5',
         className,
       )}
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-        <Icon size={18} strokeWidth={1.8} />
+      <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft-lime)] text-[var(--brand-carbon)] ring-1 ring-[color-mix(in_srgb,var(--brand-lime)_28%,transparent)] transition-transform group-hover:scale-[1.03] dark:text-[var(--foreground)]">
+        <Icon size={18} strokeWidth={1.85} aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
+        <h2 className="text-[13px] font-semibold tracking-tight text-[var(--foreground)] sm:text-sm">
           {title}
         </h2>
-        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
+        <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
           {description}
         </p>
       </div>
       <ArrowLeft
         size={16}
         className="shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
+        aria-hidden
       />
     </Link>
   );

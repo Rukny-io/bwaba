@@ -38,7 +38,7 @@ interface AnalyticsGeoMapProps {
 }
 
 const COLOR_MIN = '#dbeafe';
-const COLOR_MAX = '#3b82f6';
+const COLOR_MAX = '#b5d43b';
 
 export function AnalyticsGeoMap({
   data,

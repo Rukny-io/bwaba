@@ -81,13 +81,13 @@ export default async function AppHomePage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-3 lg:gap-4">
         <DashboardHomeRecentForms forms={recentForms} />
         <DashboardHomeRecentSubmissions items={recentSubmissions} />
         <DashboardHomeActivity items={recentActivity} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-3 lg:gap-4">
         <DashboardQuickAction
           href="/app/forms"
           icon={FileText}

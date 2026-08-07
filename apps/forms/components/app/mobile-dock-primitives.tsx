@@ -60,7 +60,7 @@ export function MobileDockPill({
       dir={dir}
       aria-label={ariaLabel}
       className={cn(
-        'min-w-0 max-w-full rounded-full border border-white/50 bg-white/55 p-1.5 shadow-[0_6px_24px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/10 dark:shadow-[0_6px_24px_rgba(0,0,0,0.4)]',
+        'min-w-0 max-w-full rounded-full border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 shadow-[var(--card-shadow)] backdrop-blur-2xl dark:border-[var(--border)] dark:bg-[var(--surface)]/95',
         className,
       )}
     >
@@ -78,29 +78,36 @@ export function MobileDockItem({
   isActive,
   href,
   onClick,
+  showLabel = true,
 }: {
   icon: LucideIcon;
   label: string;
   isActive: boolean;
   href?: string;
   onClick?: () => void;
+  /** When false, never expand with text (e.g. «المزيد») */
+  showLabel?: boolean;
 }) {
+  const withLabel = isActive && showLabel;
+
   const inner = (
     <div
       className={cn(
         'relative flex h-11 min-w-11 items-center justify-center rounded-full transition-all duration-300 ease-out',
-        isActive
-          ? 'gap-1.5 bg-white px-4 text-[var(--foreground)] shadow-[0_2px_10px_rgba(15,23,42,0.08)] dark:bg-white dark:text-slate-900'
-          : 'px-2.5 text-[var(--foreground)]/70 hover:text-[var(--foreground)]',
+        withLabel
+          ? 'gap-1.5 bg-[var(--brand-lime)] px-4 text-[var(--primary-foreground)] shadow-[0_2px_10px_rgba(181,212,59,0.25)]'
+          : isActive
+            ? 'bg-[var(--surface-secondary)] text-[var(--foreground)]'
+            : 'px-2.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
       )}
     >
       <Icon
-        size={isActive ? 19 : 21}
+        size={withLabel || isActive ? 19 : 21}
         strokeWidth={isActive ? 2.2 : 1.7}
         className="shrink-0"
         aria-hidden
       />
-      {isActive ? (
+      {withLabel ? (
         <span className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold tracking-tight">
           {label}
         </span>
@@ -148,7 +155,7 @@ export function MobileDockFab({
   onClick?: () => void;
 }) {
   const className =
-    'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-[0_6px_22px_rgba(15,23,42,0.24)] transition-transform duration-200 active:scale-95 dark:shadow-[0_6px_22px_rgba(0,0,0,0.45)]';
+    'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[var(--brand-lime)] text-[var(--primary-foreground)] shadow-[0_6px_22px_rgba(181,212,59,0.28)] transition-transform duration-200 active:scale-95';
 
   const content = <Icon size={21} strokeWidth={2.25} aria-hidden />;
 

@@ -23,58 +23,13 @@ export interface DashboardMetricCardProps {
 }
 
 const chipToneClass: Record<DashboardMetricChipTone, string> = {
-  success: 'bg-[var(--brand-soft-lime)] text-[var(--success)]',
-  warning: 'bg-[var(--warning)]/15 text-[var(--warning)]',
-  danger: 'bg-[var(--danger)]/15 text-[var(--danger)]',
-  neutral: 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+  success: 'text-[var(--success)] dark:text-[var(--brand-lime)]',
+  warning: 'text-[var(--warning)]',
+  danger: 'text-[var(--danger)]',
+  neutral: 'text-[var(--muted-foreground)]',
 };
 
-function TrendBadge({
-  trend,
-  trendPositive,
-  className,
-}: {
-  trend: string;
-  trendPositive: boolean;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums sm:px-2.5 sm:py-1 sm:text-[11px]',
-        trendPositive
-          ? 'bg-[var(--brand-soft-lime)] text-[var(--success)]'
-          : 'bg-[var(--danger)]/15 text-[var(--danger)]',
-        className,
-      )}
-      dir="ltr"
-      lang="en"
-    >
-      {trend}
-    </span>
-  );
-}
-
-function MetaChip({
-  chip,
-  tone = 'neutral',
-}: {
-  chip: string;
-  tone?: DashboardMetricChipTone;
-}) {
-  return (
-    <span
-      className={cn(
-        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-[11px]',
-        chipToneClass[tone],
-      )}
-    >
-      {chip}
-    </span>
-  );
-}
-
-/** Unified metric card — forms-list design used across the dashboard */
+/** Balance-style metric card — pill header, muted caption, hero value */
 export function DashboardMetricCard({
   icon: Icon,
   label,
@@ -95,78 +50,76 @@ export function DashboardMetricCard({
     value
   );
 
-  const meta = chip ? (
-    <MetaChip chip={chip} tone={chipTone} />
-  ) : trend ? (
-    <TrendBadge trend={trend} trendPositive={trendPositive} />
-  ) : null;
+  const footerTrend = !chip && trend ? trend : null;
+  const showFooterPill = Boolean(footerTrend || chip || comparisonSecondary);
 
   return (
-    <article className="dashboard-card flex min-h-[7.5rem] flex-col rounded-2xl p-3.5 sm:min-h-[8.5rem] sm:gap-4 sm:p-5">
-      {/* ── Mobile ── */}
-      <div className="flex min-h-0 flex-1 flex-col sm:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
-            <Icon size={15} strokeWidth={1.85} />
-          </div>
-          <p className="min-w-0 flex-1 text-[11px] font-semibold leading-snug text-[var(--muted-foreground)]">
-            {label}
-          </p>
-          {meta}
-        </div>
-
-        <div className="mt-auto flex min-h-[2.75rem] w-full flex-col justify-end pt-2.5">
-          <p
-            className={cn(
-              'text-right font-bold leading-none tracking-tight text-[var(--foreground)]',
-              tabular
-                ? 'text-[1.65rem] tabular-nums'
-                : 'text-[1.35rem] leading-snug',
-            )}
-          >
-            {valueNode}
-          </p>
-          <p className="mt-1 line-clamp-2 text-right text-[10px] leading-relaxed text-[var(--muted-foreground)]/75">
-            {comparisonPrimary}
-            {comparisonSecondary && comparisonSecondary !== comparisonPrimary
-              ? ` · ${comparisonSecondary}`
-              : null}
-          </p>
-        </div>
+    <article className="dashboard-card flex min-h-[8.25rem] flex-col gap-3 rounded-2xl border-[1px] border-[var(--border)] p-4 shadow-none sm:min-h-[9.5rem] sm:gap-3.5 sm:rounded-[2rem] sm:p-5">
+      <div className="inline-flex max-w-full items-center gap-2 self-start rounded-full bg-[var(--surface-secondary)] py-1 pe-3 ps-1">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand-carbon)] ring-1 ring-[var(--border)]/50 sm:size-8 dark:text-[var(--foreground)]">
+          <Icon size={15} strokeWidth={1.9} className="sm:hidden" aria-hidden />
+          <Icon
+            size={16}
+            strokeWidth={1.85}
+            className="hidden sm:block"
+            aria-hidden
+          />
+        </span>
+        <span className="truncate text-[12px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[13px]">
+          {label}
+        </span>
       </div>
 
-      {/* ── Desktop ── */}
-      <div className="hidden sm:contents">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-            <Icon className="size-5" strokeWidth={1.6} />
-          </div>
-          {meta}
-        </div>
-
-        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
-          {label}
+      <div className="mt-auto flex min-w-0 flex-col gap-2">
+        <p
+          className={cn(
+            'min-w-0 max-w-full break-words font-bold leading-none tracking-tight text-[var(--foreground)]',
+            tabular
+              ? 'text-[1.75rem] tabular-nums sm:text-[2rem]'
+              : 'text-[1.35rem] leading-snug sm:text-[1.5rem]',
+          )}
+        >
+          {valueNode}
         </p>
 
-        <div className="mt-auto">
-          <div className="flex items-end justify-between gap-3">
-            <p
-              className={cn(
-                'text-right font-bold leading-none tracking-tight text-[var(--foreground)]',
-                tabular
-                  ? 'text-[1.75rem] tabular-nums'
-                  : 'text-[1.35rem] leading-snug',
-              )}
-            >
-              {valueNode}
-            </p>
-            <p className="max-w-[9rem] shrink-0 text-end text-[11px] leading-snug text-[var(--muted-foreground)]/70">
-              {comparisonPrimary}
-              <br />
-              {comparisonSecondary}
-            </p>
+        {showFooterPill ? (
+          <div className="inline-flex max-w-full items-center gap-1.5 self-start rounded-full bg-[var(--surface-secondary)] px-2.5 py-1">
+            {footerTrend ? (
+              <span
+                className={cn(
+                  'shrink-0 text-[11px] font-semibold tabular-nums',
+                  trendPositive
+                    ? 'text-[var(--success)] dark:text-[var(--brand-lime)]'
+                    : 'text-[var(--danger)]',
+                )}
+                dir="ltr"
+                lang="en"
+              >
+                {footerTrend}
+              </span>
+            ) : null}
+            {chip ? (
+              <span
+                className={cn(
+                  'shrink-0 text-[11px] font-semibold',
+                  chipToneClass[chipTone],
+                )}
+              >
+                {chip}
+              </span>
+            ) : null}
+            {footerTrend && comparisonSecondary ? (
+              <span className="text-[var(--border)]" aria-hidden>
+                ·
+              </span>
+            ) : null}
+            {comparisonSecondary ? (
+              <span className="min-w-0 truncate text-[11px] font-medium text-[var(--muted-foreground)] sm:text-[12px]">
+                {comparisonSecondary}
+              </span>
+            ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
     </article>
   );

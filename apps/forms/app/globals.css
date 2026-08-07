@@ -12,75 +12,81 @@
   --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
-  /* ── Brand palette ── */
-  --brand-blue: #3b82f6;
-  --brand-blue-soft: #dbeafe;
-  --brand-slate: #e2e8f0;
+  /* ── Brand palette — Carbon / Lime ── */
+  --brand-carbon: #434738;
+  --brand-lime: #b5d43b;
+  --brand-lime-soft: #d9ef82;
+  --brand-canvas: #f7f7f7;
+  --brand-olive: var(--brand-lime-soft);
+  /* Legacy aliases (charts / older class names) */
+  --brand-blue: var(--brand-lime);
+  --brand-blue-soft: var(--brand-lime-soft);
+  --brand-slate: color-mix(in srgb, var(--brand-carbon) 12%, white);
 
   /* ── Core ── */
-  --background: #fafbfc;
-  --foreground: #0f172a;
+  --background: var(--brand-canvas);
+  --foreground: var(--brand-carbon);
   /* HeroUI: --muted is secondary TEXT, not a surface tint */
-  --muted: #64748b;
-  --muted-foreground: #64748b;
-  --border: var(--brand-slate);
-  --separator: #eef2f6;
+  --muted: color-mix(in srgb, var(--brand-carbon) 55%, white);
+  --muted-foreground: color-mix(in srgb, var(--brand-carbon) 55%, white);
+  --border: color-mix(in srgb, var(--brand-carbon) 14%, white);
+  --separator: color-mix(in srgb, var(--brand-carbon) 8%, white);
 
   /* ── Primary & Secondary (Buttons) ── */
-  --primary: var(--brand-blue);
-  --primary-foreground: #ffffff;
-  --secondary: var(--brand-blue-soft);
-  --secondary-foreground: #1e40af;
+  --primary: var(--brand-lime);
+  --primary-foreground: var(--brand-carbon);
+  --secondary: var(--brand-lime-soft);
+  --secondary-foreground: var(--brand-carbon);
 
   /* ── Accent ── */
-  --accent: var(--brand-blue);
-  --accent-foreground: #ffffff;
+  --accent: var(--brand-lime);
+  --accent-foreground: var(--brand-carbon);
 
   /* ── Surfaces ── */
   --surface: #ffffff;
-  --surface-foreground: #0f172a;
-  --surface-secondary: #f1f5f9;
-  --surface-secondary-foreground: #0f172a;
-  --surface-tertiary: var(--brand-blue-soft);
-  --surface-tertiary-foreground: #1e40af;
+  --surface-foreground: var(--brand-carbon);
+  --surface-secondary: color-mix(in srgb, var(--brand-canvas) 70%, white);
+  --surface-secondary-foreground: var(--brand-carbon);
+  --surface-tertiary: var(--brand-lime-soft);
+  --surface-tertiary-foreground: var(--brand-carbon);
 
   /* ── Overlay ── */
   --overlay: #ffffff;
-  --overlay-foreground: #0f172a;
+  --overlay-foreground: var(--brand-carbon);
 
   /* ── Fields ── */
   --field-background: #ffffff;
-  --field-foreground: #0f172a;
+  --field-foreground: var(--brand-carbon);
   --field-placeholder: var(--muted);
 
   /* ── Semantic ── */
   --danger: #ef4444;
   --danger-foreground: #ffffff;
-  --success: #10b981;
-  --success-foreground: #064e3b;
+  --success: #7a9a1f;
+  --success-foreground: var(--brand-carbon);
   --warning: #f59e0b;
   --warning-foreground: #78350f;
 
   /* ── Misc ── */
-  --default: #f1f5f9;
-  --default-foreground: #0f172a;
-  --focus: var(--brand-blue);
-  --scrollbar: #cbd5e1;
+  --default: color-mix(in srgb, var(--brand-canvas) 80%, white);
+  --default-foreground: var(--brand-carbon);
+  --focus: var(--brand-lime);
+  --scrollbar: color-mix(in srgb, var(--brand-carbon) 28%, white);
   --segment: #ffffff;
-  --segment-foreground: #0f172a;
+  --segment-foreground: var(--brand-carbon);
 
-  --brand-soft-lime: #dcfce7;
-  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.03);
-  --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+  --brand-soft-lime: var(--brand-lime-soft);
+  --card-shadow: 0 1px 2px rgba(67, 71, 56, 0.04), 0 4px 16px rgba(67, 71, 56, 0.03);
+  --card-shadow-hover: 0 4px 20px rgba(67, 71, 56, 0.08);
 
-  /* Landing page — light (public-aligned defaults; .landing-page scopes overrides) */
+  /* Landing page — light defaults; .landing-page scopes overrides */
   --landing-glass-bg: #ffffff;
-  --landing-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --landing-glass-ring: #e8ecf0;
-  --landing-preview-fade: rgba(255, 255, 255, 0.94);
+  --landing-glass-shadow: 0 1px 2px rgba(67, 71, 56, 0.04);
+  --landing-glass-ring: color-mix(in srgb, var(--brand-carbon) 12%, white);
+  --landing-preview-fade: rgba(247, 247, 247, 0.94);
   --landing-card-inset: none;
-  --landing-subtle-hover: rgba(19, 35, 39, 0.04);
-  --landing-outline-inset: rgba(19, 35, 39, 0.12);
+  --landing-subtle-hover: rgba(67, 71, 56, 0.05);
+  --landing-outline-inset: rgba(67, 71, 56, 0.14);
 
   /* ── Geometry & Typography ── */
   --radius: 1rem;
@@ -105,11 +111,17 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --brand-blue: #60a5fa;
-  --brand-blue-soft: #1e3a5f;
-  --brand-slate: #2d3748;
+  --brand-carbon: #434738;
+  --brand-lime: #b5d43b;
+  --brand-lime-soft: #d9ef82;
+  --brand-canvas: #f7f7f7;
+  /* Soft lime wash on cool slate (matches developer/hq dark ladder) */
+  --brand-olive: color-mix(in srgb, var(--brand-lime) 14%, #1a2030);
+  --brand-blue: var(--brand-lime);
+  --brand-blue-soft: color-mix(in srgb, var(--brand-lime) 12%, #1a2030);
+  --brand-slate: #2a3140;
 
-  /* Soft charcoal — avoids pure black OLED smear */
+  /* Cool charcoal ladder — aligned with developer / hq */
   --background: #0b0e13;
   --foreground: #f1f5f9;
   --muted: #94a3b8;
@@ -117,13 +129,13 @@
   --border: #2a3140;
   --separator: #252b38;
 
-  --primary: var(--brand-blue);
-  --primary-foreground: #ffffff;
+  --primary: var(--brand-lime);
+  --primary-foreground: #0b0e13;
   --secondary: #1a2030;
   --secondary-foreground: #e2e8f0;
 
-  --accent: var(--brand-blue);
-  --accent-foreground: #e2e8f0;
+  --accent: var(--brand-lime);
+  --accent-foreground: #0b0e13;
 
   --surface: #12161e;
   --surface-foreground: #f1f5f9;
@@ -140,20 +152,20 @@
   --field-placeholder: var(--muted);
 
   --danger: #f87171;
-  --danger-foreground: #0f172a;
-  --success: #34d399;
-  --success-foreground: #064e3b;
+  --danger-foreground: #0b0e13;
+  --success: #a3e635;
+  --success-foreground: #0b0e13;
   --warning: #fbbf24;
   --warning-foreground: #78350f;
 
   --default: #1a2030;
   --default-foreground: #f1f5f9;
-  --focus: var(--brand-blue);
+  --focus: var(--brand-lime);
   --scrollbar: #3d4658;
   --segment: #1a2030;
   --segment-foreground: #f1f5f9;
 
-  --brand-soft-lime: rgba(52, 211, 153, 0.16);
+  --brand-soft-lime: color-mix(in srgb, var(--brand-lime) 14%, #1a2030);
   --card-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.05),
     0 8px 32px rgba(0, 0, 0, 0.35);
@@ -161,15 +173,14 @@
     0 0 0 1px rgba(255, 255, 255, 0.07),
     0 12px 40px rgba(0, 0, 0, 0.45);
 
-  /* Landing page — dark */
-  --landing-glass-bg: rgba(22, 27, 38, 0.84);
+  --landing-glass-bg: rgba(18, 22, 30, 0.92);
   --landing-glass-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.07),
-    0 12px 40px rgba(0, 0, 0, 0.45);
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.5);
   --landing-glass-ring: rgba(255, 255, 255, 0.08);
-  --landing-preview-fade: rgba(18, 22, 30, 0.94);
-  --landing-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --landing-subtle-hover: rgba(255, 255, 255, 0.06);
+  --landing-preview-fade: rgba(11, 14, 19, 0.94);
+  --landing-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --landing-subtle-hover: rgba(255, 255, 255, 0.05);
   --landing-outline-inset: rgba(255, 255, 255, 0.12);
 }
 
@@ -272,60 +283,61 @@ body {
   }
 }
 
-/* ── Landing page — public Rukny identity (scoped; dashboard tokens unchanged) ── */
+/* ── Landing page — Carbon / Lime identity (scoped) ── */
 @layer components {
   .landing-page {
-    --background: #ffffff;
-    --foreground: #132327;
-    --muted: rgba(19, 35, 39, 0.55);
-    --muted-foreground: rgba(19, 35, 39, 0.55);
-    --border: #e8ecf0;
-    --separator: #e8ecf0;
-    --primary: #062c30;
-    --primary-foreground: #ffffff;
-    --secondary: #eef2f2;
-    --secondary-foreground: #062c30;
-    --accent: #062c30;
-    --accent-foreground: #ffffff;
+    --background: var(--brand-canvas);
+    --foreground: var(--brand-carbon);
+    --muted: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --muted-foreground: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --border: color-mix(in srgb, var(--brand-carbon) 12%, white);
+    --separator: color-mix(in srgb, var(--brand-carbon) 10%, white);
+    --primary: var(--brand-lime);
+    --primary-foreground: var(--brand-carbon);
+    --secondary: var(--brand-lime-soft);
+    --secondary-foreground: var(--brand-carbon);
+    --accent: var(--brand-lime);
+    --accent-foreground: var(--brand-carbon);
     --surface: #ffffff;
-    --surface-foreground: #132327;
-    --surface-secondary: #f6f7f8;
-    --surface-secondary-foreground: #132327;
-    --surface-tertiary: #eef2f2;
-    --surface-tertiary-foreground: #062c30;
-    --default: #f6f7f8;
-    --default-foreground: #132327;
-    --focus: #062c30;
-    --success: #062c30;
-    --brand-soft-lime: #eef2f2;
-    --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.03);
-    --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+    --surface-foreground: var(--brand-carbon);
+    --surface-secondary: #f2f2f0;
+    --surface-secondary-foreground: var(--brand-carbon);
+    --surface-tertiary: var(--brand-lime-soft);
+    --surface-tertiary-foreground: var(--brand-carbon);
+    --default: #f2f2f0;
+    --default-foreground: var(--brand-carbon);
+    --focus: var(--brand-lime);
+    --success: #7a9a1f;
+    --brand-soft-lime: var(--brand-lime-soft);
+    --brand-olive: var(--brand-lime-soft);
+    --card-shadow: 0 1px 2px rgba(67, 71, 56, 0.04), 0 4px 16px rgba(67, 71, 56, 0.03);
+    --card-shadow-hover: 0 4px 20px rgba(67, 71, 56, 0.08);
     --landing-glass-bg: rgba(255, 255, 255, 0.92);
-    --landing-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    --landing-glass-ring: #e8ecf0;
-    --landing-preview-fade: rgba(255, 255, 255, 0.94);
+    --landing-glass-shadow: 0 1px 2px rgba(67, 71, 56, 0.04);
+    --landing-glass-ring: color-mix(in srgb, var(--brand-carbon) 12%, white);
+    --landing-preview-fade: rgba(247, 247, 247, 0.94);
     --landing-card-inset: none;
-    --landing-subtle-hover: rgba(19, 35, 39, 0.04);
-    --landing-outline-inset: rgba(19, 35, 39, 0.12);
+    --landing-subtle-hover: rgba(67, 71, 56, 0.05);
+    --landing-outline-inset: rgba(67, 71, 56, 0.14);
     --max-content-width: 72rem;
-    background-color: #ffffff;
+    background-color: var(--brand-canvas);
     background-image: radial-gradient(
       ellipse 80% 60% at 50% -10%,
-      rgba(6, 44, 48, 0.07),
+      color-mix(in srgb, var(--brand-lime) 22%, transparent),
       transparent
     );
-    color: #132327;
+    color: var(--brand-carbon);
   }
 
   .dark .landing-page,
   [data-theme="dark"] .landing-page {
-    background-color: #ffffff;
+    background-color: var(--brand-canvas);
     background-image: radial-gradient(
       ellipse 80% 60% at 50% -10%,
-      rgba(6, 44, 48, 0.07),
+      color-mix(in srgb, var(--brand-lime) 22%, transparent),
       transparent
     );
-    color: #132327;
+    color: var(--brand-carbon);
   }
 
   .landing-nav-shell {
@@ -338,11 +350,11 @@ body {
   }
 
   .landing-nav-shell.is-scrolled {
-    background-color: rgba(255, 255, 255, 0.78);
+    background-color: rgba(247, 247, 247, 0.82);
     -webkit-backdrop-filter: blur(16px) saturate(160%);
     backdrop-filter: blur(16px) saturate(160%);
-    border-bottom: 1px solid #e8ecf0;
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+    border-bottom: 1px solid color-mix(in srgb, var(--brand-carbon) 12%, white);
+    box-shadow: 0 1px 0 rgba(67, 71, 56, 0.02);
   }
 
   .landing-glass {
@@ -357,7 +369,7 @@ body {
   .landing-invert-btn {
     background: var(--primary);
     color: var(--primary-foreground);
-    box-shadow: 0 8px 24px rgba(6, 44, 48, 0.18);
+    box-shadow: 0 8px 24px rgba(181, 212, 59, 0.28);
   }
 
   .landing-invert-btn:hover {
@@ -532,9 +544,9 @@ body {
 
   .notifications-liquid-chip[aria-selected='true'] {
     border-color: transparent;
-    background: #132327;
-    color: #ffffff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+    background: var(--brand-carbon);
+    color: var(--brand-canvas);
+    box-shadow: 0 1px 2px rgba(67, 71, 56, 0.14);
   }
 
   .dark .notifications-liquid-chip,
@@ -648,83 +660,99 @@ body {
     }
   }
 
-  /* Teal/white brand surface within dashboard chrome (home, forms list, …) */
+  /* Carbon / Lime brand surface within dashboard chrome (home, forms list, …) */
   .dashboard-brand {
-    --foreground: #132327;
-    --muted: rgba(19, 35, 39, 0.55);
-    --muted-foreground: rgba(19, 35, 39, 0.55);
-    --border: #e8ecf0;
-    --separator: #e8ecf0;
-    --primary: #062c30;
-    --primary-foreground: #ffffff;
-    --secondary: #eef2f2;
-    --secondary-foreground: #062c30;
-    --accent: #062c30;
-    --accent-foreground: #ffffff;
+    --foreground: var(--brand-carbon);
+    --muted: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --muted-foreground: color-mix(in srgb, var(--brand-carbon) 55%, white);
+    --border: color-mix(in srgb, var(--brand-carbon) 12%, white);
+    --separator: color-mix(in srgb, var(--brand-carbon) 10%, white);
+    --primary: var(--brand-lime);
+    --primary-foreground: var(--brand-carbon);
+    --secondary: var(--brand-lime-soft);
+    --secondary-foreground: var(--brand-carbon);
+    --accent: var(--brand-lime);
+    --accent-foreground: var(--brand-carbon);
     --surface: #ffffff;
-    --surface-foreground: #132327;
-    --surface-secondary: #f6f7f8;
-    --surface-secondary-foreground: #132327;
-    --surface-tertiary: #eef2f2;
-    --surface-tertiary-foreground: #062c30;
-    --focus: #062c30;
-    --success: #0d6b5c;
-    --brand-soft-lime: #e8f5f2;
-    /* Soft pastel accents for list/metric cards (teal-family, not purple) */
-    --soft-mint: #e8f5f2;
-    --soft-mint-deep: #0d6b5c;
+    --surface-foreground: var(--brand-carbon);
+    --surface-secondary: #f2f2f0;
+    --surface-secondary-foreground: var(--brand-carbon);
+    --surface-tertiary: var(--brand-lime-soft);
+    --surface-tertiary-foreground: var(--brand-carbon);
+    --focus: var(--brand-lime);
+    --success: #7a9a1f;
+    --brand-soft-lime: var(--brand-lime-soft);
+    --brand-olive: var(--brand-lime-soft);
+    /* Soft pastel accents for list/metric cards (lime family) */
+    --soft-mint: var(--brand-lime-soft);
+    --soft-mint-deep: #7a9a1f;
     --soft-sand: #f3efe6;
     --soft-sand-deep: #8a7355;
-    --soft-sky: #e8f1f5;
-    --soft-sky-deep: #3d6b7a;
+    --soft-sky: color-mix(in srgb, var(--brand-lime-soft) 35%, white);
+    --soft-sky-deep: #6b7a3a;
     --soft-rose: #f5ebe8;
     --soft-rose-deep: #9a5f52;
     --progress-fill: linear-gradient(
       90deg,
-      #0d6b5c 0%,
-      #2a9d8f 55%,
-      #e9c46a 100%
+      #7a9a1f 0%,
+      var(--brand-lime) 55%,
+      var(--brand-lime-soft) 100%
     );
-    --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-      0 4px 16px rgba(15, 23, 42, 0.03);
-    --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
-    color: #132327;
+    --card-shadow: 0 1px 2px rgba(67, 71, 56, 0.04),
+      0 4px 16px rgba(67, 71, 56, 0.03);
+    --card-shadow-hover: 0 4px 20px rgba(67, 71, 56, 0.08);
+    color: var(--brand-carbon);
   }
 
-  /* Dark mode: keep cards light (white/teal), but header text readable on dark background */
+  /*
+   * Dark dashboard-brand: EXPLICIT cool-slate values (never --x: var(--x) —
+   * circular refs keep light white surfaces).
+   */
   .dark .dashboard-brand,
   [data-theme="dark"] .dashboard-brand {
-    /* Match default dark tokens for text outside cards */
     --foreground: #f1f5f9;
     --muted: #94a3b8;
     --muted-foreground: #94a3b8;
-
-    /* Use dark surfaces so cards don't become pure white */
     --border: #2a3140;
     --separator: #252b38;
-
-    --primary: #0d6b5c;
-    --primary-foreground: #ffffff;
-    --accent: #0d6b5c;
-    --accent-foreground: #ffffff;
-
+    --primary: #b5d43b;
+    --primary-foreground: #0b0e13;
+    --accent: #b5d43b;
+    --accent-foreground: #0b0e13;
     --surface: #12161e;
     --surface-foreground: #f1f5f9;
     --surface-secondary: #1a2030;
     --surface-secondary-foreground: #e2e8f0;
     --surface-tertiary: #222a3a;
     --surface-tertiary-foreground: #e2e8f0;
-
     --secondary: #1a2030;
     --secondary-foreground: #e2e8f0;
+    --success: #a3e635;
+    --brand-soft-lime: color-mix(in srgb, #b5d43b 14%, #1a2030);
+    --soft-mint: color-mix(in srgb, #b5d43b 12%, #1a2030);
+    --soft-mint-deep: #a3e635;
+    --soft-sky: color-mix(in srgb, #b5d43b 8%, #1a2030);
+    --soft-sky-deep: #b5d43b;
+    --progress-fill: linear-gradient(
+      90deg,
+      #7a9a1f 0%,
+      #b5d43b 55%,
+      #d9ef82 100%
+    );
+    --card-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 8px 32px rgba(0, 0, 0, 0.35);
+    --card-shadow-hover:
+      0 0 0 1px rgba(255, 255, 255, 0.07),
+      0 12px 40px rgba(0, 0, 0, 0.45);
+    color: #f1f5f9;
   }
 
   .dark .dashboard-brand .dashboard-card,
   [data-theme="dark"] .dashboard-brand .dashboard-card {
-    --foreground: #f1f5f9;
-    --muted: #94a3b8;
-    --muted-foreground: #94a3b8;
-    --separator: #252b38;
+    background: #12161e;
+    border-color: #2a3140;
+    color: #f1f5f9;
   }
 
   .dashboard-brand .dashboard-card {
@@ -736,15 +764,14 @@ body {
     background: var(--surface-secondary);
   }
 
-  @media (min-width: 640px) {
-    .dark .dashboard-shell,
-    [data-theme="dark"] .dashboard-shell {
-      background: linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--surface) 96%, #fff 4%) 0%,
-        var(--surface) 100%
-      );
-    }
+  .dark .dashboard-shell,
+  [data-theme="dark"] .dashboard-shell {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 96%, #fff 4%) 0%,
+      var(--surface) 100%
+    );
+    border-color: var(--border);
   }
 }
 

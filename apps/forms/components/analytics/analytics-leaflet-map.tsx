@@ -11,7 +11,7 @@ import { IRAQ_GOVERNORATE_NAMES } from '@/lib/iraq-governorate-geo';
 import { formatNumber } from '@/lib/dashboard-format';
 
 const COLOR_MIN = '#dbeafe';
-const COLOR_MAX = '#3b82f6';
+const COLOR_MAX = '#b5d43b';
 const COLOR_BORDER = '#94a3b8';
 
 const WORLD_GEO_URL =
@@ -215,7 +215,7 @@ export default function AnalyticsLeafletMap({
     const defaultStyle = styleFeature(feature);
 
     path.bindTooltip(
-      `<div class="text-center font-sans" dir="rtl"><strong class="block mb-1">${name}</strong><span dir="ltr" class="inline-block text-[#3b82f6] font-bold">${formatNumber(value)}</span> <span class="text-xs text-gray-500">${metric === 'views' ? 'مشاهدة' : 'استجابة'}</span></div>`,
+      `<div class="text-center font-sans" dir="rtl"><strong class="block mb-1">${name}</strong><span dir="ltr" class="inline-block text-[#b5d43b] font-bold">${formatNumber(value)}</span> <span class="text-xs text-gray-500">${metric === 'views' ? 'مشاهدة' : 'استجابة'}</span></div>`,
       {
         sticky: false,
         direction: 'top',

@@ -76,9 +76,9 @@ export function AnalyticsOverviewView() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64 rounded-full" />
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-[7.25rem] rounded-2xl sm:h-28 sm:rounded-3xl" />
+            <Skeleton key={i} className="h-[7.25rem] rounded-3xl" />
           ))}
         </div>
         <Skeleton className="h-56 rounded-2xl sm:h-64 sm:rounded-3xl" />
@@ -118,7 +118,7 @@ export function AnalyticsOverviewView() {
         actions={<AnalyticsPeriodPicker value={days} onChange={setDays} />}
       />
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         <DashboardMetricCard
           icon={Eye}
           label="المشاهدات"

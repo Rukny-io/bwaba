@@ -55,8 +55,8 @@ export function HelpLinkChip({ href, label, external }: HelpLinkChipProps) {
     external || href.startsWith('http') || href.startsWith('mailto:');
 
   const className = cn(
-    'inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/80',
-    'bg-[var(--surface-secondary)]/60 px-3 py-1.5 text-xs font-semibold',
+    'inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/60',
+    'bg-[var(--surface-secondary)]/50 px-3 py-1.5 text-xs font-semibold',
     'text-[var(--foreground)] transition-colors',
     'hover:border-[var(--primary)]/30 hover:bg-[var(--primary)]/8 hover:text-[var(--primary)]',
   );

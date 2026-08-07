@@ -37,7 +37,7 @@ export function SettingsNotificationsSection() {
           {CATEGORY_ORDER.map((key) => (
             <div
               key={key}
-              className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5"
+              className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5"
             >
               <div className="min-w-0 space-y-1">
                 <p className="text-sm font-medium text-[var(--foreground)]">
@@ -64,7 +64,7 @@ export function SettingsNotificationsSection() {
           ))}
         </div>
 
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5">
+        <div className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
           <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-[var(--foreground)]">
               تنبيه داخل التطبيق (Toast)
@@ -86,7 +86,7 @@ export function SettingsNotificationsSection() {
           </Switch>
         </div>
 
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5">
+        <div className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               <Smartphone className="size-4 text-[var(--muted-foreground)]" />
@@ -116,7 +116,7 @@ export function SettingsNotificationsSection() {
 
         <Link
           href={`${APP_BASE}/notifications`}
-          className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/30 px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)]/60"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/30 px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)]/60"
         >
           <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-[var(--foreground)]">
@@ -129,7 +129,7 @@ export function SettingsNotificationsSection() {
           <Bell className="size-4 shrink-0 text-[var(--muted-foreground)]" />
         </Link>
 
-        <div className="flex gap-3 rounded-2xl border border-[var(--border)]/60 px-4 py-3.5">
+        <div className="flex gap-3 rounded-2xl border border-[var(--border)] px-4 py-3.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
             <Mail className="size-4" strokeWidth={1.8} />
           </div>

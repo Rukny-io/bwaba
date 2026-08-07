@@ -17,7 +17,9 @@
 9. [ملاحظات التنفيذ الفني](#9-ملاحظات-التنفيذ-الفني)
 10. [قسم Workspace (البريد المخصص)](#10-قسم-workspace-البريد-المخصص)
 
-> **تسعير Workspace التفصيلي:** [Documents/workspace/WORKSPACE_PRICING.md](../workspace/WORKSPACE_PRICING.md) — مصدر الحقيقة لحدود الدومينات وصناديق البريد.
+> **تسعير Workspace التفصيلي:** [Documents/workspace/WORKSPACE_PRICING.md](../workspace/WORKSPACE_PRICING.md) — مصدر الحقيقة لحدود الدومينات وصناديق البريد.  
+> **نموذج الأرباح الموحّد (SendGrid + فريق + هامش):** [Documents/workspace/RUKNY_PROFIT_MODEL.md](../workspace/RUKNY_PROFIT_MODEL.md).  
+> **إعداد SendGrid (مزوّد الإطلاق):** [Documents/workspace/WORKSPACE_SENDGRID_SETUP.md](../workspace/WORKSPACE_SENDGRID_SETUP.md).
 
 ---
 

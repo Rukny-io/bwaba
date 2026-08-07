@@ -574,14 +574,7 @@ export class AuthController {
     );
 
     const base = this.resolveRedirectBase(origin);
-    // 🔒 F-03: deliver the one-time code in the URL fragment (#) instead of the
-    // query string. Fragments are not sent in Referer headers, not stored in
-    // server/proxy access logs, and are less exposed in shared browser history.
-    const fragment = new URLSearchParams({ code });
-    if (nextUrl) {
-      fragment.set('next', nextUrl);
-    }
-    res.redirect(`${base}/callback#${fragment.toString()}`);
+    res.redirect(this.buildOAuthHandoffRedirect(base, code, nextUrl));
   }
 
   @Post('oauth/exchange')
@@ -792,14 +785,7 @@ export class AuthController {
     );
 
     const base = this.resolveRedirectBase(origin);
-    // 🔒 F-03: deliver the one-time code in the URL fragment (#) instead of the
-    // query string. Fragments are not sent in Referer headers, not stored in
-    // server/proxy access logs, and are less exposed in shared browser history.
-    const fragment = new URLSearchParams({ code });
-    if (nextUrl) {
-      fragment.set('next', nextUrl);
-    }
-    res.redirect(`${base}/callback#${fragment.toString()}`);
+    res.redirect(this.buildOAuthHandoffRedirect(base, code, nextUrl));
   }
 
   @Get('facebook')
@@ -860,14 +846,7 @@ export class AuthController {
     );
 
     const base = this.resolveRedirectBase(origin);
-    // 🔒 F-03: deliver the one-time code in the URL fragment (#) instead of the
-    // query string. Fragments are not sent in Referer headers, not stored in
-    // server/proxy access logs, and are less exposed in shared browser history.
-    const fragment = new URLSearchParams({ code });
-    if (nextUrl) {
-      fragment.set('next', nextUrl);
-    }
-    res.redirect(`${base}/callback#${fragment.toString()}`);
+    res.redirect(this.buildOAuthHandoffRedirect(base, code, nextUrl));
   }
 
   @Get('github')
@@ -928,11 +907,25 @@ export class AuthController {
     );
 
     const base = this.resolveRedirectBase(origin);
-    const fragment = new URLSearchParams({ code });
+    res.redirect(this.buildOAuthHandoffRedirect(base, code, nextUrl));
+  }
+
+  /**
+   * Deliver the one-time handoff code via query string (primary) and hash
+   * (compat). Query is required for reliable Next.js App Router clients — the
+   * fragment is invisible to the server and is easy to lose across remounts.
+   */
+  private buildOAuthHandoffRedirect(
+    base: string,
+    code: string,
+    nextUrl?: string | null,
+  ): string {
+    const dest = new URL(`${base.replace(/\/+$/, '')}/callback`);
+    dest.searchParams.set('code', code);
     if (nextUrl) {
-      fragment.set('next', nextUrl);
+      dest.searchParams.set('next', nextUrl);
     }
-    res.redirect(`${base}/callback#${fragment.toString()}`);
+    return dest.toString();
   }
 
   /**

@@ -40,9 +40,14 @@ async function authFetch<T>(
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = new Error(
-      (data as { message?: string }).message || 'Request failed',
-    ) as Error & { status: number; data: unknown };
+    const rawMessage = (data as { message?: string | string[] }).message;
+    const message = Array.isArray(rawMessage)
+      ? rawMessage[0]
+      : rawMessage || 'Request failed';
+    const error = new Error(message) as Error & {
+      status: number;
+      data: unknown;
+    };
     error.status = response.status;
     error.data = data;
     throw error;
@@ -72,6 +77,26 @@ export async function exchangeCode(code: string): Promise<ExchangeCodeResponse> 
     method: 'POST',
     body: JSON.stringify({ code }),
   });
+}
+
+/**
+ * Deduplicate one-time code exchange across React Strict Mode remounts /
+ * concurrent effects. The Redis code is single-use; a second POST always 400s.
+ */
+const exchangeInFlight = new Map<string, Promise<ExchangeCodeResponse>>();
+
+export function exchangeCodeOnce(code: string): Promise<ExchangeCodeResponse> {
+  const existing = exchangeInFlight.get(code);
+  if (existing) return existing;
+
+  const pending = exchangeCode(code).finally(() => {
+    window.setTimeout(() => {
+      exchangeInFlight.delete(code);
+    }, 30_000);
+  });
+
+  exchangeInFlight.set(code, pending);
+  return pending;
 }
 
 export async function logout(): Promise<void> {

@@ -43,47 +43,12 @@ import { FormTeamRoleIcon, FormTeamRoleSelect } from '@/components/team/form-tea
 import { TeamUpgradeDialog } from '@/components/team/team-upgrade-dialog';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
+import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
 import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { ACCOUNTS_URL } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
 const BILLING_URL = `${ACCOUNTS_URL.replace(/\/$/, '')}/manage/billing`;
-
-function TeamSummaryCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  accent = false,
-}: {
-  icon: typeof Users;
-  label: string;
-  value: string | number;
-  hint: string;
-  accent?: boolean;
-}) {
-  return (
-    <DashboardSurface
-      padding="sm"
-      className={cn('flex items-center gap-3', accent && 'ring-1 ring-[var(--primary)]/10')}
-    >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-        <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[11px] text-[var(--muted-foreground)]">{label}</p>
-        <p
-          className="text-lg font-bold tabular-nums text-[var(--foreground)]"
-          dir="ltr"
-          lang="en"
-        >
-          {value}
-        </p>
-        <p className="text-[10px] text-[var(--muted-foreground)]/80">{hint}</p>
-      </div>
-    </DashboardSurface>
-  );
-}
 
 function statusPillClassName(status: string) {
   return cn(
@@ -326,31 +291,34 @@ export function TeamView() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <TeamSummaryCard
+      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <DashboardMetricCard
           icon={Users}
           label="أعضاء نشطون"
           value={accepted.length}
-          hint="يملكون وصولاً فعلياً إلى نماذجك"
-          accent
+          comparisonPrimary="يملكون وصولاً فعلياً"
+          comparisonSecondary="إلى نماذجك"
         />
-        <TeamSummaryCard
+        <DashboardMetricCard
           icon={Clock3}
           label="دعوات صادرة"
           value={pendingOutgoing.length}
-          hint="بانتظار قبول من دعوتهم"
+          comparisonPrimary="بانتظار القبول"
+          comparisonSecondary="من دعوتهم"
         />
-        <TeamSummaryCard
+        <DashboardMetricCard
           icon={Mail}
           label="دعوات واردة"
           value={invitations.length}
-          hint="مساحات عمل دعتك للانضمام"
+          comparisonPrimary="مساحات عمل دعتك"
+          comparisonSecondary="للانضمام"
         />
-        <TeamSummaryCard
+        <DashboardMetricCard
           icon={Building2}
           label="فرق منضم إليها"
           value={joinedWorkspaces.length}
-          hint="مساحات عمل تشاركك الوصول"
+          comparisonPrimary="مساحات عمل"
+          comparisonSecondary="تشاركك الوصول"
         />
       </div>
 

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { getDashboardUser } from '@/lib/dal';
 import { Sidebar } from '@/components/app/sidebar';
 import { WorkspaceDashboardShell } from '@/components/app/workspace-dashboard-shell';
-import { DashboardMobileDock } from '@/components/app/dashboard-mobile-dock';
 
 export default async function AppDashboardLayout({
   children,
@@ -16,13 +15,12 @@ export default async function AppDashboardLayout({
       <Sidebar
         avatarUrl={user.avatar}
         userName={user.name ?? user.username ?? user.email}
+        userEmail={user.email}
       />
 
-      <div className="flex min-w-0 flex-1 gap-2 p-2 sm:m-2 sm:ms-[82px]">
+      <div className="flex min-w-0 flex-1 transition-[margin] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:m-2 sm:ms-[var(--dashboard-sidebar-gutter)]">
         <WorkspaceDashboardShell>{children}</WorkspaceDashboardShell>
       </div>
-
-      <DashboardMobileDock />
     </div>
   );
 }

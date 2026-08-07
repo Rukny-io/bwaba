@@ -4,12 +4,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Skeleton, Spinner } from '@heroui/react';
 import {
+  CalendarClock,
+  CircleDot,
   Copy,
   ExternalLink,
-  FileText,
   Inbox,
   Layers,
+  ListChecks,
+  PencilLine,
+  Radio,
   Trash2,
+  Zap,
 } from 'lucide-react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
@@ -30,13 +35,18 @@ import {
   getFormTypeLabel,
   getPublicFormUrl,
 } from '@/lib/forms-format';
+import { formatNumber } from '@/lib/dashboard-format';
 import { FormFieldsList } from '@/components/forms/form-detail/form-fields-list';
 import { FormMultiStepPanel } from '@/components/forms/form-detail/form-multi-step-panel';
 import { FormPublishSettingsPanel } from '@/components/forms/form-detail/form-publish-settings-panel';
 import { FormOrphanedSubmissionsExportPanel } from '@/components/forms/form-detail/form-orphaned-submissions-export-panel';
 import { fieldInputClass } from '@/components/forms/shared/form-field-input-class';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import {
+  DashboardMetricCard,
+  type DashboardMetricChipTone,
+} from '@/components/app/dashboard-metric-card';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import { cn } from '@/lib/utils';
 import {
   canAccessFormWorkspaceTab,
@@ -44,25 +54,18 @@ import {
   resolveFormAccessRole,
 } from '@/lib/form-team-permissions';
 
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="mb-4">
-      <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)] sm:text-[13px]">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
+function statusChipTone(status: FormStatus): DashboardMetricChipTone {
+  if (status === 'PUBLISHED') return 'success';
+  if (status === 'CLOSED') return 'warning';
+  if (status === 'ARCHIVED') return 'danger';
+  return 'neutral';
+}
+
+function statusChipLabel(status: FormStatus): string {
+  if (status === 'PUBLISHED') return 'مباشر';
+  if (status === 'CLOSED') return 'موقوف';
+  if (status === 'ARCHIVED') return 'مؤرشف';
+  return 'تحرير';
 }
 
 export function FormDetailView({ formId }: { formId: string }) {
@@ -174,14 +177,18 @@ export function FormDetailView({ formId }: { formId: string }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-5 sm:gap-6">
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="flex flex-col gap-3.5 sm:gap-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-[4.5rem] rounded-2xl sm:rounded-3xl" />
+            <Skeleton
+              key={i}
+              className="min-h-[7.5rem] rounded-3xl sm:min-h-[8rem]"
+            />
           ))}
         </div>
-        <Skeleton className="h-48 w-full rounded-2xl sm:rounded-3xl" />
-        <Skeleton className="h-40 w-full rounded-2xl sm:rounded-3xl" />
+        <Skeleton className="h-20 w-full rounded-3xl" />
+        <Skeleton className="h-52 w-full rounded-3xl" />
+        <Skeleton className="h-40 w-full rounded-3xl" />
       </div>
     );
   }
@@ -205,119 +212,111 @@ export function FormDetailView({ formId }: { formId: string }) {
 
   const summaryItems = [
     {
-      icon: FileText,
+      icon: CircleDot,
       label: 'الحالة',
       value: getFormStatusLabel(form.status),
-      hint: getFormTypeLabel(form.type),
-      tabular: false,
+      comparisonPrimary: getFormTypeLabel(form.type),
+      comparisonSecondary: 'حالة النشر',
+      tabular: false as const,
+      chip: statusChipLabel(form.status),
+      chipTone: statusChipTone(form.status),
     },
     {
       icon: Inbox,
       label: 'الاستجابات',
-      value: String(submissionCount),
-      hint: 'إجمالي الردود',
-      tabular: true,
+      value: formatNumber(submissionCount),
+      comparisonPrimary: 'إجمالي الردود',
+      comparisonSecondary: 'كل الوقت',
+      tabular: true as const,
+      chip: undefined,
+      chipTone: undefined,
     },
     {
       icon: Layers,
       label: 'الحقول',
-      value: String(fieldCount),
-      hint: form.isMultiStep ? 'متعدد الخطوات' : 'خطوة واحدة',
-      tabular: true,
+      value: formatNumber(fieldCount),
+      comparisonPrimary: form.isMultiStep ? 'متعدد الخطوات' : 'خطوة واحدة',
+      comparisonSecondary: 'بنية النموذج',
+      tabular: true as const,
+      chip: form.isMultiStep ? 'متعدد' : 'بسيط',
+      chipTone: (form.isMultiStep ? 'success' : 'neutral') as DashboardMetricChipTone,
     },
     {
-      icon: ExternalLink,
+      icon: CalendarClock,
       label: 'آخر تحديث',
       value: formatFormDate(form.updatedAt),
-      hint: `/${form.slug}`,
-      tabular: false,
+      comparisonPrimary: `/${form.slug}`,
+      comparisonSecondary: 'رابط النموذج',
+      tabular: false as const,
+      chip: undefined,
+      chipTone: undefined,
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {summaryItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <DashboardSurface
-              key={item.label}
-              padding="sm"
-              className="flex items-center gap-3"
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-                <Icon size={16} strokeWidth={1.7} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] text-[var(--muted-foreground)]">
-                  {item.label}
-                </p>
-                <p
-                  className={cn(
-                    'truncate text-base font-bold text-[var(--foreground)] sm:text-lg',
-                    item.tabular && 'tabular-nums',
-                  )}
-                  dir={item.tabular ? 'ltr' : undefined}
-                  lang={item.tabular ? 'en' : undefined}
-                >
-                  {item.value}
-                </p>
-                <p className="truncate text-[10px] text-[var(--muted-foreground)]/80">
-                  {item.hint}
-                </p>
-              </div>
-            </DashboardSurface>
-          );
-        })}
+    <div className="flex flex-col gap-3.5 sm:gap-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        {summaryItems.map((item) => (
+          <DashboardMetricCard
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            value={item.value}
+            comparisonPrimary={item.comparisonPrimary}
+            comparisonSecondary={item.comparisonSecondary}
+            tabular={item.tabular}
+            chip={item.chip}
+            chipTone={item.chipTone}
+          />
+        ))}
       </div>
 
-      <DashboardSurface padding="sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-[13px] text-[var(--muted-foreground)]">
-            إجراءات سريعة للنموذج
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {form.status === 'PUBLISHED' ? (
-              <a
-                href={getPublicFormUrl(form.slug)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="tertiary" size="sm" className="rounded-xl">
-                  <ExternalLink className="size-4" />
-                  معاينة
-                </Button>
-              </a>
-            ) : null}
-            <Button
-              variant="tertiary"
-              size="sm"
-              className="rounded-xl"
-              onPress={() => void handleDuplicate()}
-              isDisabled={isShared}
+      <SettingsSectionCard
+        icon={Zap}
+        title="إجراءات سريعة"
+        description="معاينة، نسخ، أو حذف النموذج"
+      >
+        <div className="flex flex-wrap gap-2">
+          {form.status === 'PUBLISHED' ? (
+            <a
+              href={getPublicFormUrl(form.slug)}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <Copy className="size-4" />
-              نسخ
-            </Button>
-            <Button
-              variant="tertiary"
-              size="sm"
-              className="rounded-xl"
-              onPress={() => setDeleteOpen(true)}
-              isDisabled={isShared}
-            >
-              <Trash2 className="size-4" />
-              حذف
-            </Button>
-          </div>
+              <Button variant="tertiary" size="sm" className="rounded-xl">
+                <ExternalLink className="size-4" />
+                معاينة
+              </Button>
+            </a>
+          ) : null}
+          <Button
+            variant="tertiary"
+            size="sm"
+            className="rounded-xl"
+            onPress={() => void handleDuplicate()}
+            isDisabled={isShared}
+          >
+            <Copy className="size-4" />
+            نسخ
+          </Button>
+          <Button
+            variant="tertiary"
+            size="sm"
+            className="rounded-xl"
+            onPress={() => setDeleteOpen(true)}
+            isDisabled={isShared}
+          >
+            <Trash2 className="size-4" />
+            حذف
+          </Button>
         </div>
-      </DashboardSurface>
+      </SettingsSectionCard>
 
-      <DashboardSurface>
-        <SectionHeading
-          title="الإعدادات الأساسية"
-          description="عنوان النموذج ووصفه الظاهر للمستجيبين"
-        />
+      <SettingsSectionCard
+        icon={PencilLine}
+        title="الإعدادات الأساسية"
+        description="عنوان النموذج ووصفه الظاهر للمستجيبين"
+      >
         <form
           onSubmit={(e) => void handleSave(e)}
           className="max-w-lg space-y-4"
@@ -352,11 +351,16 @@ export function FormDetailView({ formId }: { formId: string }) {
           <p className="text-xs text-[var(--muted-foreground)]" dir="ltr">
             /{form.slug}
           </p>
-          <Button type="submit" variant="primary" isDisabled={saving}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="rounded-full px-6"
+            isDisabled={saving}
+          >
             {saving ? 'جاري الحفظ…' : 'حفظ التغييرات'}
           </Button>
         </form>
-      </DashboardSurface>
+      </SettingsSectionCard>
 
       <FormPublishSettingsPanel
         form={form}
@@ -370,11 +374,11 @@ export function FormDetailView({ formId }: { formId: string }) {
         onSaved={(next) => setForm((prev) => withFormSharingMeta(next, prev))}
       />
 
-      <DashboardSurface>
-        <SectionHeading
-          title="الحالة والنشر"
-          description="غيّر حالة النموذج بين مسودة ومنشور ومغلق"
-        />
+      <SettingsSectionCard
+        icon={Radio}
+        title="الحالة والنشر"
+        description="غيّر حالة النموذج بين مسودة ومنشور ومغلق"
+      >
         <div className="flex flex-wrap gap-2">
           {(['DRAFT', 'PUBLISHED', 'CLOSED'] as FormStatus[]).map((s) => (
             <Button
@@ -394,15 +398,15 @@ export function FormDetailView({ formId }: { formId: string }) {
             </Button>
           ))}
         </div>
-      </DashboardSurface>
+      </SettingsSectionCard>
 
-      <DashboardSurface>
-        <SectionHeading
-          title={`الحقول (${fieldCount})`}
-          description="عرض الحقول الحالية — عدّلها من المحرّر"
-        />
+      <SettingsSectionCard
+        icon={ListChecks}
+        title={`الحقول (${fieldCount})`}
+        description="عرض الحقول الحالية — عدّلها من المحرّر"
+      >
         <FormFieldsList fields={form.fields ?? []} formSlug={form.slug} />
-      </DashboardSurface>
+      </SettingsSectionCard>
 
       <FormDeleteDialog
         isOpen={deleteOpen}

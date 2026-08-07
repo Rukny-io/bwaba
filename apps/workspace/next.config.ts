@@ -1,20 +1,15 @@
 import type { NextConfig } from "next";
-import { thmanyahFontResolveAliases } from '../../packages/Thmanyah-Font-Family/next-resolve-aliases';
-
-const thmanyahAliases = thmanyahFontResolveAliases();
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ['@rukny/thmanyah-font'],
+  transpilePackages: [
+    "@rukny/thmanyah-font",
+    "@heroui/react",
+    "@heroui/styles",
+  ],
   turbopack: {
-    resolveAlias: thmanyahAliases,
-  },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      ...thmanyahAliases,
-    };
-    return config;
+    root: path.resolve(__dirname),
   },
 };
 

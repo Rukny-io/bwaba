@@ -1,65 +1,100 @@
-import Link from 'next/link';
 import { Globe, Inbox, Mail } from 'lucide-react';
+import {
+  DashboardHomeActivity,
+  DashboardHomeRecentDomains,
+  DashboardHomeRecentMessages,
+} from '@/components/app/dashboard-home-panels';
+import { ComposeMailButton } from '@/components/app/compose-mail-button';
+import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
+import { DashboardQuickAction } from '@/components/app/dashboard-quick-action';
 import { APP_BASE } from '@/components/app/nav-config';
+import { getDashboardUser } from '@/lib/dal';
+import { getWorkspaceDashboardHomeData } from '@/lib/workspace-dashboard-data';
 
-const quickLinks = [
-  {
-    href: `${APP_BASE}/domains`,
-    icon: Globe,
-    title: 'ربط دومين',
-    description: 'أضف دومينك وتحقق من سجلات DNS',
-  },
-  {
-    href: `${APP_BASE}/mailboxes`,
-    icon: Mail,
-    title: 'صناديق البريد',
-    description: 'حتى 3 صناديق في باقة الاحترافية',
-  },
-  {
-    href: `${APP_BASE}/mail`,
-    icon: Inbox,
-    title: 'صندوق الوارد',
-    description: 'استقبل ورد على رسائل عملائك',
-  },
-];
+export default async function AppHomePage() {
+  const [user, home] = await Promise.all([
+    getDashboardUser(),
+    getWorkspaceDashboardHomeData(),
+  ]);
+  const greeting = user.name ?? user.email;
+  const { metrics, recentDomains, recentMessages, recentActivity } = home;
 
-export default function DashboardHomePage() {
   return (
-    <section className="w-full pt-6 sm:pt-8">
-      <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-        مرحباً بك في Workspace
-      </h1>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-        اربط دومينك، أنشئ صناديق بريد مخصصة، وأدر رسائلك من مكان واحد متكامل
-        مع منصة ركني.
-      </p>
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6 dashboard-brand">
+      <DashboardPageHeader
+        title="لوحة التحكم"
+        description={`مرحباً، ${greeting} — نظرة عامة على بريدك ودوميناتك.`}
+        actions={<ComposeMailButton className="hidden sm:inline-flex" />}
+      />
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
-        {quickLinks.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="dashboard-card dashboard-card-interactive group rounded-3xl p-4 transition-shadow sm:p-5"
-            >
-              <div className="mb-3 flex size-10 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)] transition-colors group-hover:bg-[var(--foreground)] group-hover:text-[var(--background)]">
-                <Icon size={20} strokeWidth={1.75} />
-              </div>
-              <h2 className="text-sm font-semibold text-[var(--foreground)]">
-                {item.title}
-              </h2>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-                {item.description}
-              </p>
-            </Link>
-          );
-        })}
+      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <DashboardMetricCard
+          icon={Globe}
+          label="الدومينات المربوطة"
+          value={metrics.linkedDomains.value}
+          chip={metrics.linkedDomains.chip}
+          chipTone={metrics.linkedDomains.chipTone}
+          comparisonPrimary="دومينات مُحقَّقة"
+          comparisonSecondary="جاهزة للبريد"
+        />
+        <DashboardMetricCard
+          icon={Mail}
+          label="صناديق البريد"
+          value={metrics.mailboxes.value}
+          chip={metrics.mailboxes.chip}
+          chipTone={metrics.mailboxes.chipTone}
+          comparisonPrimary="صناديق نشطة"
+          comparisonSecondary="في باقتك الحالية"
+        />
+        <DashboardMetricCard
+          icon={Inbox}
+          label="رسائل غير مقروءة"
+          value={metrics.unreadMessages.value}
+          chip={metrics.unreadMessages.chip}
+          chipTone={metrics.unreadMessages.chipTone}
+          comparisonPrimary="في صندوق الوارد"
+          comparisonSecondary="بانتظار الرد"
+        />
+        <DashboardMetricCard
+          icon={Mail}
+          label="معدل التسليم"
+          value={metrics.deliveryRate.value}
+          chip={metrics.deliveryRate.chip}
+          chipTone={metrics.deliveryRate.chipTone}
+          tabular={false}
+          comparisonPrimary="إرسال ناجح"
+          comparisonSecondary="آخر 30 يوماً"
+        />
       </div>
 
-      <p className="mt-8 text-xs text-[var(--muted-foreground)]">
-        MVP — ربط دومين · 3 صناديق · Inbox/Compose
-      </p>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+        <DashboardHomeRecentDomains domains={recentDomains} />
+        <DashboardHomeRecentMessages messages={recentMessages} />
+        <DashboardHomeActivity items={recentActivity} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+        <DashboardQuickAction
+          href={`${APP_BASE}/domains`}
+          icon={Globe}
+          title="ربط دومين"
+          description="أضف دومينك وتحقق من سجلات MX و SPF و DKIM."
+        />
+        <DashboardQuickAction
+          href={`${APP_BASE}/mailboxes`}
+          icon={Mail}
+          title="صناديق البريد"
+          description="أنشئ حتى 3 صناديق بريد مخصصة على دومينك."
+        />
+        <DashboardQuickAction
+          href={`${APP_BASE}/mail`}
+          icon={Inbox}
+          title="صندوق الوارد"
+          description="استقبل ورد على رسائل عملائك من مكان واحد."
+          className="sm:col-span-2 lg:col-span-1"
+        />
+      </div>
     </section>
   );
 }

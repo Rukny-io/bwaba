@@ -85,7 +85,7 @@
   /* ── Geometry & Typography ── */
   --radius: 1rem;
   --field-radius: 1rem;
-  --dashboard-sidebar-gutter: 5rem;
+  --dashboard-sidebar-gutter: 16rem;
   --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
   --font-arabic: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
   --ease-liquid: cubic-bezier(0.32, 0.72, 0, 1);

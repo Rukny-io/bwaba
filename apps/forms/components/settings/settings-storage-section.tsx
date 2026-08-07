@@ -85,38 +85,37 @@ function StorageContent({ storage }: { storage: StorageUsageSummary }) {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-4 sm:px-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/35 px-3.5 py-3.5 sm:rounded-3xl sm:px-4 sm:py-4">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p
-              className="text-[2rem] font-bold leading-none tabular-nums text-[var(--foreground)] sm:text-[2.25rem]"
+              className="text-[1.75rem] font-bold leading-none tabular-nums text-[var(--foreground)] sm:text-[2rem]"
               dir="ltr"
               lang="en"
             >
               {storage.usedLabel}
             </p>
-            <p className="mt-1.5 text-[13px] text-[var(--muted-foreground)]">
+            <p className="mt-1.5 text-[12px] text-[var(--muted-foreground)]">
               من أصل{' '}
               <span className="font-medium text-[var(--foreground)]" dir="ltr" lang="en">
                 {storage.limitLabel}
-              </span>{' '}
-              (S3)
+              </span>
             </p>
           </div>
           <div className="text-end">
             <p
-              className="text-2xl font-bold tabular-nums text-[var(--foreground)]"
+              className="text-xl font-bold tabular-nums text-[var(--foreground)] sm:text-2xl"
               dir="ltr"
               lang="en"
             >
               {storage.percentage}%
             </p>
-            <p className="text-[11px] text-[var(--muted-foreground)]">مستخدم</p>
+            <p className="text-[10px] text-[var(--muted-foreground)]">مستخدم</p>
           </div>
         </div>
 
         <div
-          className="h-3 overflow-hidden rounded-full bg-[var(--surface-secondary)]"
+          className="h-2 overflow-hidden rounded-full bg-[var(--surface-secondary)]"
           role="progressbar"
           aria-valuenow={storage.percentage}
           aria-valuemin={0}

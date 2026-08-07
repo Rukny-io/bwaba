@@ -12,14 +12,6 @@ import { ACCOUNTS_URL } from '@/lib/config';
 
 const ACCOUNTS_BASE = ACCOUNTS_URL.replace(/\/$/, '');
 
-function accountsHostLabel(): string {
-  try {
-    return new URL(ACCOUNTS_BASE).host;
-  } catch {
-    return 'accounts';
-  }
-}
-
 const ACCOUNT_LINKS = [
   {
     href: `${ACCOUNTS_BASE}/manage`,
@@ -58,33 +50,28 @@ export function SettingsAccountSection() {
     <SettingsSectionCard
       icon={UserCircle}
       title="حساب Rukny"
-      description="إعدادات الحساب المشتركة — الصورة الشخصية، الأمان، والاشتراك — تُدار من تطبيق الحسابات."
+      description="إعدادات الحساب المشتركة — الصورة، الأمان، والاشتراك — تُدار من تطبيق الحسابات."
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <a
           href={`${ACCOUNTS_BASE}/manage`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/30 px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)]"
+          className="group flex items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
         >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--foreground)]">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
             <UserCircle className="size-5" strokeWidth={1.7} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              فتح إعدادات الحساب
-            </p>
-            <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-             إدارة حسابك الكامل
+            <p className="text-sm font-semibold">فتح إعدادات الحساب</p>
+            <p className="mt-0.5 text-[12px] opacity-80">
+              إدارة حسابك الكامل في تطبيق الحسابات
             </p>
           </div>
-          <ExternalLink
-            className="size-4 shrink-0 text-[var(--muted-foreground)] opacity-70"
-            aria-hidden
-          />
+          <ExternalLink className="size-4 shrink-0 opacity-80" aria-hidden />
         </a>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
           {ACCOUNT_LINKS.slice(1).map((item) => {
             const Icon = item.icon;
 
@@ -94,16 +81,16 @@ export function SettingsAccountSection() {
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/30 px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)]"
+                className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-3.5 py-3 transition-colors hover:bg-[var(--surface-secondary)]"
               >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--foreground)]">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
                   <Icon className="size-4" strokeWidth={1.8} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-[var(--foreground)]">
                     {item.title}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
+                  <p className="mt-0.5 line-clamp-2 text-[12px] text-[var(--muted-foreground)]">
                     {item.description}
                   </p>
                 </div>

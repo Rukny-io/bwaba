@@ -228,7 +228,7 @@ export function FormMultiStepPanel({
       <div className="space-y-5">
         <DashboardSurface
           padding="sm"
-          className="flex items-start justify-between gap-4 bg-[var(--surface-secondary)]/20"
+          className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
         >
           <div>
             <p className="text-sm font-medium">نموذج متعدد الخطوات</p>
@@ -251,7 +251,7 @@ export function FormMultiStepPanel({
           <>
             <DashboardSurface
               padding="sm"
-              className="flex items-start justify-between gap-4 bg-[var(--surface-secondary)]/20"
+              className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
             >
               <div>
                 <p className="text-sm font-medium">شريط التقدم</p>
@@ -285,7 +285,11 @@ export function FormMultiStepPanel({
               </div>
 
               {steps.map((step, index) => (
-                <DashboardSurface key={step.clientKey} padding="sm" className="space-y-3">
+                <DashboardSurface
+                  key={step.clientKey}
+                  padding="sm"
+                  className="space-y-3 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold">الخطوة {index + 1}</p>
                     {steps.length > 1 ? (
@@ -353,7 +357,12 @@ export function FormMultiStepPanel({
 
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
-        <Button variant="primary" isDisabled={busy} onPress={() => void handleSave()}>
+        <Button
+          variant="primary"
+          className="rounded-full px-6"
+          isDisabled={busy}
+          onPress={() => void handleSave()}
+        >
           {busy ? 'جاري الحفظ…' : 'حفظ إعدادات الأقسام'}
         </Button>
       </div>

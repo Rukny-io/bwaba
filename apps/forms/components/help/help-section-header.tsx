@@ -10,6 +10,7 @@ interface HelpSectionHeaderProps {
   action?: ReactNode;
 }
 
+/** Kept for light inline headings; prefer SettingsSectionCard for page sections. */
 export function HelpSectionHeader({
   title,
   description,
@@ -24,18 +25,18 @@ export function HelpSectionHeader({
         className,
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
         {Icon ? (
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)]/10 text-[var(--primary)]">
-            <Icon className="size-[18px]" strokeWidth={1.8} />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
+            <Icon className="size-4" strokeWidth={1.85} />
           </div>
         ) : null}
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight text-[var(--foreground)] sm:text-lg">
+          <h2 className="text-[14px] font-semibold text-[var(--foreground)] sm:text-[15px]">
             {title}
           </h2>
           {description ? (
-            <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
+            <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--muted-foreground)] sm:text-[12px]">
               {description}
             </p>
           ) : null}

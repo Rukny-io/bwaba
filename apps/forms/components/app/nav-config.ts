@@ -8,6 +8,7 @@ import {
   HelpCircle,
   Users,
 } from 'lucide-react';
+import { FORMS_CREATE_ENTRY_PATH } from '@/lib/forms-paths';
 
 export const APP_BASE = '/app';
 
@@ -19,6 +20,71 @@ export type NavItem = {
   exact?: boolean;
 };
 
+export type NavChild = {
+  href: string;
+  label: string;
+  exact?: boolean;
+};
+
+export type NavGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  children: NavChild[];
+  defaultOpen?: boolean;
+};
+
+export type SidebarNavEntry =
+  | ({ type: 'link' } & NavItem)
+  | ({ type: 'group' } & NavGroup);
+
+/** Desktop sidebar: leaf links + collapsible groups (like reference UI) */
+export const sidebarNavEntries: SidebarNavEntry[] = [
+  {
+    type: 'link',
+    href: APP_BASE,
+    icon: LayoutGrid,
+    label: 'لوحة التحكم',
+    exact: true,
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/analytics`,
+    icon: BarChart2,
+    label: 'تحليلات',
+  },
+  {
+    type: 'group',
+    id: 'forms',
+    label: 'النماذج',
+    icon: FileText,
+    defaultOpen: true,
+    children: [
+      { href: `${APP_BASE}/forms`, label: 'كل النماذج' },
+      { href: FORMS_CREATE_ENTRY_PATH, label: 'إنشاء نموذج' },
+    ],
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/templates`,
+    icon: LayoutTemplate,
+    label: 'قوالب',
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/team`,
+    icon: Users,
+    label: 'الفريق',
+  },
+];
+
+export const sidebarFooterItem: NavItem = {
+  href: `${APP_BASE}/settings`,
+  icon: Settings,
+  label: 'الإعدادات',
+};
+
+/** Flat items for mobile dock / simpler nav surfaces */
 export const primaryNavItems: NavItem[] = [
   { href: APP_BASE, icon: LayoutGrid, label: 'لوحة التحكم', exact: true },
   { href: `${APP_BASE}/forms`, icon: FileText, label: 'نماذجي' },
@@ -68,6 +134,12 @@ export function isNavItemActive(
   }
 
   return path === href || path.startsWith(`${href}/`);
+}
+
+export function isNavGroupActive(pathname: string, group: NavGroup): boolean {
+  return group.children.some((child) =>
+    isNavItemActive(pathname, child.href, child.exact),
+  );
 }
 
 export function resolvePageLabel(pathname: string): string {

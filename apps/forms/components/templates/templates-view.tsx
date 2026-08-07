@@ -73,7 +73,7 @@ function TemplatesSummary() {
   ];
 
   return (
-    <div className="grid auto-rows-fr grid-cols-2 gap-3.5 sm:gap-3 xl:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
       {items.map((item) => (
         <DashboardMetricCard
           key={item.label}

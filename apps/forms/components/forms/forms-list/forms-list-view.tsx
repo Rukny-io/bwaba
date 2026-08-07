@@ -74,9 +74,8 @@ function FormsListSummary({
 }) {
   if (viewMode === 'trash') {
     return (
-      <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid auto-rows-fr grid-cols-1 gap-2.5 sm:gap-3">
         <DashboardMetricCard
-          compact
           icon={Trash2}
           label="في السلة"
           value={String(listTotal)}
@@ -95,7 +94,6 @@ function FormsListSummary({
   return (
     <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
       <DashboardMetricCard
-        compact
         icon={FileText}
         label="النماذج النشطة"
         value={metrics.activeForms.value}
@@ -105,7 +103,6 @@ function FormsListSummary({
         comparisonSecondary="مقابل الشهر الماضي"
       />
       <DashboardMetricCard
-        compact
         icon={Inbox}
         label="إجمالي الاستجابات"
         value={metrics.submissions.value}
@@ -115,7 +112,6 @@ function FormsListSummary({
         comparisonSecondary="مقابل الشهر الماضي"
       />
       <DashboardMetricCard
-        compact
         icon={LayoutTemplate}
         label="نماذج مخصّصة"
         value={metrics.themedForms.value}
@@ -125,7 +121,6 @@ function FormsListSummary({
         comparisonSecondary="من إجمالي نماذجك"
       />
       <DashboardMetricCard
-        compact
         icon={BarChart2}
         label="معدل الإكمال"
         value={metrics.completionRate.value}
@@ -304,7 +299,7 @@ export function FormsListView({
         viewMode={viewMode}
       />
 
-      <DashboardSurface padding="sm" className="px-3 py-2.5 sm:px-4 sm:py-3">
+      <DashboardSurface padding="sm" className="px-3.5 py-3 sm:px-4 sm:py-3">
         <FormsListToolbar
           viewMode={viewMode}
           onViewModeChange={setViewMode}

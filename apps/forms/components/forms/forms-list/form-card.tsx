@@ -140,7 +140,7 @@ function FormCardComponent({
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group dashboard-card cursor-pointer rounded-3xl p-2.5 sm:rounded-3xl sm:p-3',
+        'group dashboard-card cursor-pointer rounded-2xl p-2.5 sm:rounded-3xl sm:p-3',
         'transition-[background-color,border-color,box-shadow] duration-200',
         'hover:border-[color-mix(in_srgb,var(--primary)_28%,var(--border))]',
         'hover:bg-[color-mix(in_srgb,var(--primary)_5%,var(--surface))]',

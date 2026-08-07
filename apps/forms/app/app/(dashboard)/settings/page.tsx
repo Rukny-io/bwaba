@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <section className="dashboard-page dashboard-section-stack">
+    <section className="dashboard-page flex flex-col gap-3.5 sm:gap-6 dashboard-brand">
       <SettingsView metrics={metrics} username={user.username} />
     </section>
   );

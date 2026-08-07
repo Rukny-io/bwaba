@@ -5,7 +5,6 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
-import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import type { FormsDashboardMetrics } from '@/lib/forms-dashboard-data';
 
 interface SettingsUsageSectionProps {
@@ -14,12 +13,17 @@ interface SettingsUsageSectionProps {
 
 export function SettingsUsageSection({ metrics }: SettingsUsageSectionProps) {
   return (
-    <SettingsSectionCard
-      icon={BarChart2}
-      title="استخدام Forms"
-      description="ملخص سريع لنشاط نماذجك داخل التطبيق."
-    >
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    <section className="space-y-2.5">
+      <div className="px-0.5">
+        <h3 className="text-[13px] font-semibold text-[var(--foreground)]">
+          نشاط نماذجك
+        </h3>
+        <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
+          ملخص سريع لأداء النماذج داخل التطبيق.
+        </p>
+      </div>
+
+      <div className="grid auto-rows-fr grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3">
         <DashboardMetricCard
           icon={FileText}
           label="النماذج النشطة"
@@ -57,6 +61,6 @@ export function SettingsUsageSection({ metrics }: SettingsUsageSectionProps) {
           comparisonSecondary="مقابل الشهر الماضي"
         />
       </div>
-    </SettingsSectionCard>
+    </section>
   );
 }

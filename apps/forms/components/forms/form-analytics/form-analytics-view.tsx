@@ -87,9 +87,9 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
     return (
       <div className="flex flex-col gap-5 sm:gap-6">
         <Skeleton className="mx-auto h-11 w-full max-w-2xl rounded-full" />
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl sm:rounded-3xl" />
+            <Skeleton key={i} className="h-[7.25rem] rounded-3xl" />
           ))}
         </div>
         <Skeleton className="h-56 rounded-2xl sm:rounded-3xl" />

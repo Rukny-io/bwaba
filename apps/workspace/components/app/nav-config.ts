@@ -6,6 +6,7 @@ import {
   Inbox,
   Settings,
   HelpCircle,
+  PenLine,
 } from 'lucide-react';
 
 export const APP_BASE = '/app';
@@ -15,6 +16,58 @@ export type NavItem = {
   icon: LucideIcon;
   label: string;
   exact?: boolean;
+};
+
+export type NavChild = {
+  href: string;
+  label: string;
+  exact?: boolean;
+};
+
+export type NavGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  children: NavChild[];
+  defaultOpen?: boolean;
+};
+
+export type SidebarNavEntry =
+  | ({ type: 'link' } & NavItem)
+  | ({ type: 'group' } & NavGroup);
+
+export const sidebarNavEntries: SidebarNavEntry[] = [
+  {
+    type: 'link',
+    href: APP_BASE,
+    icon: LayoutGrid,
+    label: 'لوحة التحكم',
+    exact: true,
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/mail`,
+    icon: Inbox,
+    label: 'البريد',
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/domains`,
+    icon: Globe,
+    label: 'الدومينات',
+  },
+  {
+    type: 'link',
+    href: `${APP_BASE}/mailboxes`,
+    icon: Mail,
+    label: 'صناديق البريد',
+  },
+];
+
+export const sidebarFooterItem: NavItem = {
+  href: `${APP_BASE}/settings`,
+  icon: Settings,
+  label: 'الإعدادات',
 };
 
 export const primaryNavItems: NavItem[] = [
@@ -67,6 +120,12 @@ export function isNavItemActive(
   return path === href || path.startsWith(`${href}/`);
 }
 
+export function isNavGroupActive(pathname: string, group: NavGroup): boolean {
+  return group.children.some((child) =>
+    isNavItemActive(pathname, child.href, child.exact),
+  );
+}
+
 export function resolvePageLabel(pathname: string): string {
   const segments = pathname.split('/').filter(Boolean);
 
@@ -83,3 +142,9 @@ export function resolvePageLabel(pathname: string): string {
 
   return PAGE_LABELS.app;
 }
+
+export const composeNavItem: NavItem = {
+  href: `${APP_BASE}/mail/compose`,
+  icon: PenLine,
+  label: 'رسالة جديدة',
+};

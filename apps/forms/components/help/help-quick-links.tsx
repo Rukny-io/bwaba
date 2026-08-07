@@ -32,7 +32,7 @@ export function HelpQuickLinks({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3',
+        'grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3',
         className,
       )}
     >
@@ -42,16 +42,20 @@ export function HelpQuickLinks({ className }: { className?: string }) {
           <Link
             key={item.id}
             href={linkHref(item)}
-            className="group flex items-center gap-4 rounded-2xl border border-[var(--border)]/80 bg-[var(--surface)] p-4 transition-[border-color,background-color,box-shadow] hover:border-[var(--primary)]/25 hover:bg-[var(--surface-secondary)] hover:shadow-sm sm:rounded-3xl sm:p-5"
+            className={cn(
+              'group flex items-center gap-3 rounded-2xl bg-[var(--surface-secondary)]/30 p-3.5 sm:rounded-3xl sm:p-4',
+              'transition-[border-color,background-color,box-shadow,transform] duration-200',
+              'hover:border-[color-mix(in_srgb,var(--primary)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary)_5%,var(--surface))]',
+            )}
           >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--foreground)] text-[var(--background)] transition-transform group-hover:scale-[1.03]">
-              <Icon size={18} strokeWidth={1.8} />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40 transition-transform group-hover:scale-[1.03]">
+              <Icon className="size-4" strokeWidth={1.85} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-[var(--foreground)]">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
                 {item.title}
-              </h2>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--muted-foreground)] group-hover:text-[var(--foreground)]/70">
+              </h3>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--muted-foreground)] sm:text-[12px]">
                 {item.description}
               </p>
             </div>

@@ -9,7 +9,7 @@ import {
   getGoogleOAuthUrl,
   resolveClientNext,
 } from '@/lib/auth-redirect';
-import { clearOAuthHash, readOAuthCallbackParams } from '@/lib/oauth-callback';
+import { clearOAuthParamsFromUrl, readOAuthCallbackParams } from '@/lib/oauth-callback';
 
 function GoogleIcon() {
   return (
@@ -47,13 +47,14 @@ function LoginContent() {
     const { code, next: hashNext } = readOAuthCallbackParams(searchParams);
     if (!code) return;
 
-    clearOAuthHash();
+    // Move code into /callback query once, then clear it from /login.
     const callback = new URL('/callback', window.location.origin);
     callback.searchParams.set('code', code);
     if (hashNext) callback.searchParams.set('next', hashNext);
     else if (searchParams.get('next')) {
       callback.searchParams.set('next', searchParams.get('next')!);
     }
+    clearOAuthParamsFromUrl();
     router.replace(callback.pathname + callback.search);
   }, [router, searchParams]);
 

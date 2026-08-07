@@ -55,9 +55,10 @@ export default async function AppDashboardLayout({
       <Sidebar
         avatarUrl={user.avatar}
         userName={user.name ?? user.username ?? user.email}
+        userEmail={user.email}
       />
 
-      <div className="flex min-w-0 flex-1 sm:m-2 sm:ms-[var(--dashboard-sidebar-gutter)] sm:gap-2">
+      <div className="flex min-w-0 flex-1 transition-[margin] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:m-2 sm:ms-[var(--dashboard-sidebar-gutter)]">
         <WorkspaceRoleProvider
           role={activeRole}
           isOwner={activeIsOwner}

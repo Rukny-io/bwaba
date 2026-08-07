@@ -230,8 +230,8 @@ function PublishSettingsGroup({
   return (
     <section className="space-y-4">
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
-          <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
+          <Icon className="size-4" strokeWidth={1.8} aria-hidden />
         </div>
         <div className="min-w-0 space-y-0.5">
           <h3 className="text-sm font-semibold text-[var(--foreground)]">
@@ -261,7 +261,7 @@ function SettingRow({
   return (
     <DashboardSurface
       padding="sm"
-      className="flex items-start justify-between gap-4 bg-[var(--surface-secondary)]/40"
+      className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
     >
       <div className="min-w-0 space-y-1">
         <p className="text-sm font-medium text-[var(--foreground)]">{label}</p>

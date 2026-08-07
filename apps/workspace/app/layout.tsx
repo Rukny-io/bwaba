@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { thmanyahSans } from '@rukny/thmanyah-font/next';
+import { thmanyahSans } from '@/lib/thmanyah-font';
+import { WORKSPACE_THEME_INIT_SCRIPT } from '@/lib/workspace-theme-script';
+import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,10 +22,14 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
+      suppressHydrationWarning
       className={`${thmanyahSans.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: WORKSPACE_THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${thmanyahSans.className} min-h-full flex flex-col font-sans`}>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

@@ -19,7 +19,7 @@ export function SettingsPublicLinksSection({
       description="صيغة الروابط التي يشاركها المستجيبون — خارج لوحة Forms."
     >
       <div className="space-y-4">
-        <div className="rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
           <p className="text-[13px] text-[var(--muted-foreground)]">
             رابط نموذج منشور
           </p>
@@ -33,7 +33,7 @@ export function SettingsPublicLinksSection({
         </div>
 
         {username ? (
-          <div className="rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
             <p className="text-[13px] text-[var(--muted-foreground)]">
               صفحة نماذجك العامة
             </p>

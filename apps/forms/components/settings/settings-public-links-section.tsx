@@ -1,5 +1,9 @@
 import { Link2 } from 'lucide-react';
-import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import {
+  SettingsPanel,
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
 import { PUBLIC_SITE_URL } from '@/lib/config';
 
 interface SettingsPublicLinksSectionProps {
@@ -13,45 +17,35 @@ export function SettingsPublicLinksSection({
   const exampleSlug = 'abc123';
 
   return (
-    <SettingsSectionCard
-      icon={Link2}
-      title="روابط النماذج العامة"
-      description="صيغة الروابط التي يشاركها المستجيبون — خارج لوحة Forms."
+    <SettingsPanel
+      title="الروابط العامة"
+      description="صيغة الروابط التي يشاركها المستجيبون خارج لوحة التحكم."
     >
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
-          <p className="text-[13px] text-[var(--muted-foreground)]">
-            رابط نموذج منشور
-          </p>
-          <p
-            className="mt-1 break-all text-sm font-medium text-[var(--foreground)]"
-            dir="ltr"
-            lang="en"
-          >
+      <SettingsRow
+        isStatic
+        icon={Link2}
+        title="رابط نموذج منشور"
+        subtitle={
+          <span dir="ltr" lang="en" className="font-medium text-[var(--foreground)]">
             {base}/f/{exampleSlug}
-          </p>
-        </div>
-
-        {username ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-4 py-3.5">
-            <p className="text-[13px] text-[var(--muted-foreground)]">
-              صفحة نماذجك العامة
-            </p>
-            <p
-              className="mt-1 break-all text-sm font-medium text-[var(--foreground)]"
-              dir="ltr"
-              lang="en"
-            >
-              {base}/{username}
-            </p>
-          </div>
-        ) : null}
-
-        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
-          slug كل نموذج يظهر في صفحة تفاصيل النموذج. إعدادات النشر والتنبيهات
-          تُدار من هناك وليس من هذه الصفحة.
-        </p>
-      </div>
-    </SettingsSectionCard>
+          </span>
+        }
+      />
+      {username ? (
+        <>
+          <SettingsRowDivider />
+          <SettingsRow
+            isStatic
+            icon={Link2}
+            title="صفحة نماذجك العامة"
+            subtitle={
+              <span dir="ltr" lang="en" className="font-medium text-[var(--foreground)]">
+                {base}/{username}
+              </span>
+            }
+          />
+        </>
+      ) : null}
+    </SettingsPanel>
   );
 }

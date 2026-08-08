@@ -9,7 +9,8 @@ import {
 } from '@/lib/submission-utils';
 import { SubmissionAnswerDisplay } from '@/components/forms/submissions/submission-answer-display';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { formDetailCardClass } from '@/lib/form-detail-styles';
+import { cn } from '@/lib/utils';
 import {
   PagerIconActions,
   SubmissionPagerToolbar,
@@ -63,7 +64,7 @@ export function SubmissionsIndividualTab({
   const submission = submissions[safeIndex];
 
   return (
-    <div className="space-y-4 print:space-y-2">
+    <div className="flex flex-col gap-[12px] print:space-y-2">
       <SubmissionPagerToolbar
         selectLabel="الاستجابة"
         options={pagerOptions}
@@ -113,25 +114,31 @@ export function SubmissionsIndividualTab({
         </div>
       ) : null}
 
-      <div className="space-y-3 print:space-y-2">
+      <div className="flex flex-col gap-[12px] print:space-y-2">
         {inputFields.map((field, i) => {
           const value = getSubmissionFieldValue(submission.data, field);
 
           return (
-            <DashboardSurface key={field.id} as="article" padding="sm">
-              <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">
+            <article
+              key={field.id}
+              className={cn(
+                formDetailCardClass,
+                'print:border-none print:shadow-none',
+              )}
+            >
+              <p className="text-[14px] font-semibold text-[var(--foreground)]">
                 {i + 1}. {field.label}
                 {field.required ? (
                   <span className="ms-1 text-[var(--danger)]">*</span>
                 ) : null}
               </p>
               {field.description ? (
-                <p className="mb-2 text-xs text-[var(--muted-foreground)]">
+                <p className="text-[12px] leading-relaxed text-[var(--muted-foreground)]">
                   {field.description}
                 </p>
               ) : null}
               <SubmissionAnswerDisplay field={field} value={value} compact />
-            </DashboardSurface>
+            </article>
           );
         })}
       </div>

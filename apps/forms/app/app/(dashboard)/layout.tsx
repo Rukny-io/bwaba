@@ -4,7 +4,6 @@ import {
   getDashboardUser,
   resolveActiveWorkspace,
 } from '@/lib/dal';
-import { Sidebar } from '@/components/app/sidebar';
 import { FormsDashboardShell } from '@/components/app/forms-dashboard-shell';
 import { ForeignWorkspaceBanner } from '@/components/workspace/foreign-workspace-banner';
 import { WorkspaceRoleProvider } from '@/components/workspace/workspace-role-provider';
@@ -52,13 +51,7 @@ export default async function AppDashboardLayout({
         />
       ) : null}
 
-      <Sidebar
-        avatarUrl={user.avatar}
-        userName={user.name ?? user.username ?? user.email}
-        userEmail={user.email}
-      />
-
-      <div className="flex min-w-0 flex-1 transition-[margin] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:m-2 sm:ms-[var(--dashboard-sidebar-gutter)]">
+      <div className="flex min-w-0 flex-1">
         <WorkspaceRoleProvider
           role={activeRole}
           isOwner={activeIsOwner}
@@ -66,9 +59,8 @@ export default async function AppDashboardLayout({
           ownerId={activeOwnerId}
         >
           <FormsDashboardShell
-            username={user.username}
-            workspaces={workspaces}
-            currentUserId={user.id}
+            avatarUrl={user.avatar}
+            userName={user.name ?? user.username ?? user.email}
           >
             {children}
           </FormsDashboardShell>

@@ -3,7 +3,7 @@
 import type { Key, ReactNode } from 'react';
 import { Button, ListBox, Select, Spinner } from '@heroui/react';
 import { ChevronLeft, ChevronRight, Printer, Trash2 } from 'lucide-react';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
 export interface PagerOption {
@@ -53,10 +53,7 @@ export function SubmissionPagerToolbar({
   }
 
   return (
-    <DashboardSurface
-      padding="sm"
-      className={cn('print:hidden', className)}
-    >
+    <div className={cn(formDetailCardSurfaceClass, 'print:hidden', className)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
           {selectLabel}
@@ -142,7 +139,7 @@ export function SubmissionPagerToolbar({
           <div className="flex shrink-0 items-center gap-1">{actions}</div>
         ) : null}
       </div>
-    </DashboardSurface>
+    </div>
   );
 }
 

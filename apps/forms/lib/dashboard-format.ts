@@ -24,6 +24,26 @@ export function formatNumber(value: number): string {
   return numberFormatter.format(value);
 }
 
+/** Card/list metrics — compact from 1M+ (e.g. ١٫٢ مليون) */
+export function formatMetricCount(value: number): string {
+  const n = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+
+  if (n >= 1_000_000) {
+    return new Intl.NumberFormat('ar', {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: n >= 10_000_000 ? 0 : 1,
+    }).format(n);
+  }
+
+  return n.toLocaleString('ar');
+}
+
+export function formatMetricCountFull(value: number): string {
+  const n = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+  return n.toLocaleString('ar');
+}
+
 export function formatPercent(value: number): string {
   return `${value}%`;
 }

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { getServerAuthHeaders } from '@rukny/auth/server';
 import type { FormDetail, FormType } from '@/lib/forms-api';
@@ -18,7 +19,7 @@ function getBackendUrl(): string {
   );
 }
 
-export async function fetchFormServer(
+export const fetchFormServer = cache(async function fetchFormServer(
   idOrSlug: string,
 ): Promise<FormDetail | null> {
   const cookieStore = await cookies();
@@ -38,7 +39,7 @@ export async function fetchFormServer(
   } catch {
     return null;
   }
-}
+});
 
 /** Creates a draft with server-generated slug; used by `/forms/n/new`. */
 export async function createFormDraftServer(): Promise<FormDetail | null> {

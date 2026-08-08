@@ -7,17 +7,22 @@ import type {
   SubmissionsSummaryResponse,
 } from '@/lib/forms-api';
 import {
-  collectRespondentEmails,
   isChoiceFieldType,
   isNumericFieldType,
 } from '@/lib/submission-utils';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import {
+  formDetailCardClass,
+  formDetailCardSurfaceClass,
+  submissionAnswerInsetClass,
+} from '@/lib/form-detail-styles';
 import {
   DistributionBars,
   SignatureGallery,
   TextResponseList,
 } from '@/components/forms/submissions/submission-answer-display';
+import { cn } from '@/lib/utils';
 
 interface SubmissionsSummaryTabProps {
   form: FormDetail | null;
@@ -45,19 +50,19 @@ function FieldSummaryCard({
       : []);
 
   return (
-    <DashboardSurface as="article">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+    <article className={formDetailCardClass}>
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <h3 className="text-[14px] font-semibold text-[var(--foreground)]">
           {fieldSummary.label}
         </h3>
-        <span className="text-xs text-[var(--muted-foreground)]">
+        <span className="text-[12px] text-[var(--muted-foreground)]">
           {fieldSummary.totalResponses}{' '}
           {fieldSummary.totalResponses === 1 ? 'استجابة' : 'استجابات'}
         </span>
       </header>
 
       {blankCount > 0 ? (
-        <p className="mb-3 text-sm text-[var(--muted-foreground)]">
+        <p className="text-[13px] text-[var(--muted-foreground)]">
           <span className="italic">ترك الحقل فارغاً</span>
           {' · '}
           <span className="font-medium text-[var(--primary)]">
@@ -76,7 +81,7 @@ function FieldSummaryCard({
       {isNumericFieldType(fieldSummary.type) &&
       fieldSummary.average != null ? (
         <div className="space-y-3">
-          <p className="text-sm text-[var(--muted-foreground)]">
+          <p className="text-[13px] text-[var(--muted-foreground)]">
             المتوسط:{' '}
             <span className="font-semibold text-[var(--foreground)]">
               {fieldSummary.average}
@@ -112,11 +117,11 @@ function FieldSummaryCard({
       ) : null}
 
       {fieldSummary.totalResponses === 0 ? (
-        <p className="text-sm italic text-[var(--muted-foreground)]">
+        <p className="text-[13px] italic text-[var(--muted-foreground)]">
           لا توجد إجابات لهذا السؤال
         </p>
       ) : null}
-    </DashboardSurface>
+    </article>
   );
 }
 
@@ -128,9 +133,9 @@ export function SubmissionsSummaryTab({
 }: SubmissionsSummaryTabProps) {
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-[12px]">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+          <Skeleton key={i} className="h-36 w-full rounded-[25px]" />
         ))}
       </div>
     );
@@ -138,7 +143,7 @@ export function SubmissionsSummaryTab({
 
   if (!summary) {
     return (
-      <p className="text-sm text-[var(--muted-foreground)]">
+      <p className="text-[13px] text-[var(--muted-foreground)]">
         تعذّر تحميل الملخص.
       </p>
     );
@@ -155,42 +160,50 @@ export function SubmissionsSummaryTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-6 sm:gap-8">
       {respondentEmails.length > 0 ? (
-        <DashboardSurface as="article">
-          <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold sm:text-base">من أجاب؟</h3>
-            <span className="text-xs text-[var(--muted-foreground)]">
-              {respondentEmails.length} بريد
-            </span>
-          </header>
-          <p className="mb-2 text-xs text-[var(--muted-foreground)]">
-            البريد الإلكتروني
-          </p>
-          <ul className="max-h-48 space-y-2 overflow-y-auto">
-            {respondentEmails.slice(0, 50).map((email) => (
-              <li
-                key={email}
-                className="rounded-xl bg-[var(--surface-secondary)] px-3.5 py-2 text-sm text-[var(--foreground)]"
-                dir="ltr"
-              >
-                {email}
-              </li>
-            ))}
-          </ul>
-        </DashboardSurface>
+        <SettingsSectionCard
+          plain
+          title="من أجاب؟"
+          description={`${respondentEmails.length} بريد من الاستجابات المحمّلة`}
+        >
+          <article className={formDetailCardClass}>
+            <p className="text-[12px] text-[var(--muted-foreground)]">
+              البريد الإلكتروني
+            </p>
+            <ul className="flex max-h-48 flex-col gap-[12px] overflow-y-auto">
+              {respondentEmails.slice(0, 50).map((email) => (
+                <li
+                  key={email}
+                  className={cn(submissionAnswerInsetClass, 'text-start')}
+                  dir="ltr"
+                >
+                  {email}
+                </li>
+              ))}
+            </ul>
+          </article>
+        </SettingsSectionCard>
       ) : null}
 
-      {summary.fields.map((fieldSummary) => (
-        <FieldSummaryCard
-          key={fieldSummary.fieldId}
-          fieldSummary={fieldSummary}
-          totalSubmissions={summary.totalSubmissions}
-        />
-      ))}
+      <SettingsSectionCard
+        plain
+        title="ملخص الأسئلة"
+        description="توزيع الإجابات لكل حقل في النموذج"
+      >
+        <div className="flex flex-col gap-[12px]">
+          {summary.fields.map((fieldSummary) => (
+            <FieldSummaryCard
+              key={fieldSummary.fieldId}
+              fieldSummary={fieldSummary}
+              totalSubmissions={summary.totalSubmissions}
+            />
+          ))}
+        </div>
+      </SettingsSectionCard>
 
       {form?.description ? (
-        <p className="text-center text-xs text-[var(--muted-foreground)]">
+        <p className="text-center text-[12px] text-[var(--muted-foreground)]">
           {form.title}
         </p>
       ) : null}

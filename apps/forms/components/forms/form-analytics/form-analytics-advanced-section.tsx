@@ -6,9 +6,13 @@ import { DistributionBars } from '@/components/forms/submissions/submission-answ
 import { FormAnalyticsCompletionFunnel } from '@/components/forms/form-analytics/form-analytics-completion-funnel';
 import { FormAnalyticsGeoSection } from '@/components/forms/form-analytics/form-analytics-geo-section';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import type { FormAnalyticsResponse } from '@/lib/forms-api';
 import { DEMO_GEO_BREAKDOWN } from '@/lib/analytics-geo-demo';
+import {
+  formDetailCardClass,
+  formDetailCardSurfaceClass,
+} from '@/lib/form-detail-styles';
 import { formatNumber } from '@/lib/dashboard-format';
 import { cn } from '@/lib/utils';
 
@@ -25,42 +29,22 @@ const DECORATIVE_TYPES = new Set([
   'RECAPTCHA',
 ]);
 
-function SectionCard({
-  icon: Icon,
+function AdvancedSection({
   title,
   description,
   children,
-  className,
+  unstyled = false,
 }: {
-  icon: typeof Route;
   title: string;
   description: string;
   children: ReactNode;
-  className?: string;
+  /** When true, children render without the inner elevated card */
+  unstyled?: boolean;
 }) {
   return (
-    <DashboardSurface
-      as="article"
-      padding="none"
-      className={cn('overflow-hidden', className)}
-    >
-      <header className="border-b border-[var(--border)]/70 bg-[var(--surface-secondary)]/20 px-4 py-4 sm:px-5">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--primary)] shadow-sm">
-            <Icon className="size-4" strokeWidth={1.8} />
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
-              {title}
-            </h4>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {description}
-            </p>
-          </div>
-        </div>
-      </header>
-      <div className="px-4 py-5 sm:px-5">{children}</div>
-    </DashboardSurface>
+    <SettingsSectionCard plain title={title} description={description}>
+      {unstyled ? children : <div className={formDetailCardClass}>{children}</div>}
+    </SettingsSectionCard>
   );
 }
 
@@ -84,20 +68,19 @@ export function FormAnalyticsAdvancedSection({
   const geoBreakdown = demo ? DEMO_GEO_BREAKDOWN : data.geoBreakdown;
 
   return (
-    <section className="space-y-4">
+    <div className="flex flex-col gap-6 sm:gap-8">
       {!compact ? (
-        <header>
-          <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+        <header className="px-0.5">
+          <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
             تحليلات متقدمة
           </h3>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+          <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
             مسار الإكمال، توزيع الإجابات، التوزيع الجغرافي، ومؤشرات الرضا
           </p>
         </header>
       ) : null}
 
-      <SectionCard
-        icon={Route}
+      <AdvancedSection
         title="مسار الإكمال"
         description="تتبّع الانسحاب من الزيارة حتى الإرسال — سؤالاً بسؤال"
       >
@@ -106,10 +89,10 @@ export function FormAnalyticsAdvancedSection({
           dropOffRate={dropOffRows}
           demo={demo}
         />
-      </SectionCard>
+      </AdvancedSection>
 
-      <SectionCard
-        icon={MapPin}
+      <AdvancedSection
+        unstyled
         title="التوزيع الجغرافي"
         description="خرائط تفاعلية وقوائم الدول والمدن والمحافظات"
       >
@@ -123,31 +106,24 @@ export function FormAnalyticsAdvancedSection({
                 ? 'معاينة الخريطة الجغرافية'
                 : 'لا توجد بيانات جغرافية في هذه الفترة'
             }
-            description={
-              demo ? 'متاحة بعد الترقية' : undefined
-            }
+            description={demo ? 'متاحة بعد الترقية' : undefined}
           />
         )}
-      </SectionCard>
+      </AdvancedSection>
 
-      <SectionCard
-        icon={BarChart3}
+      <AdvancedSection
         title="تحليل إجابات الحقول"
         description="توزيع الإجابات الأكثر شيوعاً لكل حقل"
       >
         {fieldsWithStats.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-[12px] lg:grid-cols-2">
             {fieldsWithStats.slice(0, 8).map((field) => (
-              <DashboardSurface
-                key={field.fieldId}
-                padding="sm"
-                className="bg-[var(--surface-secondary)]/25"
-              >
-                <header className="mb-3 border-b border-[var(--border)]/50 pb-3">
-                  <h5 className="text-sm font-semibold text-[var(--foreground)]">
+              <article key={field.fieldId} className={formDetailCardSurfaceClass}>
+                <header>
+                  <h5 className="text-[14px] font-semibold text-[var(--foreground)]">
                     {field.fieldLabel}
                   </h5>
-                  <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                  <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
                     {formatNumber(field.totalResponses)} إجابة ·{' '}
                     {field.responseRate}% معدل
                   </p>
@@ -163,7 +139,7 @@ export function FormAnalyticsAdvancedSection({
                   }))}
                   total={field.totalResponses}
                 />
-              </DashboardSurface>
+              </article>
             ))}
           </div>
         ) : (
@@ -177,10 +153,9 @@ export function FormAnalyticsAdvancedSection({
             description={demo ? 'متاحة بعد الترقية' : undefined}
           />
         )}
-      </SectionCard>
+      </AdvancedSection>
 
-      <SectionCard
-        icon={Gauge}
+      <AdvancedSection
         title="NPS — مؤشر الرضا"
         description="Net Promoter Score من حقول المقياس (0–10)"
       >
@@ -188,10 +163,10 @@ export function FormAnalyticsAdvancedSection({
           <div className="space-y-5">
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="text-center sm:text-start">
-                <p className="text-xs text-[var(--muted-foreground)]">
+                <p className="text-[12px] text-[var(--muted-foreground)]">
                   {data.nps.fieldLabel}
                 </p>
-                <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                <p className="text-[12px] text-[var(--muted-foreground)]">
                   {formatNumber(data.nps.responses)} إجابة
                 </p>
               </div>
@@ -267,7 +242,7 @@ export function FormAnalyticsAdvancedSection({
             description={demo ? 'معاينة NPS — متاحة بعد الترقية' : undefined}
           />
         )}
-      </SectionCard>
-    </section>
+      </AdvancedSection>
+    </div>
   );
 }

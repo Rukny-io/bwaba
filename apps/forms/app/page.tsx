@@ -10,7 +10,7 @@ export default function HomePage() {
   return (
     <div
       dir="rtl"
-      className="landing-page isolate flex min-h-screen flex-col bg-white text-[#132327]"
+      className="landing-page isolate flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)]"
     >
       <LandingNav />
 

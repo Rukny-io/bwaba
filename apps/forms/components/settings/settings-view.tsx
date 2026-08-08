@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import {
   Gauge,
+  HardDrive,
   Link2,
+  LogOut,
   Palette,
   UserCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { SettingsAccountSection } from '@/components/settings/settings-account-section';
 import { SettingsAppearanceSection } from '@/components/settings/settings-appearance-section';
@@ -20,71 +23,104 @@ import {
   SettingsMobileDock,
   type SettingsSectionId,
 } from '@/components/settings/settings-mobile-dock';
-import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
+import type { SettingsViewUser } from '@/components/settings/settings-types';
 import type { FormsDashboardMetrics } from '@/lib/forms-dashboard-data';
+import { logoutWithNotification } from '@/lib/auth-notify';
 import { cn } from '@/lib/utils';
 
 const SECTIONS: {
   id: SettingsSectionId;
   label: string;
-  description: string;
-  icon: typeof Gauge;
+  icon: LucideIcon;
 }[] = [
-  {
-    id: 'overview',
-    label: 'نظرة عامة',
-    description: 'النشاط والحصة والتخزين',
-    icon: Gauge,
-  },
-  {
-    id: 'account',
-    label: 'الحساب',
-    description: 'الملف الشخصي والأمان',
-    icon: UserCircle,
-  },
-  {
-    id: 'preferences',
-    label: 'التفضيلات',
-    description: 'المظهر والإشعارات',
-    icon: Palette,
-  },
-  {
-    id: 'links',
-    label: 'الروابط',
-    description: 'العامة والاختصارات',
-    icon: Link2,
-  },
+  { id: 'overview', label: 'نظرة عامة', icon: Gauge },
+  { id: 'storage', label: 'مساحة التخزين', icon: HardDrive },
+  { id: 'account', label: 'الحساب', icon: UserCircle },
+  { id: 'preferences', label: 'التفضيلات', icon: Palette },
+  { id: 'links', label: 'الروابط', icon: Link2 },
 ];
 
 interface SettingsViewProps {
   metrics: FormsDashboardMetrics;
-  username?: string | null;
+  user: SettingsViewUser;
 }
 
-export function SettingsView({ metrics, username }: SettingsViewProps) {
-  const [section, setSection] = useState<SettingsSectionId>('overview');
-  const active = SECTIONS.find((item) => item.id === section) ?? SECTIONS[0];
+function SettingsSidebarNav({
+  section,
+  onSectionChange,
+  onSignOut,
+  className,
+}: {
+  section: SettingsSectionId;
+  onSectionChange: (id: SettingsSectionId) => void;
+  onSignOut: () => void;
+  className?: string;
+}) {
+  return (
+    <aside
+      className={cn(
+        'settings-sidebar sticky top-34 flex flex-col self-start',
+        className,
+      )}
+    >
+      <nav aria-label="أقسام الإعدادات" className="space-y-0.5">
+        {SECTIONS.map((item) => {
+          const Icon = item.icon;
+          const isActive = section === item.id;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSectionChange(item.id)}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'settings-nav-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start transition-colors',
+                isActive
+                  ? 'settings-nav-item--active'
+                  : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)]/70 hover:text-[var(--foreground)]',
+              )}
+            >
+              <Icon className="size-[17px] shrink-0" strokeWidth={1.85} aria-hidden />
+              <span className="text-[14px] font-medium leading-none">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-8 border-t border-[var(--border)]/60 pt-5">
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="settings-sign-out inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 py-2.5 text-[13px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
+        >
+          <LogOut className="size-4" strokeWidth={1.85} aria-hidden />
+          تسجيل الخروج
+        </button>
+        <p className="settings-sidebar-brand mt-6 text-[15px] font-bold tracking-tight text-[var(--foreground)]">
+          رُكنّي
+        </p>
+        <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">مساحة عمل النماذج</p>
+      </div>
+    </aside>
+  );
+}
+
+export function SettingsView({ metrics, user }: SettingsViewProps) {
+  const [section, setSection] = useState<SettingsSectionId>('account');
 
   const content = (
-    <>
-      <div className="border-b border-[var(--separator)] pb-3 lg:block">
-        <h2 className="text-[15px] font-semibold text-[var(--foreground)]">
-          {active.label}
-        </h2>
-        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-          {active.description}
-        </p>
-      </div>
-
+    <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
       {section === 'overview' ? (
         <>
           <SettingsUsageSection metrics={metrics} />
           <SettingsPlanQuotaSection />
-          <SettingsStorageSection />
         </>
       ) : null}
 
-      {section === 'account' ? <SettingsAccountSection /> : null}
+      {section === 'storage' ? <SettingsStorageSection /> : null}
+
+      {section === 'account' ? <SettingsAccountSection user={user} /> : null}
 
       {section === 'preferences' ? (
         <>
@@ -96,84 +132,37 @@ export function SettingsView({ metrics, username }: SettingsViewProps) {
 
       {section === 'links' ? (
         <>
-          <SettingsPublicLinksSection username={username} />
+          <SettingsPublicLinksSection username={user.username} />
           <SettingsShortcutsSection />
         </>
       ) : null}
-    </>
+    </div>
   );
 
   return (
     <>
-      <DashboardPageHeader
-        title="الإعدادات"
-        description="إدارة حسابك، حصتك، المظهر، وإشعارات مساحة عمل النماذج."
-        className="mb-0"
-      />
+      <div className="mb-4 lg:mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
+          الإعدادات
+        </h1>
+        <p className="mt-1 text-[13px] text-[var(--muted-foreground)] sm:text-sm">
+          إدارة حسابك وتفضيلات مساحة عمل النماذج.
+        </p>
+      </div>
 
-      {/* Mobile content — bottom dock handles section switching */}
-      <div className="flex flex-col gap-3 pb-2 sm:gap-3.5 lg:hidden">
-        {content}
+      <div className="grid items-start gap-6 pb-2 lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-10 xl:gap-12">
+        <SettingsSidebarNav
+          className="hidden lg:flex"
+          section={section}
+          onSectionChange={setSection}
+          onSignOut={() => void logoutWithNotification()}
+        />
+        <div className="min-w-0">{content}</div>
       </div>
 
       <SettingsMobileDock section={section} onSectionChange={setSection} />
-
-      {/* Desktop sticky sidebar */}
-      <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-4">
-        <aside className="sticky top-4 self-start">
-          <div className="dashboard-card space-y-0.5 rounded-2xl p-2">
-            <p className="px-2.5 pb-1.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-              الأقسام
-            </p>
-            <nav aria-label="أقسام الإعدادات" className="space-y-0.5">
-              {SECTIONS.map((item) => {
-                const Icon = item.icon;
-                const isActive = section === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSection(item.id)}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2.5 text-start transition-colors',
-                      isActive
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-                        : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'flex size-8 shrink-0 items-center justify-center rounded-full',
-                        isActive
-                          ? 'bg-white/15'
-                          : 'bg-[var(--surface-secondary)] text-[var(--primary)]',
-                      )}
-                    >
-                      <Icon className="size-3.5" strokeWidth={1.9} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-semibold leading-snug">
-                        {item.label}
-                      </span>
-                      <span
-                        className={cn(
-                          'mt-0.5 block text-[10px] leading-snug',
-                          isActive ? 'opacity-80' : 'opacity-75',
-                        )}
-                      >
-                        {item.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </aside>
-
-        <div className="flex min-w-0 flex-col gap-3.5">{content}</div>
-      </div>
     </>
   );
 }
+
+export type { SettingsViewUser } from '@/components/settings/settings-types';

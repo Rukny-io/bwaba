@@ -4,17 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Skeleton, Spinner } from '@heroui/react';
 import {
-  CalendarClock,
   CircleDot,
   Copy,
   ExternalLink,
   Inbox,
   Layers,
-  ListChecks,
-  PencilLine,
-  Radio,
+  Link2,
   Trash2,
-  Zap,
 } from 'lucide-react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
@@ -53,6 +49,7 @@ import {
   getDefaultFormWorkspacePath,
   resolveFormAccessRole,
 } from '@/lib/form-team-permissions';
+import { useFormWorkspaceSeed } from '@/lib/use-form-workspace-seed';
 
 function statusChipTone(status: FormStatus): DashboardMetricChipTone {
   if (status === 'PUBLISHED') return 'success';
@@ -68,20 +65,36 @@ function statusChipLabel(status: FormStatus): string {
   return 'تحرير';
 }
 
+const STATUS_OPTIONS: { value: FormStatus; label: string }[] = [
+  { value: 'DRAFT', label: 'مسودة' },
+  { value: 'PUBLISHED', label: 'نشر' },
+  { value: 'CLOSED', label: 'إغلاق' },
+];
+
 export function FormDetailView({ formId }: { formId: string }) {
   const router = useRouter();
-  const [form, setForm] = useState<FormDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const seedForm = useFormWorkspaceSeed(formId);
+  const [form, setForm] = useState<FormDetail | null>(seedForm);
+  const [loading, setLoading] = useState(!seedForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(seedForm?.title ?? '');
+  const [description, setDescription] = useState(seedForm?.description ?? '');
+
+  useEffect(() => {
+    if (!seedForm) return;
+    setForm(seedForm);
+    setTitle(seedForm.title);
+    setDescription(seedForm.description ?? '');
+    setLoading(false);
+  }, [seedForm]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const hasCachedForm = seedForm !== null;
+    if (!hasCachedForm) setLoading(true);
     setError(null);
     try {
       const data = await getForm(formId);
@@ -89,11 +102,13 @@ export function FormDetailView({ formId }: { formId: string }) {
       setTitle(data.title);
       setDescription(data.description ?? '');
     } catch (e) {
-      setError(e instanceof ApiException ? e.message : 'تعذّر تحميل النموذج');
+      if (!hasCachedForm) {
+        setError(e instanceof ApiException ? e.message : 'تعذّر تحميل النموذج');
+      }
     } finally {
       setLoading(false);
     }
-  }, [formId]);
+  }, [formId, seedForm]);
 
   useEffect(() => {
     void load();
@@ -177,18 +192,18 @@ export function FormDetailView({ formId }: { formId: string }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-3.5 sm:gap-4">
-        <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+      <div className="flex flex-col gap-6 sm:gap-8">
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton
               key={i}
-              className="min-h-[7.5rem] rounded-3xl sm:min-h-[8rem]"
+              className="min-h-[7.25rem] rounded-2xl sm:min-h-[7.75rem]"
             />
           ))}
         </div>
-        <Skeleton className="h-20 w-full rounded-3xl" />
-        <Skeleton className="h-52 w-full rounded-3xl" />
-        <Skeleton className="h-40 w-full rounded-3xl" />
+        <Skeleton className="h-28 w-full rounded-2xl" />
+        <Skeleton className="h-52 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
       </div>
     );
   }
@@ -209,6 +224,7 @@ export function FormDetailView({ formId }: { formId: string }) {
     form._count?.submissions ?? form.submissionCount ?? 0;
   const isShared = Boolean(form.isShared);
   const fieldCount = form.fields?.length ?? 0;
+  const publicUrl = getPublicFormUrl(form.slug);
 
   const summaryItems = [
     {
@@ -216,7 +232,7 @@ export function FormDetailView({ formId }: { formId: string }) {
       label: 'الحالة',
       value: getFormStatusLabel(form.status),
       comparisonPrimary: getFormTypeLabel(form.type),
-      comparisonSecondary: 'حالة النشر',
+      comparisonSecondary: 'نوع النموذج',
       tabular: false as const,
       chip: statusChipLabel(form.status),
       chipTone: statusChipTone(form.status),
@@ -242,87 +258,113 @@ export function FormDetailView({ formId }: { formId: string }) {
       chipTone: (form.isMultiStep ? 'success' : 'neutral') as DashboardMetricChipTone,
     },
     {
-      icon: CalendarClock,
-      label: 'آخر تحديث',
-      value: formatFormDate(form.updatedAt),
-      comparisonPrimary: `/${form.slug}`,
-      comparisonSecondary: 'رابط النموذج',
+      icon: Link2,
+      label: 'الرابط العام',
+      value: `/${form.slug}`,
+      comparisonPrimary: formatFormDate(form.updatedAt),
+      comparisonSecondary: 'آخر تحديث',
       tabular: false as const,
-      chip: undefined,
-      chipTone: undefined,
+      chip: form.status === 'PUBLISHED' ? 'مفعّل' : 'غير منشور',
+      chipTone: (form.status === 'PUBLISHED' ? 'success' : 'neutral') as DashboardMetricChipTone,
     },
   ];
 
   return (
-    <div className="flex flex-col gap-3.5 sm:gap-4">
-      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
-        {summaryItems.map((item) => (
-          <DashboardMetricCard
-            key={item.label}
-            icon={item.icon}
-            label={item.label}
-            value={item.value}
-            comparisonPrimary={item.comparisonPrimary}
-            comparisonSecondary={item.comparisonSecondary}
-            tabular={item.tabular}
-            chip={item.chip}
-            chipTone={item.chipTone}
-          />
-        ))}
-      </div>
-
+    <div className="flex flex-col gap-6 sm:gap-8">
       <SettingsSectionCard
-        icon={Zap}
-        title="إجراءات سريعة"
-        description="معاينة، نسخ، أو حذف النموذج"
+        plain
+        title="ملخص النموذج"
+        description="نظرة سريعة على الحالة والاستجابات والبنية"
       >
-        <div className="flex flex-wrap gap-2">
-          {form.status === 'PUBLISHED' ? (
-            <a
-              href={getPublicFormUrl(form.slug)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="tertiary" size="sm" className="rounded-xl">
-                <ExternalLink className="size-4" />
-                معاينة
-              </Button>
-            </a>
-          ) : null}
-          <Button
-            variant="tertiary"
-            size="sm"
-            className="rounded-xl"
-            onPress={() => void handleDuplicate()}
-            isDisabled={isShared}
-          >
-            <Copy className="size-4" />
-            نسخ
-          </Button>
-          <Button
-            variant="tertiary"
-            size="sm"
-            className="rounded-xl"
-            onPress={() => setDeleteOpen(true)}
-            isDisabled={isShared}
-          >
-            <Trash2 className="size-4" />
-            حذف
-          </Button>
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
+          {summaryItems.map((item) => (
+            <DashboardMetricCard
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              value={item.value}
+              comparisonPrimary={item.comparisonPrimary}
+              comparisonSecondary={item.comparisonSecondary}
+              tabular={item.tabular}
+              chip={item.chip}
+              chipTone={item.chipTone}
+            />
+          ))}
         </div>
       </SettingsSectionCard>
 
       <SettingsSectionCard
-        icon={PencilLine}
+        bordered
+        title="الحالة والإجراءات"
+        description="غيّر حالة النشر أو نفّذ إجراءات على النموذج"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {STATUS_OPTIONS.map(({ value, label }) => (
+              <Button
+                key={value}
+                variant={form.status === value ? 'primary' : 'tertiary'}
+                size="sm"
+                className="rounded-xl"
+                isDisabled={statusBusy || form.status === value}
+                onPress={() => void setStatus(value)}
+              >
+                {statusBusy && form.status !== value ? (
+                  <Spinner size="sm" />
+                ) : null}
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-t border-[var(--border)]/60 pt-4">
+            {form.status === 'PUBLISHED' ? (
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="tertiary" size="sm" className="rounded-xl">
+                  <ExternalLink className="size-4" />
+                  معاينة
+                </Button>
+              </a>
+            ) : null}
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="rounded-xl"
+              onPress={() => void handleDuplicate()}
+              isDisabled={isShared}
+            >
+              <Copy className="size-4" />
+              نسخ
+            </Button>
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="rounded-xl"
+              onPress={() => setDeleteOpen(true)}
+              isDisabled={isShared}
+            >
+              <Trash2 className="size-4" />
+              حذف
+            </Button>
+          </div>
+        </div>
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        bordered
         title="الإعدادات الأساسية"
         description="عنوان النموذج ووصفه الظاهر للمستجيبين"
       >
         <form
           onSubmit={(e) => void handleSave(e)}
-          className="max-w-lg space-y-4"
+          className="space-y-4"
         >
-          <div className="space-y-2">
-            <label htmlFor="edit-title" className="text-sm font-medium">
+          <div className="space-y-2 text-start">
+            <label htmlFor="edit-title" className="text-[13px] font-medium">
               العنوان
             </label>
             <input
@@ -333,8 +375,8 @@ export function FormDetailView({ formId }: { formId: string }) {
               maxLength={200}
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="edit-desc" className="text-sm font-medium">
+          <div className="space-y-2 text-start">
+            <label htmlFor="edit-desc" className="text-[13px] font-medium">
               الوصف
             </label>
             <textarea
@@ -348,17 +390,19 @@ export function FormDetailView({ formId }: { formId: string }) {
               )}
             />
           </div>
-          <p className="text-xs text-[var(--muted-foreground)]" dir="ltr">
-            /{form.slug}
-          </p>
-          <Button
-            type="submit"
-            variant="primary"
-            className="rounded-full px-6"
-            isDisabled={saving}
-          >
-            {saving ? 'جاري الحفظ…' : 'حفظ التغييرات'}
-          </Button>
+          <div className="flex flex-col gap-3 border-t border-[var(--border)]/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] text-[var(--muted-foreground)]" dir="ltr">
+              {publicUrl.replace(/^https?:\/\//, '')}
+            </p>
+            <Button
+              type="submit"
+              variant="primary"
+              className="rounded-full px-6 sm:shrink-0"
+              isDisabled={saving}
+            >
+              {saving ? 'جاري الحفظ…' : 'حفظ التغييرات'}
+            </Button>
+          </div>
         </form>
       </SettingsSectionCard>
 
@@ -375,35 +419,9 @@ export function FormDetailView({ formId }: { formId: string }) {
       />
 
       <SettingsSectionCard
-        icon={Radio}
-        title="الحالة والنشر"
-        description="غيّر حالة النموذج بين مسودة ومنشور ومغلق"
-      >
-        <div className="flex flex-wrap gap-2">
-          {(['DRAFT', 'PUBLISHED', 'CLOSED'] as FormStatus[]).map((s) => (
-            <Button
-              key={s}
-              variant={form.status === s ? 'primary' : 'tertiary'}
-              size="sm"
-              className="rounded-xl"
-              isDisabled={statusBusy || form.status === s}
-              onPress={() => void setStatus(s)}
-            >
-              {statusBusy && form.status !== s ? (
-                <Spinner size="sm" />
-              ) : null}
-              {s === 'DRAFT' && 'مسودة'}
-              {s === 'PUBLISHED' && 'نشر'}
-              {s === 'CLOSED' && 'إغلاق'}
-            </Button>
-          ))}
-        </div>
-      </SettingsSectionCard>
-
-      <SettingsSectionCard
-        icon={ListChecks}
         title={`الحقول (${fieldCount})`}
-        description="عرض الحقول الحالية — عدّلها من المحرّر"
+        description="عرض الحقول الحالية — عدّلها من المحرّر البصري"
+        plain
       >
         <FormFieldsList fields={form.fields ?? []} formSlug={form.slug} />
       </SettingsSectionCard>

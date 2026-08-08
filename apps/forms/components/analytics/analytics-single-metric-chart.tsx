@@ -69,7 +69,7 @@ export function AnalyticsSingleMetricChart({
   const uid = useId().replace(/:/g, '');
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
-  const stroke = metric === 'views' ? (isDark ? '#94a3b8' : '#64748b') : '#b5d43b';
+  const stroke = metric === 'views' ? (isDark ? '#94a3b8' : '#64748b') : '#3b82f6';
 
   const chartData = useMemo<ChartRow[]>(
     () =>

@@ -8,7 +8,6 @@ import {
   HelpCircle,
   Users,
 } from 'lucide-react';
-import { FORMS_CREATE_ENTRY_PATH } from '@/lib/forms-paths';
 
 export const APP_BASE = '/app';
 
@@ -20,69 +19,12 @@ export type NavItem = {
   exact?: boolean;
 };
 
-export type NavChild = {
-  href: string;
-  label: string;
-  exact?: boolean;
-};
-
-export type NavGroup = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  children: NavChild[];
-  defaultOpen?: boolean;
-};
-
-export type SidebarNavEntry =
-  | ({ type: 'link' } & NavItem)
-  | ({ type: 'group' } & NavGroup);
-
-/** Desktop sidebar: leaf links + collapsible groups (like reference UI) */
-export const sidebarNavEntries: SidebarNavEntry[] = [
-  {
-    type: 'link',
-    href: APP_BASE,
-    icon: LayoutGrid,
-    label: 'لوحة التحكم',
-    exact: true,
-  },
-  {
-    type: 'link',
-    href: `${APP_BASE}/analytics`,
-    icon: BarChart2,
-    label: 'تحليلات',
-  },
-  {
-    type: 'group',
-    id: 'forms',
-    label: 'النماذج',
-    icon: FileText,
-    defaultOpen: true,
-    children: [
-      { href: `${APP_BASE}/forms`, label: 'كل النماذج' },
-      { href: FORMS_CREATE_ENTRY_PATH, label: 'إنشاء نموذج' },
-    ],
-  },
-  {
-    type: 'link',
-    href: `${APP_BASE}/templates`,
-    icon: LayoutTemplate,
-    label: 'قوالب',
-  },
-  {
-    type: 'link',
-    href: `${APP_BASE}/team`,
-    icon: Users,
-    label: 'الفريق',
-  },
+/** Top navigation tabs — full-width primary sections */
+export const mainTopNavTabs: NavItem[] = [
+  { href: `${APP_BASE}/forms`, icon: FileText, label: 'النماذج' },
+  { href: `${APP_BASE}/analytics`, icon: BarChart2, label: 'التحليلات' },
+  { href: `${APP_BASE}/team`, icon: Users, label: 'الفريق' },
 ];
-
-export const sidebarFooterItem: NavItem = {
-  href: `${APP_BASE}/settings`,
-  icon: Settings,
-  label: 'الإعدادات',
-};
 
 /** Flat items for mobile dock / simpler nav surfaces */
 export const primaryNavItems: NavItem[] = [
@@ -99,6 +41,79 @@ export const middleNavItems: NavItem[] = [
 export const bottomNavItems: NavItem[] = [
   { href: `${APP_BASE}/settings`, icon: Settings, label: 'الإعدادات' },
   { href: `${APP_BASE}/help`, icon: HelpCircle, label: 'المساعدة' },
+];
+
+export type CommandPaletteItem = {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  exact?: boolean;
+};
+
+export type CommandPaletteSection = {
+  id: string;
+  label: string;
+  items: CommandPaletteItem[];
+};
+
+/** Grouped destinations for the dashboard command palette */
+export const commandPaletteSections: CommandPaletteSection[] = [
+  {
+    id: 'general',
+    label: 'عام',
+    items: [
+      {
+        href: APP_BASE,
+        icon: LayoutGrid,
+        label: 'لوحة التحكم',
+        description: 'ملخص نشاطك وإحصائيات اليوم',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/settings`,
+        icon: Settings,
+        label: 'الإعدادات',
+        description: 'الحساب والمظهر والإشعارات',
+      },
+      {
+        href: `${APP_BASE}/help`,
+        icon: HelpCircle,
+        label: 'المساعدة',
+        description: 'الأسئلة الشائعة والدعم',
+      },
+    ],
+  },
+  {
+    id: 'workspace',
+    label: 'مساحة العمل',
+    items: [
+      {
+        href: `${APP_BASE}/forms`,
+        icon: FileText,
+        label: 'النماذج',
+        description: 'إنشاء نماذج وإدارة الاستجابات',
+      },
+      {
+        href: `${APP_BASE}/analytics`,
+        icon: BarChart2,
+        label: 'التحليلات',
+        description: 'متابعة الأداء ومؤشرات النماذج',
+      },
+      {
+        href: `${APP_BASE}/templates`,
+        icon: LayoutTemplate,
+        label: 'القوالب',
+        description: 'قوالب جاهزة للبدء السريع',
+      },
+      {
+        href: `${APP_BASE}/team`,
+        icon: Users,
+        label: 'الفريق',
+        description: 'إدارة الأعضاء والصلاحيات',
+      },
+    ],
+  },
 ];
 
 export const PAGE_LABELS: Record<string, string> = {
@@ -134,12 +149,6 @@ export function isNavItemActive(
   }
 
   return path === href || path.startsWith(`${href}/`);
-}
-
-export function isNavGroupActive(pathname: string, group: NavGroup): boolean {
-  return group.children.some((child) =>
-    isNavItemActive(pathname, child.href, child.exact),
-  );
 }
 
 export function resolvePageLabel(pathname: string): string {

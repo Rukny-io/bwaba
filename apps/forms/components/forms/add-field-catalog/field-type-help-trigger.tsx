@@ -30,7 +30,7 @@ const helpIconClassName = cn(
   'inline-flex shrink-0 items-center justify-center rounded-full p-0.5',
   'text-[var(--muted-foreground)]/70 transition-colors duration-150',
   'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-brand)]/30',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/30',
 );
 
 interface FieldTypeHelpTriggerProps {

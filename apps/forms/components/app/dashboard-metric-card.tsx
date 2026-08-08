@@ -23,13 +23,13 @@ export interface DashboardMetricCardProps {
 }
 
 const chipToneClass: Record<DashboardMetricChipTone, string> = {
-  success: 'text-[var(--success)] dark:text-[var(--brand-lime)]',
+  success: 'text-[var(--success)]',
   warning: 'text-[var(--warning)]',
   danger: 'text-[var(--danger)]',
   neutral: 'text-[var(--muted-foreground)]',
 };
 
-/** Balance-style metric card — pill header, muted caption, hero value */
+/** Flat metric tile — label + icon header, hero value, subtle caption */
 export function DashboardMetricCard({
   icon: Icon,
   label,
@@ -50,77 +50,68 @@ export function DashboardMetricCard({
     value
   );
 
-  const footerTrend = !chip && trend ? trend : null;
-  const showFooterPill = Boolean(footerTrend || chip || comparisonSecondary);
+  const hasFooter = Boolean(chip || trend || comparisonSecondary || comparisonPrimary);
 
   return (
-    <article className="dashboard-card flex min-h-[8.25rem] flex-col gap-3 rounded-2xl border-[1px] border-[var(--border)] p-4 shadow-none sm:min-h-[9.5rem] sm:gap-3.5 sm:rounded-[2rem] sm:p-5">
-      <div className="inline-flex max-w-full items-center gap-2 self-start rounded-full bg-[var(--surface-secondary)] py-1 pe-3 ps-1">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand-carbon)] ring-1 ring-[var(--border)]/50 sm:size-8 dark:text-[var(--foreground)]">
-          <Icon size={15} strokeWidth={1.9} className="sm:hidden" aria-hidden />
-          <Icon
-            size={16}
-            strokeWidth={1.85}
-            className="hidden sm:block"
-            aria-hidden
-          />
-        </span>
-        <span className="truncate text-[12px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[13px]">
+    <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
           {label}
-        </span>
+        </p>
+        <Icon
+          className="size-[18px] shrink-0 text-[var(--muted-foreground)]/75"
+          strokeWidth={1.75}
+          aria-hidden
+        />
       </div>
 
-      <div className="mt-auto flex min-w-0 flex-col gap-2">
-        <p
-          className={cn(
-            'min-w-0 max-w-full break-words font-bold leading-none tracking-tight text-[var(--foreground)]',
-            tabular
-              ? 'text-[1.75rem] tabular-nums sm:text-[2rem]'
-              : 'text-[1.35rem] leading-snug sm:text-[1.5rem]',
-          )}
-        >
-          {valueNode}
-        </p>
+      <p
+        className={cn(
+          'mt-3 min-w-0 font-semibold leading-none tracking-tight text-[var(--foreground)]',
+          tabular
+            ? 'text-[1.65rem] tabular-nums sm:text-[1.75rem]'
+            : 'text-[1.25rem] leading-snug sm:text-[1.35rem]',
+        )}
+      >
+        {valueNode}
+      </p>
 
-        {showFooterPill ? (
-          <div className="inline-flex max-w-full items-center gap-1.5 self-start rounded-full bg-[var(--surface-secondary)] px-2.5 py-1">
-            {footerTrend ? (
+      {hasFooter ? (
+        <p className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+          {chip ? (
+            <span className={cn('font-medium', chipToneClass[chipTone])}>{chip}</span>
+          ) : null}
+          {!chip && trend ? (
+            <>
               <span
                 className={cn(
-                  'shrink-0 text-[11px] font-semibold tabular-nums',
-                  trendPositive
-                    ? 'text-[var(--success)] dark:text-[var(--brand-lime)]'
-                    : 'text-[var(--danger)]',
+                  'font-medium tabular-nums',
+                  trendPositive ? 'text-[var(--success)]' : 'text-[var(--danger)]',
                 )}
                 dir="ltr"
                 lang="en"
               >
-                {footerTrend}
+                {trend}
               </span>
-            ) : null}
-            {chip ? (
-              <span
-                className={cn(
-                  'shrink-0 text-[11px] font-semibold',
-                  chipToneClass[chipTone],
-                )}
-              >
-                {chip}
-              </span>
-            ) : null}
-            {footerTrend && comparisonSecondary ? (
-              <span className="text-[var(--border)]" aria-hidden>
-                ·
-              </span>
-            ) : null}
-            {comparisonSecondary ? (
-              <span className="min-w-0 truncate text-[11px] font-medium text-[var(--muted-foreground)] sm:text-[12px]">
-                {comparisonSecondary}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+              {comparisonSecondary ? (
+                <span className="text-[var(--muted-foreground)]">
+                  {' '}
+                  · {comparisonSecondary}
+                </span>
+              ) : comparisonPrimary ? (
+                <span className="text-[var(--muted-foreground)]">
+                  {' '}
+                  · {comparisonPrimary}
+                </span>
+              ) : null}
+            </>
+          ) : !chip && comparisonSecondary ? (
+            comparisonSecondary
+          ) : !chip && comparisonPrimary ? (
+            comparisonPrimary
+          ) : null}
+        </p>
+      ) : null}
     </article>
   );
 }

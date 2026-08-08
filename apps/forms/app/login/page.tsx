@@ -69,7 +69,7 @@ function LoginContent() {
     <AuthShell className="max-w-[460px]">
       <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8">
         <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-olive)] px-4 py-2 text-xs font-medium text-[var(--foreground)]">
+          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-blue-soft)] px-4 py-2 text-xs font-medium text-[var(--secondary-foreground)]">
             أهلاً بك
           </span>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">

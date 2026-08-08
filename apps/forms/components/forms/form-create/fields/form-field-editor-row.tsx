@@ -313,7 +313,7 @@ export function FormFieldEditorRow({
             className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-0.5 text-start transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05] sm:gap-3"
           >
             {TypeIcon ? (
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-soft-lime)_75%,var(--surface))] text-[var(--brand-carbon)] dark:text-[var(--foreground)] sm:size-9">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-blue-soft)_75%,var(--surface))] text-[var(--primary)] sm:size-9">
                 <TypeIcon className="size-4" strokeWidth={1.9} aria-hidden />
               </span>
             ) : null}
@@ -334,7 +334,7 @@ export function FormFieldEditorRow({
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {TypeIcon ? (
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-soft-lime)_75%,var(--surface))] text-[var(--brand-carbon)] dark:text-[var(--foreground)] sm:size-9">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand-blue-soft)_75%,var(--surface))] text-[var(--primary)] sm:size-9">
                 <TypeIcon className="size-4" strokeWidth={1.9} aria-hidden />
               </span>
             ) : null}

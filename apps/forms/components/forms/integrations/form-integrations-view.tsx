@@ -30,7 +30,8 @@ import {
 import { FormPermissionDeniedState } from '@/components/forms/shared/form-permission-denied-state';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { getGoogleDriveStatus } from '@/lib/google-drive-api';
 import {
   getFormIntegrationsRow,
@@ -43,6 +44,8 @@ import {
   type FormDeveloperEmbed,
   type FormDeveloperEmbedLinked,
 } from '@/lib/developer-embed-api';
+import { useFormWorkspaceSeed } from '@/lib/use-form-workspace-seed';
+import { cn } from '@/lib/utils';
 
 export type FormIntegrationId =
   | 'sheets'
@@ -95,12 +98,13 @@ function clearOAuthQueryParams() {
 
 export function FormIntegrationsView({ formId }: { formId: string }) {
   const searchParams = useSearchParams();
-  const [formAccess, setFormAccess] = useState<FormDetail | null>(null);
+  const seedForm = useFormWorkspaceSeed(formId);
+  const [formAccess, setFormAccess] = useState<FormDetail | null>(seedForm);
   const [form, setForm] = useState<IntegrationsFormRow | null>(null);
   const [developerEmbed, setDeveloperEmbed] =
     useState<FormDeveloperEmbed | null>(null);
   const [driveConnected, setDriveConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!seedForm);
   const [error, setError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [selected, setSelected] = useState<FormIntegrationId | null>(null);
@@ -114,12 +118,13 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
   );
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const hasCachedAccess = formAccess !== null;
+    if (!hasCachedAccess) setLoading(true);
     setError(null);
     setAccessDenied(false);
     try {
-      const formData = await getForm(formId);
-      setFormAccess(formData);
+      const formData = formAccess ?? (await getForm(formId));
+      if (!formAccess) setFormAccess(formData);
       const role = resolveFormAccessRole(formData);
       if (!hasFormTeamPermission(role, 'manage_integrations')) {
         setAccessDenied(true);
@@ -139,7 +144,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
       if (e instanceof ApiException && e.statusCode === 403) {
         setAccessDenied(true);
         setForm(null);
-      } else {
+      } else if (!hasCachedAccess) {
         setError(
           e instanceof ApiException ? e.message : 'تعذّر تحميل التكاملات',
         );
@@ -147,7 +152,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [formId]);
+  }, [formId, formAccess]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
@@ -201,11 +206,11 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
 
   if (loading && !form) {
     return (
-      <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <Skeleton className="h-5 w-64 max-w-full rounded-lg" />
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Skeleton key={i} className="h-44 rounded-2xl sm:rounded-3xl" />
+            <Skeleton key={i} className="h-44 rounded-[25px]" />
           ))}
         </div>
       </div>
@@ -235,39 +240,34 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
 
   if (selected) {
     return (
-      <div className="flex flex-col gap-5 sm:gap-6">
-        <DashboardSurface padding="md">
-          <button
-            type="button"
-            onClick={() => {
-              setSelected(null);
-              setSheetsJustConnected(false);
-              void load();
-            }}
-            className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden />
-            رجوع للبطاقات
-          </button>
+      <div className="flex flex-col gap-6 sm:gap-8">
+        <button
+          type="button"
+          onClick={() => {
+            setSelected(null);
+            setSheetsJustConnected(false);
+            void load();
+          }}
+          className="inline-flex w-fit items-center gap-1.5 text-[12px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          رجوع للبطاقات
+        </button>
 
-          <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
-            {INTEGRATION_TITLES[selected]}
-          </h2>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)] sm:text-[13px]">
-            إعداد التكامل لهذا النموذج
-          </p>
-
+        <SettingsSectionCard
+          plain
+          title={INTEGRATION_TITLES[selected]}
+          description="إعداد التكامل لهذا النموذج"
+        >
           {selected === 'sheets' && sheetsJustConnected ? (
-            <div className="mt-5">
-              <SheetsConnectedBanner
-                form={form}
-                onRefresh={() => void load()}
-                onDismiss={() => setSheetsJustConnected(false)}
-              />
-            </div>
+            <SheetsConnectedBanner
+              form={form}
+              onRefresh={() => void load()}
+              onDismiss={() => setSheetsJustConnected(false)}
+            />
           ) : null}
 
-          <div className={selected === 'sheets' && sheetsJustConnected ? '' : 'mt-6'}>
+          <div className={selected === 'sheets' && sheetsJustConnected ? 'mt-[12px]' : undefined}>
             {selected === 'sheets' ? (
               <PlanFeatureGate feature="googleSheets">
                 <SubmissionsGoogleSheetsPanel formId={form.id} />
@@ -284,7 +284,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
               </PlanFeatureGate>
             ) : null}
             {selected === 'webhook' ? (
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6 sm:gap-8">
                 <PlanFeatureGate feature="webhook">
                   <WebhookSettingsPanel form={form} onSaved={() => void load()} />
                 </PlanFeatureGate>
@@ -314,7 +314,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
               )
             ) : null}
           </div>
-        </DashboardSurface>
+        </SettingsSectionCard>
       </div>
     );
   }
@@ -342,21 +342,30 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
     : 'inactive';
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
-      <DashboardSurface padding="sm" className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-            اربط هذا النموذج بالتطبيقات الخارجية — الاستجابات تُرسل تلقائياً دون
-            تصدير يدوي.
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <SettingsSectionCard
+        plain
+        title="التكاملات"
+        description="اربط هذا النموذج بالتطبيقات الخارجية — الاستجابات تُرسل تلقائياً دون تصدير يدوي"
+      >
+        <div
+          className={cn(
+            formDetailCardSurfaceClass,
+            'flex flex-wrap items-center gap-3',
+          )}
+        >
+          <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+            {connectedCount > 0
+              ? `لديك ${formatNumber(connectedCount)} تكامل${connectedCount === 1 ? '' : 'ات'} مفعّلة على هذا النموذج`
+              : 'لم تربط أي تكامل بعد — ابدأ بـ Google Sheets أو Webhook'}
           </p>
+          {connectedCount > 0 ? (
+            <span className="shrink-0 rounded-full bg-[var(--primary)]/10 px-3 py-1 text-[12px] font-semibold text-[var(--primary)]">
+              {formatNumber(connectedCount)} مفعّل
+            </span>
+          ) : null}
         </div>
-        {connectedCount > 0 ? (
-          <span className="shrink-0 rounded-full bg-[var(--primary)]/10 px-3 py-1 text-[12px] font-semibold text-[var(--primary)]">
-            {formatNumber(connectedCount)} تكامل{' '}
-            {connectedCount === 1 ? 'مفعّل' : 'مفعّلة'}
-          </span>
-        ) : null}
-      </DashboardSurface>
+      </SettingsSectionCard>
 
       {sheetsOAuthError ? (
         <DashboardErrorState
@@ -375,11 +384,12 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
         />
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
-          التكاملات المتاحة
-        </h2>
-        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 xl:grid-cols-4">
+      <SettingsSectionCard
+        plain
+        title="التكاملات المتاحة"
+        description="اختر تكاملاً لربطه أو إدارته"
+      >
+        <div className="grid grid-cols-2 items-stretch gap-3 xl:grid-cols-4">
           <FormIntegrationCard
             logo={INTEGRATION_LOGOS.googleSheets}
             title="Google Sheets"
@@ -464,18 +474,14 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
             actionLabel={developerLinked ? 'إدارة' : 'ربط'}
           />
         </div>
-      </section>
+      </SettingsSectionCard>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            قريباً
-          </h2>
-          <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-            تكاملات إضافية قيد التحضير
-          </p>
-        </div>
-        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 xl:grid-cols-4">
+      <SettingsSectionCard
+        plain
+        title="قريباً"
+        description="تكاملات إضافية قيد التحضير"
+      >
+        <div className="grid grid-cols-2 items-stretch gap-3 xl:grid-cols-4">
           {COMING_SOON.map((item) => (
             <FormIntegrationCard
               key={item.title}
@@ -488,7 +494,7 @@ export function FormIntegrationsView({ formId }: { formId: string }) {
             />
           ))}
         </div>
-      </section>
+      </SettingsSectionCard>
     </div>
   );
 }

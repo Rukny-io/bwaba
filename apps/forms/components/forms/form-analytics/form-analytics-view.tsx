@@ -35,15 +35,18 @@ import { FormAnalyticsAdvancedPaywall } from '@/components/forms/form-analytics/
 import { FormAnalyticsSectionTabs } from '@/components/forms/form-analytics/form-analytics-section-tabs';
 import { FormPermissionDeniedState } from '@/components/forms/shared/form-permission-denied-state';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import { formDetailCardClass } from '@/lib/form-detail-styles';
+import { useFormWorkspaceSeed } from '@/lib/use-form-workspace-seed';
 
 export function FormAnalyticsView({ formId }: { formId: string }) {
+  const seedForm = useFormWorkspaceSeed(formId);
   const [days, setDays] = useState<AnalyticsPeriodDays>(() =>
     readFormsPreferences().analyticsDefaultPeriod,
   );
-  const [form, setForm] = useState<FormDetail | null>(null);
+  const [form, setForm] = useState<FormDetail | null>(seedForm);
   const [data, setData] = useState<FormAnalyticsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!seedForm);
   const [error, setError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const { hasFull, loading: planLoading, plan } = useFormAnalyticsTier();
@@ -51,11 +54,12 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
   const permissionDeniedCopy = getPermissionDeniedCopy('view_analytics', accessRole);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const hasCachedForm = seedForm !== null;
+    if (!hasCachedForm) setLoading(true);
     setError(null);
     setAccessDenied(false);
     try {
-      const formData = await getForm(formId);
+      const formData = seedForm ?? (await getForm(formId));
       setForm(formData);
       const role = resolveFormAccessRole(formData);
       if (!hasFormTeamPermission(role, 'view_analytics')) {
@@ -69,7 +73,7 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
       if (e instanceof ApiException && e.statusCode === 403) {
         setAccessDenied(true);
         setData(null);
-      } else {
+      } else if (!hasCachedForm) {
         setError(
           e instanceof ApiException ? e.message : 'تعذّر تحميل التحليلات',
         );
@@ -77,7 +81,7 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [formId, days]);
+  }, [formId, days, seedForm]);
 
   useEffect(() => {
     void load();
@@ -85,14 +89,14 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
 
   if ((loading || planLoading) && !data) {
     return (
-      <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <Skeleton className="mx-auto h-11 w-full max-w-2xl rounded-full" />
-        <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-[7.25rem] rounded-3xl" />
+            <Skeleton key={i} className="h-[7.25rem] rounded-[25px]" />
           ))}
         </div>
-        <Skeleton className="h-56 rounded-2xl sm:rounded-3xl" />
+        <Skeleton className="h-56 rounded-[25px]" />
       </div>
     );
   }
@@ -123,47 +127,44 @@ export function FormAnalyticsView({ formId }: { formId: string }) {
       defaultSection="intro"
       panels={{
         filters: (
-          <DashboardSurface className="space-y-5">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
-                الفترة الزمنية
-              </h2>
-              <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)] sm:text-[13px]">
-                اختر الفترة الزمنية لعرض التحليلات
-              </p>
+          <SettingsSectionCard
+            plain
+            title="الفترة الزمنية"
+            description="اختر الفترة الزمنية لعرض التحليلات وتصدير البيانات"
+          >
+            <div className={formDetailCardClass}>
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
+                <AnalyticsPeriodPicker value={days} onChange={setDays} />
+                {data.period ? (
+                  <p className="text-[12px] text-[var(--muted-foreground)] sm:text-[13px]">
+                    <span dir="ltr" lang="en" className="tabular-nums">
+                      {formatFormDate(data.period.startDate)} —{' '}
+                      {formatFormDate(data.period.endDate)}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {hasFull ? (
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    className="rounded-xl"
+                    onPress={() => downloadFormAnalyticsCsv(data)}
+                  >
+                    <Download className="size-4" />
+                    تصدير CSV
+                  </Button>
+                ) : null}
+                <Link href={`${APP_BASE}/forms/${formId}/submissions`}>
+                  <Button variant="outline" size="sm" className="rounded-xl">
+                    <Inbox className="size-4" />
+                    عرض الاستجابات
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
-              <AnalyticsPeriodPicker value={days} onChange={setDays} />
-              {data.period ? (
-                <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">
-                  <span dir="ltr" lang="en" className="tabular-nums">
-                    {formatFormDate(data.period.startDate)} —{' '}
-                    {formatFormDate(data.period.endDate)}
-                  </span>
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {hasFull ? (
-                <Button
-                  variant="tertiary"
-                  size="sm"
-                  className="rounded-xl"
-                  onPress={() => downloadFormAnalyticsCsv(data)}
-                >
-                  <Download className="size-4" />
-                  تصدير CSV
-                </Button>
-              ) : null}
-              <Link
-                href={`${APP_BASE}/forms/${formId}/submissions`}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]/80"
-              >
-                <Inbox className="size-4" />
-                عرض الاستجابات
-              </Link>
-            </div>
-          </DashboardSurface>
+          </SettingsSectionCard>
         ),
         intro: <FormAnalyticsIntroSection data={data} compact />,
         visits: <FormAnalyticsVisitsSection data={data} compact />,

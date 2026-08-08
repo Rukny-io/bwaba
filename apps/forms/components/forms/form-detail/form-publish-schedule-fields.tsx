@@ -13,7 +13,6 @@ import {
   formatScheduleRangeSummary,
   type ScheduleRange,
 } from '@/lib/publish-schedule-utils';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { cn } from '@/lib/utils';
 
 interface FormPublishScheduleFieldsProps {
@@ -76,18 +75,15 @@ export function FormPublishScheduleFields({
   const summary = formatScheduleRangeSummary(range);
 
   return (
-    <DashboardSurface padding="md" className="bg-[var(--surface-secondary)]/25">
-      <div className="space-y-1">
-        <Label className="text-sm font-semibold text-[var(--foreground)]">
-          فترة قبول الاستجابات
-        </Label>
-        <Description>
-          حدّد تاريخ البداية والنهاية. بدون تحديد — النموذج متاح دون قيود
-          زمنية.
-        </Description>
-      </div>
+    <div className="space-y-1 text-start">
+      <Label className="text-[13px] font-semibold text-[var(--foreground)]">
+        فترة قبول الاستجابات
+      </Label>
+      <Description>
+        حدّد تاريخ البداية والنهاية. بدون تحديد — النموذج متاح دون قيود زمنية.
+      </Description>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 pt-3">
         <Popover isOpen={calendarOpen} onOpenChange={setCalendarOpen}>
           <Popover.Trigger>
             <Button
@@ -138,10 +134,10 @@ export function FormPublishScheduleFields({
           <span className="min-w-0 leading-snug">{summary}</span>
         </p>
       ) : (
-        <p className="mt-3 text-[13px] text-[var(--muted-foreground)]">
+        <p className="text-[13px] text-[var(--muted-foreground)]">
           لم تُحدَّد فترة بعد.
         </p>
       )}
-    </DashboardSurface>
+    </div>
   );
 }

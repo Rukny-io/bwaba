@@ -25,8 +25,7 @@ export function SettingsNotificationsSection() {
 
   return (
     <SettingsSectionCard
-      icon={Bell}
-      title="إشعارات Forms"
+      title="إشعارات النماذج"
       description="تنبيهات الاستجابات والنشاط داخل تطبيق النماذج."
     >
       <div className="space-y-5">

@@ -110,7 +110,7 @@ export function MobileDock() {
                         className={cn(
                           'flex size-10 shrink-0 items-center justify-center rounded-2xl',
                           active
-                            ? 'bg-[var(--brand-lime)] text-[var(--primary-foreground)]'
+                            ? 'bg-[var(--foreground)] text-[var(--background)]'
                             : 'bg-[var(--surface-secondary)] text-[var(--foreground)]',
                         )}
                       >

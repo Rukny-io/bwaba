@@ -17,9 +17,10 @@ import {
   getDeveloperAppFormsUrl,
   getPublicFormUrl,
 } from '@/lib/developer-embed-urls';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
-const panelClassName = 'dashboard-panel shadow-none';
+const panelClassName = formDetailCardSurfaceClass;
 
 export function DeveloperEmbedSettingsPanel({
   formId,

@@ -22,19 +22,22 @@ import { collectRespondentEmails } from '@/lib/submission-utils';
 import { appToast } from '@/lib/app-toast';
 import { FormPermissionDeniedState } from '@/components/forms/shared/form-permission-denied-state';
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { SubmissionsTabBar, useSubmissionsTab } from '@/components/forms/submissions/submissions-tab-bar';
 import { SubmissionsSummaryTab } from '@/components/forms/submissions/submissions-summary-tab';
 import { SubmissionsQuestionTab } from '@/components/forms/submissions/submissions-question-tab';
 import { SubmissionsIndividualTab } from '@/components/forms/submissions/submissions-individual-tab';
 import { SubmissionsSearchBar } from '@/components/forms/submissions/submissions-search-bar';
+import { useFormWorkspaceSeed } from '@/lib/use-form-workspace-seed';
 
 const PAGE_SIZE = 50;
 
 function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
   const tab = useSubmissionsTab();
+  const seedForm = useFormWorkspaceSeed(formId);
 
-  const [form, setForm] = useState<FormDetail | null>(null);
+  const [form, setForm] = useState<FormDetail | null>(seedForm);
   const [summary, setSummary] = useState<SubmissionsSummaryResponse | null>(
     null,
   );
@@ -47,7 +50,7 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMoreCursor, setHasMoreCursor] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!seedForm);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -82,11 +85,12 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
 
   const loadCore = useCallback(
     async (search = '') => {
-      setLoading(true);
+      const hasCachedForm = form !== null;
+      if (!hasCachedForm) setLoading(true);
       setError(null);
       try {
-        const formData = await getForm(formId);
-        setForm(formData);
+        const formData = form ?? (await getForm(formId));
+        if (!form) setForm(formData);
 
         const role = resolveFormAccessRole(formData);
         if (!hasFormTeamPermission(role, 'view_submissions')) {
@@ -110,7 +114,7 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
       } catch (e) {
         if (e instanceof ApiException && e.statusCode === 403) {
           setError(e.message);
-        } else {
+        } else if (!hasCachedForm) {
           setError(
             e instanceof ApiException ? e.message : 'تعذّر تحميل الاستجابات',
           );
@@ -119,7 +123,7 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
         setLoading(false);
       }
     },
-    [formId, loadSubmissions],
+    [formId, loadSubmissions, form],
   );
 
   useEffect(() => {
@@ -234,9 +238,9 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
   if (loading && !form) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-[25px]" />
         <Skeleton className="h-10 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-[25px]" />
       </div>
     );
   }
@@ -253,7 +257,7 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
+    <div className="flex flex-col gap-6 sm:gap-8">
       <SubmissionsTabBar
         total={displayTotal}
         exporting={exporting}
@@ -262,20 +266,22 @@ function SubmissionsWorkspaceInner({ formId }: { formId: string }) {
         emailCount={respondentEmails.length}
       />
 
-      <DashboardSurface padding="md">
-        <SubmissionsSearchBar
-          value={searchInput}
-          onChange={(value) => {
-            setSearchInput(value);
-            if (!value.trim() && activeSearch) {
-              setActiveSearch('');
-              void loadCore('');
-            }
-          }}
-          onSubmit={() => void runSearch()}
-          busy={searching}
-        />
-      </DashboardSurface>
+      <SettingsSectionCard plain title="البحث" description="ابحث في الاستجابات بالبريد أو النص أو المعرّف">
+        <div className={formDetailCardSurfaceClass}>
+          <SubmissionsSearchBar
+            value={searchInput}
+            onChange={(value) => {
+              setSearchInput(value);
+              if (!value.trim() && activeSearch) {
+                setActiveSearch('');
+                void loadCore('');
+              }
+            }}
+            onSubmit={() => void runSearch()}
+            busy={searching}
+          />
+        </div>
+      </SettingsSectionCard>
 
       {activeSearch ? (
         <p className="text-[12px] text-[var(--muted-foreground)]">
@@ -330,8 +336,8 @@ export function SubmissionsWorkspace({ formId }: { formId: string }) {
     <Suspense
       fallback={
         <div className="space-y-4">
-          <Skeleton className="h-16 w-full rounded-2xl" />
-          <Skeleton className="h-48 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-[25px]" />
+          <Skeleton className="h-48 w-full rounded-[25px]" />
         </div>
       }
     >

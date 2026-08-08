@@ -53,7 +53,7 @@ export function resolveMediaProxyUrl(
   value?: string | null,
 ): string | null | undefined {
   if (!value) return value;
-  if (value.startsWith('/uploads/')) return null;
+  if (value.startsWith('/uploads/')) return value;
   if (value.startsWith('/api/')) return value;
   if (value.startsWith('http://') || value.startsWith('https://')) {
     if (!isS3Url(value)) return value;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   Users,
@@ -38,13 +38,12 @@ import {
   usePlanFeature,
 } from '@/components/plan/plan-feature-gate';
 import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import { SettingsRowDivider } from '@/components/settings/settings-primitives';
 import { TeamInviteDialog } from '@/components/team/team-invite-dialog';
 import { FormTeamRoleIcon, FormTeamRoleSelect } from '@/components/team/form-team-role-select';
 import { TeamUpgradeDialog } from '@/components/team/team-upgrade-dialog';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { ACCOUNTS_URL } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +61,38 @@ function statusPillClassName(status: string) {
 }
 
 const teamRowClassName =
-  'flex flex-col gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-secondary)]/30 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between';
+  'dashboard-metric-tile flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-[1.125rem]';
+
+function TeamMembersEmptyState({
+  children,
+}: {
+  children?: ReactNode;
+}) {
+  return (
+    <article className="dashboard-metric-tile flex flex-col items-center rounded-2xl px-6 py-10 text-center sm:py-12">
+      <span className="mb-3 flex size-11 items-center justify-center rounded-xl border border-[var(--border)]/60 bg-[var(--surface)] text-[var(--muted-foreground)]">
+        <Users className="size-5" strokeWidth={1.75} aria-hidden />
+      </span>
+      <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
+        لا يوجد أعضاء بعد
+      </h3>
+      <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+        ادعُ زملاءك للتعاون على إدارة النماذج والاستجابات.
+      </p>
+      {children ? (
+        <div className="mt-5 flex flex-wrap justify-center gap-2">{children}</div>
+      ) : null}
+    </article>
+  );
+}
+
+function TeamPriorityItem({ children }: { children: ReactNode }) {
+  return (
+    <li className="rounded-xl border border-[var(--border)]/55 bg-[var(--surface)] px-3 py-2.5 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+      {children}
+    </li>
+  );
+}
 
 function memberDisplayName(member: FormTeamMember): string {
   return (
@@ -291,36 +321,42 @@ export function TeamView() {
         }
       />
 
-      <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
-        <DashboardMetricCard
-          icon={Users}
-          label="أعضاء نشطون"
-          value={accepted.length}
-          comparisonPrimary="يملكون وصولاً فعلياً"
-          comparisonSecondary="إلى نماذجك"
-        />
-        <DashboardMetricCard
-          icon={Clock3}
-          label="دعوات صادرة"
-          value={pendingOutgoing.length}
-          comparisonPrimary="بانتظار القبول"
-          comparisonSecondary="من دعوتهم"
-        />
-        <DashboardMetricCard
-          icon={Mail}
-          label="دعوات واردة"
-          value={invitations.length}
-          comparisonPrimary="مساحات عمل دعتك"
-          comparisonSecondary="للانضمام"
-        />
-        <DashboardMetricCard
-          icon={Building2}
-          label="فرق منضم إليها"
-          value={joinedWorkspaces.length}
-          comparisonPrimary="مساحات عمل"
-          comparisonSecondary="تشاركك الوصول"
-        />
-      </div>
+      <SettingsSectionCard
+        plain
+        title="ملخص الفريق"
+        description="نظرة سريعة على حالة الأعضاء والدعوات في مساحة عملك."
+      >
+        <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-4 gap-3 xl:grid-cols-4">
+          <DashboardMetricCard
+            icon={Users}
+            label="أعضاء نشطون"
+            value={accepted.length}
+            comparisonPrimary="يملكون وصولاً فعلياً"
+            comparisonSecondary="إلى نماذجك"
+          />
+          <DashboardMetricCard
+            icon={Clock3}
+            label="دعوات صادرة"
+            value={pendingOutgoing.length}
+            comparisonPrimary="بانتظار القبول"
+            comparisonSecondary="من دعوتهم"
+          />
+          <DashboardMetricCard
+            icon={Mail}
+            label="دعوات واردة"
+            value={invitations.length}
+            comparisonPrimary="مساحات عمل دعتك"
+            comparisonSecondary="للانضمام"
+          />
+          <DashboardMetricCard
+            icon={Building2}
+            label="فرق منضم إليها"
+            value={joinedWorkspaces.length}
+            comparisonPrimary="مساحات عمل"
+            comparisonSecondary="تشاركك الوصول"
+          />
+        </div>
+      </SettingsSectionCard>
 
       {!planLoading && !teamEnabled ? (
         <PlanUpgradeBanner
@@ -333,7 +369,7 @@ export function TeamView() {
 
       {invitations.length > 0 ? (
         <SettingsSectionCard
-          icon={Mail}
+          plain
           title="دعواتك المعلّقة"
           description="مساحات عمل دعاك للانضمام إليها."
         >
@@ -384,7 +420,7 @@ export function TeamView() {
 
       {joinedWorkspaces.length > 0 ? (
         <SettingsSectionCard
-          icon={Building2}
+          plain
           title="مساحات انضممت إليها"
           description="فرق عمل شاركتك نماذجها بعد قبول الدعوة."
         >
@@ -438,35 +474,39 @@ export function TeamView() {
       ) : null}
 
       <SettingsSectionCard
-        icon={Users}
+        flush
         title="أعضاء الفريق"
         description="كل الأعضاء المرتبطين بمساحة عملك، مع حالة الدعوة والدور الحالي."
       >
         {loading ? (
-          <p className="text-sm text-[var(--muted-foreground)]">جاري التحميل…</p>
+          <p className="px-4 py-5 text-sm text-[var(--muted-foreground)] sm:px-5">
+            جاري التحميل…
+          </p>
         ) : accepted.length === 0 && pendingOutgoing.length === 0 ? (
-          <DashboardEmptyState
-            compact
-            title="لا يوجد أعضاء بعد"
-            description="ادعُ زملاءك للتعاون على إدارة النماذج والاستجابات."
-          >
-            {!teamEnabled && !planLoading ? (
-              <Button
-                variant="secondary"
-                className="rounded-full"
-                onPress={openInviteFlow}
-              >
-                اكتشف باقة بلس
-              </Button>
-            ) : null}
-          </DashboardEmptyState>
+          <div className="p-4 sm:p-5">
+            <TeamMembersEmptyState>
+              {!teamEnabled && !planLoading ? (
+                <Button
+                  variant="secondary"
+                  className="rounded-full"
+                  onPress={openInviteFlow}
+                >
+                  اكتشف باقة بلس
+                </Button>
+              ) : (
+                <Button className="rounded-full" onPress={openInviteFlow}>
+                  <UserPlus className="size-4" aria-hidden />
+                  دعوة عضو
+                </Button>
+              )}
+            </TeamMembersEmptyState>
+          </div>
         ) : (
-          <ul className="divide-y divide-[var(--border)]/60">
-            {[...accepted, ...pendingOutgoing].map((member) => (
-              <li
-                key={member.id}
-                className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-              >
+          <ul>
+            {[...accepted, ...pendingOutgoing].map((member, index) => (
+              <li key={member.id}>
+                {index > 0 ? <SettingsRowDivider /> : null}
+                <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -504,6 +544,7 @@ export function TeamView() {
                     إزالة
                   </Button>
                 </div>
+                </div>
               </li>
             ))}
           </ul>
@@ -511,103 +552,107 @@ export function TeamView() {
       </SettingsSectionCard>
 
       <SettingsSectionCard
-        icon={Users}
-        title="حالة الفريق والعمل"
-        description="ملخص تشغيلي سريع يساعدك تعرف أين تركز الآن."
+        plain
+        title="رؤى سريعة"
+        description="مؤشرات تساعدك تعرف أين تركز الآن."
       >
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-            <DashboardSurface padding="sm" className="space-y-1.5">
-              <p className="text-[11px] text-[var(--muted-foreground)]">أعضاء نشطون</p>
-              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{accepted.length}</p>
-            </DashboardSurface>
-            <DashboardSurface padding="sm" className="space-y-1.5">
-              <p className="text-[11px] text-[var(--muted-foreground)]">دعوات صادرة</p>
-              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{pendingOutgoing.length}</p>
-            </DashboardSurface>
-            <DashboardSurface padding="sm" className="space-y-1.5">
-              <p className="text-[11px] text-[var(--muted-foreground)]">دعوات واردة</p>
-              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{invitations.length}</p>
-            </DashboardSurface>
-            <DashboardSurface padding="sm" className="space-y-1.5">
-              <p className="text-[11px] text-[var(--muted-foreground)]">فرق منضم إليها</p>
-              <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{joinedWorkspaces.length}</p>
-            </DashboardSurface>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <DashboardSurface as="article" padding="md" className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--foreground)]">مؤشر التعاون</h3>
-                <Clock3 className="size-4 text-[var(--muted-foreground)]" />
-              </div>
-              <p className="text-3xl font-bold tabular-nums text-[var(--foreground)]" dir="ltr" lang="en">
-                {pendingOutgoing.length + accepted.length > 0
-                  ? `${Math.round((accepted.length / (accepted.length + pendingOutgoing.length)) * 100)}%`
-                  : '0%'}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
+                مؤشر التعاون
               </p>
-              <p className="text-[12px] text-[var(--muted-foreground)]">
-                نسبة الدعوات التي تحولت إلى أعضاء نشطين.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[var(--surface-tertiary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--primary)]">
-                  {accepted.length > 0 ? 'الفريق يعمل' : 'فردي حالياً'}
-                </span>
-                <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-1 text-[11px] text-[var(--muted-foreground)]">
-                  الخطة: {planDisplayName(plan)}
-                </span>
-              </div>
-            </DashboardSurface>
+              <Clock3
+                className="size-[18px] shrink-0 text-[var(--muted-foreground)]/75"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+            </div>
+            <p
+              className="mt-3 text-[1.65rem] font-semibold leading-none tracking-tight tabular-nums text-[var(--foreground)] sm:text-[1.75rem]"
+              dir="ltr"
+              lang="en"
+            >
+              {pendingOutgoing.length + accepted.length > 0
+                ? `${Math.round((accepted.length / (accepted.length + pendingOutgoing.length)) * 100)}%`
+                : '0%'}
+            </p>
+            <p className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+              نسبة الدعوات التي تحولت إلى أعضاء نشطين.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[var(--border)]/60 bg-[var(--surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--foreground)]">
+                {accepted.length > 0 ? 'الفريق يعمل' : 'فردي حالياً'}
+              </span>
+              <span className="rounded-full border border-[var(--border)]/60 bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--muted-foreground)]">
+                الخطة: {planDisplayName(plan)}
+              </span>
+            </div>
+          </article>
 
-            <DashboardSurface as="article" padding="md" className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--foreground)]">أولويات العمل الآن</h3>
-                {(invitations.length > 0 || pendingOutgoing.length > 0 || accepted.length === 0 || (!teamEnabled && !planLoading)) ? (
-                  <AlertCircle className="size-4 text-[var(--warning)]" />
-                ) : (
-                  <CheckCircle2 className="size-4 text-[var(--success)]" />
-                )}
-              </div>
-              <ul className="space-y-2 text-[12px] text-[var(--muted-foreground)]">
-                {invitations.length > 0 ? (
-                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">لديك دعوات واردة تحتاج قبول/رفض.</li>
-                ) : null}
-                {pendingOutgoing.length > 0 ? (
-                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">تابع الدعوات الصادرة المعلّقة مع الأعضاء.</li>
-                ) : null}
-                {accepted.length === 0 ? (
-                  <li className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2">ابدأ بدعوة أول عضو لتفعيل التعاون.</li>
-                ) : null}
-                {!teamEnabled && !planLoading ? (
-                  <li className="rounded-xl bg-[var(--warning)]/10 px-3 py-2">الترقية مطلوبة لفتح ميزات الفريق المتقدمة.</li>
-                ) : null}
-                {invitations.length === 0 &&
-                pendingOutgoing.length === 0 &&
-                accepted.length > 0 &&
-                (teamEnabled || planLoading) ? (
-                  <li className="rounded-xl bg-[var(--success)]/10 px-3 py-2">لا يوجد إجراء عاجل، فريقك مستقر حالياً.</li>
-                ) : null}
-              </ul>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" className="rounded-xl" onPress={openInviteFlow}>
-                  <UserPlus className="size-4" aria-hidden />
-                  دعوة عضو
+          <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
+                أولويات العمل الآن
+              </p>
+              {(invitations.length > 0 ||
+                pendingOutgoing.length > 0 ||
+                accepted.length === 0 ||
+                (!teamEnabled && !planLoading)) ? (
+                <AlertCircle
+                  className="size-[18px] shrink-0 text-[var(--warning)]"
+                  aria-hidden
+                />
+              ) : (
+                <CheckCircle2
+                  className="size-[18px] shrink-0 text-[var(--success)]"
+                  aria-hidden
+                />
+              )}
+            </div>
+            <ul className="mt-3 space-y-2">
+              {invitations.length > 0 ? (
+                <TeamPriorityItem>لديك دعوات واردة تحتاج قبول/رفض.</TeamPriorityItem>
+              ) : null}
+              {pendingOutgoing.length > 0 ? (
+                <TeamPriorityItem>تابع الدعوات الصادرة المعلّقة مع الأعضاء.</TeamPriorityItem>
+              ) : null}
+              {accepted.length === 0 ? (
+                <TeamPriorityItem>ابدأ بدعوة أول عضو لتفعيل التعاون.</TeamPriorityItem>
+              ) : null}
+              {!teamEnabled && !planLoading ? (
+                <TeamPriorityItem>
+                  الترقية مطلوبة لفتح ميزات الفريق المتقدمة.
+                </TeamPriorityItem>
+              ) : null}
+              {invitations.length === 0 &&
+              pendingOutgoing.length === 0 &&
+              accepted.length > 0 &&
+              (teamEnabled || planLoading) ? (
+                <TeamPriorityItem>
+                  لا يوجد إجراء عاجل، فريقك مستقر حالياً.
+                </TeamPriorityItem>
+              ) : null}
+            </ul>
+            <div className="mt-auto flex flex-wrap gap-2 pt-4">
+              <Button size="sm" className="rounded-xl" onPress={openInviteFlow}>
+                <UserPlus className="size-4" aria-hidden />
+                دعوة عضو
+              </Button>
+              <Link href="/app/analytics">
+                <Button size="sm" variant="secondary" className="rounded-xl">
+                  متابعة الأداء
                 </Button>
-                <Link href="/app/analytics">
+              </Link>
+              {!teamEnabled && !planLoading ? (
+                <Link href={BILLING_URL} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" variant="secondary" className="rounded-xl">
-                    متابعة الأداء
+                    ترقية الخطة
                   </Button>
                 </Link>
-                {!teamEnabled && !planLoading ? (
-                  <Link href={BILLING_URL} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="secondary" className="rounded-xl">
-                      ترقية الخطة
-                    </Button>
-                  </Link>
-                ) : null}
-              </div>
-            </DashboardSurface>
-          </div>
+              ) : null}
+            </div>
+          </article>
         </div>
       </SettingsSectionCard>
 

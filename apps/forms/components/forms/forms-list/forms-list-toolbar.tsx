@@ -96,7 +96,7 @@ function FormsPillTab({
       className={cn(
         'group shrink-0 rounded-full p-[1.5px] transition-colors duration-200',
         isActive
-          ? 'bg-gradient-to-l from-[var(--brand-lime-soft)] via-[var(--primary)] to-[var(--brand-lime)]'
+          ? 'bg-gradient-to-l from-[var(--brand-blue-soft)] via-[var(--primary)] to-[var(--brand-blue)]'
           : 'bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--border)_70%,var(--primary)_30%)]',
       )}
     >

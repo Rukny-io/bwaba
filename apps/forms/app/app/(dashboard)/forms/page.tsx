@@ -5,7 +5,7 @@ export default async function FormsListPage() {
   const metrics = await getFormsDashboardMetrics();
 
   return (
-    <section className="dashboard-page flex min-w-0 max-w-full flex-col gap-3.5 sm:gap-6 dashboard-brand">
+    <section className="dashboard-page flex min-w-0 max-w-full flex-col gap-3.5 sm:gap-6">
       <FormsListView metrics={metrics} />
     </section>
   );

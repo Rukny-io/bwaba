@@ -36,7 +36,7 @@ export function SheetsConnectedBanner({
   }
 
   return (
-    <div className="mb-6 rounded-2xl border border-[var(--success)]/30 bg-[var(--success)]/8 px-4 py-3.5">
+    <div className="rounded-[25px] border border-[var(--success)]/30 bg-[var(--success)]/8 px-[12px] py-3.5">
       <div className="flex flex-wrap items-start gap-3">
         <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[var(--success)]" />
         <div className="min-w-0 flex-1 space-y-2">

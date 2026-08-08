@@ -7,21 +7,15 @@ import {
   Copy,
   Edit2,
   ExternalLink,
-  Eye,
   Link2,
-  MessageSquare,
   MoreHorizontal,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
 import { Avatar, Button, Dropdown, Label, Tooltip } from '@heroui/react';
-import type { FormListItem, FormSharedWorkspace } from '@/lib/forms-api';
+import type { FormListItem, FormSharedWorkspace, FormStatus } from '@/lib/forms-api';
 import { recordFormShare } from '@/lib/forms-api';
-import {
-  FORM_STATUS_LABELS,
-  FORM_TYPE_LABELS,
-  getPublicFormUrl,
-} from '@/lib/forms-format';
+import { getPublicFormUrl } from '@/lib/forms-format';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +29,17 @@ interface FormCardProps {
   onRestore?: (form: FormListItem) => void;
   onDuplicate?: (form: FormListItem) => void;
 }
+
+const PLACEHOLDER_GRADIENT_CLASS: Record<FormStatus, string> = {
+  DRAFT:
+    'bg-gradient-to-br from-[color-mix(in_srgb,var(--foreground)_7%,var(--surface))] via-[var(--surface-secondary)]/55 to-[var(--surface)]',
+  PUBLISHED:
+    'bg-gradient-to-br from-[color-mix(in_srgb,var(--success)_16%,var(--surface))] via-[var(--surface-secondary)]/45 to-[var(--surface)]',
+  CLOSED:
+    'bg-gradient-to-br from-[color-mix(in_srgb,var(--warning)_14%,var(--surface))] via-[var(--surface-secondary)]/45 to-[var(--surface)]',
+  ARCHIVED:
+    'bg-gradient-to-br from-[color-mix(in_srgb,var(--foreground)_10%,var(--surface))] via-[var(--surface-secondary)]/40 to-[var(--surface)]',
+};
 
 function stopActivation(event: SyntheticEvent) {
   event.stopPropagation();
@@ -51,7 +56,7 @@ function FormCardSharedOwnerBadge({
 
   return (
     <div
-      className="absolute top-2 end-2 z-20"
+      className="absolute top-2 start-2 z-20"
       onClick={stopActivation}
       onPointerDown={stopActivation}
     >
@@ -78,6 +83,113 @@ function FormCardSharedOwnerBadge({
   );
 }
 
+function FormCoverPlaceholder({ status }: { status: FormStatus }) {
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 transition-colors duration-200',
+        PLACEHOLDER_GRADIENT_CLASS[status],
+      )}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.4]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 0)',
+          backgroundSize: '14px 14px',
+        }}
+        aria-hidden
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <img
+          src="/rukny-logo.svg"
+          alt=""
+          aria-hidden
+          className="size-10 object-contain opacity-[0.2] sm:size-11 dark:opacity-[0.26] dark:brightness-0 dark:invert"
+        />
+      </div>
+    </div>
+  );
+}
+
+function FormCardMenu({
+  form,
+  isTrash,
+  copied,
+  onAction,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onRestore,
+}: {
+  form: FormListItem;
+  isTrash?: boolean;
+  copied: boolean;
+  onAction: (key: Key) => void;
+  onEdit?: (form: FormListItem) => void;
+  onDuplicate?: (form: FormListItem) => void;
+  onDelete?: (form: FormListItem) => void;
+  onRestore?: (form: FormListItem) => void;
+}) {
+  return (
+    <Dropdown>
+      <Button
+        isIconOnly
+        size="sm"
+        variant="secondary"
+        aria-label="إجراءات النموذج"
+        className={cn(
+          'size-7 min-w-7 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)] text-[var(--muted-foreground)]',
+          'transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
+        )}
+      >
+        <MoreHorizontal className="size-3.5" />
+      </Button>
+      <Dropdown.Popover
+        placement="bottom end"
+        shouldFlip
+        offset={8}
+        containerPadding={12}
+        className="min-w-[12.5rem] text-right [direction:rtl]"
+      >
+        <Dropdown.Menu onAction={onAction} className="text-right [direction:rtl]">
+          {!isTrash && onEdit && (
+            <Dropdown.Item id="edit" textValue="تحرير">
+              <Edit2 className="size-3.5" />
+              <Label>تحرير</Label>
+            </Dropdown.Item>
+          )}
+          {!isTrash && (
+            <Dropdown.Item id="copy" textValue="نسخ الرابط">
+              {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
+              <Label>{copied ? 'تم النسخ' : 'نسخ الرابط'}</Label>
+            </Dropdown.Item>
+          )}
+          {!isTrash && onDuplicate && !form.isShared && (
+            <Dropdown.Item id="duplicate" textValue="نسخ">
+              <Copy className="size-3.5" />
+              <Label>نسخ النموذج</Label>
+            </Dropdown.Item>
+          )}
+          {!isTrash && onDelete && !form.isShared && (
+            <Dropdown.Item id="delete" textValue="حذف" variant="danger">
+              <Trash2 className="size-3.5" />
+              <Label>حذف</Label>
+            </Dropdown.Item>
+          )}
+          {isTrash && onRestore && !form.isShared && (
+            <Dropdown.Item id="restore" textValue="استعادة">
+              <RotateCcw className="size-3.5" />
+              <Label>استعادة</Label>
+            </Dropdown.Item>
+          )}
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
+  );
+}
+
 function FormCardComponent({
   form,
   busy,
@@ -88,11 +200,9 @@ function FormCardComponent({
   onRestore,
   onDuplicate,
 }: FormCardProps) {
-  const submissionsCount = form._count?.submissions ?? form.submissionCount ?? 0;
   const [copied, setCopied] = useState(false);
   const [coverFailed, setCoverFailed] = useState(false);
   const showCover = Boolean(form.coverImage) && !coverFailed;
-
   const copyFormLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(getPublicFormUrl(form.slug));
@@ -108,6 +218,17 @@ function FormCardComponent({
     window.open(getPublicFormUrl(form.slug), '_blank', 'noopener,noreferrer');
   }, [form.slug]);
 
+  const canOpenPublic = !isTrash && form.status === 'PUBLISHED';
+  const openButtonLabel = canOpenPublic ? 'فتح' : 'عرض';
+
+  const handleOpenPress = useCallback(() => {
+    if (canOpenPublic) {
+      openFormPage();
+      return;
+    }
+    onView?.(form);
+  }, [canOpenPublic, form, onView, openFormPage]);
+
   function handleMenuAction(key: Key) {
     switch (key) {
       case 'edit':
@@ -115,9 +236,6 @@ function FormCardComponent({
         break;
       case 'copy':
         void copyFormLink();
-        break;
-      case 'open':
-        openFormPage();
         break;
       case 'duplicate':
         onDuplicate?.(form);
@@ -132,20 +250,17 @@ function FormCardComponent({
   }
 
   return (
-    <motion.div
+    <motion.article
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      whileHover={{ y: -1 }}
-      transition={{ duration: 0.2 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.18 }}
       className={cn(
-        'group dashboard-card cursor-pointer rounded-2xl bg-[var(--surface)] p-2.5 sm:rounded-3xl sm:p-3',
-        'transition-[border-color,box-shadow] duration-200',
-        'hover:border-[color-mix(in_srgb,var(--foreground)_10%,var(--border))]',
-        'hover:shadow-[var(--card-shadow-hover)]',
+        'group dashboard-metric-tile flex cursor-pointer flex-col rounded-2xl p-2.5 transition-[border-color,background-color] duration-200',
+        'hover:border-[color-mix(in_srgb,var(--border)_45%,var(--foreground)_12%)]',
         form.isShared && 'border-dashed',
-        (form.status === 'ARCHIVED' || isTrash) && 'opacity-[0.92]',
+        (form.status === 'ARCHIVED' || isTrash) && 'opacity-[0.94]',
         busy && 'pointer-events-none opacity-60',
       )}
       onClick={() => onView?.(form)}
@@ -161,188 +276,94 @@ function FormCardComponent({
     >
       <div
         className={cn(
-          'relative mb-2.5 aspect-[16/10] overflow-hidden rounded-xl sm:mb-3 sm:aspect-[4/3] sm:rounded-2xl',
-          form.status === 'ARCHIVED' && 'grayscale-[40%]',
+          'relative aspect-[4/3] overflow-hidden rounded-xl',
+          form.status === 'ARCHIVED' && 'grayscale-[35%]',
         )}
       >
         {showCover ? (
           <>
             <img
               src={form.coverImage!}
-              alt={form.title}
+              alt=""
               loading="lazy"
               onError={() => setCoverFailed(true)}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-black/5" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--foreground)_5%,var(--surface))] transition-colors duration-200 group-hover:bg-[color-mix(in_srgb,var(--foreground)_7%,var(--surface))]">
-            <img
-              src="/rukny-logo.svg"
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 size-[30%] max-h-10 max-w-10 -translate-x-1/2 -translate-y-1/2 opacity-[0.1] dark:opacity-[0.14] dark:brightness-0 dark:invert"
-            />
-          </div>
+          <FormCoverPlaceholder status={form.status} />
         )}
-
-        <span className="absolute top-2 start-2 z-20 rounded-lg bg-[var(--surface)]/95 px-2 py-0.5 text-[10px] font-semibold text-[var(--foreground)] shadow-sm backdrop-blur-sm sm:top-2.5 sm:start-2.5 sm:px-2.5 sm:py-1">
-          {isTrash ? 'محذوف' : FORM_STATUS_LABELS[form.status]}
-        </span>
 
         {form.isShared && form.sharedWorkspace ? (
           <FormCardSharedOwnerBadge workspace={form.sharedWorkspace} />
         ) : null}
-
-        <div
-          className="absolute bottom-2 start-2 z-30"
-          onClick={stopActivation}
-          onPointerDown={stopActivation}
-        >
-          <Dropdown>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="secondary"
-              aria-label="إجراءات النموذج"
-              className={cn(
-                'size-7 min-w-7 rounded-lg bg-[var(--surface)]/90 text-[var(--muted-foreground)] shadow-sm backdrop-blur-sm',
-                'opacity-100 transition-all duration-200 hover:bg-[var(--surface)] hover:text-[var(--foreground)]',
-                'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-[pressed]:opacity-100',
-              )}
-            >
-              <MoreHorizontal className="size-3.5" />
-            </Button>
-            <Dropdown.Popover placement="top end">
-              <Dropdown.Menu onAction={handleMenuAction}>
-                {!isTrash && onEdit && (
-                  <Dropdown.Item id="edit" textValue="تحرير">
-                    <Edit2 className="size-3.5" />
-                    <Label>تحرير</Label>
-                  </Dropdown.Item>
-                )}
-                {!isTrash && (
-                  <Dropdown.Item id="copy" textValue="نسخ الرابط">
-                    {copied ? (
-                      <Check className="size-3.5" />
-                    ) : (
-                      <Link2 className="size-3.5" />
-                    )}
-                    <Label>{copied ? 'تم النسخ' : 'نسخ الرابط'}</Label>
-                  </Dropdown.Item>
-                )}
-                {!isTrash && form.status === 'PUBLISHED' && (
-                  <Dropdown.Item id="open" textValue="فتح النموذج">
-                    <ExternalLink className="size-3.5" />
-                    <Label>فتح النموذج</Label>
-                  </Dropdown.Item>
-                )}
-                {!isTrash && onDuplicate && !form.isShared && (
-                  <Dropdown.Item id="duplicate" textValue="نسخ">
-                    <Copy className="size-3.5" />
-                    <Label>نسخ النموذج</Label>
-                  </Dropdown.Item>
-                )}
-                {!isTrash && onDelete && !form.isShared && (
-                  <Dropdown.Item id="delete" textValue="حذف" variant="danger">
-                    <Trash2 className="size-3.5" />
-                    <Label>حذف</Label>
-                  </Dropdown.Item>
-                )}
-                {isTrash && onRestore && !form.isShared && (
-                  <Dropdown.Item id="restore" textValue="استعادة">
-                    <RotateCcw className="size-3.5" />
-                    <Label>استعادة</Label>
-                  </Dropdown.Item>
-                )}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        </div>
       </div>
 
-      <div className="px-0.5 text-right sm:px-1">
-        <div className="mb-1 flex items-center justify-between gap-1.5 sm:mb-1.5 sm:gap-2">
-          <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-snug text-[var(--foreground)] sm:text-[14px]">
-            {form.title}
-          </h3>
-          <span className="shrink-0 whitespace-nowrap rounded-md bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)] sm:rounded-md sm:px-2">
-            {FORM_TYPE_LABELS[form.type]}
-          </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-0.5 pt-2.5 text-start">
+        <h3
+          dir="auto"
+          className="truncate text-[14px] font-semibold leading-[1.35] tracking-tight text-[var(--foreground)]"
+          title={form.title}
+        >
+          {form.title}
+        </h3>
+
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          <div
+            className="flex shrink-0 items-center gap-1"
+            onClick={stopActivation}
+            onPointerDown={stopActivation}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 min-h-7 rounded-full px-2.5 text-[11px] font-medium"
+              onPress={handleOpenPress}
+            >
+              <ExternalLink className="size-3 shrink-0" aria-hidden />
+              {openButtonLabel}
+            </Button>
+
+            <FormCardMenu
+              form={form}
+              isTrash={isTrash}
+              copied={copied}
+              onAction={handleMenuAction}
+              onEdit={onEdit}
+              onDuplicate={onDuplicate}
+              onDelete={onDelete}
+              onRestore={onRestore}
+            />
+          </div>
         </div>
 
-        <p
-          className={cn(
-            'mb-2 line-clamp-2 text-[11px] leading-relaxed sm:mb-3 sm:text-[12px]',
-            form.description
-              ? 'text-[var(--muted-foreground)]'
-              : 'text-[var(--muted-foreground)]/55 italic',
-          )}
-        >
-          {form.description || 'بدون وصف'}
-        </p>
-
         {isTrash && form.purgeScheduledAt ? (
-          <p className="mb-1.5 text-[10px] text-[var(--muted-foreground)]">
+          <p className="mt-1 text-[10px] text-[var(--muted-foreground)]">
             حذف نهائي:{' '}
-            {new Date(form.purgeScheduledAt).toLocaleDateString('en-US', {
+            {new Date(form.purgeScheduledAt).toLocaleDateString('ar', {
               month: 'short',
               day: 'numeric',
             })}
           </p>
         ) : null}
-
-        <div className="flex items-center justify-center gap-3 border-t border-[var(--separator)] pt-2 text-[11px] tabular-nums text-[var(--muted-foreground)] sm:pt-2.5">
-          <span
-            className="inline-flex items-center gap-1 leading-none"
-            title="الاستجابات"
-          >
-            <MessageSquare className="size-3 shrink-0" aria-hidden />
-            <span dir="ltr" lang="en" className="leading-none">
-              {submissionsCount}
-            </span>
-          </span>
-
-          <span className="text-[var(--border)]" aria-hidden>
-            |
-          </span>
-
-          <span
-            className="inline-flex items-center gap-1 leading-none"
-            title="المشاهدات"
-          >
-            <Eye className="size-3 shrink-0" aria-hidden />
-            <span dir="ltr" lang="en" className="leading-none">
-              {form.viewCount ?? 0}
-            </span>
-          </span>
-        </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
 export function FormCardSkeleton() {
   return (
-    <div className="dashboard-card animate-pulse rounded-2xl p-2.5 sm:rounded-3xl sm:p-3">
-      <div className="relative mb-2.5 aspect-[16/10] rounded-xl bg-[var(--surface-secondary)] sm:mb-3 sm:aspect-[4/3] sm:rounded-2xl" />
+    <div className="dashboard-metric-tile animate-pulse rounded-2xl p-2.5">
+      <div className="aspect-[4/3] rounded-xl bg-[var(--surface-secondary)]/70" />
 
-      <div className="px-0.5 text-right sm:px-1">
-        <div className="mb-1 flex items-center justify-between gap-1.5 sm:mb-1.5">
-          <div className="h-3.5 flex-1 rounded-md bg-[var(--surface-secondary)]/70 sm:h-4" />
-          <div className="h-5 w-12 rounded-md bg-[var(--surface-secondary)]/40" />
-        </div>
-
-        <div className="mb-2 space-y-1 sm:mb-3">
-          <div className="h-3 w-full rounded-md bg-[var(--surface-secondary)]/40" />
-          <div className="h-3 w-3/4 rounded-md bg-[var(--surface-secondary)]/40" />
-        </div>
-
-        <div className="flex items-center justify-center gap-3 border-t border-[var(--separator)] pt-2 sm:pt-2.5">
-          <div className="h-3 w-7 rounded-md bg-[var(--surface-secondary)]/40" />
-          <div className="h-3 w-px bg-[var(--border)]/40" />
-          <div className="h-3 w-7 rounded-md bg-[var(--surface-secondary)]/40" />
+      <div className="px-0.5 pt-2.5 text-start">
+        <div className="h-3.5 w-[78%] rounded-md bg-[var(--surface-secondary)]/70" />
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <div className="flex gap-1">
+            <div className="h-7 w-14 rounded-full bg-[var(--surface-secondary)]/45" />
+            <div className="size-7 rounded-lg bg-[var(--surface-secondary)]/45" />
+          </div>
         </div>
       </div>
     </div>
@@ -351,7 +372,7 @@ export function FormCardSkeleton() {
 
 export function FormsGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <FormCardSkeleton key={index} />
       ))}

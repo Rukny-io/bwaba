@@ -12,7 +12,7 @@ import {
   sortedInputFields,
 } from '@/lib/submission-utils';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { formDetailCardClass } from '@/lib/form-detail-styles';
 import {
   getChoiceLabel,
   GroupedAnswerRow,
@@ -158,7 +158,7 @@ export function SubmissionsQuestionTab({
     }));
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-[12px]">
       <SubmissionPagerToolbar
         selectLabel="السؤال"
         selectClassName="w-full min-w-[12rem] max-w-md sm:max-w-lg"
@@ -177,17 +177,15 @@ export function SubmissionsQuestionTab({
         nextAriaLabel="السؤال التالي"
       />
 
-      <DashboardSurface as="article">
-        <h3 className="mb-1 text-base font-semibold text-[var(--foreground)]">
+      <article className={formDetailCardClass}>
+        <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
           {field.label}
         </h3>
         {field.description ? (
-          <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
             {field.description}
           </p>
-        ) : (
-          <div className="mb-4" />
-        )}
+        ) : null}
 
         {isChoiceFieldType(field.type) || field.type === 'TOGGLE' ? (
           <div className="space-y-2">
@@ -214,7 +212,7 @@ export function SubmissionsQuestionTab({
         ) : (
           <TextResponseList responses={textAnswers} />
         )}
-      </DashboardSurface>
+      </article>
     </div>
   );
 }

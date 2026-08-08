@@ -95,7 +95,7 @@ export function MobileDockItem({
       className={cn(
         'relative flex h-11 min-w-11 items-center justify-center rounded-full transition-all duration-300 ease-out',
         withLabel
-          ? 'gap-1.5 bg-[var(--brand-lime)] px-4 text-[var(--primary-foreground)] shadow-[0_2px_10px_rgba(181,212,59,0.25)]'
+          ? 'gap-1.5 bg-[var(--foreground)] px-4 text-[var(--background)] shadow-md'
           : isActive
             ? 'bg-[var(--surface-secondary)] text-[var(--foreground)]'
             : 'px-2.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
@@ -155,7 +155,7 @@ export function MobileDockFab({
   onClick?: () => void;
 }) {
   const className =
-    'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[var(--brand-lime)] text-[var(--primary-foreground)] shadow-[0_6px_22px_rgba(181,212,59,0.28)] transition-transform duration-200 active:scale-95';
+    'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_6px_22px_rgba(59,130,246,0.28)] transition-transform duration-200 active:scale-95';
 
   const content = <Icon size={21} strokeWidth={2.25} aria-hidden />;
 

@@ -8,10 +8,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  formWorkspaceTabClassName,
-  formWorkspaceTabGroupClassName,
-} from '@/components/ui/pill-tab';
+import { pillTabClassName } from '@/components/ui/pill-tab';
 import { cn } from '@/lib/utils';
 
 export type FormAnalyticsSectionId =
@@ -41,9 +38,9 @@ export function FormAnalyticsSectionTabs({
   const [active, setActive] = useState<FormAnalyticsSectionId>(defaultSection);
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
+    <div className="flex flex-col gap-6 sm:gap-8">
       <nav
-        className={cn(formWorkspaceTabGroupClassName, 'gap-1.5 sm:gap-2')}
+        className="flex flex-wrap items-center justify-center gap-2"
         aria-label="أقسام التحليلات"
         role="tablist"
       >
@@ -58,9 +55,9 @@ export function FormAnalyticsSectionTabs({
               aria-selected={isActive}
               role="tab"
               onClick={() => setActive(section.id)}
-              className={formWorkspaceTabClassName(
-                isActive,
-                'min-w-0 shrink px-3 sm:min-w-[5.5rem] sm:px-4',
+              className={cn(
+                pillTabClassName(isActive),
+                'inline-flex items-center gap-2',
               )}
             >
               <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />

@@ -9,8 +9,16 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <section className="dashboard-page flex flex-col gap-3.5 sm:gap-6 dashboard-brand">
-      <SettingsView metrics={metrics} username={user.username} />
+    <section className="dashboard-page mx-auto flex w-full max-w-5xl flex-col gap-4 sm:gap-5">
+      <SettingsView
+        metrics={metrics}
+        user={{
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          avatar: user.avatar,
+        }}
+      />
     </section>
   );
 }

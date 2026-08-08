@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Archive } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { appToast } from '@/lib/app-toast';
 import { exportOrphanedSubmissionsCsv, type FormDetail } from '@/lib/forms-api';
@@ -40,15 +39,15 @@ export function FormOrphanedSubmissionsExportPanel({
 
   return (
     <SettingsSectionCard
-      icon={Archive}
+      bordered
       title="الاستجابات من حقول محذوفة"
-      description={`تصدير إجابات الحقول التي حُذفت أو استُبدلت من النموذج — متاح لمشتركي ${PLUS_PLAN_LABEL} فما فوق.`}
+      description={`تصدير إجابات الحقول التي حُذفت أو استُبدلت — متاح لمشتركي ${PLUS_PLAN_LABEL} فما فوق`}
     >
       <PlusPlanGate
         description={`تصدير الاستجابات من الحقول المحذوفة متاح في باقة ${PLUS_PLAN_LABEL} فما فوق.`}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-[var(--muted-foreground)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
             يُصدَّر ملف CSV يحتوي فقط على الإجابات غير المرتبطة بالحقول الحالية،
             مع معرّف كل استجابة وتاريخها.
           </p>

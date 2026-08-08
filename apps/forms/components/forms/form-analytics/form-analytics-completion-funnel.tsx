@@ -14,6 +14,7 @@ import type {
   FormAnalyticsSummary,
 } from '@/lib/forms-api';
 import { formatNumber, formatPercent } from '@/lib/dashboard-format';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
 interface FunnelStep {
@@ -145,12 +146,7 @@ function FunnelSummaryStrip({ summary }: { summary: FormAnalyticsSummary }) {
       ].map((item) => (
         <div
           key={item.label}
-          className={cn(
-            'rounded-2xl px-4 py-3.5',
-            item.accent
-              ? 'bg-[var(--primary)]/8'
-              : 'bg-[var(--surface-secondary)]/45',
-          )}
+          className={cn(formDetailCardSurfaceClass, item.accent && 'ring-1 ring-[var(--primary)]/15')}
         >
           <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
             {item.label}
@@ -296,7 +292,8 @@ export function FormAnalyticsCompletionFunnel({
     return (
       <div
         className={cn(
-          'rounded-3xl bg-[var(--surface-secondary)]/35 px-6 py-12 text-center',
+          formDetailCardSurfaceClass,
+          'px-6 py-12 text-center',
           className,
         )}
       >

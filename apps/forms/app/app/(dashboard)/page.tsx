@@ -27,7 +27,7 @@ export default async function AppHomePage() {
   const { metrics, recentForms, recentSubmissions, recentActivity } = home;
 
   return (
-    <section className="dashboard-page flex flex-col gap-5 sm:gap-6 dashboard-brand">
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
       <DashboardPageHeader
         title="لوحة التحكم"
         description={`مرحباً، ${greeting} — نظرة عامة على نماذجك واستجاباتك.`}

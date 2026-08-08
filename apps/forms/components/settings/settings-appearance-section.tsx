@@ -24,9 +24,8 @@ export function SettingsAppearanceSection() {
 
   return (
     <SettingsSectionCard
-      icon={Sun}
       title="المظهر"
-      description="سمة عرض لوحة Forms — لا تؤثر على النماذج المنشورة للجمهور."
+      description="سمة عرض لوحة النماذج — لا تؤثر على النماذج المنشورة للجمهور."
     >
       <div
         className={pillTabGroupClassName}

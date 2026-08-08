@@ -2,7 +2,7 @@ import { AnalyticsOverviewView } from '@/components/analytics/analytics-overview
 
 export default function AnalyticsOverviewPage() {
   return (
-    <section className="dashboard-page flex flex-col gap-5 sm:gap-6 dashboard-brand">
+    <section className="dashboard-page flex flex-col gap-6 sm:gap-8">
       <AnalyticsOverviewView />
     </section>
   );

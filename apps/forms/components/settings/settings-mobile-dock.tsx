@@ -2,6 +2,7 @@
 
 import {
   Gauge,
+  HardDrive,
   LayoutGrid,
   Link2,
   Palette,
@@ -15,7 +16,12 @@ import {
   MobileDockItem,
 } from '@/components/app/mobile-dock-primitives';
 
-export type SettingsSectionId = 'overview' | 'account' | 'preferences' | 'links';
+export type SettingsSectionId =
+  | 'overview'
+  | 'storage'
+  | 'account'
+  | 'preferences'
+  | 'links';
 
 const SECTION_ITEMS: {
   id: SettingsSectionId;
@@ -23,6 +29,7 @@ const SECTION_ITEMS: {
   icon: LucideIcon;
 }[] = [
   { id: 'overview', label: 'عامة', icon: Gauge },
+  { id: 'storage', label: 'تخزين', icon: HardDrive },
   { id: 'account', label: 'الحساب', icon: UserCircle },
   { id: 'preferences', label: 'تفضيلات', icon: Palette },
   { id: 'links', label: 'روابط', icon: Link2 },

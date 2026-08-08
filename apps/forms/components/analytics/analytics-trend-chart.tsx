@@ -39,7 +39,7 @@ function useChartPalette() {
 
   return useMemo(
     () => ({
-      primary: '#b5d43b',
+      primary: '#3b82f6',
       primaryGlow: isDark ? 'rgba(59,130,246,0.45)' : 'rgba(59,130,246,0.35)',
       primaryFillTop: isDark ? 'rgba(59,130,246,0.32)' : 'rgba(59,130,246,0.22)',
       primaryFillBottom: isDark ? 'rgba(59,130,246,0.02)' : 'rgba(59,130,246,0.01)',
@@ -89,10 +89,10 @@ function TrendTooltip({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-4">
           <span className="inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-            <span className="size-2 rounded-full bg-[#b5d43b]" />
+            <span className="size-2 rounded-full bg-[#3b82f6]" />
             استجابات
           </span>
-          <span className="text-sm font-bold tabular-nums text-[#b5d43b]">
+          <span className="text-sm font-bold tabular-nums text-[#3b82f6]">
             {formatNumber(row.submissions)}
           </span>
         </div>
@@ -132,7 +132,7 @@ function StatChip({
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] leading-none',
         accent === 'primary'
-          ? 'border-[#b5d43b]/20 bg-[#b5d43b]/[0.06]'
+          ? 'border-[#3b82f6]/20 bg-[#3b82f6]/[0.06]'
           : 'border-[var(--border)] bg-[var(--surface-secondary)]/50',
       )}
     >
@@ -140,7 +140,7 @@ function StatChip({
       <span
         className={cn(
           'font-bold tabular-nums',
-          accent === 'primary' ? 'text-[#b5d43b]' : 'text-[var(--foreground)]',
+          accent === 'primary' ? 'text-[#3b82f6]' : 'text-[var(--foreground)]',
         )}
         dir="ltr"
         lang="en"
@@ -403,7 +403,7 @@ export function AnalyticsTrendChart({
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-5 text-xs text-[var(--muted-foreground)]">
         <span className="inline-flex items-center gap-2">
-          <span className="h-2 w-6 rounded-full bg-gradient-to-l from-[#b5d43b]/20 to-[#b5d43b]" />
+          <span className="h-2 w-6 rounded-full bg-gradient-to-l from-[#3b82f6]/20 to-[#3b82f6]" />
           استجابات
         </span>
         <span className="inline-flex items-center gap-2">

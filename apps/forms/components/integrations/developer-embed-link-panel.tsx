@@ -19,6 +19,7 @@ import {
   type DeveloperLinkTargetsResponse,
 } from '@/lib/developer-embed-api';
 import { getDeveloperAppFormsUrl } from '@/lib/developer-embed-urls';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
 function appIdSuffix(appId: string): string {
@@ -27,7 +28,12 @@ function appIdSuffix(appId: string): string {
 
 function SecurityBrief() {
   return (
-    <section className="dashboard-panel relative overflow-hidden border-[color-mix(in_srgb,var(--primary)_22%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_6%,var(--surface))]">
+    <section
+      className={cn(
+        formDetailCardSurfaceClass,
+        'relative overflow-hidden border-[color-mix(in_srgb,var(--primary)_22%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_6%,var(--surface))]',
+      )}
+    >
       <div
         className="pointer-events-none absolute -start-8 -top-8 size-28 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] blur-2xl"
         aria-hidden
@@ -151,7 +157,7 @@ function ConfirmLinkStep({
   const appIdSuffixStr = target.appId.slice(-4);
 
   return (
-    <section className="dashboard-panel relative overflow-hidden shadow-sm">
+    <section className={cn(formDetailCardSurfaceClass, 'relative overflow-hidden shadow-sm')}>
       <div
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[color-mix(in_srgb,var(--primary)_4%,transparent)] to-transparent"
         aria-hidden
@@ -243,7 +249,7 @@ function EmptyTargetsState() {
     'https://developers.rukny.io';
 
   return (
-    <section className="dashboard-panel space-y-4 border-dashed bg-[var(--surface-secondary)]/20 text-center">
+    <section className={cn(formDetailCardSurfaceClass, 'space-y-4 border-dashed bg-[var(--surface-secondary)]/20 text-center')}>
       <p className="text-sm font-semibold text-[var(--foreground)]">
         لا يوجد تطبيق مطوّر جاهز للربط
       </p>
@@ -317,7 +323,7 @@ export function DeveloperEmbedLinkPanel({
 
   if (!data?.canLink && data?.linkedApp) {
     return (
-      <section className="dashboard-panel space-y-3">
+      <section className={cn(formDetailCardSurfaceClass, 'space-y-3')}>
         <p className="text-sm text-[var(--foreground)]">
           النموذج مربوط بالفعل بـ{' '}
           <span className="font-semibold">{data.linkedApp.name}</span>

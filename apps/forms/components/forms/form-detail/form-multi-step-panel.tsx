@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Plus, Trash2 } from 'lucide-react';
-import { Button, Switch } from '@heroui/react';
+import { Plus, Trash2 } from 'lucide-react';
+import { Button } from '@heroui/react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
 import { fieldInputClass } from '@/components/forms/shared/form-field-input-class';
+import { FormDetailSwitchRow } from '@/components/forms/form-detail/form-detail-primitives';
 import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import {
   getForm,
@@ -16,7 +17,7 @@ import {
   type FormStepPayload,
 } from '@/lib/forms-api';
 import { PlanFeatureGate } from '@/components/plan/plan-feature-gate';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { formDetailCardClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
 interface StepDraft {
@@ -217,62 +218,36 @@ export function FormMultiStepPanel({
 
   return (
     <SettingsSectionCard
-      icon={Layers}
+      bordered
       title="الأقسام المتعددة"
-      description="قسّم النموذج إلى أقسام من محرّر النموذج — زر «إضافة قسم» أسفل الحقول."
+      description="قسّم النموذج إلى أقسام من المحرّر — زر «إضافة قسم» أسفل الحقول"
     >
       <PlanFeatureGate
         feature="multiStepForms"
         description="النماذج متعددة الخطوات متاحة في الخطط المدفوعة."
       >
       <div className="space-y-5">
-        <DashboardSurface
-          padding="sm"
-          className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
-        >
-          <div>
-            <p className="text-sm font-medium">نموذج متعدد الخطوات</p>
-            <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-              يعرض حقولاً جزءاً في كل صفحة بدل صفحة واحدة.
-            </p>
-          </div>
-          <Switch
-            isSelected={isMultiStep}
-            onChange={setIsMultiStep}
-            aria-label="نموذج متعدد الخطوات"
-          >
-            <Switch.Control>
-              <Switch.Thumb />
-            </Switch.Control>
-          </Switch>
-        </DashboardSurface>
+        <FormDetailSwitchRow
+          label="نموذج متعدد الخطوات"
+          hint="يعرض جزءاً من الحقول في كل صفحة بدل صفحة واحدة."
+          checked={isMultiStep}
+          onChange={setIsMultiStep}
+        />
 
         {isMultiStep ? (
           <>
-            <DashboardSurface
-              padding="sm"
-              className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
-            >
-              <div>
-                <p className="text-sm font-medium">شريط التقدم</p>
-                <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-                  يظهر للمستجيب نسبة إكمال الخطوات.
-                </p>
-              </div>
-              <Switch
-                isSelected={showProgressBar}
-                onChange={setShowProgressBar}
-                aria-label="شريط التقدم"
-              >
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-              </Switch>
-            </DashboardSurface>
+            <FormDetailSwitchRow
+              label="شريط التقدم"
+              hint="يظهر للمستجيب نسبة إكمال الخطوات."
+              checked={showProgressBar}
+              onChange={setShowProgressBar}
+            />
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">الخطوات</p>
+              <div className="flex items-center justify-between px-0.5">
+                <p className="text-[14px] font-semibold text-[var(--foreground)]">
+                  الخطوات
+                </p>
                 <Button
                   variant="tertiary"
                   size="sm"
@@ -285,10 +260,9 @@ export function FormMultiStepPanel({
               </div>
 
               {steps.map((step, index) => (
-                <DashboardSurface
+                <div
                   key={step.clientKey}
-                  padding="sm"
-                  className="space-y-3 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
+                  className={cn(formDetailCardClass, 'gap-3')}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold">الخطوة {index + 1}</p>
@@ -335,7 +309,7 @@ export function FormMultiStepPanel({
                     )}
                     placeholder="وصف اختياري"
                   />
-                </DashboardSurface>
+                </div>
               ))}
             </div>
 

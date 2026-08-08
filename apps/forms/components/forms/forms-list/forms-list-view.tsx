@@ -128,7 +128,7 @@ function FormsListSummary({
       : 'نماذج منشورة';
 
   return (
-    <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
       <DashboardMetricCard
         icon={FileText}
         label="النماذج النشطة"
@@ -536,7 +536,7 @@ export function FormsListView({
         <>
           <div
             className={cn(
-              'grid grid-cols-2 gap-3 transition-opacity duration-150 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4',
+              'grid grid-cols-2 gap-3 transition-opacity duration-150 sm:gap-4 lg:grid-cols-4',
               refreshing && 'opacity-60',
             )}
             aria-busy={refreshing || undefined}

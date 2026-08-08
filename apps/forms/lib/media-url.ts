@@ -35,7 +35,7 @@ function extractS3KeyFromUrl(url: string): string | null {
 export function resolveMediaUrl(url?: string | null): string | null {
   if (!url) return null;
   if (url.startsWith('/api/')) return url;
-  if (url.startsWith('/uploads/')) return null;
+  if (url.startsWith('/uploads/')) return url;
   if (url.startsWith('http://') || url.startsWith('https://')) {
     if (!isS3Url(url)) return url;
     const key = extractS3KeyFromUrl(url);
@@ -43,4 +43,14 @@ export function resolveMediaUrl(url?: string | null): string | null {
   }
   const key = url.replace(/^\/+/, '');
   return `/api/media/${key}`;
+}
+
+/** Avatar URLs may point at a video; use the generated thumbnail when needed. */
+export function resolveAvatarUrl(url?: string | null): string | null {
+  const resolved = resolveMediaUrl(url);
+  if (!resolved) return null;
+  if (/\.mp4$/i.test(resolved)) {
+    return resolved.replace(/\.mp4$/i, '_thumb.jpg');
+  }
+  return resolved;
 }

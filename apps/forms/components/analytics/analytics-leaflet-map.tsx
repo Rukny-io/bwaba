@@ -11,8 +11,9 @@ import { IRAQ_GOVERNORATE_NAMES } from '@/lib/iraq-governorate-geo';
 import { formatNumber } from '@/lib/dashboard-format';
 
 const COLOR_MIN = '#dbeafe';
-const COLOR_MAX = '#b5d43b';
-const COLOR_BORDER = '#94a3b8';
+const COLOR_MAX = '#3b82f6';
+const COLOR_EMPTY = '#e8edf1';
+const COLOR_EMPTY_BORDER = '#cbd5e1';
 
 const WORLD_GEO_URL =
   'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
@@ -146,10 +147,12 @@ export default function AnalyticsLeafletMap({
   if (loading || !geoJsonData) {
     return (
       <div
-        className="flex items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/30"
+        className="analytics-geo-map analytics-geo-map--loading flex items-center justify-center"
         style={{ height }}
       >
-        <span className="text-sm text-[var(--muted-foreground)]">جاري تحميل الخريطة...</span>
+        <span className="text-[13px] text-[var(--muted-foreground)]">
+          جاري تحميل الخريطة…
+        </span>
       </div>
     );
   }
@@ -174,11 +177,11 @@ export default function AnalyticsLeafletMap({
   const styleFeature = (feature?: GeoJSON.Feature): PathOptions => {
     if (!feature) {
       return {
-        fillColor: '#e2e8f0',
+        fillColor: COLOR_EMPTY,
         weight: 1,
         opacity: 1,
-        color: COLOR_BORDER,
-        fillOpacity: 0.35,
+        color: COLOR_EMPTY_BORDER,
+        fillOpacity: 0.5,
       };
     }
 
@@ -187,11 +190,11 @@ export default function AnalyticsLeafletMap({
     const hasValue = value > 0;
 
     return {
-      fillColor: hasValue ? colorScale(value) : '#e2e8f0',
-      weight: hasValue ? 1.5 : 1,
+      fillColor: hasValue ? colorScale(value) : COLOR_EMPTY,
+      weight: hasValue ? 1.25 : 1,
       opacity: 1,
-      color: hasValue ? '#ffffff' : COLOR_BORDER,
-      fillOpacity: hasValue ? 0.85 : 0.35,
+      color: hasValue ? '#ffffff' : COLOR_EMPTY_BORDER,
+      fillOpacity: hasValue ? 0.9 : 0.45,
     };
   };
 
@@ -215,7 +218,7 @@ export default function AnalyticsLeafletMap({
     const defaultStyle = styleFeature(feature);
 
     path.bindTooltip(
-      `<div class="text-center font-sans" dir="rtl"><strong class="block mb-1">${name}</strong><span dir="ltr" class="inline-block text-[#b5d43b] font-bold">${formatNumber(value)}</span> <span class="text-xs text-gray-500">${metric === 'views' ? 'مشاهدة' : 'استجابة'}</span></div>`,
+      `<div class="text-center font-sans" dir="rtl"><strong class="block mb-1">${name}</strong><span dir="ltr" class="inline-block text-[#3b82f6] font-bold">${formatNumber(value)}</span> <span class="text-xs text-gray-500">${metric === 'views' ? 'مشاهدة' : 'استجابة'}</span></div>`,
       {
         sticky: false,
         direction: 'top',
@@ -253,22 +256,21 @@ export default function AnalyticsLeafletMap({
 
   return (
     <div
-      className="analytics-geo-map relative isolate w-full overflow-hidden rounded-2xl border border-[var(--border)]"
+      className="analytics-geo-map relative isolate w-full overflow-hidden"
       style={{ height }}
     >
       <MapContainer
         center={center}
         zoom={zoom}
         scrollWheelZoom={false}
-        className="z-0 h-full w-full"
-        style={{ background: '#f1f5f9' }}
+        className="analytics-geo-map__canvas z-0 h-full w-full"
       >
         <MapUpdater center={center} zoom={zoom} bounds={iraqBounds} />
         {level === 'countries' ? (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            className="opacity-60 grayscale"
+            className="analytics-geo-map__tiles opacity-50 grayscale"
           />
         ) : null}
         <GeoJSON

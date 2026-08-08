@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@heroui/react';
 import { ExternalLink, Sheet } from 'lucide-react';
+import { formDetailCardClass } from '@/lib/form-detail-styles';
 import {
   disconnectGoogleSheets,
   exportToGoogleSheets,
@@ -98,7 +99,7 @@ export function SubmissionsGoogleSheetsPanel({ formId }: { formId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-secondary)]/40 p-4">
+    <div className={formDetailCardClass}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-2">
           <div>

@@ -14,11 +14,14 @@ import {
   isBlankSubmissionValue,
   resolveSignatureImageSrc,
 } from '@/lib/submission-utils';
+import {
+  formDetailCardClass,
+  formDetailCardSurfaceClass,
+  submissionAnswerInsetClass,
+} from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
 
-const answerBoxClass =
-  'rounded-xl bg-[var(--surface-secondary)] px-3.5 py-2.5 text-sm text-[var(--foreground)]';
+const answerBoxClass = submissionAnswerInsetClass;
 
 function answerBoxClassFor(compact: boolean, extra?: string) {
   return cn(
@@ -334,7 +337,7 @@ export function SubmissionFieldCard({
   responseCount?: number;
 }) {
   return (
-    <DashboardSurface as="article">
+    <article className={formDetailCardClass}>
       <header className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
           {index != null ? `${index}. ` : ''}
@@ -347,7 +350,7 @@ export function SubmissionFieldCard({
         ) : null}
       </header>
       <SubmissionAnswerDisplay field={field} value={value} />
-    </DashboardSurface>
+    </article>
   );
 }
 
@@ -398,7 +401,7 @@ export function TextResponseList({ responses }: { responses: string[] }) {
       {responses.map((text, i) => (
         <li
           key={`${i}-${text.slice(0, 24)}`}
-          className="rounded-xl bg-[var(--surface-secondary)] px-3.5 py-2.5 text-sm leading-relaxed text-[var(--foreground)]"
+          className={submissionAnswerInsetClass}
         >
           {text}
         </li>
@@ -432,7 +435,10 @@ export function GroupedAnswerRow({
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center justify-between gap-3 rounded-xl bg-[var(--surface-secondary)] px-3.5 py-2.5 text-start transition-colors hover:bg-[var(--surface-secondary)]/80"
+        className={cn(
+          submissionAnswerInsetClass,
+          'flex w-full items-center justify-between gap-3 text-start transition-colors hover:bg-[var(--surface-secondary)]/70',
+        )}
       >
         {content}
       </button>
@@ -440,7 +446,12 @@ export function GroupedAnswerRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-secondary)] px-3.5 py-2.5">
+    <div
+      className={cn(
+        submissionAnswerInsetClass,
+        'flex items-center justify-between gap-3',
+      )}
+    >
       {content}
     </div>
   );

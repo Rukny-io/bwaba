@@ -7,18 +7,18 @@ import {
   User,
   UserCircle,
 } from 'lucide-react';
-import { SettingsSectionCard } from '@/components/settings/settings-section-card';
+import {
+  SettingsPanel,
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
+import type { SettingsViewUser } from '@/components/settings/settings-types';
 import { ACCOUNTS_URL } from '@/lib/config';
+import { resolveAvatarUrl } from '@/lib/media-url';
 
 const ACCOUNTS_BASE = ACCOUNTS_URL.replace(/\/$/, '');
 
 const ACCOUNT_LINKS = [
-  {
-    href: `${ACCOUNTS_BASE}/manage`,
-    icon: UserCircle,
-    title: 'نظرة عامة',
-    description: 'لوحة إدارة حسابك على Rukny.',
-  },
   {
     href: `${ACCOUNTS_BASE}/manage/personal-info`,
     icon: User,
@@ -28,81 +28,141 @@ const ACCOUNT_LINKS = [
   {
     href: `${ACCOUNTS_BASE}/manage/security`,
     icon: ShieldCheck,
-    title: 'الأمان',
-    description: 'كلمة المرور، 2FA، الجلسات، وطرق الدخول.',
+    title: 'كلمة المرور والأمان',
+    description: 'كلمة المرور، التحقق بخطوتين، والجلسات النشطة.',
   },
   {
     href: `${ACCOUNTS_BASE}/manage/verified`,
     icon: BadgeCheck,
-    title: 'Rukny Verified',
-    description: 'التحقق الرسمي من الهوية.',
+    title: 'التحقق الرسمي',
+    description: 'توثيق هويتك على منصة رُكنّي.',
   },
   {
     href: `${ACCOUNTS_BASE}/manage/billing`,
     icon: CreditCard,
     title: 'الخطة والاشتراك',
-    description: 'الفوترة واستخدام الخطة.',
+    description: 'الفوترة وحدود استخدامك الحالية.',
   },
 ] as const;
 
-export function SettingsAccountSection() {
+function AccountAvatar({
+  user,
+}: {
+  user: SettingsViewUser;
+}) {
+  const displayName = user.name?.trim() || user.username?.trim() || 'م';
+  const initials = displayName.charAt(0).toUpperCase();
+  const src = resolveAvatarUrl(user.avatar);
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        className="size-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
   return (
-    <SettingsSectionCard
-      icon={UserCircle}
-      title="حساب Rukny"
-      description="إعدادات الحساب المشتركة — الصورة، الأمان، والاشتراك — تُدار من تطبيق الحسابات."
-    >
-      <div className="space-y-3">
+    <span className="flex size-full items-center justify-center bg-[var(--surface-secondary)] text-sm font-semibold text-[var(--foreground)]">
+      {initials}
+    </span>
+  );
+}
+
+interface SettingsAccountSectionProps {
+  user: SettingsViewUser;
+}
+
+export function SettingsAccountSection({ user }: SettingsAccountSectionProps) {
+  const displayName = user.name?.trim() || user.username || 'مستخدم';
+  const handle = user.username ? `@${user.username}` : null;
+
+  return (
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <SettingsPanel title="المعلومات الشخصية" description="بيانات حسابك الأساسية على رُكنّي.">
+        <SettingsRow
+          href={`${ACCOUNTS_BASE}/manage/personal-info`}
+          leading={
+            <span className="flex size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-[var(--border)]/80">
+              <AccountAvatar user={user} />
+            </span>
+          }
+          title={displayName}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span>{user.email}</span>
+              {handle ? (
+                <>
+                  <span aria-hidden className="text-[var(--border)]">
+                    •
+                  </span>
+                  <span dir="ltr" lang="en" className="font-medium">
+                    {handle}
+                  </span>
+                </>
+              ) : null}
+            </span>
+          }
+          trailing={
+            <ExternalLink
+              className="size-4 text-[var(--muted-foreground)]"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+          }
+        />
+      </SettingsPanel>
+
+      <SettingsPanel
+        title="الحساب والأمان"
+        description="إدارة تفاصيل الحساب المشتركة عبر تطبيقات رُكنّي."
+      >
         <a
           href={`${ACCOUNTS_BASE}/manage`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+          className="settings-row group flex w-full items-center gap-3 border-b border-[var(--border)]/70 px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)]/55 sm:gap-3.5 sm:px-5 sm:py-4"
         >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-            <UserCircle className="size-5" strokeWidth={1.7} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">فتح إعدادات الحساب</p>
-            <p className="mt-0.5 text-[12px] opacity-80">
-              إدارة حسابك الكامل في تطبيق الحسابات
-            </p>
-          </div>
-          <ExternalLink className="size-4 shrink-0 opacity-80" aria-hidden />
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)]">
+            <UserCircle className="size-[18px]" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1 text-start">
+            <span className="block text-[14px] font-medium text-[var(--foreground)]">
+              فتح لوحة الحساب
+            </span>
+            <span className="mt-1 block text-[13px] text-[var(--muted-foreground)]">
+              إدارة كاملة للملف والأمان والاشتراك
+            </span>
+          </span>
+          <ExternalLink
+            className="size-4 shrink-0 text-[var(--muted-foreground)]"
+            strokeWidth={1.75}
+            aria-hidden
+          />
         </a>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
-          {ACCOUNT_LINKS.slice(1).map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-3.5 py-3 transition-colors hover:bg-[var(--surface-secondary)]"
-              >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
-                  <Icon className="size-4" strokeWidth={1.8} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {item.title}
-                  </p>
-                  <p className="mt-0.5 line-clamp-2 text-[12px] text-[var(--muted-foreground)]">
-                    {item.description}
-                  </p>
-                </div>
+        {ACCOUNT_LINKS.map((item, index) => (
+          <div key={item.href}>
+            {index > 0 ? <SettingsRowDivider /> : null}
+            <SettingsRow
+              href={item.href}
+              icon={item.icon}
+              title={item.title}
+              subtitle={item.description}
+              trailing={
                 <ArrowLeft
-                  className="size-4 shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
+                  className="size-4 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
+                  strokeWidth={1.75}
                   aria-hidden
                 />
-              </a>
-            );
-          })}
-        </div>
-      </div>
-    </SettingsSectionCard>
+              }
+            />
+          </div>
+        ))}
+      </SettingsPanel>
+    </div>
   );
 }

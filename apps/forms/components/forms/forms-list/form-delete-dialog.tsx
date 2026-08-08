@@ -1,12 +1,56 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AlertDialog, Button, Input, Label, TextField } from '@heroui/react';
-import { AlertTriangle } from 'lucide-react';
-import { fieldInputClass } from '@/components/forms/shared/form-field-input-class';
+import { useState, type ReactNode } from 'react';
+import { AlertDialog, Button } from '@heroui/react';
 import { cn } from '@/lib/utils';
 
 const RETENTION_DAYS = 30;
+
+const dialogShellClass =
+  'max-w-md overflow-hidden rounded-[1.35rem] border border-[var(--border)]/60 bg-[var(--surface)] p-0 text-start shadow-[var(--card-shadow)]';
+
+const dialogPaddingX = 'px-6';
+
+function FormDialog({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <AlertDialog.Dialog
+      dir="rtl"
+      lang="ar"
+      className={cn(dialogShellClass, className)}
+    >
+      {children}
+    </AlertDialog.Dialog>
+  );
+}
+
+function DialogTitle({ children }: { children: ReactNode }) {
+  return (
+    <AlertDialog.Header className={cn(dialogPaddingX, 'pb-0 pt-6')}>
+      <AlertDialog.Heading className="text-start text-[1.35rem] font-normal leading-snug text-[var(--foreground)]">
+        {children}
+      </AlertDialog.Heading>
+    </AlertDialog.Header>
+  );
+}
+
+function DialogActions({ children }: { children: ReactNode }) {
+  return (
+    <AlertDialog.Footer
+      className={cn(
+        dialogPaddingX,
+        'flex items-center justify-start gap-3 pb-6 pt-5',
+      )}
+    >
+      {children}
+    </AlertDialog.Footer>
+  );
+}
 
 export interface FormDeleteDialogProps {
   isOpen: boolean;
@@ -25,104 +69,66 @@ export function FormDeleteDialog({
   busy,
   onConfirm,
 }: FormDeleteDialogProps) {
-  const [confirmTitle, setConfirmTitle] = useState('');
-  const [reason, setReason] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) {
-      setConfirmTitle('');
-      setReason('');
-    }
-  }, [isOpen]);
-
-  const titleMatches = confirmTitle.trim() === formTitle.trim();
-
   return (
     <AlertDialog.Backdrop
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       isDismissable={!busy}
+      variant="blur"
     >
-      <AlertDialog.Container size="md">
-        <AlertDialog.Dialog>
+      <AlertDialog.Container placement="center" size="md">
+        <FormDialog>
           <AlertDialog.CloseTrigger />
-          <AlertDialog.Header>
-            <AlertDialog.Icon status="danger" />
-            <AlertDialog.Heading>حذف النموذج؟</AlertDialog.Heading>
-          </AlertDialog.Header>
-          <AlertDialog.Body className="space-y-5">
-            <div className="space-y-3">
-              <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
-                سيتم نقل «{formTitle}» إلى سلة المحذوفات لمدة {RETENTION_DAYS} يوماً.
-                بعدها يُحذف النموذج واستجاباته نهائياً.
+
+          <DialogTitle>نقل إلى سلة المحذوفات؟</DialogTitle>
+
+          <AlertDialog.Body className={cn(dialogPaddingX, 'space-y-4 pb-2 pt-4')}>
+            <p className="text-start text-[14px] leading-[1.65] text-[var(--muted-foreground)]">
+              سيُنقل{' '}
+              <span dir="auto" className="text-[var(--foreground)]">
+                «{formTitle}»
+              </span>{' '}
+              إلى سلة المحذوفات، ويُحذف نهائياً بعد{' '}
+              <span className="tabular-nums text-[var(--foreground)]">
+                {RETENTION_DAYS}
+              </span>{' '}
+              يوماً.
+            </p>
+
+            {submissionCount > 0 ? (
+              <p className="text-start text-[14px] leading-[1.65] text-[var(--muted-foreground)]">
+                يحتوي هذا النموذج على{' '}
+                <span className="tabular-nums text-[var(--foreground)]">
+                  {submissionCount.toLocaleString('ar')}
+                </span>{' '}
+                استجابة. ستُحذف مع النموذج عند انتهاء فترة الاحتفاظ.
               </p>
-              {submissionCount > 0 ? (
-                <div className="flex items-start gap-2.5 rounded-2xl border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-3.5 py-3">
-                  <AlertTriangle
-                    className="mt-0.5 size-4 shrink-0 text-[var(--warning)]"
-                    aria-hidden
-                  />
-                  <p className="text-sm leading-relaxed text-[var(--foreground)]">
-                    يحتوي هذا النموذج على{' '}
-                    <strong className="font-semibold">
-                      {submissionCount.toLocaleString('ar')}
-                    </strong>{' '}
-                    استجابة. ستُحذف مع النموذج عند انتهاء فترة الاحتفاظ.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-            <div className="space-y-3 border-t border-[var(--border)]/60 pt-4">
-              <TextField>
-                <Label>اكتب عنوان النموذج للتأكيد</Label>
-                <Input
-                  value={confirmTitle}
-                  onChange={(e) => setConfirmTitle(e.target.value)}
-                  placeholder={formTitle}
-                  autoComplete="off"
-                  dir="auto"
-                />
-              </TextField>
-              {confirmTitle && !titleMatches ? (
-                <p className="text-xs text-[var(--danger)]">
-                  يجب أن يطابق العنوان تماماً (حساس لحالة الأحرف)
-                </p>
-              ) : null}
-              <TextField>
-                <Label htmlFor="delete-reason">سبب الحذف (اختياري)</Label>
-                <textarea
-                  id="delete-reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={2}
-                  maxLength={500}
-                  placeholder="مثال: انتهى المشروع"
-                  className={cn(
-                    fieldInputClass,
-                    'w-full resize-none px-3 py-2.5 text-sm leading-relaxed',
-                  )}
-                />
-              </TextField>
-            </div>
+            ) : null}
           </AlertDialog.Body>
-          <AlertDialog.Footer>
-            <Button variant="tertiary" onPress={() => onOpenChange(false)} isDisabled={busy}>
-              إلغاء
-            </Button>
+
+          <DialogActions>
             <Button
               variant="danger"
-              isDisabled={!titleMatches || busy}
+              className="min-w-[7.5rem] rounded-full px-5"
+              isDisabled={busy}
               onPress={() =>
                 void onConfirm({
-                  confirmTitle: confirmTitle.trim(),
-                  reason: reason.trim() || undefined,
+                  confirmTitle: formTitle.trim(),
                 })
               }
             >
-              نقل إلى سلة المحذوفات
+              {busy ? 'جاري النقل…' : 'نقل إلى السلة'}
             </Button>
-          </AlertDialog.Footer>
-        </AlertDialog.Dialog>
+            <Button
+              variant="outline"
+              className="rounded-full px-5"
+              onPress={() => onOpenChange(false)}
+              isDisabled={busy}
+            >
+              إلغاء
+            </Button>
+          </DialogActions>
+        </FormDialog>
       </AlertDialog.Container>
     </AlertDialog.Backdrop>
   );
@@ -145,13 +151,6 @@ export function FormRestoreDialog({
   busy,
   onConfirm,
 }: FormRestoreDialogProps) {
-  const [confirmTitle, setConfirmTitle] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) setConfirmTitle('');
-  }, [isOpen]);
-
-  const titleMatches = confirmTitle.trim() === formTitle.trim();
   const purgeLabel = purgeScheduledAt
     ? new Date(purgeScheduledAt).toLocaleDateString('ar', {
         year: 'numeric',
@@ -165,45 +164,50 @@ export function FormRestoreDialog({
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       isDismissable={!busy}
+      variant="blur"
     >
-      <AlertDialog.Container size="md">
-        <AlertDialog.Dialog>
+      <AlertDialog.Container placement="center" size="md">
+        <FormDialog>
           <AlertDialog.CloseTrigger />
-          <AlertDialog.Header>
-            <AlertDialog.Icon status="success" />
-            <AlertDialog.Heading>استعادة النموذج؟</AlertDialog.Heading>
-          </AlertDialog.Header>
-          <AlertDialog.Body className="space-y-5">
-            <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
-              سيتم استعادة «{formTitle}» وإعادته إلى قائمة النماذج النشطة.
-              {purgeLabel ? ` الحذف النهائي كان مقرراً في ${purgeLabel}.` : ''}
+
+          <DialogTitle>استعادة النموذج؟</DialogTitle>
+
+          <AlertDialog.Body className={cn(dialogPaddingX, 'space-y-4 pb-2 pt-4')}>
+            <p className="text-start text-[14px] leading-[1.65] text-[var(--muted-foreground)]">
+              سيُعاد{' '}
+              <span dir="auto" className="text-[var(--foreground)]">
+                «{formTitle}»
+              </span>{' '}
+              إلى قائمة النماذج النشطة.
+              {purgeLabel ? (
+                <>
+                  {' '}
+                  كان الحذف النهائي مقرراً في{' '}
+                  <span className="text-[var(--foreground)]">{purgeLabel}</span>.
+                </>
+              ) : null}
             </p>
-            <div className="border-t border-[var(--border)]/60 pt-4">
-              <TextField>
-                <Label>اكتب عنوان النموذج للتأكيد</Label>
-                <Input
-                  value={confirmTitle}
-                  onChange={(e) => setConfirmTitle(e.target.value)}
-                  placeholder={formTitle}
-                  autoComplete="off"
-                  dir="auto"
-                />
-              </TextField>
-            </div>
           </AlertDialog.Body>
-          <AlertDialog.Footer>
-            <Button variant="tertiary" onPress={() => onOpenChange(false)} isDisabled={busy}>
-              إلغاء
-            </Button>
+
+          <DialogActions>
             <Button
               variant="primary"
-              isDisabled={!titleMatches || busy}
-              onPress={() => void onConfirm(confirmTitle.trim())}
+              className="min-w-[7.5rem] rounded-full px-5"
+              isDisabled={busy}
+              onPress={() => void onConfirm(formTitle.trim())}
             >
-              استعادة
+              {busy ? 'جاري الاستعادة…' : 'استعادة'}
             </Button>
-          </AlertDialog.Footer>
-        </AlertDialog.Dialog>
+            <Button
+              variant="outline"
+              className="rounded-full px-5"
+              onPress={() => onOpenChange(false)}
+              isDisabled={busy}
+            >
+              إلغاء
+            </Button>
+          </DialogActions>
+        </FormDialog>
       </AlertDialog.Container>
     </AlertDialog.Backdrop>
   );

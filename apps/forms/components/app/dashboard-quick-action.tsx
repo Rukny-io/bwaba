@@ -25,7 +25,7 @@ export function DashboardQuickAction({
         className,
       )}
     >
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft-lime)] text-[var(--brand-carbon)] ring-1 ring-[color-mix(in_srgb,var(--brand-lime)_28%,transparent)] transition-transform group-hover:scale-[1.03] dark:text-[var(--foreground)]">
+      <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50 transition-transform group-hover:scale-[1.03]">
         <Icon size={18} strokeWidth={1.85} aria-hidden />
       </div>
       <div className="min-w-0 flex-1">

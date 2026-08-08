@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@heroui/react';
 import { Cloud, HardDrive, Link2 } from 'lucide-react';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import {
   getGoogleDriveStatus,
   type GoogleDriveStatus,
@@ -69,7 +70,7 @@ export function GoogleDriveSettingsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-secondary)]/40 p-4">
+      <div className={formDetailCardSurfaceClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--foreground)]">

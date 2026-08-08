@@ -5,7 +5,6 @@ import {
   FormsDashboardProvider,
 } from '@/components/app/forms-dashboard-context';
 import { DashboardNav } from '@/components/app/dashboard-nav';
-import type { AccessibleWorkspace } from '@/lib/workspace';
 import { NotificationsDesktopPanel } from '@/components/app/notifications-desktop-panel';
 import { DashboardMobileDock } from '@/components/app/dashboard-mobile-dock';
 import { NotificationsQueryOpener } from '@/components/app/notifications-query-opener';
@@ -13,32 +12,24 @@ import { NotificationsLiveListener } from '@/components/app/notifications-live-l
 
 interface ShellCommonProps {
   children: ReactNode;
-  username?: string | null;
-  workspaces?: AccessibleWorkspace[];
-  currentUserId?: string;
+  avatarUrl?: string | null;
+  userName?: string | null;
 }
 
 function FormsDashboardShellInner({
   children,
-  username,
-  workspaces,
-  currentUserId,
+  avatarUrl,
+  userName,
 }: ShellCommonProps) {
   return (
     <>
-      <div className="flex h-full min-w-0 flex-1 flex-col gap-2">
-        <div className="dashboard-shell relative flex min-h-0 min-w-0 flex-1 flex-col overflow-clip bg-[var(--background)] sm:rounded-3xl sm:border sm:border-[var(--border)] sm:bg-[var(--surface)]">
-          <DashboardNav
-            username={username}
-            workspaces={workspaces}
-            currentUserId={currentUserId}
-          />
-          <main className="flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="mx-auto w-full min-w-0 max-w-5xl px-4 pt-10 pb-[6.75rem] sm:px-4 sm:pt-12 sm:pb-6 md:px-6">
-              {children}
-            </div>
-          </main>
-        </div>
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <DashboardNav avatarUrl={avatarUrl} userName={userName} />
+        <main className="flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto w-full min-w-0 max-w-5xl px-4 pb-[6.75rem] pt-4 sm:px-4 sm:pb-6 sm:pt-16 md:px-6">
+            {children}
+          </div>
+        </main>
       </div>
 
       <NotificationsDesktopPanel />
@@ -48,9 +39,8 @@ function FormsDashboardShellInner({
 
 export function FormsDashboardShell({
   children,
-  username,
-  workspaces,
-  currentUserId,
+  avatarUrl,
+  userName,
 }: ShellCommonProps) {
   return (
     <FormsDashboardProvider>
@@ -60,9 +50,8 @@ export function FormsDashboardShell({
         </Suspense>
         <NotificationsLiveListener />
         <FormsDashboardShellInner
-          username={username}
-          workspaces={workspaces}
-          currentUserId={currentUserId}
+          avatarUrl={avatarUrl}
+          userName={userName}
         >
           {children}
         </FormsDashboardShellInner>

@@ -26,7 +26,7 @@ const STATUS_PILL: Record<FormListItem['status'], string> = {
   DRAFT:
     'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] ring-1 ring-[var(--border)]/70',
   PUBLISHED:
-    'bg-[var(--brand-soft-lime)] text-[var(--primary-foreground)] ring-1 ring-[color-mix(in_srgb,var(--brand-lime)_35%,transparent)] dark:text-[var(--brand-lime)]',
+    'bg-[var(--brand-soft-lime)] text-[var(--success)] ring-1 ring-[color-mix(in_srgb,var(--success)_30%,transparent)]',
   CLOSED:
     'bg-[color-mix(in_srgb,var(--warning)_14%,var(--surface))] text-[var(--warning)] ring-1 ring-[color-mix(in_srgb,var(--warning)_30%,transparent)]',
   ARCHIVED:
@@ -66,7 +66,7 @@ function PanelHeader({
   return (
     <div className="mb-3.5 flex items-center justify-between gap-3 sm:mb-4">
       <div className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[var(--surface-secondary)] py-1 pe-3 ps-1">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand-carbon)] shadow-[0_1px_3px_rgba(67,71,56,0.06)] ring-1 ring-[var(--border)]/40 dark:text-[var(--foreground)]">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)] shadow-[0_1px_3px_rgba(15,23,42,0.06)] ring-1 ring-[var(--border)]/40">
           <Icon size={14} strokeWidth={1.9} aria-hidden />
         </span>
         <h2 className="truncate text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
@@ -147,7 +147,7 @@ function ListRow({
       href={href}
       className="group flex items-start gap-3 rounded-2xl px-2.5 py-2.5 transition-colors hover:bg-[var(--surface-secondary)]"
     >
-      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft-lime)] text-[var(--brand-carbon)] ring-1 ring-[color-mix(in_srgb,var(--brand-lime)_28%,transparent)] transition-transform group-hover:scale-[1.03] dark:text-[var(--foreground)]">
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50 transition-transform group-hover:scale-[1.03]">
         <Icon size={15} strokeWidth={1.85} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">

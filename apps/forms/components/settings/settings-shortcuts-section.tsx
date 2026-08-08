@@ -1,13 +1,10 @@
-import Link from 'next/link';
+import { ArrowLeft, BarChart2, FileText, LayoutTemplate, Users } from 'lucide-react';
 import {
-  ArrowLeft,
-  BarChart2,
-  FileText,
-  LayoutTemplate,
-  Users,
-} from 'lucide-react';
+  SettingsPanel,
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
 import { APP_BASE } from '@/components/app/nav-config';
-import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 
 const SHORTCUTS = [
   {
@@ -38,40 +35,25 @@ const SHORTCUTS = [
 
 export function SettingsShortcutsSection() {
   return (
-    <SettingsSectionCard
-      icon={FileText}
-      title="اختصارات سريعة"
-      description="انتقل مباشرة إلى أقسام Forms الأخرى."
-    >
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
-        {SHORTCUTS.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 px-3.5 py-3 transition-colors hover:bg-[var(--surface-secondary)]"
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
-                <Icon className="size-4" strokeWidth={1.8} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--foreground)]">
-                  {item.title}
-                </p>
-                <p className="mt-0.5 line-clamp-2 text-[12px] text-[var(--muted-foreground)]">
-                  {item.description}
-                </p>
-              </div>
+    <SettingsPanel title="اختصارات سريعة" description="انتقل مباشرة إلى أقسام التطبيق الأخرى.">
+      {SHORTCUTS.map((item, index) => (
+        <div key={item.href}>
+          {index > 0 ? <SettingsRowDivider /> : null}
+          <SettingsRow
+            href={item.href}
+            icon={item.icon}
+            title={item.title}
+            subtitle={item.description}
+            trailing={
               <ArrowLeft
-                className="size-4 shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
+                className="size-4 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
+                strokeWidth={1.75}
                 aria-hidden
               />
-            </Link>
-          );
-        })}
-      </div>
-    </SettingsSectionCard>
+            }
+          />
+        </div>
+      ))}
+    </SettingsPanel>
   );
 }

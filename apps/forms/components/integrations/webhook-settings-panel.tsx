@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Switch } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { Copy, RefreshCw, Zap } from 'lucide-react';
 import {
   regenerateWebhookSecret,
@@ -11,7 +11,9 @@ import {
   type IntegrationsFormRow,
 } from '@/lib/integrations-api';
 import { fieldInputClass } from '@/components/forms/shared/form-field-input-class';
+import { FormDetailSwitchRow } from '@/components/forms/form-detail/form-detail-primitives';
 import { PlanFeatureGate } from '@/components/plan/plan-feature-gate';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { appToast } from '@/lib/app-toast';
 import { cn } from '@/lib/utils';
 
@@ -116,28 +118,15 @@ export function WebhookSettingsPanel({
 
   return (
     <PlanFeatureGate feature="webhook">
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/40 px-4 py-3.5">
-        <div className="min-w-0 space-y-1">
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            تفعيل Webhook
-          </p>
-          <p className="text-[13px] text-[var(--muted-foreground)]">
-            إرسال حدث POST عند كل استجابة جديدة أو محدّثة.
-          </p>
-        </div>
-        <Switch
-          isSelected={enabled}
-          onChange={setEnabled}
-          aria-label="تفعيل Webhook"
-        >
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-        </Switch>
-      </div>
+    <div className="flex flex-col gap-[12px]">
+      <FormDetailSwitchRow
+        label="تفعيل Webhook"
+        hint="إرسال حدث POST عند كل استجابة جديدة أو محدّثة."
+        checked={enabled}
+        onChange={setEnabled}
+      />
 
-      <div className="space-y-2">
+      <div className="space-y-2 text-start">
         <label className="text-sm font-medium text-[var(--foreground)]">
           رابط Webhook
         </label>
@@ -214,7 +203,7 @@ export function WebhookSettingsPanel({
       </div>
 
       {secret ? (
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--border)]/80 bg-[var(--surface-secondary)]/50 px-3 py-2">
+        <div className={cn(formDetailCardSurfaceClass, 'flex items-center gap-2')}>
           <code
             className="min-w-0 flex-1 truncate text-xs text-[var(--foreground)]"
             dir="ltr"

@@ -6,11 +6,13 @@ import { AnalyticsGeoMap } from '@/components/analytics/analytics-geo-map';
 import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import type { AnalyticsGeoBreakdown } from '@/lib/forms-api';
 import { formatNumber } from '@/lib/dashboard-format';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { pillTabClassName } from '@/components/ui/pill-tab';
 import { cn } from '@/lib/utils';
 
 type GeoMetric = 'views' | 'submissions';
 type GeoListTab = 'countries' | 'cities' | 'governorates';
+type GeoMapLevel = 'governorates' | 'countries';
 
 interface GeoListRow {
   key: string;
@@ -97,17 +99,14 @@ function GeoBreakdownList({
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="flex flex-col gap-[12px]">
       {rows.map((row, index) => {
         const pct = row.max > 0 ? Math.round((row.value / row.max) * 100) : 0;
 
         return (
-          <li
-            key={row.key}
-            className="rounded-2xl border border-[var(--border)]/60 bg-[var(--surface-secondary)]/20 px-3.5 py-3 sm:px-4"
-          >
+          <li key={row.key} className={formDetailCardSurfaceClass}>
             <div className="mb-2 flex items-center gap-3">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[11px] font-bold tabular-nums text-[var(--muted-foreground)]">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[11px] font-bold tabular-nums text-[var(--muted-foreground)]">
                 {index + 1}
               </span>
               {row.countryCode && row.label !== 'Unknown' ? (
@@ -117,10 +116,10 @@ function GeoBreakdownList({
                   className="shrink-0"
                 />
               ) : null}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 text-start">
                 <p
                   className={cn(
-                    'truncate text-sm font-medium text-[var(--foreground)]',
+                    'truncate text-[13px] font-medium text-[var(--foreground)]',
                     row.label === 'Unknown' && 'text-[var(--muted-foreground)]',
                   )}
                 >
@@ -136,7 +135,7 @@ function GeoBreakdownList({
                 <p
                   dir="ltr"
                   lang="en"
-                  className="text-sm font-semibold tabular-nums text-[var(--foreground)]"
+                  className="text-[13px] font-semibold tabular-nums text-[var(--foreground)]"
                 >
                   {formatNumber(row.value)}
                 </p>
@@ -178,6 +177,7 @@ export function FormAnalyticsGeoSection({
   className?: string;
 }) {
   const [metric, setMetric] = useState<GeoMetric>('views');
+  const [mapLevel, setMapLevel] = useState<GeoMapLevel>('governorates');
   const [listTab, setListTab] = useState<GeoListTab>('governorates');
 
   const listRows = useMemo(
@@ -190,9 +190,9 @@ export function FormAnalyticsGeoSection({
   );
 
   return (
-    <div className={cn('space-y-5', className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap justify-center gap-2">
+    <div className={cn('flex flex-col gap-6 sm:gap-8', className)}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
             className={pillTabClassName(metric === 'views')}
@@ -208,25 +208,46 @@ export function FormAnalyticsGeoSection({
             استجابات
           </button>
         </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            className={pillTabClassName(mapLevel === 'governorates')}
+            onClick={() => setMapLevel('governorates')}
+          >
+            خارطة العراق
+          </button>
+          <button
+            type="button"
+            className={pillTabClassName(mapLevel === 'countries')}
+            onClick={() => setMapLevel('countries')}
+          >
+            خارطة العالم
+          </button>
+        </div>
       </div>
 
       <AnalyticsGeoMap
         data={data}
         showGovernorates
-        defaultLevel="governorates"
+        defaultLevel={mapLevel}
+        level={mapLevel}
+        onLevelChange={setMapLevel}
         hideTitle
         hideMetricTabs
+        hideLevelTabs
         metric={metric}
-        mapHeight={360}
+        mapHeight={380}
+        embedded
       />
 
-      <div className="border-t border-[var(--border)]/70 pt-5">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col items-center gap-3 text-center">
           <div>
-            <h5 className="text-sm font-semibold text-[var(--foreground)]">
+            <h5 className="text-[14px] font-semibold text-[var(--foreground)]">
               التفصيل الجغرافي
             </h5>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+            <p className="mt-1 text-[12px] text-[var(--muted-foreground)]">
               أبرز المناطق حسب {metric === 'views' ? 'المشاهدات' : 'الاستجابات'}
             </p>
           </div>
@@ -245,8 +266,13 @@ export function FormAnalyticsGeoSection({
         </div>
 
         {listTab === 'governorates' && !hasGovernorateData ? (
-          <p className="mb-3 rounded-xl bg-[var(--surface-secondary)]/40 px-3 py-2 text-xs text-[var(--muted-foreground)]">
-            المحافظات تظهر للزوار من العراق (IQ) عند توفر بيانات Cloudflare.
+          <p
+            className={cn(
+              formDetailCardSurfaceClass,
+              'text-center text-[12px] text-[var(--muted-foreground)]',
+            )}
+          >
+            المحافظات تظهر للزوار من العراق (IQ) عند توفر بيانات
           </p>
         ) : null}
 

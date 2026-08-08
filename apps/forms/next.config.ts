@@ -125,6 +125,10 @@ const nextConfig: NextConfig = {
         source: "/api/media/:path*",
         destination: `${API_BACKEND_URL}/api/media/:path*`,
       },
+      {
+        source: "/uploads/:path*",
+        destination: `${API_BACKEND_URL}/uploads/:path*`,
+      },
       // /api/v1 is proxied via app/api/v1/[...path]/route.ts (forwards DELETE bodies)
     ];
   },

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@heroui/react';
 import type { IntegrationLogoAsset } from '@/lib/integration-logos';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import { cn } from '@/lib/utils';
 
 export type IntegrationCardStatus = 'connected' | 'inactive' | 'coming_soon';
@@ -56,14 +57,15 @@ export function FormIntegrationCard({
   return (
     <article
       className={cn(
-        'dashboard-card flex h-full flex-col rounded-2xl p-4 transition-all duration-200 sm:rounded-3xl sm:p-6',
+        formDetailCardSurfaceClass,
+        'flex h-full flex-col',
         !comingSoon &&
-          'dashboard-card-interactive hover:shadow-[var(--card-shadow-hover)]',
+          'transition-shadow hover:shadow-[0px_12px_22px_-4px_rgba(0,0,0,0.08)]',
         comingSoon && 'opacity-70',
       )}
     >
-      <div className="mb-4 flex items-start justify-between gap-2">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)]/60 bg-white p-1.5">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950">
           {logo ? (
             <Image
               src={logo.src}
@@ -90,15 +92,15 @@ export function FormIntegrationCard({
         </span>
       </div>
 
-      <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+      <h3 className="text-[14px] font-semibold text-[var(--foreground)]">
         {title}
       </h3>
-      <p className="mt-1 flex-1 text-xs leading-relaxed text-[var(--muted-foreground)] sm:text-[13px]">
+      <p className="mt-1 flex-1 text-[12px] leading-relaxed text-[var(--muted-foreground)] sm:text-[13px]">
         {description}
       </p>
 
       {detailLine ? (
-        <p className="mt-3 text-[11px] text-[var(--muted-foreground)]">
+        <p className="mt-3 truncate text-[11px] text-[var(--muted-foreground)]" dir="ltr">
           {detailLine}
         </p>
       ) : null}
@@ -107,7 +109,7 @@ export function FormIntegrationCard({
         <Button
           size="sm"
           variant={status === 'connected' ? 'outline' : 'primary'}
-          className="mt-4 w-full rounded-full sm:mt-5"
+          className="mt-4 w-full rounded-xl sm:mt-5"
           onPress={onAction}
         >
           {actionLabel ?? (status === 'connected' ? 'إدارة' : 'ربط')}

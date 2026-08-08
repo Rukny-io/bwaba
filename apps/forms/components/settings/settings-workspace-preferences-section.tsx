@@ -1,11 +1,10 @@
 'use client';
 
-import { SlidersHorizontal } from 'lucide-react';
-import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import {
   ANALYTICS_PERIOD_OPTIONS,
   type AnalyticsPeriodDays,
 } from '@/components/analytics/analytics-period-picker';
+import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import { useFormsPreferences } from '@/hooks/use-forms-preferences';
 import { pillTabClassName, pillTabGroupClassName } from '@/components/ui/pill-tab';
 
@@ -18,9 +17,8 @@ export function SettingsWorkspacePreferencesSection() {
 
   return (
     <SettingsSectionCard
-      icon={SlidersHorizontal}
       title="تفضيلات مساحة العمل"
-      description="إعدادات افتراضية تُطبَّق داخل تطبيق Forms فقط."
+      description="إعدادات افتراضية تُطبَّق داخل تطبيق النماذج فقط."
     >
       <div className="space-y-2">
         <p className="text-sm font-medium text-[var(--foreground)]">

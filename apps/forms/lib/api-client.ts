@@ -181,6 +181,29 @@ interface ApiResponse<T> {
   status: number;
 }
 
+const FETCH_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiException(
+        408,
+        'انتهت مهلة الطلب — تحقق من الاتصال وحاول مجدداً',
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function apiClient<T>(
   endpoint: string,
   config: RequestConfig = {},
@@ -203,7 +226,7 @@ async function apiClient<T>(
     headers[ACTIVE_WORKSPACE_HEADER] = activeWorkspaceId;
   }
 
-  let response = await fetch(url, {
+  let response = await fetchWithTimeout(url, {
     ...rest,
     method,
     headers,
@@ -216,7 +239,7 @@ async function apiClient<T>(
     if (refreshed.success) {
       const newCsrf = getCsrfToken();
       if (newCsrf && method !== 'GET') headers['X-CSRF-Token'] = newCsrf;
-      response = await fetch(url, {
+      response = await fetchWithTimeout(url, {
         ...rest,
         method,
         headers,

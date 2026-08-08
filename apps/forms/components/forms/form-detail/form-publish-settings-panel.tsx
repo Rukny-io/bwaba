@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { CalendarClock, Shield, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   Description,
   Label,
   NumberField,
-  Separator,
-  Switch,
 } from '@heroui/react';
 import { ApiException } from '@/lib/api-client';
 import { appToast } from '@/lib/app-toast';
 import { FormPublishScheduleFields } from '@/components/forms/form-detail/form-publish-schedule-fields';
+import {
+  FormDetailSubsection,
+  FormDetailSwitchRow,
+} from '@/components/forms/form-detail/form-detail-primitives';
 import { SettingsSectionCard } from '@/components/settings/settings-section-card';
-import { DashboardSurface } from '@/components/app/dashboard-surface';
+import { formDetailCardSurfaceClass } from '@/lib/form-detail-styles';
 import {
   scheduleFromForm,
   scheduleToIso,
@@ -107,101 +108,99 @@ export function FormPublishSettingsPanel({
 
   return (
     <SettingsSectionCard
-      icon={Shield}
+      plain
       title="إعدادات النشر والحماية"
-      description="تحكّم في من يمكنه الإرسال، ومتى، وبأي قيود."
+      description="تحكّم في من يمكنه الإرسال، ومتى، وبأي قيود"
     >
       <div className="space-y-6">
-        <PublishSettingsGroup
-          icon={Users}
+        <FormDetailSubsection
           title="الوصول والإرسال"
-          description="من يمكنه تعبئة النموذج وكم مرة."
+          description="من يمكنه تعبئة النموذج وكم مرة"
         >
-          <SettingRow
+          <FormDetailSwitchRow
             label="يتطلب تسجيل الدخول"
             hint="فقط المستخدمون المسجّلون يمكنهم الإرسال."
             checked={state.requiresAuthentication}
             onChange={(checked) => toggle('requiresAuthentication', checked)}
           />
-          <SettingRow
+          <FormDetailSwitchRow
             label="استجابة واحدة لكل مستخدم"
             hint="يمنع نفس الحساب من الإرسال أكثر من مرة."
             checked={state.oneResponsePerUser}
             onChange={(checked) => toggle('oneResponsePerUser', checked)}
           />
-          <SettingRow
+          <FormDetailSwitchRow
             label="السماح بإرسالات متعددة"
             hint="يسمح لنفس الزائر بإرسال أكثر من استجابة."
             checked={state.allowMultipleSubmissions}
             onChange={(checked) => toggle('allowMultipleSubmissions', checked)}
           />
-        </PublishSettingsGroup>
+        </FormDetailSubsection>
 
-        <Separator className="bg-[var(--border)]/60" />
-
-        <PublishSettingsGroup
-          icon={Shield}
+        <FormDetailSubsection
           title="الحماية والحدود"
-          description="تقليل السبام وتحديد عدد الاستجابات."
+          description="تقليل السبام وتحديد عدد الاستجابات"
         >
-          <SettingRow
+          <FormDetailSwitchRow
             label="Turnstile عند الإرسال"
             hint="تحقق Cloudflare خفيف يقلّل السبام على النموذج العام."
             checked={state.requireTurnstileOnSubmit}
             onChange={(checked) => toggle('requireTurnstileOnSubmit', checked)}
           />
 
-          <NumberField
-            className="w-full max-w-sm"
-            value={state.submissionLimit ?? undefined}
-            onChange={(value) =>
-              toggle(
-                'submissionLimit',
-                value != null && !Number.isNaN(value) ? value : null,
-              )
-            }
-            minValue={1}
-            aria-label="حد أقصى للاستجابات"
-            fullWidth
-          >
-            <Label>حد أقصى للاستجابات</Label>
-            <NumberField.Group>
-              <NumberField.DecrementButton />
-              <NumberField.Input placeholder="بدون حد" />
-              <NumberField.IncrementButton />
-            </NumberField.Group>
-            <Description>
-              اتركه فارغاً لعدم التحديد. يُغلق النموذج عند الوصول للحد.
-            </Description>
-          </NumberField>
-        </PublishSettingsGroup>
+          <div className={formDetailCardSurfaceClass}>
+            <NumberField
+              className="w-full max-w-sm text-start"
+              value={state.submissionLimit ?? undefined}
+              onChange={(value) =>
+                toggle(
+                  'submissionLimit',
+                  value != null && !Number.isNaN(value) ? value : null,
+                )
+              }
+              minValue={1}
+              aria-label="حد أقصى للاستجابات"
+              fullWidth
+            >
+              <Label>حد أقصى للاستجابات</Label>
+              <NumberField.Group>
+                <NumberField.DecrementButton />
+                <NumberField.Input placeholder="بدون حد" />
+                <NumberField.IncrementButton />
+              </NumberField.Group>
+              <Description>
+                اتركه فارغاً لعدم التحديد. يُغلق النموذج عند الوصول للحد.
+              </Description>
+            </NumberField>
+          </div>
+        </FormDetailSubsection>
 
-        <Separator className="bg-[var(--border)]/60" />
-
-        <PublishSettingsGroup
-          icon={CalendarClock}
+        <FormDetailSubsection
           title="الجدولة"
-          description="متى يفتح النموذج ومتى يُغلق تلقائياً."
+          description="متى يفتح النموذج ومتى يُغلق تلقائياً"
         >
-          <FormPublishScheduleFields
-            range={state.scheduleRange}
-            onRangeChange={(range) => toggle('scheduleRange', range)}
-          />
+          <div className={formDetailCardSurfaceClass}>
+            <FormPublishScheduleFields
+              range={state.scheduleRange}
+              onRangeChange={(range) => toggle('scheduleRange', range)}
+            />
+          </div>
 
-          <SettingRow
+          <FormDetailSwitchRow
             label="إغلاق تلقائي بعد تاريخ الإغلاق"
             hint="يرفض الاستجابات بعد وقت الإغلاق المحدّد."
             checked={state.closeAfterDate}
             onChange={(checked) => toggle('closeAfterDate', checked)}
           />
-        </PublishSettingsGroup>
+        </FormDetailSubsection>
 
         {error ? (
-          <p className="rounded-xl bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+          <p className="rounded-2xl bg-[var(--danger)]/10 px-4 py-3 text-[13px] text-[var(--danger)]">
             {error}
           </p>
         ) : null}
-        <div className="flex justify-end pt-1">
+
+        <div className="flex justify-end border-t border-[var(--border)]/60 pt-4">
           <Button
             variant="primary"
             className="rounded-full px-6"
@@ -213,67 +212,5 @@ export function FormPublishSettingsPanel({
         </div>
       </div>
     </SettingsSectionCard>
-  );
-}
-
-function PublishSettingsGroup({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: typeof Users;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/40">
-          <Icon className="size-4" strokeWidth={1.8} aria-hidden />
-        </div>
-        <div className="min-w-0 space-y-0.5">
-          <h3 className="text-sm font-semibold text-[var(--foreground)]">
-            {title}
-          </h3>
-          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
-            {description}
-          </p>
-        </div>
-      </div>
-      <div className="space-y-3 ps-0 sm:ps-12">{children}</div>
-    </section>
-  );
-}
-
-function SettingRow({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <DashboardSurface
-      padding="sm"
-      className="flex items-start justify-between gap-4 border-[var(--border)]/50 bg-[var(--surface-secondary)]/30"
-    >
-      <div className="min-w-0 space-y-1">
-        <p className="text-sm font-medium text-[var(--foreground)]">{label}</p>
-        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
-          {hint}
-        </p>
-      </div>
-      <Switch isSelected={checked} onChange={onChange} aria-label={label}>
-        <Switch.Control>
-          <Switch.Thumb />
-        </Switch.Control>
-      </Switch>
-    </DashboardSurface>
   );
 }

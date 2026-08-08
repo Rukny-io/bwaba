@@ -19,7 +19,7 @@ export function FormCreatePill({
       )}
     >
       {Icon ? (
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand-carbon)] ring-1 ring-[var(--border)]/50 sm:size-8 dark:text-[var(--foreground)]">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)] ring-1 ring-[var(--border)]/50 sm:size-8">
           <Icon size={15} strokeWidth={1.9} className="sm:hidden" aria-hidden />
           <Icon
             size={16}
@@ -67,7 +67,7 @@ export function FormCreateSectionBadge({
   return (
     <div
       className={cn(
-        'absolute -top-3 start-4 z-[1] rounded-full bg-[var(--brand-soft-lime)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand-carbon)] ring-1 ring-[color-mix(in_srgb,var(--brand-lime)_28%,transparent)] dark:text-[var(--brand-lime)]',
+        'absolute -top-3 start-4 z-[1] rounded-full bg-[var(--brand-blue-soft)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--secondary-foreground)] ring-1 ring-[color-mix(in_srgb,var(--primary)_28%,transparent)]',
         className,
       )}
     >
@@ -136,7 +136,7 @@ export function FormCreateGradientPill({
       className={cn(
         'group shrink-0 rounded-full p-[1.5px] transition-colors duration-200',
         isActive
-          ? 'bg-gradient-to-l from-[var(--brand-lime-soft)] via-[var(--primary)] to-[var(--brand-lime)]'
+          ? 'bg-gradient-to-l from-[var(--brand-blue-soft)] via-[var(--primary)] to-[var(--brand-blue)]'
           : 'bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--border)_70%,var(--primary)_30%)]',
       )}
     >
@@ -184,7 +184,7 @@ export function FormCreateTypeTile({
         'group relative flex w-full items-start gap-2.5 rounded-xl border p-3 text-start transition-all duration-200 sm:gap-3 sm:p-3.5',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]',
         isActive
-          ? 'border-[color-mix(in_srgb,var(--primary)_50%,var(--border))] bg-[color-mix(in_srgb,var(--brand-soft-lime)_72%,var(--surface))] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--primary)_18%,transparent)]'
+          ? 'border-[color-mix(in_srgb,var(--primary)_50%,var(--border))] bg-[color-mix(in_srgb,var(--brand-blue-soft)_72%,var(--surface))] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--primary)_18%,transparent)]'
           : 'border-[var(--border)] bg-[var(--surface)] hover:border-[color-mix(in_srgb,var(--border)_45%,var(--primary)_55%)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_55%,var(--surface))]',
       )}
     >
@@ -256,7 +256,7 @@ export function FormCreateQuickActionCard({
         'flex w-full items-start gap-3 rounded-xl p-3.5 text-start transition-all duration-200 sm:gap-3.5 sm:p-4',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]',
         isPrimary
-          ? 'bg-[color-mix(in_srgb,var(--brand-soft-lime)_68%,var(--surface))] hover:bg-[color-mix(in_srgb,var(--brand-soft-lime)_82%,var(--surface))]'
+          ? 'bg-[color-mix(in_srgb,var(--brand-blue-soft)_68%,var(--surface))] hover:bg-[color-mix(in_srgb,var(--brand-blue-soft)_82%,var(--surface))]'
           : 'bg-[var(--surface-secondary)]/70 hover:bg-[var(--surface-secondary)]',
       )}
     >

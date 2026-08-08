@@ -4,94 +4,34 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, X, LogOut } from 'lucide-react';
+import {
+  MoreHorizontal,
+  X,
+  LogOut,
+  ChevronLeft,
+} from 'lucide-react';
 import {
   primaryNavItems,
   middleNavItems,
   bottomNavItems,
   isNavItemActive,
 } from '@/components/app/nav-config';
+import {
+  MobileDockShell,
+  MobileDockPill,
+  MobileDockItem,
+} from '@/components/app/mobile-dock-primitives';
 import { logoutWithNotification } from '@/lib/auth-notify';
+import { cn } from '@/lib/utils';
 
 const dockItems = [
   primaryNavItems[0],
   primaryNavItems[1],
-  primaryNavItems[3],
+  primaryNavItems[2],
   bottomNavItems[0],
 ];
 
-const drawerItems = [
-  primaryNavItems[2],
-  primaryNavItems[4],
-  ...middleNavItems,
-  bottomNavItems[1],
-];
-
-function DockButton({
-  href,
-  icon: Icon,
-  label,
-  isActive,
-  onClick,
-}: {
-  href?: string;
-  icon: React.ElementType;
-  label: string;
-  isActive: boolean;
-  onClick?: () => void;
-}) {
-  const content = (
-    <div
-      className={`relative flex items-center justify-center transition-all duration-200 ${
-        isActive
-          ? 'bg-[var(--foreground)] text-[var(--background)] shadow-md'
-          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-      }`}
-      style={{
-        borderRadius: 20,
-        height: 42,
-        padding: '0 14px',
-        gap: isActive ? 6 : 0,
-      }}
-    >
-      <Icon
-        size={18}
-        strokeWidth={isActive ? 2.2 : 1.7}
-        style={{ flexShrink: 0 }}
-      />
-      {isActive ? (
-        <span className="inline-block whitespace-nowrap text-[12px] font-bold tracking-tight">
-          {label}
-        </span>
-      ) : null}
-    </div>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} aria-label={label} style={{ display: 'flex' }} onClick={onClick}>
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-      }}
-    >
-      {content}
-    </button>
-  );
-}
+const drawerItems = [...middleNavItems, bottomNavItems[1]];
 
 export function MobileDock() {
   const pathname = usePathname();
@@ -106,99 +46,129 @@ export function MobileDock() {
   return (
     <>
       <AnimatePresence>
-        {open ? (
+        {open && (
           <motion.div
             key="backdrop"
             className="fixed inset-0 z-40 sm:hidden"
             style={{
-              background: 'rgba(0, 0, 0, 0.5)',
-              backdropFilter: 'blur(12px)',
+              background: 'rgba(15, 23, 42, 0.28)',
+              backdropFilter: 'blur(8px)',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={handleClose}
           />
-        ) : null}
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
-        {open ? (
+        {open && (
           <motion.div
             key="drawer"
             dir="rtl"
-            className="fixed inset-x-3 bottom-[5.2rem] z-50 flex max-h-[65vh] flex-col gap-0.5 overflow-y-auto rounded-[28px] border border-[var(--border)] bg-[var(--surface)]/95 p-3 shadow-2xl backdrop-blur-[40px] sm:hidden"
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            role="menu"
+            aria-label="المزيد"
+            className="fixed inset-x-0 bottom-[5.85rem] z-50 mx-auto w-[min(100%-1.5rem,22rem)] overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)]/95 shadow-[var(--card-shadow)] backdrop-blur-2xl sm:hidden"
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            exit={{ opacity: 0, y: 10, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
           >
-            {drawerItems.map(({ href, icon: Icon, label }) => {
-              const active = isNavItemActive(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={handleClose}
-                  className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors ${
-                    active
-                      ? 'bg-[var(--surface-secondary)]'
-                      : 'hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  <Icon size={18} strokeWidth={1.8} />
-                  {label}
-                </Link>
-              );
-            })}
-            <div className="mx-1 my-1 h-px bg-[var(--border)]" />
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-            >
-              <LogOut size={16} />
-              تسجيل الخروج
-            </button>
+            <div className="border-b border-[var(--border)] px-4 pb-2.5 pt-3.5">
+              <p className="text-[11px] font-semibold tracking-wide text-[var(--muted-foreground)]">
+                المزيد من الخيارات
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1 p-2">
+              {drawerItems.map(({ href, icon, label }, index) => {
+                if (!icon) return null;
+                const Icon = icon;
+                const active = isNavItemActive(pathname, href);
+                return (
+                  <motion.div
+                    key={href}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 * index, duration: 0.22 }}
+                  >
+                    <Link
+                      href={href}
+                      role="menuitem"
+                      onClick={handleClose}
+                      className={cn(
+                        'flex items-center gap-3 rounded-2xl px-2.5 py-2.5 transition-colors',
+                        active
+                          ? 'bg-[var(--surface-secondary)]'
+                          : 'hover:bg-[var(--surface-secondary)]/80',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-2xl',
+                          active
+                            ? 'bg-[var(--foreground)] text-[var(--background)]'
+                            : 'bg-[var(--surface-secondary)] text-[var(--foreground)]',
+                        )}
+                      >
+                        <Icon size={18} strokeWidth={1.9} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 text-[14px] font-semibold text-[var(--foreground)]">
+                        {label}
+                      </span>
+                      <ChevronLeft
+                        size={16}
+                        strokeWidth={2}
+                        className="shrink-0 text-[var(--muted-foreground)]/70"
+                        aria-hidden
+                      />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-[var(--border)] p-2">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void handleLogout()}
+                className="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--danger)_14%,transparent)] text-[var(--danger)]">
+                  <LogOut size={17} strokeWidth={1.9} aria-hidden />
+                </span>
+                <span className="text-[14px] font-semibold">تسجيل الخروج</span>
+              </button>
+            </div>
           </motion.div>
-        ) : null}
+        )}
       </AnimatePresence>
 
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 sm:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
-          style={{
-            background:
-              'linear-gradient(to top, var(--background) 35%, transparent 100%)',
-          }}
-        />
-        <div className="pointer-events-auto relative mb-3 flex justify-center">
-          <nav
-            dir="rtl"
-            aria-label="التنقل الرئيسي"
-            className="flex items-center gap-0.5 rounded-[26px] border border-[var(--border)] bg-[var(--surface)]/95 px-[5px] py-1 shadow-xl backdrop-blur-[32px]"
-          >
-            {dockItems.map(({ href, icon, label, exact }) => (
-              <DockButton
+      <MobileDockShell>
+        <MobileDockPill aria-label="التنقل الرئيسي">
+          {dockItems.map(({ href, icon, label, exact }) =>
+            icon ? (
+              <MobileDockItem
                 key={href}
                 href={href}
                 icon={icon}
                 label={label}
                 isActive={isNavItemActive(pathname, href, exact)}
               />
-            ))}
-            <div className="mx-0.5 h-4 w-px shrink-0 rounded-[1px] bg-[var(--border)]" />
-            <DockButton
-              icon={open ? X : MoreHorizontal}
-              label="المزيد"
-              isActive={open}
-              onClick={() => setOpen((v) => !v)}
-            />
-          </nav>
-        </div>
-      </div>
+            ) : null,
+          )}
+          <MobileDockItem
+            icon={open ? X : MoreHorizontal}
+            label="المزيد"
+            isActive={open}
+            showLabel={false}
+            onClick={() => setOpen((v) => !v)}
+          />
+        </MobileDockPill>
+      </MobileDockShell>
     </>
   );
 }

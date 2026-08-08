@@ -206,6 +206,40 @@ export class StorageController {
     return { key, url };
   }
 
+  @Post('brand-image')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload collection banner or logo image' })
+  @ApiResponse({ status: 200, description: 'Brand image uploaded successfully' })
+  async uploadBrandImage(
+    @Request() req,
+    @Query('category') category: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    if (category !== 'BANNER' && category !== 'LOGO') {
+      throw new BadRequestException('category must be BANNER or LOGO');
+    }
+
+    const fileCategory =
+      category === 'BANNER' ? FileCategory.BANNER : FileCategory.LOGO;
+    const key = await this.storageService.uploadBrandImage(
+      req.user.id,
+      file,
+      fileCategory,
+    );
+
+    return { key, url: `/api/media/${key}` };
+  }
+
   @Post('forms/:formId/cover')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

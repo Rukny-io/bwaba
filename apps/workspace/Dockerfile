@@ -11,22 +11,31 @@ WORKDIR /app
 # file: dependency needs the shared package present before npm install
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/workspace/package.json apps/workspace/package-lock.json* ./apps/workspace/
+COPY apps/workspace/packages/react ./apps/workspace/packages/react/
+COPY apps/workspace/packages/styles ./apps/workspace/packages/styles/
+# postinstall runs scripts/materialize-workspace-deps.mjs
+COPY apps/workspace/scripts ./apps/workspace/scripts/
 
 WORKDIR /app/apps/workspace
+# Strip workspace:* from nested package manifests (npm cannot resolve them outside a workspace).
 RUN --mount=type=cache,id=npm-workspace,target=/root/.npm \
-  npm config set fetch-retries 10 \
+  node -e "const fs=require('fs');const path=require('path');function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.name==='package.json'){const pkg=JSON.parse(fs.readFileSync(p,'utf8'));for(const field of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){if(!pkg[field])continue;for(const [k,v] of Object.entries(pkg[field])){if(String(v).startsWith('workspace:'))delete pkg[field][k];}}fs.writeFileSync(p,JSON.stringify(pkg,null,2)+'\n');}}}walk('packages');" \
+  && npm config set fetch-retries 10 \
   && npm config set fetch-timeout 600000 \
   && npm install --no-audit --no-fund
 
 FROM base AS builder
 WORKDIR /app/apps/workspace
 
+# Source first (.dockerignore excludes **/node_modules).
+# Must land before deps node_modules so file: symlinks cannot collide with COPY.
+COPY apps/workspace .
 COPY --from=deps /app/apps/workspace/node_modules ./node_modules
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
-COPY apps/workspace .
 
-# Materialize font package (Turbopack rejects symlinks pointing outside filesystem root)
-RUN rm -rf node_modules/@rukny/thmanyah-font \
+# Materialize file: packages (Turbopack rejects outbound symlinks)
+RUN node scripts/materialize-workspace-deps.mjs \
+  && rm -rf node_modules/@rukny/thmanyah-font \
   && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 
 ENV NEXT_TELEMETRY_DISABLED=1

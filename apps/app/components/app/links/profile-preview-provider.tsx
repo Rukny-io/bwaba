@@ -104,7 +104,6 @@ export const PREVIEW_COLUMN_WIDTH_PX = 320;
 const PHONE_WIDTH_PX = 300;
 const PHONE_RADIUS = '2.25rem';
 const HEADER_HEIGHT_PX = 36;
-const FOOTER_HINT_HEIGHT_PX = 0; // hint removed for tighter layout
 const COLUMN_GAP_PX = 12;
 
 /**
@@ -169,13 +168,10 @@ export function ProfilePreviewAside() {
 
   if (!profile?.username) {
     return (
-      <aside
-        className="flex h-full min-h-0 w-full flex-col items-center justify-center px-2"
-        style={{ width: PREVIEW_COLUMN_WIDTH_PX }}
-      >
+      <aside className="flex h-full min-h-0 w-full items-center justify-center px-2 py-4">
         <div
-          className="flex w-[300px] flex-1 max-h-full items-center justify-center rounded-[2.25rem] bg-[var(--surface-secondary)]/60 ring-1 ring-[var(--border)]"
-          style={{ marginTop: HEADER_HEIGHT_PX + COLUMN_GAP_PX }}
+          className="flex w-[300px] items-center justify-center rounded-[2.25rem] bg-[var(--surface-secondary)]/60 ring-1 ring-[var(--border)]"
+          style={{ height: 'min(560px, calc(100dvh - 8rem))' }}
         >
           <p className="px-6 text-center text-xs text-[var(--muted-foreground)]">
             جاري تحميل المعاينة…
@@ -187,50 +183,50 @@ export function ProfilePreviewAside() {
 
   const publicUrl = getPublicProfileUrl(profile.username);
 
-  return (
-    <aside
-      className="flex h-full min-h-0 flex-col items-center pb-2"
-      style={{ width: PREVIEW_COLUMN_WIDTH_PX, gap: COLUMN_GAP_PX }}
-    >
-      <div
-        className="flex w-[300px] shrink-0 items-center justify-between"
-        style={{ height: HEADER_HEIGHT_PX }}
-      >
-        <p className="text-sm font-semibold text-[var(--foreground)]">معاينة مباشرة</p>
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setLoaded(false);
-              setFailed(false);
-              setReloadKey((k) => k + 1);
-            }}
-            className="inline-flex size-7 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
-            title="تحديث المعاينة"
-          >
-            <RefreshCw className="size-3.5" />
-          </button>
-          {publicUrl ? (
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline"
-            >
-              فتح
-              <ExternalLink className="size-3" />
-            </a>
-          ) : null}
-        </div>
-      </div>
+  const phoneHeight = 'min(560px, calc(100dvh - 8rem))';
 
+  return (
+    <aside className="flex h-full min-h-0 w-full items-center justify-center px-2 py-4">
       <div
-        className="relative min-h-0 w-[300px] flex-1 overflow-hidden bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
-        style={{
-          borderRadius: PHONE_RADIUS,
-          maxHeight: `calc(100% - ${HEADER_HEIGHT_PX + COLUMN_GAP_PX + FOOTER_HINT_HEIGHT_PX}px)`,
-        }}
+        className="flex w-[300px] shrink-0 flex-col"
+        style={{ gap: COLUMN_GAP_PX }}
       >
+        <div
+          className="flex w-full shrink-0 items-center justify-between"
+          style={{ height: HEADER_HEIGHT_PX }}
+        >
+          <p className="text-sm font-semibold text-[var(--foreground)]">معاينة مباشرة</p>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setLoaded(false);
+                setFailed(false);
+                setReloadKey((k) => k + 1);
+              }}
+              className="inline-flex size-7 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+              title="تحديث المعاينة"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+            {publicUrl ? (
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline"
+              >
+                فتح
+                <ExternalLink className="size-3" />
+              </a>
+            ) : null}
+          </div>
+        </div>
+
+        <div
+          className="relative w-full shrink-0 overflow-hidden bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5 dark:bg-[var(--surface)]"
+          style={{ borderRadius: PHONE_RADIUS, height: phoneHeight }}
+        >
         {!loaded && !failed ? (
           <div className="absolute inset-0 z-10 animate-pulse bg-[var(--surface-secondary)]" />
         ) : null}
@@ -271,6 +267,7 @@ export function ProfilePreviewAside() {
             referrerPolicy="no-referrer-when-downgrade"
           />
         ) : null}
+        </div>
       </div>
     </aside>
   );

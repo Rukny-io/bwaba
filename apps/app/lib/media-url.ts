@@ -46,3 +46,13 @@ export function resolveMediaUrl(url?: string | null): string | null {
 }
 
 export const resolveProfileMediaUrl = resolveMediaUrl;
+
+/** Avatar URLs may point at a video; use the generated thumbnail when needed. */
+export function resolveAvatarUrl(url?: string | null): string | null {
+  const resolved = resolveMediaUrl(url);
+  if (!resolved) return null;
+  if (/\.mp4$/i.test(resolved)) {
+    return resolved.replace(/\.mp4$/i, '_thumb.jpg');
+  }
+  return resolved;
+}

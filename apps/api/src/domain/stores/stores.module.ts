@@ -34,6 +34,8 @@ import {
   ProductCategoriesController,
   PublicProductCategoriesController,
 } from './product-categories.controller';
+import { ProductCollectionsService } from './product-collections.service';
+import { ProductCollectionsController } from './product-collections.controller';
 // 📱 نظام التحقق عبر واتساب للشراء كضيف
 import { CheckoutAuthService } from './checkout-auth.service';
 import { CheckoutAuthController } from './checkout-auth.controller';
@@ -86,6 +88,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     // Controllers فئات المنتجات (must register before StoresController to avoid :username route conflict)
     ProductCategoriesController,
     PublicProductCategoriesController,
+    ProductCollectionsController,
     StoresController,
     ProductsController,
     CartController,
@@ -130,6 +133,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     ProductAttributesService,
     // Service فئات المنتجات
     ProductCategoriesService,
+    ProductCollectionsService,
     // 📱 Service التحقق عبر واتساب
     CheckoutAuthService,
     // � Service المنتجات الرقمية

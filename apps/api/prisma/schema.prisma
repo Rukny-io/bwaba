@@ -543,6 +543,7 @@ model Store {
   forms              Form[]
   orders             orders[]
   product_categories product_categories[]
+  product_collections product_collections[]
   products           products[]
   store_categories   store_categories?    @relation(fields: [categoryId], references: [id])
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1433,6 +1434,41 @@ model product_categories {
   @@index([storeId])
 }
 
+model product_collections {
+  id          String                     @id
+  storeId     String
+  name        String
+  nameAr      String?
+  slug        String
+  description String?
+  imagePath   String?
+  bannerPath  String?
+  order       Int                        @default(0)
+  isActive    Boolean                    @default(true)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime
+  stores      Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items       product_collection_items[]
+
+  @@unique([storeId, slug])
+  @@index([order])
+  @@index([storeId])
+}
+
+model product_collection_items {
+  id           String              @id @default(cuid())
+  collectionId String
+  productId    String
+  order        Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  collection   product_collections @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      products            @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+}
+
 model product_images {
   id           String   @id
   productId    String
@@ -1470,6 +1506,7 @@ model products {
   order_items        order_items[]
   productAttributes  product_attributes[]
   product_images     product_images[]
+  collection_items   product_collection_items[]
   variants           product_variants[]
   product_categories product_categories?  @relation(fields: [categoryId], references: [id])
   stores             Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)

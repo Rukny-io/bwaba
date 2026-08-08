@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Skeleton } from '@heroui/react';
+import { Skeleton, Table } from '@heroui/react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
 } from '@/components/analytics/analytics-period-picker';
 import { AnalyticsGeoMap } from '@/components/analytics/analytics-geo-map';
 import { AnalyticsTrendChart } from '@/components/analytics/analytics-trend-chart';
+import { FormStatusChip } from '@/components/forms/shared/form-status-chip';
 import { SettingsSectionCard } from '@/components/settings/settings-section-card';
 import { ApiException } from '@/lib/api-client';
 import { readFormsPreferences } from '@/lib/forms-preferences';
@@ -32,7 +33,6 @@ import {
   type AnalyticsOverviewResponse,
 } from '@/lib/forms-api';
 import {
-  FORM_STATUS_LABELS,
   formatFormDate,
   getFormTypeLabel,
 } from '@/lib/forms-format';
@@ -284,62 +284,60 @@ export function AnalyticsOverviewView() {
               لا توجد نماذج بعد
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-start text-xs text-[var(--muted-foreground)]">
-                    <th className="pb-3 pe-4 font-medium">النموذج</th>
-                    <th className="pb-3 pe-4 font-medium">الحالة</th>
-                    <th className="pb-3 pe-4 font-medium">النوع</th>
-                    <th className="pb-3 pe-4 text-end font-medium">مشاهدات</th>
-                    <th className="pb-3 pe-4 text-end font-medium">استجابات</th>
-                    <th className="pb-3 text-end font-medium">إكمال</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.forms.map((form) => (
-                    <tr
-                      key={form.id}
-                      className="border-b border-[var(--border)]/60 last:border-0"
-                    >
-                      <td className="py-3 pe-4">
-                        <Link
-                          href={`${APP_BASE}/forms/${form.id}/analytics`}
-                          className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
-                        >
-                          {form.title}
-                        </Link>
-                      </td>
-                      <td className="py-3 pe-4">
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-medium',
-                            form.status === 'PUBLISHED'
-                              ? 'bg-[var(--success)]/15 text-[var(--success)]'
-                              : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
-                          )}
-                        >
-                          {FORM_STATUS_LABELS[form.status as FormStatus] ??
-                            form.status}
-                        </span>
-                      </td>
-                      <td className="py-3 pe-4 text-[var(--muted-foreground)]">
-                        {getFormTypeLabel(form.type as FormType)}
-                      </td>
-                      <td className="py-3 pe-4 text-end tabular-nums">
-                        {formatNumber(form.views)}
-                      </td>
-                      <td className="py-3 pe-4 text-end tabular-nums font-medium">
-                        {formatNumber(form.submissions)}
-                      </td>
-                      <td className="py-3 text-end tabular-nums">
-                        {formatPercent(form.completionRate)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table variant="secondary">
+              <Table.ScrollContainer>
+                <Table.Content
+                  aria-label="أداء النماذج"
+                  className="min-w-[36rem]"
+                >
+                  <Table.Header>
+                    <Table.Column isRowHeader id="title">
+                      النموذج
+                    </Table.Column>
+                    <Table.Column id="status">الحالة</Table.Column>
+                    <Table.Column id="type">النوع</Table.Column>
+                    <Table.Column id="views" className="text-end">
+                      مشاهدات
+                    </Table.Column>
+                    <Table.Column id="submissions" className="text-end">
+                      استجابات
+                    </Table.Column>
+                    <Table.Column id="completionRate" className="text-end">
+                      إكمال
+                    </Table.Column>
+                  </Table.Header>
+                  <Table.Body items={data.forms}>
+                    {(form) => (
+                      <Table.Row id={form.id}>
+                        <Table.Cell>
+                          <Link
+                            href={`${APP_BASE}/forms/${form.id}/analytics`}
+                            className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
+                          >
+                            {form.title}
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <FormStatusChip status={form.status as FormStatus} />
+                        </Table.Cell>
+                        <Table.Cell className="text-[var(--muted-foreground)]">
+                          {getFormTypeLabel(form.type as FormType)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end tabular-nums">
+                          {formatNumber(form.views)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end font-medium tabular-nums">
+                          {formatNumber(form.submissions)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end tabular-nums">
+                          {formatPercent(form.completionRate)}
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
           )}
         </div>
       </SettingsSectionCard>

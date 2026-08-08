@@ -47,6 +47,7 @@ export interface PlanLimits {
   ordersPerMonth: number;
   imagesPerProduct: number;
   categories: number;
+  collections: number;
   coupons: number;
   wishlist: boolean;
   productReviews: boolean;
@@ -132,6 +133,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     ordersPerMonth: Infinity,
     imagesPerProduct: 3,
     categories: 5,
+    collections: 5,
     coupons: 0,
     wishlist: false,
     productReviews: false,
@@ -214,6 +216,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     ordersPerMonth: Infinity,
     imagesPerProduct: 8,
     categories: 15,
+    collections: 15,
     coupons: 5,
     wishlist: true,
     productReviews: true,
@@ -296,6 +299,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     ordersPerMonth: Infinity,
     imagesPerProduct: Infinity,
     categories: Infinity,
+    collections: Infinity,
     coupons: Infinity,
     wishlist: true,
     productReviews: true,
@@ -378,6 +382,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     ordersPerMonth: Infinity,
     imagesPerProduct: Infinity,
     categories: Infinity,
+    collections: Infinity,
     coupons: Infinity,
     wishlist: true,
     productReviews: true,

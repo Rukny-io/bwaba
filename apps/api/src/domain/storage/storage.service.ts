@@ -540,6 +540,10 @@ export class StorageService {
         );
       case FileCategory.PRODUCT_IMAGE:
         return this.s3Service.getProductFileKey(userId, entityId, filename);
+      case FileCategory.BANNER:
+        return `banners/${userId}/${filename}`;
+      case FileCategory.LOGO:
+        return `logos/${userId}/${filename}`;
       case FileCategory.SUPPORT_ATTACHMENT:
         return `users/${userId}/support/${entityId}/${filename}`;
       default:
@@ -738,6 +742,78 @@ export class StorageService {
     });
 
     this.logger.log(`Cover uploaded for user ${userId}: ${key}`);
+    return key;
+  }
+
+  /**
+   * Upload brand images (collection banner / logo) via server-side processing.
+   */
+  async uploadBrandImage(
+    userId: string,
+    file: Express.Multer.File,
+    category: Extract<FileCategory, 'BANNER' | 'LOGO'>,
+  ): Promise<string> {
+    this.validateFileExtension(file?.originalname);
+
+    const buffer = await this.normalizeFileToBuffer(file);
+    const incomingSize =
+      (file && (file.size ?? buffer.length)) || buffer.length;
+
+    if (incomingSize > this.MAX_FILE_SIZE) {
+      throw new BadRequestException('حجم الملف يتجاوز 10MB');
+    }
+
+    const hasSpace = await this.checkStorageLimit(userId, incomingSize);
+    if (!hasSpace) {
+      throw new BadRequestException('لا توجد مساحة تخزين كافية');
+    }
+
+    const fileType = await fileTypeFromBuffer(buffer);
+    if (!fileType || !this.ALLOWED_IMAGE_TYPES.includes(fileType.mime)) {
+      throw new BadRequestException(
+        'نوع الملف غير مسموح. يُسمح فقط بـ JPEG, PNG, WebP, GIF',
+      );
+    }
+
+    const processedImage = await sharp(buffer)
+      .rotate()
+      .resize(
+        category === FileCategory.BANNER ? 1600 : 512,
+        category === FileCategory.BANNER ? 205 : 512,
+        category === FileCategory.BANNER
+          ? { fit: 'cover', position: 'center' }
+          : { fit: 'inside', withoutEnlargement: true },
+      )
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const [blurHash, dimensions] = await Promise.all([
+      this.generateBlurHash(processedImage),
+      this.getImageDimensions(processedImage),
+    ]);
+
+    const filename = `${uuidv4()}.webp`;
+    const key = this.generateKeyForCategory(userId, category, filename);
+
+    await this.s3Service.uploadBuffer(
+      this.bucket,
+      key,
+      processedImage,
+      'image/webp',
+    );
+
+    await this.trackFile(userId, {
+      key,
+      fileName: file.originalname,
+      fileType: 'image/webp',
+      fileSize: BigInt(processedImage.length),
+      category,
+      blurHash,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
+    this.logger.log(`Brand image uploaded for user ${userId}: ${key}`);
     return key;
   }
 

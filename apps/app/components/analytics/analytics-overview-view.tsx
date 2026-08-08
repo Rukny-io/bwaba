@@ -41,6 +41,8 @@ import {
   formatShortDate,
   formatTrendBadge,
 } from '@/lib/dashboard-format';
+import { Table } from '@heroui/react';
+import { appDetailCardSurfaceClass } from '@/lib/app-detail-styles';
 import { cn } from '@/lib/utils';
 
 function AnalyticsSkeleton() {
@@ -271,64 +273,70 @@ export function AnalyticsOverviewView() {
           </DashboardSurface>
         </div>
 
-        <DashboardSurface as="article">
+        <div className={appDetailCardSurfaceClass}>
           <h3 className="mb-4 text-sm font-semibold text-[var(--foreground)]">كل الروابط</h3>
           {links.length === 0 ? (
             <p className="text-sm italic text-[var(--muted-foreground)]">لا توجد روابط بعد</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-start text-xs text-[var(--muted-foreground)]">
-                    <th className="pb-3 pe-4 font-medium">الرابط</th>
-                    <th className="pb-3 pe-4 font-medium">الحالة</th>
-                    <th className="pb-3 pe-4 font-medium">المنصة</th>
-                    <th className="pb-3 pe-4 text-end font-medium">مشاهدات</th>
-                    <th className="pb-3 text-end font-medium">نقرات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {links.map((link) => (
-                    <tr
-                      key={link.id}
-                      className="border-b border-[var(--border)]/60 last:border-0"
-                    >
-                      <td className="py-3 pe-4">
-                        <Link
-                          href="/app/links"
-                          className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
-                        >
-                          {link.title ?? link.platform}
-                        </Link>
-                      </td>
-                      <td className="py-3 pe-4">
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-medium',
-                            link.status === 'active'
-                              ? 'bg-[var(--success)]/15 text-[var(--success)]'
-                              : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
-                          )}
-                        >
-                          {link.status === 'active' ? 'نشط' : 'مخفي'}
-                        </span>
-                      </td>
-                      <td className="py-3 pe-4 text-[var(--muted-foreground)]">
-                        {link.platform}
-                      </td>
-                      <td className="py-3 pe-4 text-end tabular-nums">
-                        {formatNumber(link.views)}
-                      </td>
-                      <td className="py-3 text-end tabular-nums font-medium">
-                        {formatNumber(link.totalClicks)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table variant="secondary">
+              <Table.ScrollContainer>
+                <Table.Content
+                  aria-label="أداء الروابط"
+                  className="min-w-[36rem]"
+                >
+                  <Table.Header>
+                    <Table.Column isRowHeader id="title">
+                      الرابط
+                    </Table.Column>
+                    <Table.Column id="status">الحالة</Table.Column>
+                    <Table.Column id="platform">المنصة</Table.Column>
+                    <Table.Column id="views" className="text-end">
+                      مشاهدات
+                    </Table.Column>
+                    <Table.Column id="clicks" className="text-end">
+                      نقرات
+                    </Table.Column>
+                  </Table.Header>
+                  <Table.Body items={links}>
+                    {(link) => (
+                      <Table.Row id={link.id}>
+                        <Table.Cell>
+                          <Link
+                            href="/app/links"
+                            className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
+                          >
+                            {link.title ?? link.platform}
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-xs font-medium',
+                              link.status === 'active'
+                                ? 'bg-[var(--success)]/15 text-[var(--success)]'
+                                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+                            )}
+                          >
+                            {link.status === 'active' ? 'نشط' : 'مخفي'}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell className="text-[var(--muted-foreground)]">
+                          {link.platform}
+                        </Table.Cell>
+                        <Table.Cell className="text-end tabular-nums">
+                          {formatNumber(link.views)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end font-medium tabular-nums">
+                          {formatNumber(link.totalClicks)}
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
           )}
-        </DashboardSurface>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3 sm:gap-4">

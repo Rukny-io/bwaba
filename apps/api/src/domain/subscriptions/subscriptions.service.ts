@@ -119,6 +119,7 @@ export class SubscriptionsService {
       formsCount,
       productsCount,
       categoriesCount,
+      collectionsCount,
       couponsCount,
       linkGroupsCount,
       storageUsed,
@@ -134,6 +135,9 @@ export class SubscriptionsService {
         where: { stores: { userId }, status: { not: 'INACTIVE' } },
       }),
       this.prisma.product_categories.count({
+        where: { stores: { userId } },
+      }),
+      this.prisma.product_collections.count({
         where: { stores: { userId } },
       }),
       this.prisma.coupons.count({
@@ -185,6 +189,7 @@ export class SubscriptionsService {
         },
         products: { used: productsCount, limit: limits.products },
         categories: { used: categoriesCount, limit: limits.categories },
+        collections: { used: collectionsCount, limit: limits.collections },
         coupons: { used: couponsCount, limit: limits.coupons },
         linkGroups: { used: linkGroupsCount, limit: limits.linkGroups },
         storage: { used: storageUsed, limit: limits.storageBytes },
@@ -259,6 +264,10 @@ export class SubscriptionsService {
         });
       case 'categories':
         return this.prisma.product_categories.count({
+          where: { stores: { userId } },
+        });
+      case 'collections':
+        return this.prisma.product_collections.count({
           where: { stores: { userId } },
         });
       case 'coupons':

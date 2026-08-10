@@ -116,7 +116,7 @@ export function ProductImagesUpload({
             {index === 0 ? (
               <Chip
                 size="sm"
-                variant="solid"
+                variant="secondary"
                 className="absolute start-1.5 top-1.5 z-10 h-5 bg-black/55 text-[9px] text-white"
               >
                 الرئيسية

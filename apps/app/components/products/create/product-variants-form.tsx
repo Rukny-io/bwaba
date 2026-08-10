@@ -50,6 +50,10 @@ export function ProductVariantsForm({
 }: ProductVariantsFormProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
 
+  function handleExpandedChange(keys: Set<string | number>) {
+    setExpandedKeys(new Set([...keys].map(String)));
+  }
+
   const variantIds = useMemo(
     () => variants.map((variant) => variant.id),
     [variants],
@@ -131,7 +135,7 @@ export function ProductVariantsForm({
         <DisclosureGroup
           allowsMultipleExpanded
           expandedKeys={expandedKeys}
-          onExpandedChange={setExpandedKeys}
+          onExpandedChange={handleExpandedChange}
           className="flex flex-col gap-3"
         >
           {variants.map((variant, index) => {

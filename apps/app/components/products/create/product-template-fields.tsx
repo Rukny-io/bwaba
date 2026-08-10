@@ -133,7 +133,7 @@ function TemplateFieldControl({
                 <Chip
                   key={option}
                   size="sm"
-                  variant={active ? 'solid' : 'soft'}
+                  variant={active ? 'primary' : 'soft'}
                   className="cursor-pointer"
                   onClick={() => {
                     if (active) {

@@ -21,9 +21,9 @@ import { cn } from '@/lib/utils';
 
 const ROWS_PER_PAGE = 8;
 
-const KIND_CHIP_COLOR: Record<ProductKind, 'success' | 'primary' | 'warning'> = {
+const KIND_CHIP_COLOR: Record<ProductKind, 'success' | 'accent' | 'warning'> = {
   PHYSICAL: 'success',
-  DIGITAL: 'primary',
+  DIGITAL: 'accent',
   SERVICE: 'warning',
 };
 

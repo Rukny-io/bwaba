@@ -62,6 +62,7 @@ function CallbackContent() {
         }
 
         if (result.requires2FA && result.pendingSessionId) {
+          const accountsUrl = resolveAccountsUrl();
           const verify = new URL('/verify-2fa', accountsUrl);
           verify.searchParams.set('sessionId', result.pendingSessionId);
           window.location.href = verify.toString();

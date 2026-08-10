@@ -16,6 +16,7 @@ import {
 } from '@heroui/react';
 import { ProductPriceField } from '@/components/products/create/product-price-field';
 import { ProductFormSection } from '@/components/products/create/product-form-section';
+import { ProductKindIconBadge } from '@/components/products/create/product-kind-icon-badge';
 import { ProductCreatePill } from '@/components/products/create/page/product-create-primitives';
 import {
   ProductImagesUpload,

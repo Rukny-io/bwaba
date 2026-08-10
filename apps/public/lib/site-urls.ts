@@ -11,8 +11,8 @@ export const siteUrls = {
   accounts: accountsBase,
   forms: formsBase,
   app: appBase,
-  privacy: `${accountsBase}/privacy`,
-  terms: `${accountsBase}/terms`,
+  privacy: '/privacy',
+  terms: '/terms',
   login: `${accountsBase}/login`,
   formsLogin: `${formsBase}/login`,
 } as const;

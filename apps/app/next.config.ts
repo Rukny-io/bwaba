@@ -40,6 +40,11 @@ const monorepoAliases = {
 const API_BACKEND_URL =
   process.env.API_BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
 
+const PUBLIC_SITE_URL =
+  process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
+  process.env.FORM_PUBLIC_BASE_URL ||
+  'http://localhost:3006';
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['192.168.0.179', '127.0.0.1', 'localhost'],
@@ -60,6 +65,21 @@ const nextConfig: NextConfig = {
       {
         source: '/api/media/:path*',
         destination: `${API_BACKEND_URL}/api/media/:path*`,
+      },
+    ];
+  },
+  async redirects() {
+    const publicBase = PUBLIC_SITE_URL.replace(/\/$/, '');
+    return [
+      {
+        source: '/privacy',
+        destination: `${publicBase}/privacy`,
+        permanent: true,
+      },
+      {
+        source: '/terms',
+        destination: `${publicBase}/terms`,
+        permanent: true,
       },
     ];
   },

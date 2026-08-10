@@ -8,6 +8,11 @@ import { google, sheets_v4 } from 'googleapis';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import {
+  GOOGLE_FORMS_INTEGRATION_SCOPES,
+  resolveGoogleClientCredentials,
+  resolveGoogleIntegrationRedirectUri,
+} from '../google/google-oauth-config';
 
 // Google Sheets cell character limit
 const MAX_CELL_LENGTH = 50000;
@@ -106,13 +111,15 @@ export class GoogleSheetsService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
+    const { clientId, clientSecret } = resolveGoogleClientCredentials(this.config);
     this.oauth2Client = new google.auth.OAuth2(
-      this.config.get('GOOGLE_SHEETS_CLIENT_ID') ||
-        this.config.get('GOOGLE_CALENDAR_CLIENT_ID'),
-      this.config.get('GOOGLE_SHEETS_CLIENT_SECRET') ||
-        this.config.get('GOOGLE_CALENDAR_CLIENT_SECRET'),
-      this.config.get('GOOGLE_SHEETS_REDIRECT_URI') ||
-        `${this.config.get('API_URL')}/integrations/google-sheets/callback`,
+      clientId,
+      clientSecret,
+      resolveGoogleIntegrationRedirectUri(
+        this.config,
+        'GOOGLE_SHEETS_REDIRECT_URI',
+        'google-sheets',
+      ),
     );
   }
 
@@ -127,21 +134,26 @@ export class GoogleSheetsService {
    * @param userEmail - Optional: User's email to auto-select Google account (login_hint)
    */
   getAuthUrl(formId: string, userId: string, userEmail?: string): string {
-    const scopes = [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.file',
-    ];
+    const scopes = [...GOOGLE_FORMS_INTEGRATION_SCOPES];
 
     // Encode state with formId and userId
     const state = Buffer.from(JSON.stringify({ formId, userId })).toString(
       'base64',
     );
 
-    const authOptions: any = {
+    const authOptions: {
+      access_type: 'offline';
+      scope: string[];
+      prompt: 'consent';
+      state: string;
+      login_hint?: string;
+      include_granted_scopes: boolean;
+    } = {
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent',
       state,
+      include_granted_scopes: true,
     };
 
     // Add login_hint if user email is provided

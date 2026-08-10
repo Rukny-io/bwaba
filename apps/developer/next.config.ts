@@ -39,6 +39,12 @@ const API_BACKEND_URL =
 const ACCOUNTS_URL =
   process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
 
+const PUBLIC_SITE_URL = (
+  process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
+  process.env.FORM_PUBLIC_BASE_URL ||
+  'https://rukny.io'
+).replace(/\/$/, '');
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
@@ -77,13 +83,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/terms',
-        destination: `${ACCOUNTS_URL.replace(/\/$/, '')}/terms`,
-        permanent: false,
+        destination: `${PUBLIC_SITE_URL}/terms`,
+        permanent: true,
       },
       {
         source: '/privacy',
-        destination: `${ACCOUNTS_URL.replace(/\/$/, '')}/privacy`,
-        permanent: false,
+        destination: `${PUBLIC_SITE_URL}/privacy`,
+        permanent: true,
       },
     ];
   },

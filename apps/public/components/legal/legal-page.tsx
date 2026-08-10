@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DynamicIslandTOC } from '@/components/ui/dynamic-island-toc';
 import { LegalDesktopToc } from '@/components/legal/legal-desktop-toc';
@@ -37,7 +36,7 @@ const RELATED: Record<
   },
 };
 
-function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
+export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
   const { isEn, toggleLocale } = useLegalLocale();
   const content = isEn ? contentEn : contentAr;
   const dir = isEn ? 'ltr' : 'rtl';
@@ -72,14 +71,14 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
       };
 
   return (
-    <div className="relative min-h-dvh bg-[var(--background)] text-[var(--foreground)]" dir={dir}>
+    <div className="relative min-h-dvh bg-background text-foreground" dir={dir}>
       <div className="lg:hidden">
         <DynamicIslandTOC />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-[var(--border)]/40 bg-[var(--background)]/85 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-border/40 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3.5 sm:px-6 lg:max-w-6xl">
-          <Link href="/login" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <Image
               src="/rukny-logo.svg"
               alt="Rukny"
@@ -88,7 +87,7 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
               className="size-7"
               priority
             />
-            <span className="text-sm font-medium tracking-tight text-[var(--foreground)]/90 sm:text-base">
+            <span className="text-sm font-medium tracking-tight text-foreground/90 sm:text-base">
               {isEn ? 'Rukny' : 'ركني'}
             </span>
           </Link>
@@ -101,7 +100,7 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
             <button
               type="button"
               onClick={toggleLocale}
-              className="flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+              className="flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
               aria-label={isEn ? 'Language' : 'اللغة'}
             >
               <svg
@@ -126,14 +125,14 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
 
       <main className="mx-auto w-full max-w-3xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14 lg:max-w-6xl lg:pb-20">
         <motion.div {...fadeIn}>
-          <header className="mb-10 border-b border-[var(--border)]/50 pb-8 text-start sm:mb-12 sm:pb-10 lg:mb-14 lg:border-0 lg:pb-0 lg:text-center">
-            <p className="text-xs font-medium tracking-wide text-[var(--muted-foreground)] lg:hidden">
+          <header className="mb-10 border-b border-border/50 pb-8 text-start sm:mb-12 sm:pb-10 lg:mb-14 lg:border-0 lg:pb-0 lg:text-center">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground lg:hidden">
               {isEn ? 'Legal' : 'قانوني'}
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)] sm:text-4xl sm:leading-tight lg:mt-0 lg:text-[2.5rem]">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl sm:leading-tight lg:mt-0 lg:text-[2.5rem]">
               {content.title}
             </h1>
-            <p className="mt-3 text-sm text-[var(--muted-foreground)] sm:text-[15px]">
+            <p className="mt-3 text-sm text-muted-foreground sm:text-[15px]">
               {isEn
                 ? `This document is effective as of ${content.lastUpdated}.`
                 : `تسري هذه الوثيقة اعتبارًا من ${content.lastUpdated}.`}
@@ -148,14 +147,14 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
             />
 
             <article className={cn(isEn ? 'text-left' : 'text-right')}>
-              <p className="mb-10 max-w-2xl text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8 lg:mb-12">
+              <p className="mb-10 max-w-2xl text-[15px] leading-7 text-muted-foreground sm:text-base sm:leading-8 lg:mb-12">
                 {content.description}{' '}
                 {isEn ? (
                   <>
                     See also our{' '}
                     <Link
                       href={related.href}
-                      className="font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
+                      className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
                     >
                       {related.labelEn}
                     </Link>
@@ -166,7 +165,7 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
                     راجع أيضًا{' '}
                     <Link
                       href={related.href}
-                      className="font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
+                      className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
                     >
                       {related.labelAr}
                     </Link>
@@ -187,22 +186,22 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
                 ))}
               </div>
 
-              <footer className="mt-14 border-t border-[var(--border)]/50 pt-8">
-                <p className="text-sm text-[var(--muted-foreground)]">
+              <footer className="mt-14 border-t border-border/50 pt-8">
+                <p className="text-sm text-muted-foreground">
                   {isEn ? 'Related:' : 'ذات صلة:'}{' '}
                   <Link
                     href={related.href}
-                    className="font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
+                    className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
                   >
                     {isEn ? related.labelEn : related.labelAr}
                   </Link>
                 </p>
                 <p className="mt-4">
                   <Link
-                    href="/login"
-                    className="text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+                    href="/"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    {isEn ? '← Back to sign in' : 'العودة لتسجيل الدخول ←'}
+                    {isEn ? '← Back to home' : 'العودة للرئيسية ←'}
                   </Link>
                 </p>
               </footer>
@@ -211,13 +210,5 @@ function LegalPageContent({ kind, contentAr, contentEn }: LegalPageProps) {
         </motion.div>
       </main>
     </div>
-  );
-}
-
-export function LegalPage(props: LegalPageProps) {
-  return (
-    <ThemeProvider>
-      <LegalPageContent {...props} />
-    </ThemeProvider>
   );
 }

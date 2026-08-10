@@ -9,6 +9,11 @@ import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 import * as crypto from 'crypto';
+import {
+  GOOGLE_FORMS_INTEGRATION_SCOPES,
+  resolveGoogleClientCredentials,
+  resolveGoogleIntegrationRedirectUri,
+} from '../google/google-oauth-config';
 
 @Injectable()
 export class GoogleDriveService {
@@ -18,13 +23,15 @@ export class GoogleDriveService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
+    const { clientId, clientSecret } = resolveGoogleClientCredentials(this.config);
     this.oauth2Client = new google.auth.OAuth2(
-      this.config.get('GOOGLE_SHEETS_CLIENT_ID') ||
-        this.config.get('GOOGLE_CALENDAR_CLIENT_ID'),
-      this.config.get('GOOGLE_SHEETS_CLIENT_SECRET') ||
-        this.config.get('GOOGLE_CALENDAR_CLIENT_SECRET'),
-      this.config.get('GOOGLE_DRIVE_REDIRECT_URI') ||
-        `${this.config.get('API_URL')}/integrations/google-drive/callback`,
+      clientId,
+      clientSecret,
+      resolveGoogleIntegrationRedirectUri(
+        this.config,
+        'GOOGLE_DRIVE_REDIRECT_URI',
+        'google-drive',
+      ),
     );
   }
 
@@ -35,20 +42,25 @@ export class GoogleDriveService {
    * @param userEmail - Optional: User's email to auto-select Google account (login_hint)
    */
   getAuthUrl(formId: string, userId: string, userEmail?: string): string {
-    const scopes = [
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/spreadsheets',
-    ];
+    const scopes = [...GOOGLE_FORMS_INTEGRATION_SCOPES];
 
     const state = Buffer.from(
       JSON.stringify({ formId, userId, type: 'drive' }),
     ).toString('base64');
 
-    const authOptions: any = {
+    const authOptions: {
+      access_type: 'offline';
+      scope: string[];
+      prompt: 'consent';
+      state: string;
+      login_hint?: string;
+      include_granted_scopes: boolean;
+    } = {
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent',
       state,
+      include_granted_scopes: true,
     };
 
     // Add login_hint if user email is provided

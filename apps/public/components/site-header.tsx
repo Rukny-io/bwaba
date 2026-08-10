@@ -5,8 +5,8 @@ import { RuknyLogo } from '@/components/rukny-logo';
 const navLinks = [
   { href: '/pricing', label: 'الأسعار', external: false },
   { href: siteUrls.forms, label: 'النماذج', external: true },
-  { href: siteUrls.privacy, label: 'سياسة الخصوصية', external: true },
-  { href: siteUrls.terms, label: 'شروط الاستخدام', external: true },
+  { href: siteUrls.privacy, label: 'سياسة الخصوصية', external: false },
+  { href: siteUrls.terms, label: 'شروط الاستخدام', external: false },
 ] as const;
 
 export function SiteHeader() {

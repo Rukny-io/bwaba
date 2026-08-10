@@ -85,6 +85,8 @@ services:
       INSTAGRAM_REDIRECT_URI: http://localhost:3001/api/v1/integrations/instagram/callback
       YOUTUBE_REDIRECT_URI: http://localhost:3001/api/v1/integrations/youtube/callback
       GOOGLE_SHEETS_REDIRECT_URI: http://localhost:3001/api/v1/integrations/google-sheets/callback
+      GOOGLE_DRIVE_REDIRECT_URI: http://localhost:3001/api/v1/integrations/google-drive/callback
+      API_PUBLIC_URL: http://localhost:3001
       QASEH_REDIRECT_URL: http://localhost:3000/payment/callback
       QASEH_WEBHOOK_URL: http://localhost:3001/api/v1/payments/qaseh/webhook
       # Trust Docker BFF containers so X-Forwarded-For reaches getClientIp()

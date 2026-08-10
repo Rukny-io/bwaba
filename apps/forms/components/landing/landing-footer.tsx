@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { APP_BASE } from '@/components/app/nav-config';
-import { ACCOUNTS_URL, PUBLIC_SITE_URL } from '@/lib/config';
+import { ACCOUNTS_URL } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
 function RuknyLogoIcon({ className }: { className?: string }) {
@@ -65,8 +65,8 @@ const DEVELOPERS_URL =
   process.env.NEXT_PUBLIC_DEVELOPERS_URL || 'https://developers.rukny.io';
 const BUSINESS_URL =
   process.env.NEXT_PUBLIC_BUSINESS_URL || 'https://business.rukny.io';
-const PRIVACY_URL = `${PUBLIC_SITE_URL}/privacy`;
-const TERMS_URL = `${PUBLIC_SITE_URL}/terms`;
+const PRIVACY_URL = `${ACCOUNTS_URL}/privacy`;
+const TERMS_URL = `${ACCOUNTS_URL}/terms`;
 
 interface FooterLink {
   label: string;

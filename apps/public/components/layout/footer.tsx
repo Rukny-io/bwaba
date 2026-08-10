@@ -26,6 +26,7 @@ const Linkedin = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
 );
 import { cn } from "@/lib/utils";
+import { siteUrls } from "@/lib/site-urls";
 
 const footerConfig = {
   description:
@@ -82,8 +83,8 @@ const footerConfig = {
     {
       title: "القانونية",
       links: [
-        { label: "سياسة الخصوصية", href: "/privacy" },
-        { label: "شروط الاستخدام", href: "/terms" },
+        { label: "سياسة الخصوصية", href: siteUrls.privacy },
+        { label: "شروط الاستخدام", href: siteUrls.terms },
         { label: "الأمان و الأسترداد", href: "/security" },      ],
     },
   ],
@@ -183,12 +184,12 @@ export default function Footer() {
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500 dark:text-gray-400 gap-4">
           <p>© {new Date().getFullYear()} ركني. جميع الحقوق محفوظة.</p>
           <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-primary transition-colors">
+            <a href={siteUrls.privacy} className="hover:text-primary transition-colors">
               الخصوصية
-            </Link>
-            <Link href="/terms" className="hover:text-primary transition-colors">
+            </a>
+            <a href={siteUrls.terms} className="hover:text-primary transition-colors">
               الشروط
-            </Link>
+            </a>
             <Link href="/sitemap" className="hover:text-primary transition-colors">
               خريطة الموقع
             </Link>

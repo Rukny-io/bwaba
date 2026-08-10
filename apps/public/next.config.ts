@@ -11,6 +11,9 @@ const monorepoAliases = {
 const API_BACKEND_URL =
   process.env.API_BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
 
+const ACCOUNTS_URL =
+  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'https://accounts.rukny.io';
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['192.168.0.179', '127.0.0.1', 'localhost'],
@@ -50,6 +53,21 @@ const nextConfig: NextConfig = {
       {
         source: '/api/media/:path*',
         destination: `${API_BACKEND_URL}/api/media/:path*`,
+      },
+    ];
+  },
+  async redirects() {
+    const accountsBase = ACCOUNTS_URL.replace(/\/$/, '');
+    return [
+      {
+        source: '/privacy',
+        destination: `${accountsBase}/privacy`,
+        permanent: true,
+      },
+      {
+        source: '/terms',
+        destination: `${accountsBase}/terms`,
+        permanent: true,
       },
     ];
   },

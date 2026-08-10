@@ -40,10 +40,8 @@ const monorepoAliases = {
 const API_BACKEND_URL =
   process.env.API_BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
 
-const PUBLIC_SITE_URL =
-  process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
-  process.env.FORM_PUBLIC_BASE_URL ||
-  'http://localhost:3006';
+const ACCOUNTS_URL =
+  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -69,16 +67,16 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    const publicBase = PUBLIC_SITE_URL.replace(/\/$/, '');
+    const accountsBase = ACCOUNTS_URL.replace(/\/$/, '');
     return [
       {
         source: '/privacy',
-        destination: `${publicBase}/privacy`,
+        destination: `${accountsBase}/privacy`,
         permanent: true,
       },
       {
         source: '/terms',
-        destination: `${publicBase}/terms`,
+        destination: `${accountsBase}/terms`,
         permanent: true,
       },
     ];

@@ -1,5 +1,4 @@
 import { siteUrls } from '@/lib/site-urls';
-import { PUBLIC_SITE_URL } from '@/lib/config';
 
 export function SiteFooter() {
   return (
@@ -38,7 +37,7 @@ export function SiteFooter() {
 
         <p className="site-footer__legal" lang="en">
           © {new Date().getFullYear()} Rukny.io — Privacy Policy:{' '}
-          <a href={`${PUBLIC_SITE_URL}/privacy`}>{PUBLIC_SITE_URL}/privacy</a>
+          <a href={siteUrls.privacy}>{siteUrls.privacy}</a>
         </p>
       </div>
     </footer>

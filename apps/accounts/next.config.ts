@@ -19,11 +19,6 @@ const API_BACKEND_URL =
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-const PUBLIC_SITE_URL =
-  process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
-  process.env.FORM_PUBLIC_BASE_URL ||
-  "https://rukny.io";
-
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
@@ -89,21 +84,6 @@ const nextConfig: NextConfig = {
       {
         source: "/api/users/:path*",
         destination: `${API_BACKEND_URL}/api/users/:path*`,
-      },
-    ];
-  },
-  async redirects() {
-    const publicBase = PUBLIC_SITE_URL.replace(/\/$/, "");
-    return [
-      {
-        source: "/privacy",
-        destination: `${publicBase}/privacy`,
-        permanent: true,
-      },
-      {
-        source: "/terms",
-        destination: `${publicBase}/terms`,
-        permanent: true,
       },
     ];
   },

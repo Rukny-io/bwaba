@@ -12,6 +12,8 @@ WORKDIR /app
 COPY packages/auth ./packages/auth
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/hq/package.json apps/hq/package-lock.json* ./apps/hq/
+# postinstall runs scripts/materialize-workspace-deps.mjs
+COPY apps/hq/scripts ./apps/hq/scripts/
 
 WORKDIR /app/apps/hq
 RUN --mount=type=cache,id=npm-hq,target=/root/.npm \

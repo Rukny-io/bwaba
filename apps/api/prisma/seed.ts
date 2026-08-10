@@ -43,6 +43,20 @@ const storeCategories = [
     isActive: true,
     templateFields: {
       hasVariants: true,
+      kindRules: {
+        PHYSICAL: {
+          attributeKeys: ['material', 'gender', 'season', 'brand'],
+          enableVariants: true,
+        },
+        DIGITAL: {
+          attributeKeys: ['gender', 'brand', 'season'],
+          enableVariants: false,
+        },
+        SERVICE: {
+          attributeKeys: ['brand'],
+          enableVariants: false,
+        },
+      },
       variantAttributes: [
         { key: 'size', label: 'Size', labelAr: 'المقاس', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'] },
         { key: 'color', label: 'Color', labelAr: 'اللون', options: ['أسود', 'أبيض', 'أزرق', 'أحمر', 'أخضر', 'بيج', 'رمادي', 'بني', 'وردي', 'برتقالي', 'أصفر', 'كحلي'] },

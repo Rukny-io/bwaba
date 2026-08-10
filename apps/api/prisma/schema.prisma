@@ -544,6 +544,7 @@ model Store {
   orders             orders[]
   product_categories product_categories[]
   product_collections product_collections[]
+  product_discounts   product_discounts[]
   products           products[]
   store_categories   store_categories?    @relation(fields: [categoryId], references: [id])
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1469,6 +1470,35 @@ model product_collection_items {
   @@index([productId])
 }
 
+model product_discounts {
+  id         String                   @id
+  storeId    String
+  percentage Decimal                  @db.Decimal(5, 2)
+  isActive   Boolean                  @default(true)
+  startDate  DateTime                 @default(now())
+  endDate    DateTime?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime
+  stores     Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items      product_discount_items[]
+
+  @@index([storeId])
+  @@index([isActive])
+}
+
+model product_discount_items {
+  id         String            @id @default(cuid())
+  discountId String
+  productId  String
+  createdAt  DateTime          @default(now())
+  discount   product_discounts @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  product    products          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([discountId, productId])
+  @@index([discountId])
+  @@index([productId])
+}
+
 model product_images {
   id           String   @id
   productId    String
@@ -1501,12 +1531,14 @@ model products {
   hasVariants        Boolean              @default(false)
   trackInventory     Boolean              @default(true)
   isDigital          Boolean              @default(false)
+  productKind        ProductKind          @default(PHYSICAL)
   cart_items         cart_items[]
   digitalAssets      digital_assets[]
   order_items        order_items[]
   productAttributes  product_attributes[]
   product_images     product_images[]
   collection_items   product_collection_items[]
+  discount_items     product_discount_items[]
   variants           product_variants[]
   product_categories product_categories?  @relation(fields: [categoryId], references: [id])
   stores             Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -2156,6 +2188,12 @@ enum ProductStatus {
   INACTIVE
   OUT_OF_STOCK
   DISCONTINUED
+}
+
+enum ProductKind {
+  PHYSICAL
+  DIGITAL
+  SERVICE
 }
 
 enum SecurityAction {

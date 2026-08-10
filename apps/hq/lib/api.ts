@@ -1,4 +1,5 @@
 import { resolveMediaUrl } from '@/lib/media-url';
+import { createExchangeCodeOnce } from '@rukny/auth/client/oauth-exchange';
 
 export interface AuthUser {
   id: string;
@@ -68,6 +69,8 @@ export async function exchangeCode(code: string): Promise<ExchangeCodeResponse> 
     body: JSON.stringify({ code }),
   });
 }
+
+export const exchangeCodeOnce = createExchangeCodeOnce(exchangeCode);
 
 export async function logout(): Promise<void> {
   await authFetch('logout', { method: 'POST' });

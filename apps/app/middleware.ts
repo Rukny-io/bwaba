@@ -7,16 +7,17 @@ import {
   type SecurityHeadersContext,
 } from '@rukny/forms-shared/apply-security-headers';
 import { parseApiConnectOrigins } from '@rukny/forms-shared/security-headers';
+import { resolveApiBaseUrl, isLoopbackHost } from '@rukny/auth/client/env-urls';
 import { DEFAULT_APP_PATH } from './lib/auth-redirect';
 import { checkAppAuth } from './lib/middleware-auth';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
-function publicSiteFrameOrigins(): string[] {
+function publicSiteFrameOrigins(hostname: string): string[] {
   const raw =
     process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (isDev ? 'http://localhost:3006' : '');
+    (isLoopbackHost(hostname) || isDev ? 'http://localhost:3006' : '');
   if (!raw) return [];
   try {
     return [new URL(raw).origin];
@@ -25,15 +26,16 @@ function publicSiteFrameOrigins(): string[] {
   }
 }
 
-const SECURITY_OPTS = {
-  isDev,
-  allowMapTiles: false,
-  apiConnectOrigins: parseApiConnectOrigins(
-    process.env.NEXT_PUBLIC_API_URL || process.env.API_BACKEND_URL,
-  ),
-  /** Allow dashboard live preview iframe of the public profile app */
-  frameSrcOrigins: publicSiteFrameOrigins(),
-} as const;
+function buildSecurityOpts(hostname: string) {
+  return {
+    isDev,
+    allowMapTiles: false,
+    apiConnectOrigins: parseApiConnectOrigins(
+      resolveApiBaseUrl({ hostname }),
+    ),
+    frameSrcOrigins: publicSiteFrameOrigins(hostname),
+  } as const;
+}
 
 const PROTECTED_PREFIXES = ['/app'];
 const AUTH_PAGES = ['/login', '/callback'];
@@ -69,7 +71,9 @@ function secureNext(
 }
 
 export async function middleware(request: NextRequest) {
-  const security = createSecurityHeadersContext(SECURITY_OPTS);
+  const security = createSecurityHeadersContext(
+    buildSecurityOpts(request.nextUrl.hostname),
+  );
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/_next') || pathname.includes('.')) {

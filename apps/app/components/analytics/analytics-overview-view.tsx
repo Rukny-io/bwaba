@@ -5,11 +5,7 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   ArrowLeft,
-  Eye,
   Link2,
-  MousePointerClick,
-  Package,
-  ShoppingBag,
 } from 'lucide-react';
 import { AnalyticsCommerceSection } from '@/components/analytics/analytics-commerce-section';
 import { AnalyticsCountryBreakdown } from '@/components/analytics/analytics-country-breakdown';
@@ -133,7 +129,7 @@ export function AnalyticsOverviewView() {
 
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <DashboardMetricCard
-            icon={MousePointerClick}
+            icon="mouse-pointer-click"
             label="نقرات الروابط"
             value={formatNumber(summary.totalClicks)}
             trend={formatTrendBadge(summary.changes.clicks)}
@@ -142,21 +138,21 @@ export function AnalyticsOverviewView() {
             comparisonSecondary="مقابل السابقة"
           />
           <DashboardMetricCard
-            icon={Eye}
+            icon="eye"
             label="زيارات الصفحة"
             value={formatNumber(summary.totalLinkViews)}
             comparisonPrimary="إجمالي المشاهدات"
             comparisonSecondary="على جميع الروابط"
           />
           <DashboardMetricCard
-            icon={Link2}
+            icon="link"
             label="روابط نشطة"
             value={formatNumber(links.filter((l) => l.status === 'active').length)}
             comparisonPrimary="ظاهرة للزوار"
             comparisonSecondary={`من ${summary.linksCount}`}
           />
           <DashboardMetricCard
-            icon={AlertTriangle}
+            icon="alert-triangle"
             label="روابط مخفية"
             value={formatNumber(hiddenLinks.length)}
             comparisonPrimary="غير ظاهرة"
@@ -348,14 +344,14 @@ export function AnalyticsOverviewView() {
 
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <DashboardMetricCard
-            icon={ShoppingBag}
+            icon="shopping-bag"
             label="إجمالي الطلبات"
             value={formatNumber(orderStats.totalOrders)}
             comparisonPrimary={`${formatNumber(orderStats.pendingOrders)} معلّقة`}
             comparisonSecondary={formatCurrency(orderStats.totalRevenue)}
           />
           <DashboardMetricCard
-            icon={Package}
+            icon="package"
             label="منتجات نشطة"
             value={formatNumber(productStats.activeProducts)}
             comparisonPrimary={`${formatNumber(productStats.totalProducts)} إجمالي`}
@@ -366,14 +362,14 @@ export function AnalyticsOverviewView() {
             }
           />
           <DashboardMetricCard
-            icon={AlertTriangle}
+            icon="alert-triangle"
             label="نفد المخزون"
             value={formatNumber(productStats.outOfStock)}
             comparisonPrimary="منتجات غير متاحة"
             comparisonSecondary="تحتاج إعادة تخزين"
           />
           <DashboardMetricCard
-            icon={ShoppingBag}
+            icon="shopping-bag"
             label="طلبات مكتملة"
             value={formatNumber(orderStats.completedOrders)}
             comparisonPrimary="تم تسليمها"

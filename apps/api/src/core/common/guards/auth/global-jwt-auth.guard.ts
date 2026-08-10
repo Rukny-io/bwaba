@@ -16,9 +16,9 @@ import { IS_PUBLIC_KEY } from '../../decorators/auth/public.decorator';
  * @UseGuards" gap where any new endpoint was public by default.
  *
  * Zero-downtime rollout via `GLOBAL_AUTH_MODE`:
- *   - `report` (default): never blocks; logs any route that WOULD be blocked so
- *      the team can add `@Public()` where legitimately needed before enforcing.
- *   - `enforce`: unauthenticated, non-public routes receive 401.
+ *   - unset: `enforce` in production, `report` in development
+ *   - `report`: never blocks; logs routes that WOULD be blocked
+ *   - `enforce`: unauthenticated, non-public routes receive 401
  *
  * Flip to `enforce` once the report logs are clean (see
  * scripts/scan-unprotected-routes.ts).
@@ -32,10 +32,11 @@ export class GlobalJwtAuthGuard extends AuthGuard('jwt') {
   }
 
   private get mode(): 'report' | 'enforce' {
-    return (process.env.GLOBAL_AUTH_MODE || 'report').toLowerCase() ===
-      'enforce'
-      ? 'enforce'
-      : 'report';
+    const envMode = (process.env.GLOBAL_AUTH_MODE || '').toLowerCase();
+    if (envMode === 'enforce') return 'enforce';
+    if (envMode === 'report') return 'report';
+    // Default: enforce in production, report in development for gradual rollout.
+    return process.env.NODE_ENV === 'production' ? 'enforce' : 'report';
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

@@ -3,43 +3,55 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthShell } from '@/components/auth/auth-shell';
-import { exchangeCode, fetchCurrentUser } from '@/lib/api';
+import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
 import { resolveClientNext } from '@/lib/auth-redirect';
 import {
-  clearOAuthHash,
+  clearOAuthParamsFromUrl,
+  clearStashedOAuthParams,
   readOAuthCallbackParams,
+  readStashedOAuthParams,
+  stashOAuthParams,
 } from '@/lib/oauth-callback';
 
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
+import { resolveAccountsUrl } from '@rukny/auth/client/env-urls';
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const ran = useRef(false);
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    if (ran.current) return;
-    ran.current = true;
+    if (hasRun.current) return;
+    hasRun.current = true;
 
-    const { code, next: hashNext } = readOAuthCallbackParams(searchParams);
+    const fromUrl = readOAuthCallbackParams(searchParams);
+    if (fromUrl.code) {
+      stashOAuthParams({ code: fromUrl.code, next: fromUrl.next });
+      clearOAuthParamsFromUrl();
+    }
+
+    const stashed = readStashedOAuthParams();
+    const code = fromUrl.code || stashed.code;
+    const nextRaw = fromUrl.next || stashed.next;
+
     if (!code) {
+      hasRun.current = false;
       router.replace('/login');
       return;
     }
 
-    clearOAuthHash();
-
     const storedNext = localStorage.getItem('auth_next');
     const nextPath = resolveClientNext(
-      searchParams.get('next') ?? hashNext ?? storedNext,
+      searchParams.get('next') ?? nextRaw ?? storedNext,
       '/apps',
     );
 
     (async () => {
       try {
-        const result = await exchangeCode(code);
+        const result = await exchangeCodeOnce(code);
+        clearStashedOAuthParams();
+
         if (!result.success) {
           setError(result.message || 'تعذّر إكمال تسجيل الدخول');
           return;
@@ -48,7 +60,8 @@ function CallbackContent() {
         localStorage.removeItem('auth_next');
 
         if (result.needsProfileCompletion) {
-          const complete = new URL('/complete-profile', ACCOUNTS_URL);
+          const accountsUrl = resolveAccountsUrl();
+          const complete = new URL('/complete-profile', accountsUrl);
           complete.searchParams.set(
             'next',
             `${window.location.origin}${nextPath}`,
@@ -58,7 +71,8 @@ function CallbackContent() {
         }
 
         if (result.requires2FA && result.pendingSessionId) {
-          const verify = new URL('/verify-2fa', ACCOUNTS_URL);
+          const accountsUrl = resolveAccountsUrl();
+          const verify = new URL('/verify-2fa', accountsUrl);
           verify.searchParams.set('sessionId', result.pendingSessionId);
           window.location.href = verify.toString();
           return;
@@ -79,6 +93,13 @@ function CallbackContent() {
 
         setError('تم تسجيل الدخول لكن الجلسة لم تُحفظ. أعد المحاولة.');
       } catch (err: unknown) {
+        const existing = await fetchCurrentUser();
+        if (existing) {
+          clearStashedOAuthParams();
+          window.location.replace(nextPath);
+          return;
+        }
+
         const message =
           err instanceof Error ? err.message : 'حدث خطأ أثناء تسجيل الدخول';
         setError(message);
@@ -95,7 +116,10 @@ function CallbackContent() {
           <button
             type="button"
             className="text-sm font-medium underline"
-            onClick={() => router.replace('/login')}
+            onClick={() => {
+              clearStashedOAuthParams();
+              router.replace('/login');
+            }}
           >
             العودة لتسجيل الدخول
           </button>

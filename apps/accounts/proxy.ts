@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  isAllowedRedirectHost,
+  resolveAccountsUrl,
+  resolveAppUrl,
+  resolveBusinessUrl,
+  resolveDeveloperUrl,
+  resolveFormsUrl,
+  resolveHqUrl,
+} from "@/lib/env-urls";
 
 // المسارات العامة (لا تحتاج حماية)
 const PUBLIC_PATHS = [
@@ -14,6 +23,24 @@ const PUBLIC_PATHS = [
 
 // المسارات المحمية (تحتاج جلسة)
 const PROTECTED_PATHS = ["/onboarding", "/manage"];
+
+function getAccessToken(request: NextRequest): string | undefined {
+  return (
+    request.cookies.get("__Secure-access_token")?.value ||
+    request.cookies.get("access_token")?.value
+  );
+}
+
+function getRefreshToken(request: NextRequest): string | undefined {
+  return (
+    request.cookies.get("__Secure-refresh_token")?.value ||
+    request.cookies.get("refresh_token")?.value
+  );
+}
+
+function hasSessionCookies(request: NextRequest): boolean {
+  return !!(getAccessToken(request) || getRefreshToken(request));
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -76,13 +103,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // المسارات العامة
   const isAuthPage = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-
-  // المسارات المحمية → تحقق من الكوكي
-  const accessToken =
-    request.cookies.get("__Secure-access_token")?.value ||
-    request.cookies.get("access_token")?.value;
+  const accessToken = getAccessToken(request);
 
   // ── session=logout: إجراء مقصود من المستخدم → حذف الكوكيز دائماً ──
   if (isAuthPage && sessionFlag === "logout") {
@@ -100,7 +122,6 @@ export async function proxy(request: NextRequest) {
     (sessionFlag === "expired" || sessionFlag === "invalid")
   ) {
     if (accessToken) {
-      // فحص صلاحية التوكن قبل حذفه
       try {
         const { decodeJwt } = await import("jose");
         const decoded = decodeJwt(accessToken);
@@ -111,34 +132,28 @@ export async function proxy(request: NextRequest) {
             : null;
 
         if (exp !== null && exp > nowInSeconds) {
-          // التوكن صالح! → توجيه إلى next URL أو الوجهة الافتراضية
           const nextParam = request.nextUrl.searchParams.get("next");
           if (nextParam) {
             try {
               const nextUrl = new URL(nextParam);
               const hostname = nextUrl.hostname;
-              const isAllowed =
-                hostname === "localhost" ||
-                hostname === "127.0.0.1" ||
-                hostname.endsWith(".rukny.io") ||
-                hostname === "rukny.io";
-              if (isAllowed) {
+              if (isAllowedRedirectHost(hostname)) {
                 return NextResponse.redirect(nextUrl.toString());
               }
             } catch {
               // رابط next غير صالح → تجاهل والتوجيه حسب الدور
             }
           }
-          // لا يوجد next صالح → توجيه حسب الدور
           const role = (decoded.role as string) || "USER";
-          return NextResponse.redirect(getRedirectByRole(role));
+          return NextResponse.redirect(
+            getRedirectByRole(role, request.nextUrl.hostname),
+          );
         }
       } catch {
         // التوكن فاسد → سيتم حذفه أدناه
       }
     }
 
-    // لا يوجد توكن أو التوكن منتهي/فاسد → حذف الكوكيز وعرض صفحة الدخول
     const response = NextResponse.next();
     response.cookies.delete("__Secure-access_token");
     response.cookies.delete("access_token");
@@ -158,9 +173,10 @@ export async function proxy(request: NextRequest) {
           ? decoded.exp
           : null;
 
-      // إذا كانت صلاحية التوكن منتهية، لا نعيد التوجيه خارج صفحة الدخول
-      // ونزيل الكوكيز القديمة حتى يتمكن المستخدم من تسجيل الدخول من جديد.
       if (exp !== null && exp <= nowInSeconds) {
+        if (getRefreshToken(request)) {
+          return NextResponse.next();
+        }
         const response = NextResponse.next();
         response.cookies.delete("__Secure-access_token");
         response.cookies.delete("access_token");
@@ -180,16 +196,17 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    return NextResponse.redirect(getRedirectByRole(role));
+    return NextResponse.redirect(
+      getRedirectByRole(role, request.nextUrl.hostname),
+    );
   }
 
-  // حماية المسارات المحمية
   const isProtected = PROTECTED_PATHS.some((p) =>
     pathname.startsWith(p)
   );
 
-  if (isProtected && !accessToken) {
-    const accountsUrl = process.env.NEXT_PUBLIC_ACCOUNTS_URL || "http://localhost:3005";
+  if (isProtected && !hasSessionCookies(request)) {
+    const accountsUrl = resolveAccountsUrl({ hostname: request.nextUrl.hostname });
     const loginUrl = new URL("/login", accountsUrl);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -198,16 +215,17 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// ── دالة مساعدة: التوجيه حسب الدور ──
-function getRedirectByRole(role: string): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const businessUrl = process.env.NEXT_PUBLIC_BUSINESS_URL || "http://localhost:3003";
-  const developersUrl = process.env.NEXT_PUBLIC_DEVELOPERS_URL || "http://localhost:3004";
-  const formsUrl = process.env.NEXT_PUBLIC_FORMS_URL || "http://localhost:3007";
+function getRedirectByRole(role: string, hostname?: string): string {
+  const opts = { hostname };
+  const appUrl = resolveAppUrl(opts);
+  const businessUrl = resolveBusinessUrl(opts);
+  const developersUrl = resolveDeveloperUrl(opts);
+  const formsUrl = resolveFormsUrl(opts);
+  const hqUrl = resolveHqUrl(opts);
 
   switch (role) {
     case "ADMIN":
-      return appUrl;
+      return hqUrl;
     case "DEVELOPER":
       return developersUrl;
     case "BUSINESS":

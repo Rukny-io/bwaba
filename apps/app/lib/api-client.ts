@@ -1,42 +1,15 @@
 import { notifySessionExpiredAndRedirect } from '@/lib/auth-notify';
 import {
+  clearCsrfToken,
+  getCsrfToken,
+  setCsrfToken,
+} from '@rukny/auth/client/csrf-cookie';
+
+export { getCsrfToken, setCsrfToken };
+import {
   ACTIVE_WORKSPACE_HEADER,
   readActiveWorkspaceIdFromBrowser,
 } from '@/lib/workspace';
-
-let csrfToken: string | null = null;
-
-export function getCsrfToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  if (csrfToken) return csrfToken;
-  const match = document.cookie.match(/(?:^|; )(?:__Secure-)?csrf_token=([^;]*)/);
-  if (match) {
-    csrfToken = match[1];
-    return csrfToken;
-  }
-  return null;
-}
-
-export function setCsrfToken(token: string): void {
-  if (!token) return;
-  csrfToken = token;
-  if (typeof window === 'undefined') return;
-  const isSecure = window.location.protocol === 'https:';
-  const parts = [
-    `csrf_token=${encodeURIComponent(token)}`,
-    'Path=/',
-    `Max-Age=${24 * 60 * 60}`,
-    'SameSite=Lax',
-  ];
-  if (isSecure) parts.push('Secure');
-  document.cookie = parts.join('; ');
-}
-
-function clearCsrfToken(): void {
-  csrfToken = null;
-  if (typeof window === 'undefined') return;
-  document.cookie = 'csrf_token=; Path=/; Max-Age=0; SameSite=Lax';
-}
 
 const REFRESH_STATE_KEY = '__app_refresh_state__';
 

@@ -23,6 +23,12 @@ export enum ProductStatus {
   DISCONTINUED = 'DISCONTINUED',
 }
 
+export enum ProductKind {
+  PHYSICAL = 'PHYSICAL',
+  DIGITAL = 'DIGITAL',
+  SERVICE = 'SERVICE',
+}
+
 export class CreateProductDto {
   @ApiProperty({ description: 'Product name', example: 'iPhone 15 Pro' })
   @IsString()
@@ -136,6 +142,15 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   trackInventory?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'نوع المنتج',
+    enum: ProductKind,
+    default: ProductKind.PHYSICAL,
+  })
+  @IsOptional()
+  @IsEnum(ProductKind)
+  kind?: ProductKind;
 
   @ApiPropertyOptional({
     description: 'هل المنتج رقمي (كتاب، ملف، دورة)',

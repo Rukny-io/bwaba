@@ -109,6 +109,7 @@ export interface TemplateField {
   options?: string[];
   required: boolean;
   placeholder?: string;
+  kinds?: Array<'PHYSICAL' | 'DIGITAL' | 'SERVICE'>;
 }
 
 /**
@@ -121,6 +122,11 @@ export interface VariantAttribute {
   options: string[];
 }
 
+export interface CategoryKindRules {
+  attributeKeys?: string[];
+  enableVariants?: boolean;
+}
+
 /**
  * واجهة قالب الفئة الكامل
  */
@@ -128,4 +134,7 @@ export interface CategoryTemplateFields {
   hasVariants: boolean;
   variantAttributes?: VariantAttribute[];
   productAttributes: TemplateField[];
+  kindRules?: Partial<
+    Record<'PHYSICAL' | 'DIGITAL' | 'SERVICE', CategoryKindRules>
+  >;
 }

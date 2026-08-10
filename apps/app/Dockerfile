@@ -25,11 +25,14 @@ RUN --mount=type=cache,id=npm-app,target=/root/.npm \
 FROM base AS builder
 WORKDIR /app/apps/app
 
+# Source first (.dockerignore excludes **/node_modules).
+# Must land before deps node_modules so file: symlinks cannot collide with COPY.
+COPY apps/app .
+RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/app/node_modules ./node_modules
 COPY --from=deps /app/packages/auth /app/packages/auth
 COPY --from=deps /app/packages/forms-shared /app/packages/forms-shared
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
-COPY apps/app .
 
 # Materialize file: dependencies (symlinks can confuse Turbopack package exports)
 RUN rm -rf node_modules/@rukny/auth \

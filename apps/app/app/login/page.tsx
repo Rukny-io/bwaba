@@ -9,7 +9,11 @@ import {
   getGoogleOAuthUrl,
   resolveClientNext,
 } from '@/lib/auth-redirect';
-import { clearOAuthHash, readOAuthCallbackParams } from '@/lib/oauth-callback';
+import {
+  clearOAuthParamsFromUrl,
+  readOAuthCallbackParams,
+  stashOAuthParams,
+} from '@/lib/oauth-callback';
 
 function GoogleIcon() {
   return (
@@ -44,18 +48,21 @@ function LoginContent() {
   const sessionFlag = searchParams.get('session');
 
   useEffect(() => {
-    const { code, next: hashNext } = readOAuthCallbackParams(searchParams);
-    if (!code) return;
+    const fromUrl = readOAuthCallbackParams(searchParams);
+    if (!fromUrl.code) return;
 
-    clearOAuthHash();
+    stashOAuthParams({ code: fromUrl.code, next: fromUrl.next });
+    clearOAuthParamsFromUrl();
+
     const callback = new URL('/callback', window.location.origin);
-    callback.searchParams.set('code', code);
-    if (hashNext) callback.searchParams.set('next', hashNext);
-    else if (searchParams.get('next')) {
-      callback.searchParams.set('next', searchParams.get('next')!);
-    }
+    callback.searchParams.set('code', fromUrl.code);
+    const nextTarget =
+      fromUrl.next ||
+      searchParams.get('next') ||
+      (nextPath !== DEFAULT_APP_PATH ? nextPath : null);
+    if (nextTarget) callback.searchParams.set('next', nextTarget);
     router.replace(callback.pathname + callback.search);
-  }, [router, searchParams]);
+  }, [router, searchParams, nextPath]);
 
   const sessionMessage =
     sessionFlag === 'expired'

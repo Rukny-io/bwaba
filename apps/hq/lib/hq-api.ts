@@ -49,6 +49,15 @@ import type {
 } from '@/lib/types/support-tickets';
 import { getCsrfToken, ApiException } from '@/lib/api-client';
 import { supportTicketsQueryToApiParams } from '@/lib/support-tickets-query';
+import { storesQueryToApiParams } from '@/lib/stores-query';
+import type {
+  AdminStoreCategory,
+  AdminStoreDetail,
+  StoreCategoryPayload,
+  StoresListQuery,
+  StoresListResponse,
+  StoresStats,
+} from '@/lib/types/stores';
 
 export const hqApi = {
   getStats: () => api.get<PlatformStats>('/admin/stats').then((r) => r.data),
@@ -98,6 +107,37 @@ export const hqApi = {
 
   getOrdersStats: () =>
     api.get<OrdersStats>('/admin/orders/stats').then((r) => r.data),
+
+  getStoreStats: () =>
+    api.get<StoresStats>('/admin/stores/stats').then((r) => r.data),
+
+  getStores: (query: StoresListQuery = {}) =>
+    api
+      .get<StoresListResponse>('/admin/stores', storesQueryToApiParams(query))
+      .then((r) => r.data),
+
+  getStore: (id: string) =>
+    api.get<AdminStoreDetail>(`/admin/stores/${id}`).then((r) => r.data),
+
+  updateStoreStatus: (id: string, status: 'ACTIVE' | 'INACTIVE') =>
+    api.patch(`/admin/stores/${id}/status`, { status }).then((r) => r.data),
+
+  deleteStore: (id: string) =>
+    api.delete(`/admin/stores/${id}`).then((r) => r.data),
+
+  getStoreCategories: () =>
+    api.get<AdminStoreCategory[]>('/admin/store-categories').then((r) => r.data),
+
+  createStoreCategory: (body: StoreCategoryPayload) =>
+    api.post<AdminStoreCategory>('/admin/store-categories', body).then((r) => r.data),
+
+  updateStoreCategory: (id: string, body: StoreCategoryPayload) =>
+    api
+      .put<AdminStoreCategory>(`/admin/store-categories/${id}`, body)
+      .then((r) => r.data),
+
+  deleteStoreCategory: (id: string) =>
+    api.delete(`/admin/store-categories/${id}`).then((r) => r.data),
 
   getVerificationStats: () =>
     api.get<VerificationStats>('/admin/verification/stats').then((r) => r.data),

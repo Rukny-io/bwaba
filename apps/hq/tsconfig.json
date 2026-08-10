@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@rukny/auth/client/session-keepalive": [
+        "./node_modules/@rukny/auth/src/client/session-keepalive.tsx"
+      ],
+      "@rukny/auth/server": ["./node_modules/@rukny/auth/src/server/index.ts"]
     }
   },
   "include": [

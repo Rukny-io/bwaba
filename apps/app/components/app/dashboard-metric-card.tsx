@@ -1,4 +1,16 @@
-import type { LucideIcon } from 'lucide-react';
+'use client';
+
+import {
+  AlertTriangle,
+  Eye,
+  Link2,
+  MousePointerClick,
+  Package,
+  ShoppingBag,
+  type LucideIcon,
+} from 'lucide-react';
+import { AnimatedNumber } from '@/components/ui/animated-number';
+import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
 import { cn } from '@/lib/utils';
 
 export type DashboardMetricChipTone =
@@ -7,8 +19,35 @@ export type DashboardMetricChipTone =
   | 'neutral'
   | 'danger';
 
+export type DashboardMetricIconName =
+  | 'mouse-pointer-click'
+  | 'eye'
+  | 'link'
+  | 'package'
+  | 'shopping-bag'
+  | 'alert-triangle';
+
+export type DashboardNumericFormat = 'number' | 'currency' | 'trend-percent';
+
+const METRIC_ICONS: Record<DashboardMetricIconName, LucideIcon> = {
+  'mouse-pointer-click': MousePointerClick,
+  eye: Eye,
+  link: Link2,
+  package: Package,
+  'shopping-bag': ShoppingBag,
+  'alert-triangle': AlertTriangle,
+};
+
+function formatNumericValue(format: DashboardNumericFormat, value: number): string {
+  if (format === 'currency') return formatCurrency(value);
+  if (format === 'trend-percent') {
+    return `${value >= 0 ? '+' : ''}${Math.round(value * 10) / 10}%`;
+  }
+  return formatNumber(value);
+}
+
 export interface DashboardMetricCardProps {
-  icon: LucideIcon;
+  icon: DashboardMetricIconName;
   label: string;
   value: string | number;
   comparisonPrimary: string;
@@ -18,6 +57,10 @@ export interface DashboardMetricCardProps {
   chip?: string;
   chipTone?: DashboardMetricChipTone;
   tabular?: boolean;
+  numericValue?: number;
+  numericFormat?: DashboardNumericFormat;
+  animationDelay?: number;
+  trendNumericValue?: number;
 }
 
 const chipToneClass: Record<DashboardMetricChipTone, string> = {
@@ -28,7 +71,7 @@ const chipToneClass: Record<DashboardMetricChipTone, string> = {
 };
 
 export function DashboardMetricCard({
-  icon: Icon,
+  icon,
   label,
   value,
   comparisonPrimary,
@@ -38,16 +81,41 @@ export function DashboardMetricCard({
   chip,
   chipTone = 'neutral',
   tabular = true,
+  numericValue,
+  numericFormat = 'number',
+  animationDelay = 0,
+  trendNumericValue,
 }: DashboardMetricCardProps) {
-  const valueNode = tabular ? (
-    <span dir="ltr" lang="en">
-      {value}
-    </span>
-  ) : (
-    value
-  );
+  const Icon = METRIC_ICONS[icon];
 
-  const hasFooter = Boolean(chip || trend || comparisonSecondary || comparisonPrimary);
+  const valueNode =
+    numericValue != null ? (
+      <AnimatedNumber
+        value={numericValue}
+        format={(n) => formatNumericValue(numericFormat, n)}
+        delay={animationDelay}
+      />
+    ) : tabular ? (
+      <span dir="ltr" lang="en">
+        {value}
+      </span>
+    ) : (
+      value
+    );
+
+  const trendNode =
+    trendNumericValue != null ? (
+      <AnimatedNumber
+        value={trendNumericValue}
+        format={(n) => formatNumericValue('trend-percent', n)}
+        delay={animationDelay + 120}
+        duration={700}
+      />
+    ) : (
+      trend
+    );
+
+  const hasFooter = Boolean(chip || trend || trendNumericValue != null || comparisonSecondary || comparisonPrimary);
 
   return (
     <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
@@ -66,7 +134,7 @@ export function DashboardMetricCard({
         className={cn(
           'mt-3 min-w-0 font-semibold leading-none tracking-tight text-[var(--foreground)]',
           tabular
-            ? 'text-[1.65rem] tabular-nums sm:text-[1.75rem]'
+            ? 'text-[1.65rem] sm:text-[1.75rem]'
             : 'text-[1.25rem] leading-snug sm:text-[1.35rem]',
         )}
       >
@@ -78,7 +146,7 @@ export function DashboardMetricCard({
           {chip ? (
             <span className={cn('font-medium', chipToneClass[chipTone])}>{chip}</span>
           ) : null}
-          {!chip && trend ? (
+          {!chip && trendNode ? (
             <>
               <span
                 className={cn(
@@ -88,7 +156,7 @@ export function DashboardMetricCard({
                 dir="ltr"
                 lang="en"
               >
-                {trend}
+                {trendNode}
               </span>
               {comparisonSecondary ? (
                 <span className="text-[var(--muted-foreground)]">

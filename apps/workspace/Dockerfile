@@ -30,6 +30,7 @@ WORKDIR /app/apps/workspace
 # Source first (.dockerignore excludes **/node_modules).
 # Must land before deps node_modules so file: symlinks cannot collide with COPY.
 COPY apps/workspace .
+RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/workspace/node_modules ./node_modules
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 

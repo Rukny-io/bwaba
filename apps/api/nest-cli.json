@@ -12,6 +12,10 @@
       {
         "include": "domain/forms/data/*.geojson",
         "outDir": "dist"
+      },
+      {
+        "include": "domain/stores/data/*.json",
+        "outDir": "dist"
       }
     ]
   },

@@ -1,14 +1,13 @@
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-const HQ_ORIGIN = process.env.NEXT_PUBLIC_HQ_URL || 'http://localhost:3002';
+import {
+  isAllowedRedirectHost,
+  LOCAL_SERVICE_URLS,
+  resolveAccountsUrl,
+  resolveApiBaseUrl,
+  resolvePageOrigin,
+} from '@rukny/auth/client/env-urls';
 
 export function getHqOrigin(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return HQ_ORIGIN;
+  return resolvePageOrigin(LOCAL_SERVICE_URLS.hq, 'NEXT_PUBLIC_HQ_URL');
 }
 
 export function buildHqCallbackUrl(nextPath: string): string {
@@ -23,25 +22,20 @@ export function buildHqCallbackUrl(nextPath: string): string {
 
 export function getAccountsLoginUrl(nextPath = '/app'): string {
   const returnTo = buildHqCallbackUrl(nextPath);
-  const url = new URL('/login', ACCOUNTS_URL);
+  const url = new URL('/login', resolveAccountsUrl());
   url.searchParams.set('next', returnTo);
   return url.toString();
 }
 
+/** Google OAuth via Accounts (exchange on accounts, then hand off to HQ) */
 export function getGoogleOAuthUrl(nextPath = '/app'): string {
-  const origin = getHqOrigin();
-  const next =
-    nextPath.startsWith('http') || nextPath.startsWith('/')
-      ? nextPath.startsWith('/')
-        ? new URL(nextPath, origin).toString()
-        : nextPath
-      : new URL(nextPath, origin).toString();
-
+  const accountsOrigin = new URL(resolveAccountsUrl()).origin;
+  const callbackUrl = buildHqCallbackUrl(nextPath);
   const params = new URLSearchParams({
-    redirect_origin: origin,
-    next,
+    redirect_origin: accountsOrigin,
+    next: callbackUrl,
   });
-  return `${API_BASE}/auth/google?${params.toString()}`;
+  return `${resolveApiBaseUrl()}/auth/google?${params.toString()}`;
 }
 
 export function resolveClientNext(
@@ -52,13 +46,7 @@ export function resolveClientNext(
   try {
     if (nextParam.startsWith('/')) return nextParam;
     const url = new URL(nextParam);
-    const host = url.hostname;
-    if (
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host.endsWith('.rukny.io') ||
-      host === 'rukny.io'
-    ) {
+    if (isAllowedRedirectHost(url.hostname)) {
       return url.pathname + url.search;
     }
   } catch {
@@ -77,11 +65,7 @@ function resolveSafeNext(nextParam: string | null, baseUrl: string): string | nu
     const base = new URL(baseUrl);
     const host = url.hostname;
     const allowed =
-      host === base.hostname ||
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host.endsWith('.rukny.io') ||
-      host === 'rukny.io';
+      host === base.hostname || isAllowedRedirectHost(host);
     if (!allowed) return null;
     return url.pathname + url.search;
   } catch {

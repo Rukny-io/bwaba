@@ -5,12 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { AuthSplitPage } from "@/components/auth/auth-split-page"
 import { AuthStatus } from "@/components/auth/auth-status"
-import { exchangeCode, issueOAuthCode, saveProfileOAuthHint } from "@/lib/api"
+import { exchangeCodeOnce, issueOAuthCode, saveProfileOAuthHint } from "@/lib/api"
 import { getSafeRedirectUrl, getRedirectUrlByRole } from "@/lib/redirect"
+import { resolveApiBaseUrl, resolveAppUrl } from "@/lib/env-urls"
 import {
-  clearOAuthHash,
+  clearOAuthParamsFromUrl,
+  clearStashedOAuthParams,
   readOAuthCallbackParams,
+  readStashedOAuthParams,
   resolveCrossAppForwardNext,
+  stashOAuthParams,
 } from "@/lib/oauth-callback"
 
 function CallbackContent() {
@@ -24,17 +28,25 @@ function CallbackContent() {
     if (hasRun.current) return
     hasRun.current = true
 
-    const { code, next: hashNext } = readOAuthCallbackParams(searchParams)
+    const fromUrl = readOAuthCallbackParams(searchParams)
+    if (fromUrl.code) {
+      stashOAuthParams({ code: fromUrl.code, next: fromUrl.next })
+      clearOAuthParamsFromUrl()
+    }
+
+    const stashed = readStashedOAuthParams()
+    const code = fromUrl.code || stashed.code
+    const hashNext = fromUrl.next || stashed.next
+
     if (!code) {
+      hasRun.current = false
       router.replace("/login")
       return
     }
 
-    clearOAuthHash()
-
     const doExchange = async () => {
       const accountsOrigin = window.location.origin
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "")
+      const appUrl = resolveAppUrl().replace(/\/$/, "")
       const defaultAppTarget = `${appUrl}/app/links`
       let resolvedTarget = defaultAppTarget
 
@@ -43,7 +55,8 @@ function CallbackContent() {
         const sessionNext = localStorage.getItem("auth_next")
         const nextTarget = urlNext || sessionNext
 
-        const result = await exchangeCode(code)
+        const result = await exchangeCodeOnce(code)
+        clearStashedOAuthParams()
 
         if (!result.success) {
           if (result.requiresLinking) {
@@ -93,7 +106,7 @@ function CallbackContent() {
         if (targetOrigin !== accountsOrigin) {
           try {
             const { code: transferCode } = await issueOAuthCode()
-            const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "")
+            const apiBase = resolveApiBaseUrl().replace(/\/$/, "")
             let apiOrigin: string | null = null
             try {
               apiOrigin = apiBase ? new URL(apiBase).origin : null
@@ -149,7 +162,10 @@ function CallbackContent() {
         variant={error ? "error" : "loading"}
         message={error || t("callback_signing_in")}
         actionLabel={error ? t("back_to_login") : undefined}
-        onAction={error ? () => router.replace("/login") : undefined}
+        onAction={error ? () => {
+          clearStashedOAuthParams()
+          router.replace("/login")
+        } : undefined}
       />
     </AuthSplitPage>
   )

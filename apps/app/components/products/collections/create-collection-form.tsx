@@ -12,25 +12,9 @@ import {
   getProductDisplayName,
 } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
-import { resolveMediaUrl } from '@/lib/media-url';
+import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
 import { uploadStorageImage } from '@/lib/storage/upload';
 import { cn } from '@/lib/utils';
-
-function getProductImage(product: MyStoreProduct): string | null {
-  const images = product.product_images ?? [];
-  const primary = images.find((img) => img.isPrimary) ?? images[0];
-  return resolveMediaUrl(primary?.imagePath);
-}
-
-function formatPrice(price: number | string): string {
-  const value = typeof price === 'string' ? Number(price) : price;
-  if (!Number.isFinite(value)) return '—';
-  return new Intl.NumberFormat('ar-IQ', {
-    style: 'currency',
-    currency: 'IQD',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 interface CreateCollectionFormProps {
   onCreated?: () => void;
@@ -307,7 +291,7 @@ export function CreateCollectionForm({
                           {getProductDisplayName(product)}
                         </p>
                         <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-                          {formatPrice(product.price)}
+                          {formatProductPrice(product.price)}
                         </p>
                       </div>
 

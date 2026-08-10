@@ -25,6 +25,13 @@ export async function middleware(request: NextRequest) {
   }
 
   const auth = await checkHqAuth(request);
+
+  // Fast redirect — avoid compiling the `/` RSC page on every visit
+  if (pathname === '/') {
+    const target = auth.isAuthenticated ? '/app' : '/login';
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
   const isProtected = matchesPrefix(pathname, PROTECTED_PREFIXES);
   const isAuthPage = matchesPrefix(pathname, AUTH_PAGES);
 

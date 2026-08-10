@@ -24,19 +24,13 @@ export function getAccountsLoginUrl(nextPath = '/app'): string {
   return url.toString();
 }
 
-/** Google OAuth via API (sets cookies + redirects back) */
+/** Google OAuth via Accounts (exchange on accounts, then hand off to Forms) */
 export function getGoogleOAuthUrl(nextPath = '/app'): string {
-  const origin = getFormsOrigin();
-  const next =
-    nextPath.startsWith('http') || nextPath.startsWith('/')
-      ? nextPath.startsWith('/')
-        ? new URL(nextPath, origin).toString()
-        : nextPath
-      : new URL(nextPath, origin).toString();
-
+  const accountsOrigin = new URL(resolveAccountsUrl()).origin;
+  const callbackUrl = buildFormsCallbackUrl(nextPath);
   const params = new URLSearchParams({
-    redirect_origin: origin,
-    next,
+    redirect_origin: accountsOrigin,
+    next: callbackUrl,
   });
   return `${resolveApiBaseUrl()}/auth/google?${params.toString()}`;
 }

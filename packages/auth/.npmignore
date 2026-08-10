@@ -1,9 +1,3 @@
-# Source
-src/
-*.ts
-*.tsx
-!*.d.ts
-
 # Config
 tsconfig.json
 .eslintrc.js

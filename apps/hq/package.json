@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/materialize-workspace-deps.mjs",
+    "predev": "node scripts/materialize-workspace-deps.mjs",
+    "prebuild": "node scripts/materialize-workspace-deps.mjs",
     "dev": "next dev -p 3002",
+    "dev:clean": "rm -rf .next && next dev -p 3002",
     "build": "next build",
     "start": "next start -p 3002",
     "lint": "eslint"

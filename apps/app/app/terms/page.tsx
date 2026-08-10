@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { LegalPage } from "@/components/legal/legal-page"
-import { termsContentAr, termsContentEn } from "@/lib/legal/terms-content"
+import { LegalPage } from '@/components/legal/legal-page';
+import { termsContentAr, termsContentEn } from '@/lib/legal/terms-content';
 
 export default function TermsPage() {
   return (
@@ -10,5 +10,5 @@ export default function TermsPage() {
       contentAr={termsContentAr}
       contentEn={termsContentEn}
     />
-  )
+  );
 }

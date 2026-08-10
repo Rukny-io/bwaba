@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "node:path";
 import { loadEnvConfig } from "@next/env";
 import createNextIntlPlugin from 'next-intl/plugin';
+import { authResolveAliases } from '../../packages/auth/next-resolve-aliases';
+
+const monorepoAliases = authResolveAliases();
 
 // Monorepo: load root .env / .env.dev so OAuth flags work when running from apps/accounts
 const repoRoot = path.resolve(__dirname, "../..");
@@ -13,16 +16,28 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const API_BACKEND_URL =
   process.env.API_BACKEND_URL || process.env.API_URL || "http://localhost:3001";
 
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
     "@rukny/thmanyah-font",
+    "@rukny/auth",
     "@heroui/react",
     "@heroui/styles",
   ],
   turbopack: {
     // Pin app root only — without this Turbopack indexes the whole monorepo and RAM spikes.
     root: path.resolve(__dirname),
+    resolveAlias: monorepoAliases,
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...monorepoAliases,
+    };
+    return config;
   },
   experimental: {
     // Allow identity document uploads (~5 MB) through route handlers / proxy
@@ -69,6 +84,21 @@ const nextConfig: NextConfig = {
       {
         source: "/api/users/:path*",
         destination: `${API_BACKEND_URL}/api/users/:path*`,
+      },
+    ];
+  },
+  async redirects() {
+    const appBase = APP_URL.replace(/\/$/, "");
+    return [
+      {
+        source: "/privacy",
+        destination: `${appBase}/privacy`,
+        permanent: false,
+      },
+      {
+        source: "/terms",
+        destination: `${appBase}/terms`,
+        permanent: false,
       },
     ];
   },

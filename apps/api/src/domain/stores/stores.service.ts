@@ -18,6 +18,8 @@ import { CreateStoreDto, StoreStatus } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { v4 as uuidv4 } from 'uuid';
 import S3Service from '../../services/s3.service';
+import { getStaticStoreCategory } from './store-category-catalog';
+import { normalizeStoreCategorySlug } from './store-category-slugs';
 
 @Injectable()
 export class StoresService {
@@ -119,15 +121,26 @@ export class StoresService {
     const existing = await this.prisma.store.findFirst({
       where: { userId: opts.userId },
     });
-    if (existing) return { slug: existing.slug, id: existing.id };
 
+    if (existing) {
+      if (opts.storeCategory) {
+        await this.applyStoreCategory(
+          existing.id,
+          opts.userId,
+          opts.storeCategory,
+          {
+            description: opts.storeDescription,
+            employeesCount: opts.employeesCount,
+          },
+        );
+      }
+      return { slug: existing.slug, id: existing.id };
+    }
+
+    const normalizedCategory = normalizeStoreCategorySlug(opts.storeCategory);
     let resolvedCategoryId: string | null = null;
-    if (opts.storeCategory) {
-      const cat = await this.prisma.store_categories.findFirst({
-        where: { slug: opts.storeCategory, isActive: true },
-        select: { id: true },
-      });
-      resolvedCategoryId = cat?.id ?? null;
+    if (normalizedCategory) {
+      resolvedCategoryId = await this.resolveCategoryId(normalizedCategory);
     }
 
     const storeSlug =
@@ -143,7 +156,7 @@ export class StoresService {
         name: opts.name || 'متجري',
         slug: storeSlug,
         description: opts.storeDescription ?? null,
-        category: opts.storeCategory ?? null,
+        category: normalizedCategory,
         categoryId: resolvedCategoryId,
         employeesCount: opts.employeesCount ?? null,
         contactEmail: opts.email,
@@ -220,6 +233,163 @@ export class StoresService {
 
       return store;
     });
+  }
+
+  /**
+   * قالب حقول المنتج حسب تصنيف المتجر (لإنشاء المنتجات)
+   */
+  async getMyStoreProductTemplate(userId: string) {
+    const store = await this.getMyStore(userId);
+
+    if (!store) {
+      return {
+        storeId: null,
+        categoryId: null,
+        categorySlug: null,
+        categoryName: null,
+        categoryNameAr: null,
+        template: null,
+      };
+    }
+
+    const category = await this.resolveStoreCategory(store);
+    const categorySlug =
+      category?.slug ??
+      normalizeStoreCategorySlug(store.category) ??
+      store.category ??
+      null;
+
+    let categoryName = category?.name ?? null;
+    let categoryNameAr = category?.nameAr ?? null;
+    let raw = category?.templateFields;
+
+    if (!raw && categorySlug) {
+      const fallback = getStaticStoreCategory(categorySlug);
+      if (fallback) {
+        raw = fallback.templateFields;
+        categoryName = categoryName ?? fallback.name;
+        categoryNameAr = categoryNameAr ?? fallback.nameAr;
+      }
+    }
+
+    const template = this.parseCategoryTemplateFields(raw);
+
+    const realCategoryId =
+      category?.id && !String(category.id).startsWith('static_')
+        ? category.id
+        : null;
+
+    if (
+      categorySlug &&
+      (store.category !== categorySlug || (!store.categoryId && realCategoryId))
+    ) {
+      await this.prisma.store
+        .update({
+          where: { id: store.id },
+          data: {
+            category: categorySlug,
+            ...(realCategoryId ? { categoryId: realCategoryId } : {}),
+          },
+        })
+        .catch((err) => {
+          this.logger.warn(
+            `Failed to sync store category for ${store.id}: ${err?.message || err}`,
+          );
+        });
+    }
+
+    return {
+      storeId: store.id,
+      categoryId: category?.id ?? store.categoryId,
+      categorySlug,
+      categoryName,
+      categoryNameAr,
+      template,
+    };
+  }
+
+  private async resolveCategoryId(slug: string): Promise<string | null> {
+    const normalized = normalizeStoreCategorySlug(slug);
+    if (!normalized) return null;
+
+    const cat = await this.prisma.store_categories.findFirst({
+      where: { slug: normalized, isActive: true },
+      select: { id: true },
+    });
+    return cat?.id ?? null;
+  }
+
+  private async applyStoreCategory(
+    storeId: string,
+    userId: string,
+    categorySlug: string,
+    extras?: { description?: string; employeesCount?: string },
+  ) {
+    const normalized = normalizeStoreCategorySlug(categorySlug);
+    if (!normalized) return;
+
+    const categoryId = await this.resolveCategoryId(normalized);
+    await this.prisma.store.update({
+      where: { id: storeId },
+      data: {
+        category: normalized,
+        ...(categoryId ? { categoryId } : {}),
+        ...(extras?.description ? { description: extras.description } : {}),
+        ...(extras?.employeesCount
+          ? { employeesCount: extras.employeesCount }
+          : {}),
+      },
+    });
+
+    await this.cacheManager.invalidate(CacheKeys.storeByUserId(userId));
+  }
+
+  /** يحل تصنيف المتجر من categoryId أو من slug القديم store.category */
+  private async resolveStoreCategory(store: {
+    categoryId: string | null;
+    category: string | null;
+    store_categories: {
+      id: string;
+      slug: string;
+      name: string;
+      nameAr: string;
+      templateFields: unknown;
+    } | null;
+  }) {
+    if (store.store_categories) {
+      return store.store_categories;
+    }
+
+    const slug = normalizeStoreCategorySlug(store.category);
+    if (!slug) return null;
+
+    const fromDb = await this.prisma.store_categories.findFirst({
+      where: { slug, isActive: true },
+    });
+    if (fromDb) return fromDb;
+
+    const fallback = getStaticStoreCategory(slug);
+    if (!fallback) return null;
+
+    return {
+      id: `static_${slug}`,
+      slug: fallback.slug,
+      name: fallback.name,
+      nameAr: fallback.nameAr,
+      templateFields: fallback.templateFields,
+    };
+  }
+
+  private parseCategoryTemplateFields(value: unknown) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const obj = value as Record<string, unknown>;
+    if (
+      typeof obj.hasVariants !== 'boolean' ||
+      !Array.isArray(obj.productAttributes)
+    ) {
+      return null;
+    }
+    return value;
   }
 
   /**

@@ -295,7 +295,8 @@ export class OAuthProviderService {
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
         hostname.endsWith('.rukny.io') ||
-        hostname === 'rukny.io';
+        hostname === 'rukny.io' ||
+        hostname === 'rukny.work';
 
       if (!allowed) {
         throw new BadRequestException('redirect target is not allowed');

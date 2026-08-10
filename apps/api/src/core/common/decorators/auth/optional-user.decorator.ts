@@ -14,11 +14,14 @@ export const OptionalUserId = createParamDecorator(
       return undefined;
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return undefined;
+    }
+
     try {
       const token = authHeader.split(' ')[1];
-      const jwtService = new JwtService({
-        secret: process.env.JWT_SECRET || 'your-secret-key-here',
-      });
+      const jwtService = new JwtService({ secret });
       const payload = jwtService.verify(token);
       return payload.sub || payload.id;
     } catch (error) {

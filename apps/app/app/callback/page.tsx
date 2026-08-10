@@ -2,57 +2,75 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AuthErrorCard, AuthLoadingCard } from '@/components/auth/auth-status-card';
 import { AuthShell } from '@/components/auth/auth-shell';
-import { exchangeCode, fetchCurrentUser } from '@/lib/api';
+import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
+import { formatAuthError } from '@/lib/auth-error-messages';
 import {
   DEFAULT_APP_PATH,
   resolveClientNext,
 } from '@/lib/auth-redirect';
-import { clearOAuthHash, readOAuthCallbackParams } from '@/lib/oauth-callback';
+import {
+  clearOAuthParamsFromUrl,
+  clearStashedOAuthParams,
+  readOAuthCallbackParams,
+  readStashedOAuthParams,
+  stashOAuthParams,
+} from '@/lib/oauth-callback';
 
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
+import { resolveAccountsUrl } from '@rukny/auth/client/env-urls';
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const ran = useRef(false);
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    if (ran.current) return;
-    ran.current = true;
+    if (hasRun.current) return;
+    hasRun.current = true;
 
-    const { code, next: hashNext } = readOAuthCallbackParams(searchParams);
+    const fromUrl = readOAuthCallbackParams(searchParams);
+    if (fromUrl.code) {
+      stashOAuthParams({ code: fromUrl.code, next: fromUrl.next });
+      clearOAuthParamsFromUrl();
+    }
+
+    const stashed = readStashedOAuthParams();
+    const code = fromUrl.code || stashed.code;
+    const nextRaw = fromUrl.next || stashed.next;
+
     if (!code) {
+      hasRun.current = false;
       router.replace('/login');
       return;
     }
 
-    clearOAuthHash();
-
     const nextPath = resolveClientNext(
-      searchParams.get('next') || hashNext,
+      searchParams.get('next') || nextRaw,
       DEFAULT_APP_PATH,
     );
 
     (async () => {
       try {
-        const result = await exchangeCode(code);
+        const result = await exchangeCodeOnce(code);
+        clearStashedOAuthParams();
+
         if (!result.success) {
           setError(result.message || 'تعذر إكمال تسجيل الدخول');
           return;
         }
 
         if (result.needsProfileCompletion) {
-          const complete = new URL('/complete-profile', ACCOUNTS_URL);
+          const accountsUrl = resolveAccountsUrl();
+          const complete = new URL('/complete-profile', accountsUrl);
           complete.searchParams.set('next', `${window.location.origin}${nextPath}`);
           window.location.href = complete.toString();
           return;
         }
 
         if (result.requires2FA && result.pendingSessionId) {
-          const verify = new URL('/verify-2fa', ACCOUNTS_URL);
+          const verify = new URL('/verify-2fa', accountsUrl);
           verify.searchParams.set('sessionId', result.pendingSessionId);
           window.location.href = verify.toString();
           return;
@@ -73,44 +91,47 @@ function CallbackContent() {
 
         setError('تم تسجيل الدخول لكن الجلسة لم تُحفظ. أعد المحاولة.');
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'حدث خطأ أثناء تسجيل الدخول';
+        const existing = await fetchCurrentUser();
+        if (existing) {
+          clearStashedOAuthParams();
+          window.location.replace(nextPath);
+          return;
+        }
+
+        const apiError = err as {
+          message?: string;
+          data?: { message?: string | string[] };
+        };
+        const raw =
+          apiError.data?.message ??
+          apiError.message ??
+          'حدث خطأ أثناء تسجيل الدخول';
+        const message = Array.isArray(raw) ? raw[0] : raw;
         setError(message);
       }
     })();
   }, [router, searchParams]);
 
   if (error) {
+    const copy = formatAuthError(error);
+
     return (
-      <AuthShell>
-        <section className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-6 sm:px-7 sm:py-8 flex flex-col items-center text-center shadow-sm">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] mb-4">
-            تعذر تسجيل الدخول
-          </h1>
-          <p className="text-sm text-[var(--danger)] text-center mb-4">{error}</p>
-          <button
-            type="button"
-            className="text-sm font-medium text-[var(--foreground)] underline transition-opacity hover:opacity-80"
-            onClick={() => router.replace('/login')}
-          >
-            العودة لتسجيل الدخول
-          </button>
-        </section>
+      <AuthShell className="max-w-[460px]">
+        <AuthErrorCard
+          title={copy.title}
+          description={copy.description}
+          onAction={() => {
+            clearStashedOAuthParams();
+            router.replace('/login');
+          }}
+        />
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell>
-      <section className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-6 sm:px-7 sm:py-8 flex flex-col items-center text-center shadow-sm">
-        <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] mb-4">
-          جارٍ تسجيل الدخول
-        </h1>
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="size-10 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
-          <p className="text-sm text-[var(--muted-foreground)]">يتم التحقق من جلستك...</p>
-        </div>
-      </section>
+    <AuthShell className="max-w-[460px]">
+      <AuthLoadingCard />
     </AuthShell>
   );
 }
@@ -119,10 +140,8 @@ export default function CallbackPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell>
-          <section className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-6 text-center shadow-sm">
-            <p className="text-sm text-[var(--muted-foreground)]">جارٍ التحميل...</p>
-          </section>
+        <AuthShell className="max-w-[460px]">
+          <AuthLoadingCard title="جارٍ التحميل" description="لحظة من فضلك…" />
         </AuthShell>
       }
     >

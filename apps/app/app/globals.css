@@ -34,6 +34,7 @@
 
   --accent: var(--brand-blue);
   --accent-foreground: #ffffff;
+  --accent-hover: #2563eb;
 
   --surface: #ffffff;
   --surface-foreground: #0f172a;
@@ -48,6 +49,13 @@
   --field-background: #ffffff;
   --field-foreground: #0f172a;
   --field-placeholder: var(--muted);
+  --field-border: transparent;
+  --field-border-width: 0px;
+  --field-border-hover: transparent;
+  --field-border-focus: transparent;
+  --field-shadow: none;
+  --field-hover: color-mix(in oklab, var(--field-background) 92%, var(--field-foreground) 8%);
+  --field-focus: var(--field-background);
 
   --danger: #ef4444;
   --danger-foreground: #ffffff;
@@ -104,6 +112,7 @@
 
   --accent: var(--brand-blue);
   --accent-foreground: #e2e8f0;
+  --accent-hover: #93c5fd;
 
   --surface: #12161e;
   --surface-foreground: #f1f5f9;
@@ -118,6 +127,13 @@
   --field-background: #161b26;
   --field-foreground: #f1f5f9;
   --field-placeholder: var(--muted);
+  --field-border: transparent;
+  --field-border-width: 0px;
+  --field-border-hover: transparent;
+  --field-border-focus: transparent;
+  --field-shadow: none;
+  --field-hover: color-mix(in oklab, var(--field-background) 92%, var(--field-foreground) 8%);
+  --field-focus: var(--field-background);
 
   --danger: #f87171;
   --danger-foreground: #0f172a;
@@ -263,6 +279,27 @@ body {
 .dashboard-metric-tile {
   border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   background: var(--surface);
+}
+
+@keyframes metric-value-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-value-animate {
+  animation: metric-value-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-value-animate {
+    animation: none;
+  }
 }
 
 .dark .dashboard-metric-tile,
@@ -454,3 +491,95 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Product create — full-page flow (mirrors forms create) */
+.product-create-brand {
+  --product-create-max-width: 48rem;
+}
+
+.product-create-brand .product-price-field__group .input-group__input {
+  border-radius: 0.625rem;
+}
+
+.product-create-brand .product-price-field__group .product-price-field__step {
+  align-self: center;
+}
+
+.product-create-brand .variant-attribute-mode {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--border) 50%, transparent);
+}
+
+.product-create-brand .product-create-toolbar-submit {
+  transition:
+    background-color 160ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
+}
+
+.product-create-brand .product-create-toolbar-submit:hover,
+.product-create-brand .product-create-toolbar-submit[data-hovered='true'] {
+  background-color: var(--accent-hover);
+  box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 32%, transparent);
+}
+
+.product-create-brand .product-create-toolbar-submit:active,
+.product-create-brand .product-create-toolbar-submit[data-pressed='true'] {
+  background-color: var(--accent-hover);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 24%, transparent);
+}
+
+.product-create-shell {
+  min-height: 100dvh;
+}
+
+.product-create-toolbar-shell {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 30;
+  background: transparent;
+  pointer-events: none;
+}
+
+.product-create-toolbar-glass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 8px 32px rgba(15, 23, 42, 0.07);
+  -webkit-backdrop-filter: blur(56px) saturate(220%);
+  backdrop-filter: blur(56px) saturate(220%);
+}
+
+.product-create-toolbar-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.04) 42%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.product-create-toolbar-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .product-create-toolbar-glass,
+[data-theme='dark'] .product-create-toolbar-glass {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(18, 22, 30, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 36px rgba(0, 0, 0, 0.32);
+}
+

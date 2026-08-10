@@ -1,36 +1,29 @@
-/** Local service URLs when running the Forms app on loopback. */
-export const LOCAL_ACCOUNTS_URL = 'http://localhost:3005';
-export const LOCAL_API_BASE_URL = 'http://localhost:3001/api/v1';
-export const LOCAL_FORMS_URL = 'http://localhost:3007';
+export {
+  isLoopbackHost,
+  LOCAL_SERVICE_URLS,
+  resolveAccountsUrl,
+  resolveApiBaseUrl,
+  resolveFormsUrl,
+  shouldUseLocalServiceUrls,
+} from '@rukny/auth/client/env-urls';
 
-function isLoopbackHost(hostname: string): boolean {
-  return hostname === 'localhost' || hostname === '127.0.0.1';
-}
+import {
+  LOCAL_SERVICE_URLS,
+  resolveFormsUrl,
+  shouldUseLocalServiceUrls,
+} from '@rukny/auth/client/env-urls';
 
-/**
- * True when Forms is served from localhost (browser) or in `next dev` (SSR).
- * Root `.env` often points at production; loopback must use local API/Accounts.
- */
+/** @deprecated Use `shouldUseLocalServiceUrls` */
 export function isFormsLocalDev(hostname?: string | null): boolean {
-  if (hostname) return isLoopbackHost(hostname);
-  if (typeof window !== 'undefined') {
-    return isLoopbackHost(window.location.hostname);
-  }
-  return process.env.NODE_ENV === 'development';
+  return shouldUseLocalServiceUrls({ hostname });
 }
 
-export function resolveAccountsUrl(): string {
-  if (isFormsLocalDev()) return LOCAL_ACCOUNTS_URL;
-  return process.env.NEXT_PUBLIC_ACCOUNTS_URL || LOCAL_ACCOUNTS_URL;
-}
-
-export function resolveApiBaseUrl(): string {
-  if (isFormsLocalDev()) return LOCAL_API_BASE_URL;
-  return process.env.NEXT_PUBLIC_API_URL || LOCAL_API_BASE_URL;
-}
+export const LOCAL_ACCOUNTS_URL = LOCAL_SERVICE_URLS.accounts;
+export const LOCAL_API_BASE_URL = LOCAL_SERVICE_URLS.apiBase;
+export const LOCAL_FORMS_URL = LOCAL_SERVICE_URLS.forms;
 
 export function resolveFormsOrigin(): string {
   if (typeof window !== 'undefined') return window.location.origin;
-  if (isFormsLocalDev()) return LOCAL_FORMS_URL;
-  return process.env.NEXT_PUBLIC_FORMS_URL || LOCAL_FORMS_URL;
+  if (shouldUseLocalServiceUrls()) return LOCAL_SERVICE_URLS.forms;
+  return resolveFormsUrl();
 }

@@ -9,6 +9,7 @@ const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(appDir, '../..');
 
 const workspaceDeps = [
+  { name: '@rukny/auth', src: 'packages/auth' },
   { name: '@rukny/thmanyah-font', src: 'packages/Thmanyah-Font-Family' },
   {
     name: '@heroui/styles',

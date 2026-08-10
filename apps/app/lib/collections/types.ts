@@ -33,6 +33,9 @@ export interface MyStoreProduct {
   name: string;
   nameAr?: string | null;
   price: number | string;
+  salePrice?: number | string | null;
+  productKind?: 'PHYSICAL' | 'DIGITAL' | 'SERVICE';
+  isDigital?: boolean;
   status: string;
   product_images?: Array<{
     imagePath: string;

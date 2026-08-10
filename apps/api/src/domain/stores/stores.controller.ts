@@ -67,6 +67,15 @@ export class StoresController {
     return this.storesService.getMyStore(ws.ownerId);
   }
 
+  @Get('my-store/template')
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:products:read')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get product field template for my store category' })
+  getMyStoreProductTemplate(@ActiveWorkspace() ws: WorkspaceContext) {
+    return this.storesService.getMyStoreProductTemplate(ws.ownerId);
+  }
+
   @Get('stats')
   @UseGuards(JwtAuthGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('store:analytics:read')

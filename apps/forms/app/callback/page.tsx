@@ -2,8 +2,10 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AuthErrorCard, AuthLoadingCard } from '@/components/auth/auth-status-card';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
+import { formatAuthError } from '@/lib/auth-error-messages';
 import { resolveClientNext } from '@/lib/auth-redirect';
 import { resolveAccountsUrl } from '@/lib/dev-urls';
 import {
@@ -103,41 +105,25 @@ function CallbackContent() {
   }, [router, searchParams]);
 
   if (error) {
+    const copy = formatAuthError(error);
+
     return (
-      <AuthShell>
-        <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8 shadow-sm border border-[var(--border)] rounded-2xl flex flex-col items-center text-center">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] mb-4">
-            تعذر تسجيل الدخول
-          </h1>
-          <p className="text-sm text-[var(--danger)] text-center mb-4">{error}</p>
-          <button
-            type="button"
-            className="text-sm font-medium text-[var(--foreground)] underline w-full text-center transition-opacity hover:opacity-80"
-            onClick={() => {
-              clearStashedOAuthParams();
-              router.replace('/login');
-            }}
-          >
-            العودة لتسجيل الدخول
-          </button>
-        </section>
+      <AuthShell className="max-w-[460px]">
+        <AuthErrorCard
+          title={copy.title}
+          description={copy.description}
+          onAction={() => {
+            clearStashedOAuthParams();
+            router.replace('/login');
+          }}
+        />
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell>
-      <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8 shadow-sm border border-[var(--border)] rounded-2xl flex flex-col items-center text-center">
-        <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] mb-4">
-          جارٍ تسجيل الدخول
-        </h1>
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="size-10 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
-          <p className="text-sm text-[var(--muted-foreground)]">
-            يتم التحقق من جلستك...
-          </p>
-        </div>
-      </section>
+    <AuthShell className="max-w-[460px]">
+      <AuthLoadingCard />
     </AuthShell>
   );
 }
@@ -146,15 +132,8 @@ export default function CallbackPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell>
-          <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8 shadow-sm border border-[var(--border)] rounded-2xl flex flex-col items-center text-center">
-            <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] mb-4">
-              جارٍ التحميل
-            </h1>
-            <p className="text-sm text-[var(--muted-foreground)] text-center">
-              ...
-            </p>
-          </section>
+        <AuthShell className="max-w-[460px]">
+          <AuthLoadingCard title="جارٍ التحميل" description="لحظة من فضلك…" />
         </AuthShell>
       }
     >

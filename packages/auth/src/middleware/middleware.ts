@@ -2,7 +2,7 @@
 // Compatible with Next.js Edge Runtime
 
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
+import { decodeJwt, jwtVerify } from 'jose';
 import type { User, UserRoleType } from '../types';
 import { isTokenExpired } from '../utils';
 import { COOKIE_NAMES, getRedirectUrlByRole, APP_URLS } from '../config';
@@ -110,7 +110,6 @@ export async function checkAuth(request: NextRequest): Promise<AuthCheckResult> 
   const accessToken = extractAccessToken(request);
   const refreshToken = extractRefreshToken(request);
 
-  // No tokens = not authenticated
   if (!accessToken && !refreshToken) {
     return {
       isAuthenticated: false,
@@ -120,29 +119,73 @@ export async function checkAuth(request: NextRequest): Promise<AuthCheckResult> 
     };
   }
 
-  // Check access token
-  if (accessToken && !isTokenExpired(accessToken)) {
-    try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
-      const { payload } = await jwtVerify(accessToken, secret);
+  if (!accessToken) {
+    return {
+      isAuthenticated: true,
+      user: null,
+      tokenExpired: true,
+      hasRefreshToken: true,
+    };
+  }
 
+  if (isTokenExpired(accessToken)) {
+    if (refreshToken) {
+      try {
+        const payload = decodeJwt(accessToken);
+        if (payload.sub) {
+          return {
+            isAuthenticated: true,
+            user: {
+              id: String(payload.sub),
+              email: String(payload.email ?? ''),
+              role: (payload.role as UserRoleType) ?? 'BASIC',
+            } as User,
+            tokenExpired: true,
+            hasRefreshToken: true,
+          };
+        }
+      } catch {
+        /* fall through */
+      }
+      return {
+        isAuthenticated: true,
+        user: null,
+        tokenExpired: true,
+        hasRefreshToken: true,
+      };
+    }
+    return {
+      isAuthenticated: false,
+      user: null,
+      tokenExpired: true,
+      hasRefreshToken: false,
+    };
+  }
+
+  const secretValue = process.env.JWT_SECRET;
+
+  if (secretValue) {
+    try {
+      const { payload } = await jwtVerify(
+        accessToken,
+        new TextEncoder().encode(secretValue),
+      );
       return {
         isAuthenticated: true,
         user: {
-          id: payload.sub as string,
-          email: payload.email as string,
-          role: payload.role as UserRoleType,
+          id: String(payload.sub),
+          email: String(payload.email ?? ''),
+          role: (payload.role as UserRoleType) ?? 'BASIC',
         } as User,
         tokenExpired: false,
         hasRefreshToken: !!refreshToken,
       };
-    } catch (err) {
-      // Invalid signature or format
+    } catch {
+      /* fall through */
     }
   }
 
-  // Token expired or invalid
-  if (accessToken) {
+  if (process.env.NODE_ENV === 'production') {
     return {
       isAuthenticated: false,
       user: null,
@@ -151,13 +194,34 @@ export async function checkAuth(request: NextRequest): Promise<AuthCheckResult> 
     };
   }
 
-  // Only refresh token exists
-  return {
-    isAuthenticated: false,
-    user: null,
-    tokenExpired: true,
-    hasRefreshToken: true,
-  };
+  try {
+    const payload = decodeJwt(accessToken);
+    if (!payload.sub) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        tokenExpired: true,
+        hasRefreshToken: !!refreshToken,
+      };
+    }
+    return {
+      isAuthenticated: true,
+      user: {
+        id: String(payload.sub),
+        email: String(payload.email ?? ''),
+        role: (payload.role as UserRoleType) ?? 'BASIC',
+      } as User,
+      tokenExpired: false,
+      hasRefreshToken: !!refreshToken,
+    };
+  } catch {
+    return {
+      isAuthenticated: false,
+      user: null,
+      tokenExpired: true,
+      hasRefreshToken: !!refreshToken,
+    };
+  }
 }
 
 // ============================================================================

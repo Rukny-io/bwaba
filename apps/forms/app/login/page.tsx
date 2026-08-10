@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@heroui/react';
+import { AuthLoadingCard } from '@/components/auth/auth-status-card';
 import { AuthShell } from '@/components/auth/auth-shell';
 import {
   getAccountsLoginUrl,
@@ -67,7 +68,7 @@ function LoginContent() {
 
   return (
     <AuthShell className="max-w-[460px]">
-      <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8">
+      <section className="w-full px-2 sm:px-4">
         <div className="mb-7 flex flex-col items-center text-center">
           <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-blue-soft)] px-4 py-2 text-xs font-medium text-[var(--secondary-foreground)]">
             أهلاً بك
@@ -129,11 +130,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell>
-          <div className="w-full text-center py-12">
-            <div className="size-10 mx-auto rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
-            <p className="text-sm text-[var(--muted-foreground)] mt-4">جارٍ التحميل...</p>
-          </div>
+        <AuthShell className="max-w-[460px]">
+          <AuthLoadingCard title="جارٍ التحميل" description="لحظة من فضلك…" />
         </AuthShell>
       }
     >

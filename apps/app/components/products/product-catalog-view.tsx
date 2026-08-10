@@ -6,10 +6,7 @@ import {
   PRODUCT_CATALOG_CONFIG,
   type ProductCatalogKind,
 } from '@/components/products/product-catalog-config';
-import type {
-  ProductsSortOption,
-  ProductsViewMode,
-} from '@/components/products/products-view-mode';
+import type { ProductsSortOption } from '@/components/products/products-view-mode';
 
 interface ProductCatalogViewProps {
   kind: ProductCatalogKind;
@@ -18,7 +15,6 @@ interface ProductCatalogViewProps {
 
 export function ProductCatalogView({ kind, onAdd }: ProductCatalogViewProps) {
   const config = PRODUCT_CATALOG_CONFIG[kind];
-  const [viewMode, setViewMode] = useState<ProductsViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<ProductsSortOption>('newest');
   const [showHidden, setShowHidden] = useState(false);
@@ -42,8 +38,6 @@ export function ProductCatalogView({ kind, onAdd }: ProductCatalogViewProps) {
   return (
     <section className="dashboard-page flex flex-col gap-4 pt-5 sm:gap-5 sm:pt-10">
       <ProductsToolbar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         sortBy={sortBy}

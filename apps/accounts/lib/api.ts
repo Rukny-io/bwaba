@@ -3,9 +3,13 @@
  * يتصل مباشرةً بـ API backend عبر Next.js proxy أو direct URL
  */
 
+import { createExchangeCodeOnce } from '@rukny/auth/client/oauth-exchange';
+import { resolveApiBaseUrl } from "./env-urls";
 import { resolveCrossAppForwardNext } from "./oauth-callback";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+function getApiBaseUrl(): string {
+  return resolveApiBaseUrl();
+}
 
 interface FetchOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
@@ -34,7 +38,7 @@ async function apiFetch<T = unknown>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
     ...rest,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -140,7 +144,7 @@ export async function redirectToAppCallback(
   nextPath: string,
 ): Promise<void> {
   const { code } = await issueOAuthCode();
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+  const apiBase = getApiBaseUrl().replace(/\/$/, '');
   let apiOrigin: string | null = null;
   try {
     apiOrigin = apiBase ? new URL(apiBase).origin : null;
@@ -181,6 +185,8 @@ export async function exchangeCode(code: string): Promise<ExchangeCodeResponse> 
 
   return data as ExchangeCodeResponse;
 }
+
+export const exchangeCodeOnce = createExchangeCodeOnce(exchangeCode);
 
 // ── 2FA API ───────────────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@
  */
 
 import { resolveMediaUrl } from '@/lib/media-url';
+import { createExchangeCodeOnce } from '@rukny/auth/client/oauth-exchange';
 
 export interface AuthUser {
   id: string;
@@ -83,21 +84,7 @@ export async function exchangeCode(code: string): Promise<ExchangeCodeResponse> 
  * Deduplicate one-time code exchange across React Strict Mode remounts /
  * concurrent effects. The Redis code is single-use; a second POST always 400s.
  */
-const exchangeInFlight = new Map<string, Promise<ExchangeCodeResponse>>();
-
-export function exchangeCodeOnce(code: string): Promise<ExchangeCodeResponse> {
-  const existing = exchangeInFlight.get(code);
-  if (existing) return existing;
-
-  const pending = exchangeCode(code).finally(() => {
-    window.setTimeout(() => {
-      exchangeInFlight.delete(code);
-    }, 30_000);
-  });
-
-  exchangeInFlight.set(code, pending);
-  return pending;
-}
+export const exchangeCodeOnce = createExchangeCodeOnce(exchangeCode);
 
 export async function logout(): Promise<void> {
   await authFetch('logout', { method: 'POST' });

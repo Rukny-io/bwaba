@@ -2,6 +2,7 @@
 # App-level .dockerignore files are ignored when context is `.`.
 
 **/node_modules
+apps/*/node_modules
 **/.next
 **/dist
 **/coverage

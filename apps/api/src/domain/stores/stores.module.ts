@@ -36,6 +36,8 @@ import {
 } from './product-categories.controller';
 import { ProductCollectionsService } from './product-collections.service';
 import { ProductCollectionsController } from './product-collections.controller';
+import { ProductDiscountsService } from './product-discounts.service';
+import { ProductDiscountsController } from './product-discounts.controller';
 // 📱 نظام التحقق عبر واتساب للشراء كضيف
 import { CheckoutAuthService } from './checkout-auth.service';
 import { CheckoutAuthController } from './checkout-auth.controller';
@@ -89,6 +91,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     ProductCategoriesController,
     PublicProductCategoriesController,
     ProductCollectionsController,
+    ProductDiscountsController,
     StoresController,
     ProductsController,
     CartController,
@@ -134,6 +137,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     // Service فئات المنتجات
     ProductCategoriesService,
     ProductCollectionsService,
+    ProductDiscountsService,
     // 📱 Service التحقق عبر واتساب
     CheckoutAuthService,
     // � Service المنتجات الرقمية

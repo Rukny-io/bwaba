@@ -83,6 +83,14 @@ export function resolvePageLabel(pathname: string): string {
     return 'Form details';
   }
 
+  if (path === '/app/stores/categories') {
+    return 'Store categories';
+  }
+
+  if (/^\/app\/stores\/[^/]+$/.test(path)) {
+    return 'Store details';
+  }
+
   if (/^\/app\/support-tickets\/[^/]+$/.test(path)) {
     return 'Ticket details';
   }

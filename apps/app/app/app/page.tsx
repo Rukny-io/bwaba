@@ -2,9 +2,7 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   BarChart2,
-  Eye,
   Link2,
-  MousePointerClick,
   Package,
   Plus,
   ShoppingBag,
@@ -34,41 +32,53 @@ export default async function DashboardHomePage() {
     data.profile?.name ?? user.name ?? user.email?.split('@')[0] ?? 'بك';
   const { analytics, commerce, links, insights } = data;
   const { orderStats, productStats } = commerce;
-  const clicksTrend = formatTrendBadge(analytics.summary.changes.clicks);
+  const clicksChange = analytics.summary.changes.clicks;
+  const clicksTrend = formatTrendBadge(clicksChange);
   const topLinks = analytics.topLinks.slice(0, 3);
 
   return (
     <section className="dashboard-page dashboard-section-stack">
 
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 xl:grid-cols-4">
         <DashboardMetricCard
-          icon={MousePointerClick}
+          icon="mouse-pointer-click"
           label="نقرات الروابط"
           value={formatNumber(analytics.summary.totalClicks)}
+          numericValue={analytics.summary.totalClicks}
+          animationDelay={0}
           trend={clicksTrend}
-          trendPositive={(analytics.summary.changes.clicks ?? 0) >= 0}
+          trendNumericValue={
+            clicksChange != null && clicksChange !== 0 ? clicksChange : undefined
+          }
+          trendPositive={(clicksChange ?? 0) >= 0}
           comparisonPrimary="آخر 30 يوم"
           comparisonSecondary="مقابل الفترة السابقة"
         />
         <DashboardMetricCard
-          icon={Eye}
+          icon="eye"
           label="زيارات الصفحة"
           value={formatNumber(analytics.summary.totalLinkViews)}
+          numericValue={analytics.summary.totalLinkViews}
+          animationDelay={80}
           comparisonPrimary="إجمالي المشاهدات"
           comparisonSecondary="على جميع الروابط"
         />
         <DashboardMetricCard
-          icon={ShoppingBag}
+          icon="shopping-bag"
           label="الطلبات"
           value={formatNumber(orderStats.totalOrders)}
+          numericValue={orderStats.totalOrders}
+          animationDelay={160}
           comparisonPrimary={`${formatNumber(orderStats.pendingOrders)} معلّقة`}
           comparisonSecondary={formatCurrency(orderStats.totalRevenue)}
         />
         <DashboardMetricCard
-          icon={Package}
+          icon="package"
           label="المنتجات النشطة"
           value={formatNumber(productStats.activeProducts)}
+          numericValue={productStats.activeProducts}
+          animationDelay={240}
           comparisonPrimary={`${formatNumber(productStats.totalProducts)} إجمالي`}
           comparisonSecondary={
             productStats.lowStock > 0

@@ -40,9 +40,6 @@ const monorepoAliases = {
 const API_BACKEND_URL =
   process.env.API_BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
 
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
-
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['192.168.0.179', '127.0.0.1', 'localhost'],
@@ -57,20 +54,6 @@ const nextConfig: NextConfig = {
       ...monorepoAliases,
     };
     return config;
-  },
-  async redirects() {
-    return [
-      {
-        source: '/terms',
-        destination: `${ACCOUNTS_URL.replace(/\/$/, '')}/terms`,
-        permanent: false,
-      },
-      {
-        source: '/privacy',
-        destination: `${ACCOUNTS_URL.replace(/\/$/, '')}/privacy`,
-        permanent: false,
-      },
-    ];
   },
   async rewrites() {
     return [

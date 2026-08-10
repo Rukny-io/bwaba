@@ -9,6 +9,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # file: dependency needs the shared package present before npm install
+COPY packages/auth ./packages/auth
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/accounts/package.json apps/accounts/package-lock.json* ./apps/accounts/
 # Only the file: packages referenced by package.json (skip storybook/vitest — they use workspace:*)
@@ -32,11 +33,15 @@ WORKDIR /app/apps/accounts
 # Source first (root .dockerignore excludes **/node_modules).
 # Must land before deps node_modules so file: symlinks cannot collide with COPY.
 COPY apps/accounts .
+RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/accounts/node_modules ./node_modules
+COPY --from=deps /app/packages/auth /app/packages/auth
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
 # Materialize file: packages (Turbopack rejects outbound symlinks)
 RUN node scripts/materialize-workspace-deps.mjs \
+  && rm -rf node_modules/@rukny/auth \
+  && cp -a /app/packages/auth node_modules/@rukny/auth \
   && rm -rf node_modules/@rukny/thmanyah-font \
   && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 
@@ -67,6 +72,7 @@ ENV NEXT_PUBLIC_OAUTH_GITHUB_ENABLED=${NEXT_PUBLIC_OAUTH_GITHUB_ENABLED}
 ENV NEXT_PUBLIC_OAUTH_FACEBOOK_ENABLED=${NEXT_PUBLIC_OAUTH_FACEBOOK_ENABLED}
 
 RUN test -f node_modules/@heroui/react/package.json \
+  && test -f node_modules/@rukny/auth/src/edge/check-edge-auth.ts \
   && test -f node_modules/@rukny/thmanyah-font/src/next.ts \
   && test -f /app/packages/Thmanyah-Font-Family/fonts/thmanyahsans/thmanyahsans-Regular.woff2
 

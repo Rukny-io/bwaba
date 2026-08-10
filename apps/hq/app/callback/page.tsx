@@ -3,35 +3,68 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthShell } from '@/components/auth/auth-shell';
-import { exchangeCode, fetchCurrentUser } from '@/lib/api';
+import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
 import { resolveClientNext } from '@/lib/auth-redirect';
+import {
+  clearOAuthParamsFromUrl,
+  clearStashedOAuthParams,
+  readOAuthCallbackParams,
+  readStashedOAuthParams,
+  stashOAuthParams,
+} from '@/lib/oauth-callback';
 
-const ACCOUNTS_URL =
-  process.env.NEXT_PUBLIC_ACCOUNTS_URL || 'http://localhost:3005';
+import { resolveAccountsUrl } from '@rukny/auth/client/env-urls';
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const ran = useRef(false);
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    if (ran.current) return;
-    ran.current = true;
+    if (hasRun.current) return;
+    hasRun.current = true;
 
-    const code = searchParams.get('code');
+    const fromUrl = readOAuthCallbackParams(searchParams);
+    if (fromUrl.code) {
+      stashOAuthParams({ code: fromUrl.code, next: fromUrl.next });
+      clearOAuthParamsFromUrl();
+    }
+
+    const stashed = readStashedOAuthParams();
+    const code = fromUrl.code || stashed.code;
+    const nextRaw = fromUrl.next || stashed.next;
+
     if (!code) {
+      hasRun.current = false;
       router.replace('/login');
       return;
     }
 
-    const nextPath = resolveClientNext(searchParams.get('next'), '/app');
+    const nextPath = resolveClientNext(nextRaw, '/app');
 
     (async () => {
       try {
-        const result = await exchangeCode(code);
+        const result = await exchangeCodeOnce(code);
+        clearStashedOAuthParams();
+
         if (!result.success) {
           setError(result.message || 'Could not complete sign-in');
+          return;
+        }
+
+        if (result.needsProfileCompletion) {
+          const accountsUrl = resolveAccountsUrl();
+          const complete = new URL('/complete-profile', accountsUrl);
+          complete.searchParams.set('next', `${window.location.origin}${nextPath}`);
+          window.location.href = complete.toString();
+          return;
+        }
+
+        if (result.requires2FA && result.pendingSessionId) {
+          const verify = new URL('/verify-2fa', accountsUrl);
+          verify.searchParams.set('sessionId', result.pendingSessionId);
+          window.location.href = verify.toString();
           return;
         }
 
@@ -41,24 +74,36 @@ function CallbackContent() {
           return;
         }
 
-        if (result.needsProfileCompletion) {
-          const complete = new URL('/complete-profile', ACCOUNTS_URL);
-          complete.searchParams.set('next', `${window.location.origin}${nextPath}`);
-          window.location.href = complete.toString();
+        if (user) {
+          window.location.replace(nextPath);
           return;
         }
 
-        if (result.requires2FA && result.pendingSessionId) {
-          const verify = new URL('/verify-2fa', ACCOUNTS_URL);
-          verify.searchParams.set('sessionId', result.pendingSessionId);
-          window.location.href = verify.toString();
+        await new Promise((resolve) => window.setTimeout(resolve, 150));
+        const retryUser = await fetchCurrentUser();
+        if (retryUser?.role === 'ADMIN') {
+          window.location.replace(nextPath);
           return;
         }
 
-        router.replace(nextPath);
+        setError('Signed in but the session was not saved. Please try again.');
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'An error occurred during sign-in';
+        const existing = await fetchCurrentUser();
+        if (existing?.role === 'ADMIN') {
+          clearStashedOAuthParams();
+          window.location.replace(nextPath);
+          return;
+        }
+
+        const apiError = err as {
+          message?: string;
+          data?: { message?: string | string[] };
+        };
+        const raw =
+          apiError.data?.message ??
+          apiError.message ??
+          'An error occurred during sign-in';
+        const message = Array.isArray(raw) ? raw[0] : raw;
         setError(message);
       }
     })();
@@ -73,7 +118,10 @@ function CallbackContent() {
           <button
             type="button"
             className="text-sm font-medium underline"
-            onClick={() => router.replace('/login')}
+            onClick={() => {
+              clearStashedOAuthParams();
+              router.replace('/login');
+            }}
           >
             Back to sign in
           </button>

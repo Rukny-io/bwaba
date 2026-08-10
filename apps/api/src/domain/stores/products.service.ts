@@ -10,12 +10,19 @@ import {
 import { ProductStatus as PrismaProductStatus } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
-import { CreateProductDto, ProductStatus } from './dto/create-product.dto';
+import { CreateProductDto, ProductKind, ProductStatus } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { CreateProductAttributeDto } from './dto/product-attribute.dto';
+import { CreateProductVariantDto } from './dto/product-variant.dto';
+import { resolveTemplateForKind } from './category-template-rules';
+import type { CategoryTemplateFields } from './dto/product-attribute.dto';
+import { getStaticStoreCategory } from './store-category-catalog';
+import { normalizeStoreCategorySlug } from './store-category-slugs';
 import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
 import { CacheManager } from '../../core/cache/cache.manager';
 import S3Service from '../../services/s3.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class ProductsService {
@@ -26,6 +33,7 @@ export class ProductsService {
     private prisma: PrismaService,
     private readonly redisService: RedisService,
     private readonly cacheManager: CacheManager,
+    private readonly subscriptionsService: SubscriptionsService,
     @Inject(forwardRef(() => S3Service))
     private readonly s3Service: S3Service,
   ) {}
@@ -68,14 +76,33 @@ export class ProductsService {
       hasVariants: hasVariantsInput,
       trackInventory: trackInventoryInput,
       isDigital: isDigitalInput,
+      kind: kindInput,
       ...productData
     } = createProductDto;
+
+    const resolvedKind = this.resolveProductKind(kindInput, isDigitalInput);
+    await this.assertProductKindAllowed(userId, resolvedKind);
+
+    const kindDefaults = this.getKindDefaults(resolvedKind);
 
     // حساب قيم hasVariants و trackInventory
     const hasVariantsValue =
       hasVariantsInput || (variants && variants.length > 0) || false;
-    const trackInventoryValue = trackInventoryInput ?? true;
-    const isDigitalValue = isDigitalInput ?? false;
+    const trackInventoryValue =
+      trackInventoryInput ?? kindDefaults.trackInventory;
+    const isDigitalValue = kindDefaults.isDigital;
+
+    const categoryTemplate = await this.resolveStoreCategoryTemplate(store);
+    const categorySlug =
+      normalizeStoreCategorySlug(store.category) ?? store.category ?? null;
+    this.assertCreateTemplatePayload(
+      categoryTemplate,
+      resolvedKind,
+      productAttributes,
+      variants,
+      hasVariantsValue,
+      categorySlug,
+    );
 
     // إنشاء المنتج مع المتغيرات والخصائص في transaction واحد
     const product = await this.prisma.$transaction(async (tx) => {
@@ -89,6 +116,11 @@ export class ProductsService {
           hasVariants: hasVariantsValue,
           trackInventory: trackInventoryValue,
           isDigital: isDigitalValue,
+          productKind: resolvedKind,
+          quantity:
+            resolvedKind === ProductKind.PHYSICAL
+              ? (productData.quantity ?? 0)
+              : 0,
           updatedAt: new Date(),
           ...(status && { status: status as any }),
           ...(categoryId && { categoryId }),
@@ -727,5 +759,121 @@ export class ProductsService {
 
     // Fallback: use nanoid
     return nanoid(10).toLowerCase();
+  }
+
+  private resolveProductKind(
+    kind?: ProductKind,
+    isDigital?: boolean,
+  ): ProductKind {
+    if (kind) return kind;
+    if (isDigital) return ProductKind.DIGITAL;
+    return ProductKind.PHYSICAL;
+  }
+
+  private getKindDefaults(kind: ProductKind) {
+    switch (kind) {
+      case ProductKind.DIGITAL:
+        return { isDigital: true, trackInventory: false };
+      case ProductKind.SERVICE:
+        return { isDigital: false, trackInventory: false };
+      case ProductKind.PHYSICAL:
+      default:
+        return { isDigital: false, trackInventory: true };
+    }
+  }
+
+  private async assertProductKindAllowed(userId: string, kind: ProductKind) {
+    if (kind !== ProductKind.DIGITAL) return;
+
+    const limits = await this.subscriptionsService.getUserLimits(userId);
+    if (!limits.digitalProducts) {
+      throw new ForbiddenException({
+        message: 'المنتجات الرقمية غير متاحة في باقتك الحالية',
+        code: 'FEATURE_REQUIRED',
+        feature: 'digitalProducts',
+      });
+    }
+  }
+
+  private async resolveStoreCategoryTemplate(store: {
+    categoryId: string | null;
+    category: string | null;
+    store_categories: { templateFields: unknown } | null;
+  }): Promise<CategoryTemplateFields | null> {
+    let raw = store.store_categories?.templateFields;
+    const slug = normalizeStoreCategorySlug(store.category);
+
+    if (!raw && slug) {
+      const category = await this.prisma.store_categories.findFirst({
+        where: { slug, isActive: true },
+      });
+      raw = category?.templateFields;
+    }
+
+    if (!raw && slug) {
+      raw = getStaticStoreCategory(slug)?.templateFields;
+    }
+
+    return this.parseCategoryTemplateFields(raw);
+  }
+
+  private parseCategoryTemplateFields(
+    value: unknown,
+  ): CategoryTemplateFields | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const obj = value as Record<string, unknown>;
+    if (
+      typeof obj.hasVariants !== 'boolean' ||
+      !Array.isArray(obj.productAttributes)
+    ) {
+      return null;
+    }
+    return value as CategoryTemplateFields;
+  }
+
+  private assertCreateTemplatePayload(
+    template: CategoryTemplateFields | null,
+    kind: ProductKind,
+    productAttributes: CreateProductAttributeDto[] | undefined,
+    variants: CreateProductVariantDto[] | undefined,
+    hasVariants: boolean,
+    categorySlug?: string | null,
+  ) {
+    const resolved = resolveTemplateForKind(template, kind, categorySlug);
+    if (!resolved) return;
+
+    const provided = new Map(
+      (productAttributes ?? []).map((attr) => [attr.key, attr.value?.trim()]),
+    );
+
+    for (const field of resolved.productAttributes) {
+      if (field.required && !provided.get(field.key)) {
+        throw new BadRequestException(`أكمل الحقل: ${field.labelAr}`);
+      }
+    }
+
+    if (!resolved.hasVariants || !hasVariants) return;
+
+    const variantKeys = resolved.variantAttributes?.map((attr) => attr.key) ?? [];
+    if (!variantKeys.length) return;
+
+    if (!variants?.length) {
+      throw new BadRequestException('أضف متغيراً واحداً على الأقل');
+    }
+
+    for (const variant of variants) {
+      for (const key of variantKeys) {
+        const value = variant.attributes?.[key];
+        if (!value?.trim()) {
+          const label =
+            resolved.variantAttributes?.find((attr) => attr.key === key)
+              ?.labelAr ?? key;
+          throw new BadRequestException(`اختر ${label} لكل المتغيرات`);
+        }
+      }
+      if (!Number.isFinite(variant.stock) || variant.stock < 0) {
+        throw new BadRequestException('أدخل كمية مخزون صالحة لكل متغير');
+      }
+    }
   }
 }

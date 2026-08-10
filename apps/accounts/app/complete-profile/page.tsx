@@ -251,11 +251,7 @@ function CompleteProfileContent() {
     setIsLoading(true)
     setApiError(null)
     try {
-      const categorySlugMap: Record<string, string> = {
-        "food-beverages": "food",
-        "kids-baby": "kids",
-      }
-      const mappedCategory = storeCategory ? (categorySlugMap[storeCategory] || storeCategory) : undefined
+      const mappedCategory = storeCategory || undefined
       const payload = {
         name: fullName,
         username,

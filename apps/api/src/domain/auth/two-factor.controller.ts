@@ -33,6 +33,7 @@ import { WhatsAppBusinessService } from '../../integrations/whatsapp-business/wh
 import { normalizePhoneNumber } from '../forms/utils/form-phone-verification-check.util';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 import {
   setAccessTokenCookie,
@@ -85,6 +86,7 @@ export class TwoFactorController {
    * Authenticator / Recovery code مباشرةً إذا كان 2FA مفعلاً.
    */
   @Post('start-verify-identity')
+  @Public() // 🔒 F-07: pre-login 2FA method discovery (no JWT yet)
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -467,6 +469,7 @@ export class TwoFactorController {
    * 🟢 إرسال رمز OTP عبر الواتساب
    */
   @Post('whatsapp/send-otp')
+  @Public() // 🔒 F-07: pending 2FA session, no access token yet
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'إرسال رمز التحقق عبر الواتساب' })
@@ -527,6 +530,7 @@ export class TwoFactorController {
    * يُستخدم بعد التحقق الأولي (QuickSign/OAuth) إذا كان 2FA مفعلاً
    */
   @Post('verify-login')
+  @Public() // 🔒 F-07: completes login after password/OAuth when 2FA is required
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 🔒 10 محاولات في الدقيقة (منع brute force)
   @ApiOperation({ summary: 'التحقق من 2FA عند تسجيل الدخول' })
@@ -723,6 +727,7 @@ export class TwoFactorController {
    * 🔒 لا يكشف ما إذا كانت الجلسة موجودة أو صالحة لمنع التعداد.
    */
   @Get('check-session/:sessionId')
+  @Public() // 🔒 F-07: pre-login session probe
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 🔒 10 محاولات في الدقيقة (منع تعداد الجلسات)
   @ApiOperation({ summary: 'فحص تمهيدي لجلسة 2FA بدون كشف حالتها' })

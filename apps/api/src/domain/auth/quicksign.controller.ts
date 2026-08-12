@@ -54,6 +54,7 @@ import {
   getTrustedDeviceId,
 } from './cookie.config';
 import { getClientIp } from '../../core/common/utils/client-ip.util';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 // Throttle policies:
 // - Production: strict limits to prevent abuse
@@ -76,6 +77,7 @@ const QUICK_SIGN_VERIFY_THROTTLE =
 const isProduction = process.env.NODE_ENV === 'production';
 
 @ApiTags('QuickSign Authentication')
+@Public() // 🔒 F-07: magic-link / signup flow has no JWT yet
 @Controller('auth/quicksign')
 export class QuickSignController {
   constructor(

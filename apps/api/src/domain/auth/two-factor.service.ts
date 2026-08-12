@@ -293,12 +293,12 @@ export class TwoFactorService {
     // فك تشفير المفتاح
     const secret = this.decrypt(user.twoFactorSecret);
 
-    // التحقق من الرمز باستخدام otplib (±1 خطوة زمنية لاختلاف ساعة الجهاز)
+    // otplib v13: epochTolerance is seconds (window:1 → 30), not steps
     const cleanToken = token.replace(/\s/g, ''); // إزالة المسافات
     const result = verifySync({
       token: cleanToken,
       secret,
-      epochTolerance: 1,
+      epochTolerance: 30,
     });
 
     if (!result.valid) {
@@ -360,12 +360,12 @@ export class TwoFactorService {
     // فك تشفير المفتاح
     const secret = this.decrypt(user.twoFactorSecret);
 
-    // التحقق من الرمز باستخدام otplib (±1 خطوة زمنية لاختلاف ساعة الجهاز)
+    // otplib v13: epochTolerance is seconds (window:1 → 30), not steps
     const cleanToken = token.replace(/\s/g, '');
     const result = verifySync({
       token: cleanToken,
       secret,
-      epochTolerance: 1,
+      epochTolerance: 30,
     });
 
     if (result.valid) {

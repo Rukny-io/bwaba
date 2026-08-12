@@ -26,6 +26,7 @@ import {
   UnlockAccountDto,
   LockoutStatusResponseDto,
 } from './dto/account-lockout.dto';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 /**
  * 🔒 Account Lockout Controller
@@ -41,6 +42,7 @@ export class AccountLockoutController {
    * 🔍 فحص حالة القفل (للمستخدم)
    */
   @Get('status')
+  @Public() // 🔒 F-07: checked on login before session exists
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'فحص حالة قفل الحساب' })
   @ApiQuery({ name: 'email', required: true, description: 'البريد الإلكتروني' })

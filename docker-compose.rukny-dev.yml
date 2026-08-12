@@ -59,6 +59,9 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      # Local docker uses production NODE_ENV for Next builds; keep auth report-mode
+      # so missing @Public() on login routes does not brick accounts during rollout.
+      GLOBAL_AUTH_MODE: ${GLOBAL_AUTH_MODE:-report}
       SESSION_FINGERPRINT_STRICT: "false"
       PORT: 3001
       HOST: 0.0.0.0

@@ -53,6 +53,14 @@ export function useChooseMethodSession() {
 
     if (urlSessionId) {
       setSessionId(urlSessionId)
+      setHas2FA(true)
+      sessionStorage.setItem("auth_pending_2fa_session", urlSessionId)
+    } else {
+      const storedSession = sessionStorage.getItem("auth_pending_2fa_session")
+      if (storedSession) {
+        setSessionId(storedSession)
+        setHas2FA(true)
+      }
     }
 
     const cachedData = sessionStorage.getItem(`auth_methods_${finalEmail}`)
@@ -60,7 +68,7 @@ export function useChooseMethodSession() {
       try {
         const { has2FA: cached2FA, isSubscribed: cachedSub } =
           JSON.parse(cachedData)
-        setHas2FA(cached2FA)
+        if (!urlSessionId) setHas2FA(cached2FA)
         setIsSubscribed(cachedSub)
         setIsLoading(false)
       } catch {
@@ -70,7 +78,8 @@ export function useChooseMethodSession() {
 
     startVerifyIdentity(finalEmail)
       .then((result) => {
-        const fresh2FA = result.availableMethods.authenticator
+        const fresh2FA =
+          Boolean(result.availableMethods.authenticator) || Boolean(urlSessionId)
         const freshSub = result.availableMethods.whatsapp || false
 
         setHas2FA(fresh2FA)
@@ -87,10 +96,15 @@ export function useChooseMethodSession() {
 
         if (result.pendingSessionId && !urlSessionId) {
           setSessionId(result.pendingSessionId)
+          sessionStorage.setItem(
+            "auth_pending_2fa_session",
+            result.pendingSessionId,
+          )
         }
       })
       .catch(() => {
-        // الفشل لا يمنع من المحاولة عبر الإيميل
+        // Keep email path; preserve has2FA when we already have a 2FA session.
+        if (urlSessionId) setHas2FA(true)
       })
       .finally(() => {
         setIsLoading(false)

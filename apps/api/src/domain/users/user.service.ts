@@ -257,12 +257,12 @@ export class UserService {
       throw new BadRequestException('2FA setup not initiated');
     }
 
-    // Verify code using otplib (window:1 allows ±30s clock skew)
+    // Verify code using otplib (epochTolerance:30 = ±1 period / ±30s clock skew)
     const result = verifySync({
       token: code,
       secret: user.twoFactorSecret,
-      window: 1,
-    } as any);
+      epochTolerance: 30,
+    });
 
     if (!result.valid) {
       // Log failed 2FA verification

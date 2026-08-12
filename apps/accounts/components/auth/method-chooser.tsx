@@ -109,6 +109,8 @@ interface MethodChooserProps {
   isSubscribed?: boolean
   className?: string
   isLoading?: boolean
+  sessionId?: string | null
+  email?: string | null
 }
 
 export function MethodChooser({
@@ -116,6 +118,8 @@ export function MethodChooser({
   isSubscribed = false,
   className,
   isLoading = false,
+  sessionId,
+  email,
 }: MethodChooserProps) {
   const router = useRouter()
   const t = useTranslations("Auth")
@@ -131,7 +135,7 @@ export function MethodChooser({
 
   const handleSelect = (method: VerificationMethod, disabled: boolean) => {
     if (disabled || isLoading) return
-    router.push(chooseMethodPath(method))
+    router.push(chooseMethodPath(method, { sessionId, email }))
   }
 
   return (

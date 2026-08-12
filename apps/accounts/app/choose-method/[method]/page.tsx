@@ -105,6 +105,7 @@ function ChooseMethodVerifyContent() {
     }
 
     sessionStorage.removeItem("auth_email")
+    sessionStorage.removeItem("auth_pending_2fa_session")
     window.location.href = getRedirectUrlByRole(result.user?.role)
   }
 

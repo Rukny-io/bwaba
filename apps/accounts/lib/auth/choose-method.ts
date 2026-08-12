@@ -27,6 +27,14 @@ export function isVerificationMethodAvailable(
   return false
 }
 
-export function chooseMethodPath(method: VerificationMethod): string {
-  return `/choose-method/${method}`
+export function chooseMethodPath(
+  method: VerificationMethod,
+  opts?: { sessionId?: string | null; email?: string | null },
+): string {
+  const path = `/choose-method/${method}`
+  if (!opts?.sessionId && !opts?.email) return path
+  const params = new URLSearchParams()
+  if (opts.sessionId) params.set("sessionId", opts.sessionId)
+  if (opts.email) params.set("email", opts.email)
+  return `${path}?${params.toString()}`
 }

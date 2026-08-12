@@ -219,10 +219,24 @@ function LoginPageContent() {
 
       if (!result.success) {
         if (result.requires2FA && result.pendingSessionId) {
+          const emailFor2FA = result.email || trimmedEmail
           const params = new URLSearchParams({
             sessionId: result.pendingSessionId,
           })
-          if (result.email) params.set("email", result.email)
+          if (emailFor2FA) {
+            params.set("email", emailFor2FA)
+            sessionStorage.setItem("auth_email", emailFor2FA)
+            // Password login already proved 2FA is required — don't wait on
+            // start-verify-identity (or a stale cache) to show Authenticator.
+            sessionStorage.setItem(
+              `auth_methods_${emailFor2FA}`,
+              JSON.stringify({
+                has2FA: true,
+                isSubscribed: false,
+                timestamp: Date.now(),
+              }),
+            )
+          }
           router.replace(`/choose-method?${params.toString()}`)
           return
         }

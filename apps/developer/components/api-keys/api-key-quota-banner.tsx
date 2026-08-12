@@ -6,7 +6,12 @@ import {
   ApiKeyQuotaIndicator,
   type ApiKeyQuotaLabels,
 } from '@/components/api-keys/api-key-quota-indicator';
-import { isQuotaAtLimit } from '@/lib/developer-plan-limits';
+import {
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
+import { AppSettingsSection } from '@/components/settings/app-settings-section';
+import { isQuotaAtLimit, isUnlimitedLimit } from '@/lib/developer-plan-limits';
 
 interface ApiKeyQuotaBannerProps {
   used: number;
@@ -32,6 +37,12 @@ export function ApiKeyQuotaBanner({
   retryLabel,
 }: ApiKeyQuotaBannerProps) {
   const isAtLimit = isQuotaAtLimit(used, limit);
+  const unlimited = isUnlimitedLimit(limit);
+  const usageLabel = unlimited
+    ? quotaLabels.activeCount.replace('{used}', String(used))
+    : quotaLabels.ofLimit
+        .replace('{used}', String(used))
+        .replace('{limit}', String(limit));
 
   return (
     <div className="space-y-3">
@@ -44,26 +55,25 @@ export function ApiKeyQuotaBanner({
         />
       ) : null}
 
-      <div className="dashboard-card rounded-2xl p-4 sm:rounded-3xl sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Key className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              {quotaTitle}
-            </p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {quotaDesc}
-            </p>
-            <ApiKeyQuotaIndicator
-              used={used}
-              limit={limit}
-              labels={quotaLabels}
-            />
-          </div>
+      <AppSettingsSection flush title={quotaTitle} description={quotaDesc}>
+        <SettingsRow
+          isStatic
+          icon={Key}
+          title={usageLabel}
+          subtitle={unlimited ? quotaLabels.openHint : quotaLabels.remaining.replace(
+            '{remaining}',
+            String(Math.max(limit - used, 0)),
+          )}
+        />
+        <SettingsRowDivider />
+        <div className="px-4 pb-4 pt-1 sm:px-5 sm:pb-5">
+          <ApiKeyQuotaIndicator
+            used={used}
+            limit={limit}
+            labels={quotaLabels}
+          />
         </div>
-      </div>
+      </AppSettingsSection>
 
       {isAtLimit ? (
         <ApiKeysAlert variant="warning" message={limitMessage} />

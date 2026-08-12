@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listApiKeys } from '@/lib/api/api-keys';
 import { getAppWallet } from '@/lib/api/wallet';
 import { listWhatsappAccounts } from '@/lib/api/whatsapp';
-import { getFormsAppSummary } from '@/lib/api/forms';
+import { getFormsAppSummary, listLinkedForms } from '@/lib/api/forms';
 
 export const appDashboardKeys = {
   all: (publicAppId: string, internalAppId: string) =>
@@ -15,14 +15,18 @@ export function useAppDashboard(publicAppId: string, internalAppId: string) {
   return useQuery({
     queryKey: appDashboardKeys.all(publicAppId, internalAppId),
     queryFn: async () => {
-      const [keys, walletResult, accounts, formsSummary] = await Promise.all([
-        listApiKeys(internalAppId),
-        getAppWallet(publicAppId).catch(() => null),
-        listWhatsappAccounts(publicAppId).catch(() => [] as Awaited<
-          ReturnType<typeof listWhatsappAccounts>
-        >),
-        getFormsAppSummary(publicAppId).catch(() => null),
-      ]);
+      const [keys, walletResult, accounts, formsSummary, linkedForms] =
+        await Promise.all([
+          listApiKeys(internalAppId),
+          getAppWallet(publicAppId).catch(() => null),
+          listWhatsappAccounts(publicAppId).catch(() => [] as Awaited<
+            ReturnType<typeof listWhatsappAccounts>
+          >),
+          getFormsAppSummary(publicAppId).catch(() => null),
+          listLinkedForms(publicAppId).catch(() => [] as Awaited<
+            ReturnType<typeof listLinkedForms>
+          >),
+        ]);
 
       const wallet = walletResult;
 
@@ -34,7 +38,8 @@ export function useAppDashboard(publicAppId: string, internalAppId: string) {
       const hasUsedKey = keys.some(
         (k) => Number(k.requestCount ?? 0) > 0 || Boolean(k.lastUsedAt),
       );
-      const hasIntegration = accounts.length > 0 || (formsSummary?.linkedCount ?? 0) > 0;
+      const hasIntegration =
+        accounts.length > 0 || (formsSummary?.linkedCount ?? 0) > 0;
 
       return {
         keys,
@@ -43,6 +48,7 @@ export function useAppDashboard(publicAppId: string, internalAppId: string) {
         wallet,
         accounts,
         formsSummary,
+        linkedForms,
         hasIntegration,
         hasUsedKey,
       };

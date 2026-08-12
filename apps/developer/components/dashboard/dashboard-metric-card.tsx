@@ -1,4 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export type DashboardMetricChipTone =
+  | 'success'
+  | 'warning'
+  | 'neutral'
+  | 'danger';
 
 export interface DashboardMetricCardProps {
   icon: LucideIcon;
@@ -8,9 +15,20 @@ export interface DashboardMetricCardProps {
   comparisonSecondary?: string;
   trend?: string;
   trendPositive?: boolean;
+  chip?: string;
+  chipTone?: DashboardMetricChipTone;
+  tabular?: boolean;
   href?: string;
 }
 
+const chipToneClass: Record<DashboardMetricChipTone, string> = {
+  success: 'text-[var(--success)]',
+  warning: 'text-[var(--warning)]',
+  danger: 'text-[var(--danger)]',
+  neutral: 'text-[var(--muted-foreground)]',
+};
+
+/** Flat metric tile — matches forms dashboard */
 export function DashboardMetricCard({
   icon: Icon,
   label,
@@ -19,59 +37,88 @@ export function DashboardMetricCard({
   comparisonSecondary,
   trend,
   trendPositive = true,
+  chip,
+  chipTone = 'neutral',
+  tabular = true,
 }: DashboardMetricCardProps) {
+  const valueNode = tabular ? (
+    <span dir="ltr" lang="en">
+      {value}
+    </span>
+  ) : (
+    value
+  );
+
+  const hasFooter = Boolean(
+    chip || trend || comparisonSecondary || comparisonPrimary,
+  );
+
   return (
-    <article className="dashboard-card flex min-h-[7.25rem] flex-col gap-2 p-3 sm:min-h-0 sm:gap-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] sm:size-10 sm:rounded-xl">
-          <Icon className="size-[18px] sm:size-5" strokeWidth={1.6} />
-        </div>
-        {trend ? (
-          <span
-            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums sm:px-2.5 sm:py-1 sm:text-[11px] ${
-              trendPositive
-                ? 'bg-[var(--brand-soft-lime)] text-[var(--success)]'
-                : 'bg-[color-mix(in_srgb,var(--danger)_12%,var(--background))] text-[var(--danger)]'
-            }`}
-            dir="ltr"
-            lang="en"
-          >
-            {trend}
-          </span>
-        ) : (
-          <span className="size-0 sm:hidden" aria-hidden />
-        )}
+    <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
+          {label}
+        </p>
+        <Icon
+          className="size-[18px] shrink-0 text-[var(--muted-foreground)]/75"
+          strokeWidth={1.75}
+          aria-hidden
+        />
       </div>
 
-      <p className="line-clamp-2 text-xs font-medium leading-snug text-[var(--muted-foreground)] sm:text-[13px]">
-        {label}
+      <p
+        className={cn(
+          'mt-3 min-w-0 font-semibold leading-none tracking-tight text-[var(--foreground)]',
+          tabular
+            ? 'text-[1.65rem] tabular-nums sm:text-[1.75rem]'
+            : 'text-[1.25rem] leading-snug sm:text-[1.35rem]',
+        )}
+      >
+        {valueNode}
       </p>
 
-      <div className="mt-auto space-y-1 sm:space-y-0">
-        <div className="flex items-end justify-between gap-2 sm:gap-3">
-          <p
-            className="metric-value text-[var(--foreground)]"
-            dir="ltr"
-            lang="en"
-          >
-            {value}
-          </p>
-          {comparisonSecondary ? (
-            <p className="hidden max-w-[9rem] text-end text-[11px] leading-snug text-[var(--muted-foreground)]/70 sm:block">
+      {hasFooter ? (
+        <p className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+          {chip ? (
+            <span className={cn('font-medium', chipToneClass[chipTone])}>
+              {chip}
+            </span>
+          ) : null}
+          {!chip && trend ? (
+            <>
+              <span
+                className={cn(
+                  'font-medium tabular-nums',
+                  trendPositive ? 'text-[var(--success)]' : 'text-[var(--danger)]',
+                )}
+                dir="ltr"
+                lang="en"
+              >
+                {trend}
+              </span>
+              {comparisonSecondary ? (
+                <span className="text-[var(--muted-foreground)]">
+                  {' '}
+                  · {comparisonSecondary}
+                </span>
+              ) : comparisonPrimary ? (
+                <span className="text-[var(--muted-foreground)]">
+                  {' '}
+                  · {comparisonPrimary}
+                </span>
+              ) : null}
+            </>
+          ) : !chip && comparisonSecondary ? (
+            <>
               {comparisonPrimary}
-              <br />
+              {comparisonPrimary ? ' · ' : null}
               {comparisonSecondary}
-            </p>
-          ) : (
-            <p className="hidden max-w-[9rem] text-end text-[11px] leading-snug text-[var(--muted-foreground)]/70 sm:block">
-              {comparisonPrimary}
-            </p>
-          )}
-        </div>
-        <p className="line-clamp-1 text-[10px] leading-tight text-[var(--muted-foreground)]/70 sm:hidden">
-          {comparisonPrimary}
+            </>
+          ) : !chip && comparisonPrimary ? (
+            comparisonPrimary
+          ) : null}
         </p>
-      </div>
+      ) : null}
     </article>
   );
 }

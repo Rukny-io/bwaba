@@ -1,8 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Plus, Trash2, Zap } from 'lucide-react';
+import { Loader2, Plus, Trash2, Webhook, Zap } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
+import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
+import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
+import {
+  WhatsappEmptyState,
+  whatsappBtnDanger,
+  whatsappBtnPrimary,
+  whatsappBtnSecondary,
+  whatsappInputClass,
+} from '@/components/whatsapp/whatsapp-ui';
 import { useWebhookMutations, useWebhooks } from '@/hooks/use-webhooks';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 import { cn } from '@/lib/utils';
@@ -17,8 +26,9 @@ const WEBHOOK_EVENTS = [
   'template.rejected',
 ] as const;
 
-const cardClass =
-  'rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:rounded-3xl';
+function formatCount(value: number): string {
+  return new Intl.NumberFormat('en-US').format(value);
+}
 
 export function WhatsappWebhooksPanel() {
   const w = useTranslations().whatsapp;
@@ -44,55 +54,78 @@ export function WhatsappWebhooksPanel() {
     );
   }
 
+  const list = webhooks ?? [];
+  const activeCount = list.filter((h) => h.status === 'ACTIVE').length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <div className="dashboard-section-stack">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-[var(--muted-foreground)]">{w.webhooksPageDesc}</p>
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--primary-foreground)]"
+          className={whatsappBtnPrimary}
         >
           <Plus className="size-3.5" />
           {w.addWebhook}
         </button>
       </div>
 
-      {newSecret && (
-        <section className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_40%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--background))] p-4">
-          <p className="text-xs font-medium text-[var(--foreground)]">{w.webhookSecretOnce}</p>
+      <DashboardGrid>
+        <DashboardMetricCard
+          icon={Webhook}
+          label={w.metricWebhooksTotal}
+          value={formatCount(list.length)}
+          comparisonPrimary={w.metricWebhooksTotalHint}
+        />
+        <DashboardMetricCard
+          icon={Zap}
+          label={w.metricWebhooksActive}
+          value={formatCount(activeCount)}
+          comparisonPrimary={w.metricWebhooksActiveHint}
+        />
+      </DashboardGrid>
+
+      {newSecret ? (
+        <section className="rounded-2xl bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] p-4 sm:p-5">
+          <p className="text-[13px] font-medium text-[var(--foreground)]">{w.webhookSecretOnce}</p>
           <code className="mt-2 block break-all font-mono text-xs" dir="ltr">
             {newSecret}
           </code>
         </section>
-      )}
+      ) : null}
 
-      {showForm && (
-        <section className={cn(cardClass, 'space-y-3')}>
+      {showForm ? (
+        <section className="dashboard-panel space-y-4 rounded-2xl p-5 sm:rounded-3xl sm:p-6">
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={w.webhookUrl}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            className={whatsappInputClass}
             dir="ltr"
           />
-          <p className="text-xs font-medium text-[var(--muted-foreground)]">{w.webhookEvents}</p>
-          <div className="flex flex-wrap gap-2">
-            {WEBHOOK_EVENTS.map((event) => (
-              <button
-                key={event}
-                type="button"
-                onClick={() => toggleEvent(event)}
-                className={cn(
-                  'rounded-full px-2.5 py-1 font-mono text-[10px] transition-colors',
-                  events.includes(event)
-                    ? 'bg-[var(--foreground)] text-[var(--background)]'
-                    : 'bg-[var(--surface-secondary)] text-[var(--foreground)]',
-                )}
-              >
-                {event}
-              </button>
-            ))}
+          <div>
+            <p className="mb-2 text-[12.5px] font-medium text-[var(--muted-foreground)]">
+              {w.webhookEvents}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {WEBHOOK_EVENTS.map((event) => (
+                <button
+                  key={event}
+                  type="button"
+                  onClick={() => toggleEvent(event)}
+                  className={cn(
+                    'rounded-xl px-2.5 py-1.5 font-mono text-[11px] transition-colors',
+                    events.includes(event)
+                      ? 'bg-[var(--foreground)] text-[var(--background)]'
+                      : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                  )}
+                >
+                  {event}
+                </button>
+              ))}
+            </div>
           </div>
           <button
             type="button"
@@ -111,62 +144,87 @@ export function WhatsappWebhooksPanel() {
                 },
               )
             }
-            className="rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--primary-foreground)] disabled:opacity-50"
+            className={whatsappBtnPrimary}
           >
             {w.addWebhook}
           </button>
         </section>
-      )}
+      ) : null}
 
-      {!webhooks?.length ? (
-        <section className={cn(cardClass, 'text-center text-sm text-[var(--muted-foreground)]')}>
-          {w.noWebhooks}
-        </section>
+      {!list.length ? (
+        <WhatsappEmptyState
+          icon={Webhook}
+          title={w.noWebhooks}
+          description={w.webhooksEmptyDesc}
+          action={
+            <button type="button" onClick={() => setShowForm(true)} className={whatsappBtnPrimary}>
+              <Plus className="size-3.5" />
+              {w.addWebhook}
+            </button>
+          }
+        />
       ) : (
-        webhooks.map((hook) => (
-          <section key={hook.id} className={cn(cardClass, 'space-y-2')}>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <code className="break-all font-mono text-xs text-[var(--foreground)]" dir="ltr">
-                {hook.url}
-              </code>
-              <span className="rounded-full bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-semibold uppercase">
-                {hook.status}
-              </span>
-            </div>
-            <p className="font-mono text-[10px] text-[var(--muted-foreground)]">
-              {hook.events.join(', ')}
-            </p>
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                disabled={testMutation.isPending}
-                onClick={() =>
-                  testMutation.mutate(hook.id, {
-                    onSuccess: () => appToast.success(w.testWebhook),
-                    onError: (e) => appToast.error(getApiErrorMessage(e)),
-                  })
-                }
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1 text-xs"
-              >
-                <Zap className="size-3" />
-                {w.testWebhook}
-              </button>
-              <button
-                type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() =>
-                  deleteMutation.mutate(hook.id, {
-                    onSuccess: () => appToast.success('OK'),
-                    onError: (e) => appToast.error(getApiErrorMessage(e)),
-                  })
-                }
-                className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--danger)_30%,var(--border))] px-3 py-1 text-xs text-[var(--danger)]"
-              >
-                <Trash2 className="size-3" />
-              </button>
-            </div>
-          </section>
-        ))
+        <div className="space-y-3">
+          {list.map((hook) => (
+            <section
+              key={hook.id}
+              className="dashboard-panel space-y-3 rounded-2xl p-4 sm:rounded-3xl sm:p-5"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <code
+                  className="break-all font-mono text-[13px] text-[var(--foreground)]"
+                  dir="ltr"
+                >
+                  {hook.url}
+                </code>
+                <span className="rounded-lg bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                  {hook.status}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {hook.events.map((event) => (
+                  <span
+                    key={event}
+                    className="rounded-lg bg-[var(--surface-secondary)] px-2 py-1 font-mono text-[11px] text-[var(--muted-foreground)]"
+                    dir="ltr"
+                  >
+                    {event}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={testMutation.isPending}
+                  onClick={() =>
+                    testMutation.mutate(hook.id, {
+                      onSuccess: () => appToast.success(w.testWebhook),
+                      onError: (e) => appToast.error(getApiErrorMessage(e)),
+                    })
+                  }
+                  className={whatsappBtnSecondary}
+                >
+                  <Zap className="size-3.5" />
+                  {w.testWebhook}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  onClick={() =>
+                    deleteMutation.mutate(hook.id, {
+                      onSuccess: () => appToast.success(w.deleteWebhookDone),
+                      onError: (e) => appToast.error(getApiErrorMessage(e)),
+                    })
+                  }
+                  className={whatsappBtnDanger}
+                >
+                  <Trash2 className="size-3.5" />
+                  {w.deleteWebhook}
+                </button>
+              </div>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

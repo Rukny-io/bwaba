@@ -1,5 +1,10 @@
-import { AppLegalSettingsPanel } from '@/components/settings/app-legal-settings-panel';
+import { redirect } from 'next/navigation';
 
-export default function AppLegalSettingsPage() {
-  return <AppLegalSettingsPanel />;
+export default async function AppLegalSettingsPage({
+  params,
+}: {
+  params: Promise<{ appId: string }>;
+}) {
+  const { appId } = await params;
+  redirect(`/apps/${appId}/settings`);
 }

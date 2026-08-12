@@ -1,5 +1,6 @@
 import { getDashboardUser, requireAppForUser } from '@/lib/dal';
 import { AppWalletPage } from '@/components/wallet/app-wallet-page';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { getDictionary } from '@/lib/dictionary';
 
 export default async function WalletPage({
@@ -15,21 +16,16 @@ export default async function WalletPage({
   const greeting = user.name ?? user.username ?? user.email ?? 'Developer';
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <header>
-        <p
-          dir="ltr"
-          className="mb-1 font-mono text-[11px] text-[var(--muted-foreground)]"
-        >
-          {app.appId}
-        </p>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {w.title}
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--muted-foreground)] sm:text-sm">
-          {w.subtitle.replace('{name}', greeting)}
-        </p>
-      </header>
+    <div className="dashboard-section-stack">
+      <DashboardPageHeader
+        eyebrow={
+          <p dir="ltr" className="font-mono text-[11px] text-[var(--muted-foreground)]">
+            {app.appId}
+          </p>
+        }
+        title={w.title}
+        description={w.subtitle.replace('{name}', greeting)}
+      />
 
       <AppWalletPage publicAppId={app.appId} />
     </div>

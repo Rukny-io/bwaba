@@ -1,7 +1,10 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAppForUser, fetchApiKeysForApp } from '@/lib/dal';
 import { EditApiKeyForm } from '@/components/api-keys/edit-api-key-form';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { getDictionary } from '@/lib/dictionary';
+import { appApiKeys } from '@/lib/app-routes';
 
 export default async function EditApiKeyPage({
   params,
@@ -21,17 +24,21 @@ export default async function EditApiKeyPage({
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <header>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {ep.heading}
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--muted-foreground)] sm:text-sm">
-          {ep.description}
-        </p>
-      </header>
-
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
+      <DashboardPageHeader
+        className="mb-0"
+        title={ep.heading}
+        description={ep.description}
+        actions={
+          <Link
+            href={appApiKeys(app.appId)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+          >
+            {ep.back}
+          </Link>
+        }
+      />
       <EditApiKeyForm apiKey={apiKey} />
-    </div>
+    </section>
   );
 }

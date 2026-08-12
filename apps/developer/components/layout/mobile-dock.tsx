@@ -3,13 +3,19 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MoreHorizontal, X, LayoutGrid, LogOut, Plus } from 'lucide-react';
+import { MoreHorizontal, X, LayoutGrid, LogOut, Plus, type LucideIcon } from 'lucide-react';
 import {
   getMobileDockItems,
   getProductsCatalogNavItem,
   isNavItemActive,
   resolveNavItemLabel,
 } from '@/components/layout/nav-config';
+import {
+  MobileDockShell,
+  MobileDockPill,
+  MobileDockItem,
+  MobileDockFab,
+} from '@/components/layout/mobile-dock-primitives';
 import { logoutWithNotification } from '@/lib/auth-notify';
 import { useSidebarProducts } from '@/hooks/use-sidebar-products';
 import {
@@ -19,80 +25,41 @@ import {
 import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
 
-function DockButton({
-  href,
-  icon: Icon,
-  label,
-  isActive,
-  onClick,
-}: {
-  href?: string;
-  icon: React.ElementType;
-  label: string;
-  isActive: boolean;
-  onClick?: () => void;
-}) {
-  const content = (
-    <div
-      className={`relative flex items-center justify-center transition-all duration-200 ${
-        isActive
-          ? 'bg-[var(--foreground)] text-[var(--background)] shadow-md'
-          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-      }`}
-      style={{
-        borderRadius: 20,
-        height: 42,
-        padding: '0 14px',
-        gap: isActive ? 6 : 0,
-      }}
-    >
-      <Icon
-        size={18}
-        strokeWidth={isActive ? 2.2 : 1.7}
-        style={{ flexShrink: 0 }}
-      />
-      {isActive ? (
-        <span className="inline-block whitespace-nowrap text-[12px] font-bold tracking-tight">
-          {label}
-        </span>
-      ) : null}
-    </div>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} aria-label={label} style={{ display: 'flex' }} onClick={onClick}>
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-      }}
-    >
-      {content}
-    </button>
-  );
-}
-
 interface MobileDockProps {
   appId: string;
 }
 
 function drawerRowClass(active: boolean) {
   return cn(
-    'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors',
-    active ? 'bg-[var(--surface-secondary)]' : 'hover:bg-[var(--surface-secondary)]',
+    'flex items-center gap-2.5 rounded-xl px-2 py-2 transition-colors',
+    active
+      ? 'bg-[var(--surface-secondary)]'
+      : 'hover:bg-[var(--surface-secondary)]/80 active:bg-[var(--surface-secondary)]',
+  );
+}
+
+function DrawerIcon({
+  icon: Icon,
+  active,
+  danger,
+}: {
+  icon: LucideIcon;
+  active?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'flex size-8 shrink-0 items-center justify-center rounded-xl',
+        danger
+          ? 'bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] text-[var(--danger)]'
+          : active
+            ? 'bg-[var(--foreground)] text-[var(--background)]'
+            : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+      )}
+    >
+      <Icon size={15} strokeWidth={1.9} aria-hidden />
+    </span>
   );
 }
 
@@ -115,10 +82,13 @@ function MobilePinnedProductRow({
   const isExternal = Boolean(product.externalHref);
   const active = !isExternal && isNavItemActive(pathname, href);
   const Icon = product.icon;
+
   const content = (
     <>
-      <Icon size={18} strokeWidth={1.8} />
-      {label}
+      <DrawerIcon icon={Icon} active={active} />
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
+        {label}
+      </span>
     </>
   );
 
@@ -149,6 +119,10 @@ export function MobileDock({ appId }: MobileDockProps) {
   const [open, setOpen] = useState(false);
   const handleClose = useCallback(() => setOpen(false), []);
 
+  if (/\/apps\/\d{16}\/settings(?:\/|$)/.test(pathname)) {
+    return null;
+  }
+
   const isRtl = t.common.switchLang === 'English';
   const labels = {
     dashboard: t.sidebar.dashboard,
@@ -157,6 +131,7 @@ export function MobileDock({ appId }: MobileDockProps) {
     docs: t.sidebar.docs,
     apps: t.sidebar.apps,
     appSettings: t.sidebar.appSettings,
+    analytics: t.sidebar.analytics,
     help: t.sidebar.help,
     logout: t.sidebar.logout,
     more: t.mobile.more,
@@ -167,6 +142,7 @@ export function MobileDock({ appId }: MobileDockProps) {
   const { installedProducts, hydrated } = useSidebarProducts();
   const productMeta = (t.products.items ?? {}) as Record<string, { name?: string }>;
   const catalogActive = isNavItemActive(pathname, catalogItem.href);
+  const hasProducts = hydrated && installedProducts.length > 0;
 
   async function handleLogout() {
     setOpen(false);
@@ -179,7 +155,11 @@ export function MobileDock({ appId }: MobileDockProps) {
         <button
           type="button"
           aria-label={t.mobile.closeMenu}
-          className="mobile-dock-backdrop fixed inset-0 z-40 sm:hidden"
+          className="fixed inset-0 z-40 sm:hidden"
+          style={{
+            background: 'rgba(15, 23, 42, 0.22)',
+            backdropFilter: 'blur(6px)',
+          }}
           onClick={handleClose}
         />
       ) : null}
@@ -187,93 +167,111 @@ export function MobileDock({ appId }: MobileDockProps) {
       {open ? (
         <div
           dir={isRtl ? 'rtl' : 'ltr'}
-          className="mobile-dock-drawer fixed inset-x-3 bottom-[5.2rem] z-50 flex max-h-[65vh] flex-col gap-0.5 overflow-y-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)]/95 p-3 shadow-2xl backdrop-blur-[40px] sm:hidden"
+          role="menu"
+          aria-label={labels.more}
+          className="fixed inset-x-0 bottom-[5.5rem] z-50 mx-auto flex max-h-[min(52vh,22rem)] w-[min(100%-2rem,18.5rem)] flex-col overflow-hidden rounded-2xl bg-[var(--surface)]/96 backdrop-blur-xl sm:hidden"
         >
-          {hydrated && installedProducts.length > 0 ? (
-            <>
-              <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-                {t.products.mobileDrawerProducts}
-              </p>
-              {installedProducts.map((product) => (
-                <MobilePinnedProductRow
-                  key={product.id}
-                  product={product}
-                  appId={appId}
-                  label={productMeta[product.id]?.name ?? product.id}
-                  pathname={pathname}
-                  onNavigate={handleClose}
+          <div className="max-h-[inherit] overflow-y-auto overscroll-contain px-1.5 py-1.5">
+            {hasProducts ? (
+              <div className="px-1.5 pb-1 pt-1.5">
+                <p className="px-1.5 pb-1 text-[10px] font-semibold tracking-wide text-[var(--muted-foreground)]">
+                  {t.products.mobileDrawerProducts}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {installedProducts.map((product) => (
+                    <MobilePinnedProductRow
+                      key={product.id}
+                      product={product}
+                      appId={appId}
+                      label={productMeta[product.id]?.name ?? product.id}
+                      pathname={pathname}
+                      onNavigate={handleClose}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div
+              className={cn(
+                'flex flex-col gap-0.5 px-1.5',
+                hasProducts && 'mt-0.5 border-t border-[var(--border)]/50 pt-1.5',
+              )}
+            >
+              {!hasProducts ? (
+                <p className="px-1.5 pb-1 pt-1 text-[10px] font-semibold tracking-wide text-[var(--muted-foreground)]">
+                  {labels.more}
+                </p>
+              ) : null}
+              <Link
+                href={catalogItem.href}
+                onClick={handleClose}
+                className={drawerRowClass(catalogActive)}
+              >
+                <DrawerIcon icon={Plus} active={catalogActive} />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
+                  {t.products.addProduct}
+                </span>
+              </Link>
+              <Link
+                href="/apps"
+                onClick={handleClose}
+                className={drawerRowClass(pathname === '/apps')}
+              >
+                <DrawerIcon
+                  icon={LayoutGrid}
+                  active={pathname === '/apps'}
                 />
-              ))}
-              <div className="mx-1 my-1 h-px bg-[var(--border)]" />
-            </>
-          ) : null}
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
+                  {t.topbar.myApps}
+                </span>
+              </Link>
+            </div>
 
-          <Link
-            href={catalogItem.href}
-            onClick={handleClose}
-            className={drawerRowClass(catalogActive)}
-          >
-            <Plus size={18} strokeWidth={1.8} />
-            {t.products.addProduct}
-          </Link>
-          <Link
-            href="/apps"
-            onClick={handleClose}
-            className={drawerRowClass(pathname === '/apps')}
-          >
-            <LayoutGrid size={18} strokeWidth={1.8} />
-            {t.topbar.myApps}
-          </Link>
-
-          <div className="mx-1 my-1 h-px bg-[var(--border)]" />
-
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_10%,var(--background))]"
-          >
-            <LogOut size={16} />
-            {labels.logout}
-          </button>
+            <div className="mt-0.5 border-t border-[var(--border)]/50 px-1.5 pb-0.5 pt-1.5">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void handleLogout()}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+              >
+                <DrawerIcon icon={LogOut} danger />
+                <span className="text-[13px] font-medium">{labels.logout}</span>
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 sm:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
-          style={{
-            background:
-              'linear-gradient(to top, var(--background) 35%, transparent 100%)',
-          }}
-        />
-        <div className="pointer-events-auto relative mb-3 flex justify-center">
-          <nav
-            dir={isRtl ? 'rtl' : 'ltr'}
-            aria-label={t.mobile.mainNav}
-            className="flex items-center gap-0.5 rounded-3xl border border-[var(--border)] bg-[var(--surface)]/95 px-[5px] py-1 shadow-xl backdrop-blur-[32px]"
-          >
-            {dockItems.map(({ href, icon, label, exact }) => (
-              <DockButton
-                key={href}
-                href={href}
-                icon={icon}
-                label={resolveNavItemLabel(label, labels)}
-                isActive={isNavItemActive(pathname, href, exact)}
-              />
-            ))}
-            <div className="mx-0.5 h-4 w-px shrink-0 rounded-[1px] bg-[var(--border)]" />
-            <DockButton
-              icon={open ? X : MoreHorizontal}
-              label={labels.more}
-              isActive={open}
-              onClick={() => setOpen((value) => !value)}
+      <MobileDockShell>
+        <MobileDockPill
+          aria-label={t.mobile.mainNav}
+          dir={isRtl ? 'rtl' : 'ltr'}
+        >
+          {dockItems.map(({ href, icon, label, exact }) => (
+            <MobileDockItem
+              key={href}
+              href={href}
+              icon={icon}
+              label={resolveNavItemLabel(label, labels)}
+              isActive={isNavItemActive(pathname, href, exact)}
             />
-          </nav>
-        </div>
-      </div>
+          ))}
+          <MobileDockItem
+            icon={open ? X : MoreHorizontal}
+            label={labels.more}
+            isActive={open}
+            showLabel={false}
+            onClick={() => setOpen((value) => !value)}
+          />
+        </MobileDockPill>
+
+        <MobileDockFab
+          href={catalogItem.href}
+          label={t.products.addProduct}
+          icon={Plus}
+        />
+      </MobileDockShell>
     </>
   );
 }

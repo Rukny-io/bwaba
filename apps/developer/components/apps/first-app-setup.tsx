@@ -106,7 +106,7 @@ function Step1AppDetails({
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.step1Desc}</p>
       </div>
 
-      <div className="dashboard-card space-y-4 rounded-2xl border border-[var(--border)] p-5">
+      <div className="dashboard-card space-y-4 rounded-2xl p-5">
         <TextField isRequired>
           <Label className="text-xs font-medium text-[var(--foreground)]">{labels.appName}</Label>
           <Input
@@ -337,7 +337,7 @@ function Step4Verification({
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.step4Desc}</p>
       </div>
 
-      <div className="dashboard-card space-y-4 rounded-2xl border border-[var(--border)] p-5">
+      <div className="dashboard-card space-y-4 rounded-2xl p-5">
         <TextField isRequired>
           <Label className="text-xs font-medium text-[var(--foreground)]">{labels.phoneLabel}</Label>
           <Input

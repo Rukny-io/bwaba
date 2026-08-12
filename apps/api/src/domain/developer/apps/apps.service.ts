@@ -30,6 +30,7 @@ const APP_SETTINGS_SELECT = {
   appId: true,
   name: true,
   contactEmail: true,
+  companyEmail: true,
   appType: true,
   description: true,
   businessId: true,
@@ -361,6 +362,14 @@ export class AppsService {
         ...(dto.name !== undefined && { name: dto.name.trim() }),
         ...(dto.description !== undefined && {
           description: this.normalizeOptionalString(dto.description),
+        }),
+        ...(dto.contactEmail !== undefined && {
+          contactEmail: dto.contactEmail.trim().toLowerCase(),
+        }),
+        ...(dto.companyEmail !== undefined && {
+          companyEmail: this.normalizeOptionalString(
+            dto.companyEmail.toLowerCase(),
+          ),
         }),
         ...(dto.businessId !== undefined && {
           businessId: this.normalizeOptionalString(dto.businessId),

@@ -44,10 +44,10 @@ export function ApiKeyIpField({
           placeholder={placeholder}
           aria-invalid={Boolean(ipError)}
           className={cn(
-            'h-10 flex-1 rounded-xl border bg-[var(--background)] px-3 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2',
+            'h-11 flex-1 rounded-xl border bg-[var(--background)] px-3.5 text-[13px] text-[var(--foreground)] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[var(--muted-foreground)] focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary)_22%,transparent)]',
             ipError
-              ? 'border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[color-mix(in_srgb,var(--danger)_20%,transparent)]'
-              : 'border-[var(--border)] focus:border-[var(--primary)] focus:ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]',
+              ? 'border-[var(--danger)] focus-visible:border-[var(--danger)] focus-visible:ring-[color-mix(in_srgb,var(--danger)_20%,transparent)]'
+              : 'border-[var(--border)]',
           )}
         />
         <Button variant="secondary" onPress={onAdd} className="rounded-xl">

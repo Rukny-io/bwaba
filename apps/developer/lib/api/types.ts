@@ -20,6 +20,7 @@ export interface DeveloperApp {
   appId: string;
   name: string;
   contactEmail: string;
+  companyEmail?: string | null;
   appType: DeveloperAppType;
   description?: string | null;
   businessId?: string | null;
@@ -53,6 +54,8 @@ export interface CreateAppInput {
 export interface UpdateAppInput {
   name?: string;
   description?: string;
+  contactEmail?: string;
+  companyEmail?: string;
   businessId?: string;
   icon?: string;
   profileImage?: string;

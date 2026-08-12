@@ -39,6 +39,10 @@ export function appWallet(appId: string): string {
   return `${appBase(appId)}/wallet`;
 }
 
+export function appAnalytics(appId: string): string {
+  return `${appBase(appId)}/analytics`;
+}
+
 export function appCreation(): string {
   return '/apps/creation';
 }

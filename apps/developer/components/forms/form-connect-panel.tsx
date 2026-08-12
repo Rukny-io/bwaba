@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ExternalLink, Loader2 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { CodeSnippetCard } from '@/components/forms/code-snippet-card';
 import { useLinkedFormDetail } from '@/hooks/use-app-forms';
 import { appForms } from '@/lib/app-routes';
@@ -14,8 +15,7 @@ import {
 } from '@/lib/forms-urls';
 import { cn } from '@/lib/utils';
 
-const connectSectionClassName =
-  'rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-none sm:rounded-3xl';
+const connectSectionClassName = 'dashboard-panel';
 
 export function FormConnectPanel({
   appId,
@@ -60,7 +60,7 @@ export function FormConnectPanel({
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="dashboard-section-stack">
       <div>
         <Link
           href={appForms(appId)}
@@ -69,10 +69,11 @@ export function FormConnectPanel({
           <BackArrow className="size-3.5" />
           {f.backToForms}
         </Link>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {f.connectTitle}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{form.title}</p>
+        <DashboardPageHeader
+          className="mb-0 sm:mb-0"
+          title={f.connectTitle}
+          description={form.title}
+        />
       </div>
 
       {!form.embed.embedEnabled ? (

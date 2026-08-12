@@ -80,16 +80,14 @@ export default async function AppScopedLayout({
           />
 
           <div
-            className={`flex min-w-0 flex-1 flex-col gap-2 p-2 sm:m-2 sm:gap-2 ${locale === 'en' ? 'sm:ml-[82px]' : 'sm:mr-[82px]'}`}
+            className={`relative flex min-w-0 flex-1 flex-col gap-0 p-0 ${locale === 'en' ? 'sm:ml-[82px]' : 'sm:mr-[82px]'}`}
           >
-            <div className="hidden overflow-visible sm:block">
-              <HeaderTopBar
-                avatarUrl={user.avatar}
-                userName={displayName}
-                workspaces={workspaces}
-                currentUserId={user.id}
-              />
-            </div>
+            <HeaderTopBar
+              avatarUrl={user.avatar}
+              userName={displayName}
+              workspaces={workspaces}
+              currentUserId={user.id}
+            />
             <DevShell userName={displayName} appName={app.name}>
               {children}
             </DevShell>

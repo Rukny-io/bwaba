@@ -4,8 +4,9 @@ import {
   KeyRound,
   Settings,
   Package,
+  ChartColumn,
 } from 'lucide-react';
-import { extractAppIdFromPath, appSettings, appProducts } from '@/lib/app-routes';
+import { extractAppIdFromPath, appSettings, appProducts, appAnalytics } from '@/lib/app-routes';
 
 export type NavItem = {
   href: string;
@@ -24,6 +25,7 @@ export function getPrimaryNavItems(appId: string): NavItem[] {
       exact: true,
     },
     { href: `${base}/dashboard`, icon: LayoutGrid, label: 'الرئيسية', exact: true },
+    { href: appAnalytics(appId), icon: ChartColumn, label: 'التحليلات' },
     { href: `${base}/api-keys`, icon: KeyRound, label: 'مفاتيح API' },
   ];
 }
@@ -66,6 +68,7 @@ export type SidebarLabelMap = {
   docs: string;
   apps: string;
   appSettings: string;
+  analytics: string;
   help: string;
   logout: string;
   more: string;
@@ -79,6 +82,7 @@ export function resolveNavItemLabel(label: string, labels: SidebarLabelMap): str
     التوثيق: labels.docs,
     التطبيقات: labels.apps,
     'إعدادات التطبيق': labels.appSettings,
+    التحليلات: labels.analytics,
     المساعدة: labels.help,
   };
   return map[label] ?? label;
@@ -131,6 +135,7 @@ export function resolvePageLabel(pathname: string): string {
   const last = segments[segments.length - 1];
   const labels: Record<string, string> = {
     dashboard: 'الرئيسية',
+    analytics: 'التحليلات',
     'api-keys': 'مفاتيح API',
     products: 'المنتجات',
     forms: 'النماذج',

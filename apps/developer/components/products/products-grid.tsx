@@ -3,6 +3,7 @@
 import { Check, Download, Loader2 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { useSidebarProducts } from '@/hooks/use-sidebar-products';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import {
   DEVELOPER_PRODUCTS,
   type DeveloperProductId,
@@ -51,18 +52,16 @@ export function ProductsGrid({ appId }: ProductsGridProps) {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <header>
-        <p className="mb-1 font-mono text-[11px] text-[var(--muted-foreground)]">
-          {appId}
-        </p>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {p.title}
-        </h1>
-        <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-          {p.catalogSubtitle}
-        </p>
-      </header>
+    <div className="dashboard-section-stack">
+      <DashboardPageHeader
+        eyebrow={
+          <p className="font-mono text-[11px] text-[var(--muted-foreground)]">
+            {appId}
+          </p>
+        }
+        title={p.title}
+        description={p.catalogSubtitle}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {DEVELOPER_PRODUCTS.map((product) => {

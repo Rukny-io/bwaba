@@ -9,13 +9,16 @@ import {
   PhoneActionSection,
   PhoneStatBox,
   PhoneStatusBadge,
+  WhatsappEmptyState,
+  whatsappBtnPrimary,
+  whatsappBtnSecondary,
+  whatsappInputClass,
 } from '@/components/whatsapp/whatsapp-ui';
 import { usePhoneNumbers, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import type { WhatsappPhoneSummary } from '@/lib/api/types';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 
-const inputClass =
-  'w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-[var(--primary)]';
+const inputClass = whatsappInputClass;
 
 function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
@@ -64,8 +67,8 @@ function PhoneCard({
   const isPending = phone.status === 'PENDING';
 
   return (
-    <article className="dashboard-card overflow-hidden rounded-2xl sm:rounded-3xl">
-      <header className="flex flex-col gap-4 border-b border-[var(--border)] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+    <article className="dashboard-panel overflow-hidden rounded-2xl sm:rounded-3xl">
+      <header className="flex flex-col gap-4 border-b border-[var(--border)]/30 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
             <Phone className="size-5" strokeWidth={1.6} />
@@ -137,7 +140,7 @@ function PhoneCard({
                     },
                   )
                 }
-                className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-50"
+                className={whatsappBtnPrimary}
               >
                 {w.registerPhone}
               </button>
@@ -176,7 +179,7 @@ function PhoneCard({
                     },
                   )
                 }
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-5 text-sm font-medium transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_6%,var(--surface-secondary))]"
+                className={whatsappBtnSecondary}
               >
                 <Send className="size-4" />
                 {w.sendTest}
@@ -229,7 +232,7 @@ function PhoneCard({
                     },
                   )
                 }
-                className="inline-flex h-10 items-center justify-center rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-50"
+                className={whatsappBtnPrimary}
               >
                 {w.editProfile}
               </button>
@@ -265,15 +268,11 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
 
   if (!phones?.length) {
     return (
-      <section className="dashboard-card rounded-2xl p-8 text-center sm:rounded-3xl sm:p-10">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
-          <Phone className="size-6" strokeWidth={1.6} />
-        </div>
-        <h2 className="mt-4 text-base font-semibold text-[var(--foreground)]">{w.noPhones}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
-          {w.noPhonesDesc}
-        </p>
-      </section>
+      <WhatsappEmptyState
+        icon={Phone}
+        title={w.noPhones}
+        description={w.noPhonesDesc}
+      />
     );
   }
 
@@ -283,7 +282,7 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
   const pendingCount = phones.filter((p) => p.status === 'PENDING').length;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="dashboard-section-stack">
       <DashboardGrid>
         <DashboardMetricCard
           icon={Phone}

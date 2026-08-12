@@ -38,6 +38,7 @@ import { UsageService } from './usage/usage.service';
 import { AppsController } from './apps/apps.controller';
 import { AppsService } from './apps/apps.service';
 import { AppsUploadService } from './apps/apps-upload.service';
+import { AppAnalyticsService } from './apps/app-analytics.service';
 
 // Forms integration
 import { DevFormsController } from './forms/dev-forms.controller';
@@ -90,6 +91,7 @@ import { DevProductsService } from './products/dev-products.service';
   providers: [
     AppsService,
     AppsUploadService,
+    AppAnalyticsService,
     DevFormsService,
     DevProductsService,
     ApiKeysService,
@@ -105,6 +107,7 @@ import { DevProductsService } from './products/dev-products.service';
   ],
   exports: [
     AppsService,
+    AppAnalyticsService,
     ApiKeysService,
     ApiKeyAuthGuard,
     JwtOrApiKeyGuard,

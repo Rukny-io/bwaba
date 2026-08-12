@@ -1,5 +1,8 @@
 import 'server-only';
-import { getDictionary } from '@/lib/dictionary';interface PlaceholderPanelProps {
+import { getDictionary } from '@/lib/dictionary';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
+
+interface PlaceholderPanelProps {
   title: string;
   description: string;
 }
@@ -7,14 +10,9 @@ import { getDictionary } from '@/lib/dictionary';interface PlaceholderPanelProps
 export async function PlaceholderPanel({ title, description }: PlaceholderPanelProps) {
   const dictionary = await getDictionary();
   return (
-    <div className="dashboard-card rounded-2xl p-6 sm:p-8">
-      <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-        {title}
-      </h1>
-      <p className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--muted-foreground)]">
-        {description}
-      </p>
-      <p className="mt-4 inline-flex rounded-full bg-[var(--surface-secondary)] px-3 py-1 text-xs font-medium text-[var(--muted-foreground)]">
+    <div className="dashboard-panel">
+      <DashboardPageHeader className="mb-4 sm:mb-4" title={title} description={description} />
+      <p className="inline-flex rounded-full bg-[var(--surface-secondary)] px-3 py-1 text-xs font-medium text-[var(--muted-foreground)]">
         {dictionary.panel.comingSoon}
       </p>
     </div>
@@ -37,7 +35,7 @@ export async function WelcomeBanner({ userName }: WelcomeBannerProps) {
   ];
 
   return (
-    <section className="dashboard-card rounded-2xl p-5 sm:p-6">
+    <section className="dashboard-card p-5 sm:p-6">
       <p className="text-xs font-medium text-[var(--primary)]">{t.welcome}</p>
       <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
         {t.hello.replace('{userName}', userName)}

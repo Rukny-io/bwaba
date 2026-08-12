@@ -15,6 +15,7 @@ import { markWorkspaceSwitched } from '@/components/workspace/workspace-switch-t
 interface WorkspaceSwitcherProps {
   workspaces: AccessibleWorkspace[];
   currentUserId: string;
+  triggerClassName?: string;
 }
 
 function workspaceLabel(ws: AccessibleWorkspace): string {
@@ -33,6 +34,7 @@ function roleLabelKey(role: AccessibleWorkspace['role']): string {
 export function WorkspaceSwitcher({
   workspaces,
   currentUserId,
+  triggerClassName,
 }: WorkspaceSwitcherProps) {
   const t = useTranslations();
   const [activeId, setActiveId] = useState<string>(currentUserId);
@@ -76,6 +78,7 @@ export function WorkspaceSwitcher({
   const CurrentIcon = currentIcon;
 
   const pillClass =
+    triggerClassName ??
     'touch-target inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:px-4 outline-none';
 
   if (!hasMultiple) {
@@ -84,12 +87,12 @@ export function WorkspaceSwitcher({
 
   return (
     <Dropdown>
-      <Dropdown.Trigger className={cn(pillClass, 'max-w-[12rem] truncate')}>
-        <CurrentIcon size={16} className="shrink-0" />
+      <Dropdown.Trigger className={cn(pillClass, 'max-w-[12rem] truncate outline-none')}>
+        <CurrentIcon size={14} className="shrink-0" />
         <span className="truncate">{workspaceLabel(current)}</span>
-        <ChevronDown size={16} className="shrink-0" />
+        <ChevronDown size={14} className="shrink-0 opacity-70" />
       </Dropdown.Trigger>
-      <Dropdown.Popover placement="bottom start" className="min-w-[16rem]">
+      <Dropdown.Popover placement="bottom start" offset={14} className="min-w-[16rem]">
         <Dropdown.Menu
           onAction={(key) => handleSelect(String(key))}
         >

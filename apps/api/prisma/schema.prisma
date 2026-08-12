@@ -2503,6 +2503,8 @@ model DeveloperApp {
   userId       String
   name         String
   contactEmail String?
+  /// Official company / business contact email (separate from app contactEmail)
+  companyEmail String?
   appType      DeveloperAppType   @default(BUSINESS)
   description  String?
   businessId   String?

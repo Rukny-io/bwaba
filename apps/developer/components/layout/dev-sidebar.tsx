@@ -4,7 +4,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, LogOut } from 'lucide-react';
+import {
+  Globe,
+  LayoutGrid,
+  LogOut,
+  Receipt,
+  Settings,
+  User,
+} from 'lucide-react';
+import { Dropdown } from '@heroui/react';
 import {
   getPrimaryNavItems,
   getMiddleNavItems,
@@ -15,9 +23,10 @@ import {
 } from '@/components/layout/nav-config';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { logoutWithNotification } from '@/lib/auth-notify';
-import { appSettings } from '@/lib/app-routes';
+import { setLocaleAction } from '@/actions/set-locale';
 import { SidebarProductsRail } from '@/components/layout/sidebar-products-rail';
 import { useTranslations } from '@/components/providers/translations-provider';
+import { cn } from '@/lib/utils';
 
 function Tooltip({ label, isRtl }: { label: string; isRtl: boolean }) {
   return (
@@ -125,6 +134,7 @@ export function DevSidebar({ appId, avatarUrl, userName }: DevSidebarProps) {
     docs: t.sidebar.docs,
     apps: t.sidebar.apps,
     appSettings: t.sidebar.appSettings,
+    analytics: t.sidebar.analytics,
     help: t.sidebar.help,
     logout: t.sidebar.logout,
     more: t.mobile.more,
@@ -135,7 +145,12 @@ export function DevSidebar({ appId, avatarUrl, userName }: DevSidebarProps) {
     : [{ href: '/apps', icon: LayoutGrid, label: t.sidebar.apps, exact: true }];
   const middleNavItems = appId ? getMiddleNavItems(appId) : [];
   const bottomNavItems = appId ? getBottomNavItems(appId) : [];
-  const settingsHref = appId ? appSettings(appId) : undefined;
+
+  async function handleLangSwitch() {
+    const isEn = t.common.switchLang === 'العربية';
+    await setLocaleAction(isEn ? 'ar' : 'en');
+    window.location.reload();
+  }
 
   return (
     <aside
@@ -154,7 +169,7 @@ export function DevSidebar({ appId, avatarUrl, userName }: DevSidebarProps) {
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-4">
+        <div className="flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-3">
           <nav className="flex flex-col items-center gap-1.5" aria-label={t.sidebar.apps}>
             {primaryNavItems.map((item) => (
               <NavLink
@@ -202,28 +217,65 @@ export function DevSidebar({ appId, avatarUrl, userName }: DevSidebarProps) {
       {appId ? <SidebarProductsRail /> : null}
 
       <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void logoutWithNotification()}
-          className="group relative flex size-10 items-center justify-center rounded-2xl text-[var(--muted-foreground)] transition-all duration-200 hover:bg-[color-mix(in_srgb,var(--danger)_10%,var(--background))] hover:text-[var(--danger)]"
-          aria-label={t.sidebar.logout}
-        >
-          <LogOut size={19} strokeWidth={1.7} />
-          <Tooltip label={t.sidebar.logout} isRtl={isRtl} />
-        </button>
-
-        {settingsHref ? (
-          <Link
-            href={settingsHref}
-            className="group relative size-10 shrink-0 overflow-hidden rounded-full transition-opacity hover:opacity-90"
+        <Dropdown>
+          <Dropdown.Trigger
+            aria-label={t.topbar.profile}
+            className={cn(
+              'group relative size-10 shrink-0 overflow-hidden rounded-full outline-none',
+              'transition-opacity hover:opacity-90',
+            )}
           >
             <SidebarAvatar avatarUrl={avatarUrl} userName={userName} />
-          </Link>
-        ) : (
-          <div className="size-10 shrink-0 overflow-hidden rounded-full">
-            <SidebarAvatar avatarUrl={avatarUrl} userName={userName} />
-          </div>
-        )}
+          </Dropdown.Trigger>
+          <Dropdown.Popover
+            placement={isRtl ? 'left bottom' : 'right bottom'}
+            offset={14}
+            className="min-w-[13rem]"
+          >
+            <Dropdown.Menu
+              onAction={(key) => {
+                if (key === 'lang') void handleLangSwitch();
+                if (key === 'logout') void logoutWithNotification();
+              }}
+            >
+              <Dropdown.Item
+                id="profile"
+                textValue={t.topbar.profile}
+                href="/settings"
+                className="gap-2"
+              >
+                <User className="size-4 shrink-0" />
+                {t.topbar.profile}
+              </Dropdown.Item>
+              <Dropdown.Item
+                id="settings"
+                textValue={t.topbar.settings}
+                href="/settings"
+                className="gap-2"
+              >
+                <Settings className="size-4 shrink-0" />
+                {t.topbar.settings}
+              </Dropdown.Item>
+              <Dropdown.Item id="billing" textValue={t.topbar.billing} className="gap-2">
+                <Receipt className="size-4 shrink-0" />
+                {t.topbar.billing}
+              </Dropdown.Item>
+              <Dropdown.Item id="lang" textValue={t.common.switchLang} className="gap-2">
+                <Globe className="size-4 shrink-0" />
+                {t.common.switchLang}
+              </Dropdown.Item>
+              <Dropdown.Item
+                id="logout"
+                textValue={t.topbar.logout}
+                variant="danger"
+                className="gap-2"
+              >
+                <LogOut className="size-4 shrink-0" />
+                {t.topbar.logout}
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
       </div>
     </aside>
   );

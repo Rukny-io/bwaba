@@ -30,9 +30,9 @@
     --cursor-interactive: pointer;
     --cursor-disabled: not-allowed;
 
-    /* Radius */
-    --radius: 2.5rem;
-    --field-radius: 2.5rem;
+    /* Radius — aligned with forms/app (overridden by app globals) */
+    --radius: 1rem;
+    --field-radius: 1rem;
 
     /* == Light Theme Variables == */
 

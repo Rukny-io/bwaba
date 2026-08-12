@@ -106,12 +106,12 @@
    Table Column (<th>)
    -------------------------------------------------------------------------- */
 .table__column {
-  @apply relative px-4 py-2.5 text-left text-xs font-medium text-muted;
+  @apply relative px-4 py-2.5 text-start text-xs font-medium text-muted;
 
-  /* Separator between columns — a short vertical line on the right edge */
+  /* Separator between columns — short vertical line on the inline-end edge */
   &::after {
     content: "";
-    @apply pointer-events-none absolute top-1/2 right-0 h-4 w-px -translate-y-1/2 rounded-sm bg-separator;
+    @apply pointer-events-none absolute top-1/2 end-0 h-4 w-px -translate-y-1/2 rounded-sm bg-separator;
   }
 
   &:last-child:not(:only-child)::after {

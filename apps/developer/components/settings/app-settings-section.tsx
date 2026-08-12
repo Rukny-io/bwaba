@@ -1,37 +1,50 @@
+import type { ReactNode } from 'react';
+import { SettingsPanel } from '@/components/settings/settings-primitives';
+import { cn } from '@/lib/utils';
+
 export const settingsInputClassName =
   'h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3.5 text-[13px] text-[var(--foreground)] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[var(--muted-foreground)] focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary)_22%,transparent)]';
 
 export const settingsTextareaClassName =
-  'mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3.5 py-2.5 font-mono text-[13px] leading-relaxed text-[var(--foreground)] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[var(--muted-foreground)] focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary)_22%,transparent)]';
+  'mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3.5 py-2.5 text-[13px] leading-relaxed text-[var(--foreground)] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[var(--muted-foreground)] focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary)_22%,transparent)]';
+
+export const settingsLabelClassName =
+  'text-[13px] font-medium text-[var(--foreground)]';
 
 export function AppSettingsSection({
   title,
   description,
   children,
   footer,
+  flush = false,
+  className,
 }: {
   title: string;
   description?: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  /** Render children flush against the surface (row lists) */
+  flush?: boolean;
+  className?: string;
 }) {
   return (
-    <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-none sm:p-6">
-      <div>
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
-        {description ? (
-          <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-            {description}
-          </p>
-        ) : null}
-      </div>
-      {children}
+    <SettingsPanel title={title} description={description} className={className}>
+      {flush ? (
+        children
+      ) : (
+        <div className="space-y-4 p-4 sm:space-y-5 sm:p-5">{children}</div>
+      )}
       {footer ? (
-        <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
+        <div
+          className={cn(
+            'flex flex-col gap-3 border-t border-[var(--border)]/70 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-end sm:px-5',
+            flush && 'bg-[var(--surface-secondary)]/35',
+          )}
+        >
           {footer}
         </div>
       ) : null}
-    </section>
+    </SettingsPanel>
   );
 }
 

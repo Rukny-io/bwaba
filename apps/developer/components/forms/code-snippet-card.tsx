@@ -70,7 +70,7 @@ export function CodeSnippetCard({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] sm:rounded-3xl">
+    <section className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:px-5">
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>

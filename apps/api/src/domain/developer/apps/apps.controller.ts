@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -18,6 +19,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagg
 import { AuthGuard } from '@nestjs/passport';
 import { AppsService } from './apps.service';
 import { AppsUploadService } from './apps-upload.service';
+import { AppAnalyticsService } from './app-analytics.service';
 import { CreateAppDto } from './dto/create-app.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
 import { SendAppOtpDto, VerifyAppOtpDto } from './dto/app-otp.dto';
@@ -36,6 +38,7 @@ export class AppsController {
   constructor(
     private readonly appsService: AppsService,
     private readonly appsUploadService: AppsUploadService,
+    private readonly appAnalyticsService: AppAnalyticsService,
   ) {}
 
   @Post('otp/send')
@@ -65,6 +68,22 @@ export class AppsController {
   @ApiOperation({ summary: 'قائمة التطبيقات' })
   findAll(@ActiveWorkspace() ws: WorkspaceContext) {
     return this.appsService.findAll(ws.ownerId);
+  }
+
+  @Get(':appId/analytics')
+  @RequiresWorkspacePermission('developer:apps:read')
+  @ApiOperation({ summary: 'تحليلات التطبيق (API / واتساب / نماذج / محفظة)' })
+  getAnalytics(
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Param('appId') appId: string,
+    @Query('days') days?: string,
+  ) {
+    const parsed = days ? parseInt(days, 10) : 30;
+    return this.appAnalyticsService.getAppAnalytics(
+      ws.ownerId,
+      appId,
+      Number.isFinite(parsed) ? parsed : 30,
+    );
   }
 
   @Get(':appId')

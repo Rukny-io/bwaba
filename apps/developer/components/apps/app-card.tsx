@@ -27,7 +27,7 @@ export function AppCard({ app, href }: AppCardProps) {
   return (
     <Link
       href={href}
-      className="dashboard-card group flex flex-col gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md"
+      className="dashboard-card group flex flex-col gap-4 rounded-2xl p-5 transition-colors"
     >
       <div className="flex items-start gap-3">
         {iconSrc && !iconFailed ? (

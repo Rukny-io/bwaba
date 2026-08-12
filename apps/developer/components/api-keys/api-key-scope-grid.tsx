@@ -25,10 +25,10 @@ export function ApiKeyScopeGrid({
             type="button"
             onClick={() => onChange(toggleScope(selectedScopes, scope))}
             className={cn(
-              'flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-start text-sm transition-all',
+              'flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-start text-[13px] transition-colors',
               selected
-                ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] text-[var(--foreground)] ring-1 ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]'
-                : 'border-[var(--border)] text-[var(--foreground)] hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))]',
+                ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] text-[var(--foreground)]'
+                : 'border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]/50',
             )}
           >
             <span

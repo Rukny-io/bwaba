@@ -6,5 +6,5 @@ export default async function AppComplianceRedirectPage({
   params: Promise<{ appId: string }>;
 }) {
   const { appId } = await params;
-  redirect(`/apps/${appId}/settings/legal`);
+  redirect(`/apps/${appId}/settings`);
 }

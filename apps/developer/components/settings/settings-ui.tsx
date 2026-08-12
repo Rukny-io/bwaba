@@ -13,7 +13,7 @@ export function SettingsSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-none sm:p-6">
+    <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 shadow-none sm:p-6">
       <div>
         <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
         {description ? (

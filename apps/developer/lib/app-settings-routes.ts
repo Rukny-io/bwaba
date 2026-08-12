@@ -3,7 +3,6 @@ import { appSettings } from '@/lib/app-routes';
 export const APP_SETTINGS_TABS = [
   { segment: 'identity', slug: '' },
   { segment: 'domains', slug: 'domains' },
-  { segment: 'legal', slug: 'legal' },
 ] as const;
 
 export type AppSettingsTabSegment =

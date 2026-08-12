@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Eye, Inbox, Link2, Loader2, Plus, Unlink, CircleCheck } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
 import {
@@ -177,7 +178,7 @@ function EmbedSecurityCard({ appId }: { appId: string }) {
   const domain = summary?.websiteOrigin ?? null;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-none sm:rounded-3xl">
+    <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 shadow-none sm:rounded-3xl">
       <div>
         <h2 className="text-sm font-semibold text-[var(--foreground)]">{f.embedSecurityTitle}</h2>
         <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
@@ -224,35 +225,35 @@ export function FormsHub({ appId }: { appId: string }) {
   const placeholder = '…';
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="mb-1 font-mono text-[11px] text-[var(--muted-foreground)]">{appId}</p>
-          <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">{f.title}</h1>
-          <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-            {f.subtitle}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={getFormsCreateUrl(appId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
-          >
-            <Plus className="size-3.5" />
-            {f.createForm}
-          </a>
-          <a
-            href={getFormsDashboardUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-full bg-[var(--surface-secondary)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
-          >
-            {f.openDashboard}
-          </a>
-        </div>
-      </header>
+    <div className="dashboard-section-stack">
+      <DashboardPageHeader
+        eyebrow={
+          <p className="font-mono text-[11px] text-[var(--muted-foreground)]">{appId}</p>
+        }
+        title={f.title}
+        description={f.subtitle}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={getFormsCreateUrl(appId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            >
+              <Plus className="size-3.5" />
+              {f.createForm}
+            </a>
+            <a
+              href={getFormsDashboardUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center rounded-full bg-[var(--surface-secondary)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
+            >
+              {f.openDashboard}
+            </a>
+          </div>
+        }
+      />
 
       <DashboardGrid>
         <DashboardMetricCard

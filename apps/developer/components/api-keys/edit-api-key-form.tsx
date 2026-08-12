@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TextField, Label, Input } from '@heroui/react';
 import {
-  ArrowLeft,
-  ArrowRight,
   Key,
   Globe,
   FlaskConical,
@@ -39,9 +37,6 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
   const s = t.apiKeys;
   const ep = (s.editPage ?? {}) as Record<string, string>;
   const scopeLabels = (s.scopeLabels ?? {}) as Record<string, string>;
-  const isRtl = t.common.switchLang === 'English';
-  const BackArrow = isRtl ? ArrowRight : ArrowLeft;
-
   const { app } = useCurrentApp();
   const updateMutation = useUpdateApiKey(app.id, app.appId);
 
@@ -129,24 +124,16 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-8">
-      <Link
-        href={appApiKeys(app.appId)}
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-      >
-        <BackArrow className="size-4" />
-        {ep.back}
-      </Link>
-
+    <div className="mx-auto max-w-2xl space-y-5 pb-8 sm:space-y-6">
       {isInactive ? (
         <ApiKeysAlert variant="warning" message={ep.inactiveWarning ?? ''} />
       ) : null}
 
       {formError ? <ApiKeysAlert message={formError} /> : null}
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-0.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
             <Key className="size-3.5" />
           </span>
           <h2 className="text-sm font-semibold text-[var(--foreground)]">
@@ -154,7 +141,7 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
           </h2>
         </div>
 
-        <div className="dashboard-card space-y-5 rounded-2xl p-5 sm:rounded-3xl">
+        <div className="dashboard-metric-tile space-y-5 rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5">
           <TextField
             value={name}
             onChange={(value) => {
@@ -218,9 +205,9 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-0.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
             <Shield className="size-3.5" />
           </span>
           <h2 className="text-sm font-semibold text-[var(--foreground)]">
@@ -230,7 +217,7 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
 
         <div
           className={cn(
-            'dashboard-card rounded-2xl p-5 sm:rounded-3xl',
+            'dashboard-metric-tile rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5',
             isInactive && 'pointer-events-none opacity-60',
           )}
         >
@@ -253,9 +240,9 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-0.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
             <Lock className="size-3.5" />
           </span>
           <h2 className="text-sm font-semibold text-[var(--foreground)]">
@@ -265,7 +252,7 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
 
         <div
           className={cn(
-            'dashboard-card rounded-2xl p-5 sm:rounded-3xl',
+            'dashboard-metric-tile rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5',
             isInactive && 'pointer-events-none opacity-60',
           )}
         >
@@ -292,10 +279,10 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
         </div>
       </section>
 
-      <div className="dashboard-card flex justify-end gap-3 rounded-2xl p-4 sm:rounded-3xl sm:p-5">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
           href={appApiKeys(app.appId)}
-          className="inline-flex items-center rounded-full border border-[var(--border)] px-6 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+          className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
         >
           {s.cancel}
         </Link>
@@ -303,7 +290,7 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
           type="button"
           onClick={() => void handleSubmit()}
           disabled={!name.trim() || updateMutation.isPending || isInactive}
-          className="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-8 py-2.5 text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-8 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {updateMutation.isPending ? ep.saving : ep.save}
         </button>

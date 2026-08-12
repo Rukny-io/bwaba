@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { useTranslations } from '@/components/providers/translations-provider';
-import { optionPillClass } from '@/components/settings/settings-ui';
 import { cn } from '@/lib/utils';
 import {
   WHATSAPP_TABS,
@@ -46,7 +45,7 @@ export function WhatsappTabsNav() {
 
   return (
     <nav
-      className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label={w.title}
     >
       {WHATSAPP_TABS.map((tab) => {
@@ -59,7 +58,12 @@ export function WhatsappTabsNav() {
             key={tab.segment}
             href={href}
             aria-current={active ? 'page' : undefined}
-            className={cn(optionPillClass(active, 'lg'), 'shrink-0')}
+            className={cn(
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-medium transition-colors',
+              active
+                ? 'bg-[var(--foreground)] text-[var(--background)]'
+                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+            )}
           >
             <Icon className="size-3.5" strokeWidth={active ? 2 : 1.75} aria-hidden />
             {labels[tab.segment]}

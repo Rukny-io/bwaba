@@ -87,7 +87,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
 
   if (masterLoading || appLoading || !masterWallet || !appWallet) {
     return (
-      <div className="space-y-6 sm:space-y-8">
+      <div className="dashboard-section-stack">
         <DashboardGrid>
           <MetricSkeleton />
           <MetricSkeleton />
@@ -113,7 +113,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
     amount.length > 0;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="dashboard-section-stack">
       <DashboardGrid>
         <DashboardMetricCard
           icon={Wallet}
@@ -280,7 +280,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
           <div className="space-y-2">
             <Link
               href={appWhatsapp(publicAppId)}
-              className="dashboard-card group flex items-center gap-3 rounded-xl p-3 transition-shadow hover:shadow-md"
+              className="dashboard-card group flex items-center gap-3 rounded-xl p-3 transition-colors"
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)] group-hover:bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
                 <MessageSquare className="size-4" />

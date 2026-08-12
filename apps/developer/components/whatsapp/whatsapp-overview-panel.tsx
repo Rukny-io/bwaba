@@ -1,10 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowLeft,
-  ArrowRight,
   BookOpen,
   CircleCheck,
   Key,
@@ -19,8 +16,14 @@ import {
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
+import { DashboardQuickAction } from '@/components/dashboard/dashboard-quick-action';
 import { EmbeddedSignupButton } from '@/components/whatsapp/embedded-signup-button';
-import { PhoneStatusBadge } from '@/components/whatsapp/whatsapp-ui';
+import {
+  PhoneStatusBadge,
+  WhatsappEmptyState,
+  whatsappBtnDanger,
+  whatsappBtnSecondary,
+} from '@/components/whatsapp/whatsapp-ui';
 import { useWhatsappAccounts, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import type { WhatsappPhoneSummary } from '@/lib/api/types';
 import { appApiKeysNew, appWhatsappApi } from '@/lib/app-routes';
@@ -32,9 +35,9 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-function formatConnectedDate(iso: string | null | undefined, isRtl: boolean): string {
+function formatConnectedDate(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Intl.DateTimeFormat(isRtl ? 'ar-IQ' : 'en-US', {
+  return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
   }).format(new Date(iso));
 }
@@ -47,7 +50,7 @@ function AccountStatusBadge({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
         isActive &&
           'bg-[color-mix(in_srgb,var(--success)_14%,var(--background))] text-[var(--success)]',
         isPending &&
@@ -88,65 +91,6 @@ function PhoneListRow({ phone }: { phone: WhatsappPhoneSummary }) {
   );
 }
 
-function WhatsappQuickAction({
-  href,
-  label,
-  desc,
-  icon: Icon,
-  variant,
-  isRtl,
-}: {
-  href: string;
-  label: string;
-  desc: string;
-  icon: LucideIcon;
-  variant: 'primary' | 'accent' | 'soft';
-  isRtl: boolean;
-}) {
-  const Arrow = isRtl ? ArrowLeft : ArrowRight;
-  const iconVariantClass = {
-    primary: 'bg-[var(--foreground)] text-[var(--background)]',
-    accent:
-      'bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]',
-    soft: 'bg-[var(--surface-secondary)] text-[var(--primary)]',
-  } as const;
-
-  return (
-    <Link
-      href={href}
-      className="dashboard-card dashboard-card-interactive group flex h-full flex-col rounded-2xl p-3.5 sm:rounded-3xl sm:p-4"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div
-          className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-[1.03]',
-            iconVariantClass[variant],
-          )}
-        >
-          <Icon size={18} strokeWidth={1.8} />
-        </div>
-        <Arrow
-          size={15}
-          className={cn(
-            'mt-0.5 shrink-0 text-[var(--muted-foreground)] transition-all duration-200',
-            isRtl
-              ? 'opacity-60 group-hover:-translate-x-0.5 group-hover:opacity-100'
-              : 'opacity-60 group-hover:translate-x-0.5 group-hover:opacity-100',
-          )}
-        />
-      </div>
-      <div className="mt-3 min-w-0 flex-1">
-        <h3 className="text-sm font-semibold text-[var(--foreground)] transition-colors group-hover:text-[var(--primary)]">
-          {label}
-        </h3>
-        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[var(--muted-foreground)] sm:text-xs">
-          {desc}
-        </p>
-      </div>
-    </Link>
-  );
-}
-
 export function WhatsappOverviewPanel({ appId }: { appId: string }) {
   const t = useTranslations();
   const w = t.whatsapp;
@@ -167,21 +111,12 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
 
   if (!activeAccount || activeAccount.status === 'DISCONNECTED') {
     return (
-      <section className="dashboard-card rounded-2xl p-6 text-center sm:rounded-3xl sm:p-8 sm:text-start">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)] sm:mx-0">
-          <MessageSquare className="size-6" strokeWidth={1.6} />
-        </div>
-        <h2 className="mt-4 text-base font-semibold text-[var(--foreground)]">{w.notConnected}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)] sm:mx-0">
-          {w.notConnectedDesc}
-        </p>
-        <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[var(--muted-foreground)] sm:mx-0">
-          {w.connectHint}
-        </p>
-        <div className="mt-5 flex justify-center sm:justify-start">
-          <EmbeddedSignupButton appId={appId} />
-        </div>
-      </section>
+      <WhatsappEmptyState
+        icon={MessageSquare}
+        title={w.notConnected}
+        description={`${w.notConnectedDesc} ${w.connectHint}`}
+        action={<EmbeddedSignupButton appId={appId} />}
+      />
     );
   }
 
@@ -193,8 +128,8 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
   const previewPhones = phones.slice(0, 4);
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+    <div className="dashboard-section-stack">
+      <section className="dashboard-panel rounded-2xl p-5 sm:rounded-3xl sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -218,7 +153,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
                   onError: (e) => appToast.error(getApiErrorMessage(e)),
                 })
               }
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border)] px-4 text-xs font-medium transition-colors hover:bg-[var(--surface-secondary)]"
+              className={whatsappBtnSecondary}
             >
               <RefreshCw
                 className={cn('size-3.5', refreshMutation.isPending && 'animate-spin')}
@@ -235,7 +170,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
                   onError: (e) => appToast.error(getApiErrorMessage(e)),
                 });
               }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--danger)_30%,var(--border))] px-4 text-xs font-medium text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_8%,var(--background))]"
+              className={whatsappBtnDanger}
             >
               <Unplug className="size-3.5" />
               {w.disconnect}
@@ -260,101 +195,100 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
         <DashboardMetricCard
           icon={MessageSquare}
           label={w.metricConnectedAt}
-          value={formatConnectedDate(activeAccount.connectedAt, isRtl)}
+          value={formatConnectedDate(activeAccount.connectedAt)}
           comparisonPrimary={w.metricConnectedAtHint}
+          tabular
         />
         <DashboardMetricCard
           icon={CircleCheck}
           label={w.status}
           value={activeAccount.status === 'ACTIVE' ? w.connected : w.pending}
           comparisonPrimary={w.metricAccountHint}
+          tabular={false}
         />
       </DashboardGrid>
 
       {phoneCount === 0 ? (
-        <p className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_25%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_6%,var(--background))] px-4 py-3 text-xs leading-relaxed text-[var(--warning)] sm:rounded-3xl sm:px-5 sm:text-sm">
+        <p className="rounded-2xl bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-3 text-[13px] leading-relaxed text-[var(--warning)] sm:px-5">
           {w.phonesPendingMeta}
         </p>
       ) : null}
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
             {w.linkedPhones}
           </h3>
           <Link
             href={appWhatsappHref(appId, 'phones')}
-            className="text-xs font-medium text-[var(--primary)] transition-opacity hover:opacity-80"
+            className="text-[12.5px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           >
             {w.managePhones}
           </Link>
         </div>
 
         {previewPhones.length > 0 ? (
-          <ul className="dashboard-card divide-y divide-[var(--border)] overflow-hidden rounded-2xl sm:rounded-3xl">
+          <ul className="dashboard-panel divide-y divide-[var(--border)]/30 overflow-hidden rounded-2xl sm:rounded-3xl">
             {previewPhones.map((phone) => (
               <PhoneListRow key={phone.id} phone={phone} />
             ))}
           </ul>
         ) : (
-          <div className="dashboard-card rounded-2xl px-4 py-8 text-center text-sm text-[var(--muted-foreground)] sm:rounded-3xl">
-            {w.noPhones}
-          </div>
+          <WhatsappEmptyState icon={Phone} title={w.noPhones} />
         )}
 
         {phoneCount > previewPhones.length ? (
-          <p className="px-0.5 text-xs text-[var(--muted-foreground)]">
+          <p className="text-xs text-[var(--muted-foreground)]">
             {w.phonesMore.replace('{count}', String(phoneCount - previewPhones.length))}
           </p>
         ) : null}
       </section>
 
       <section className="space-y-3 sm:space-y-4">
-        <div className="px-0.5">
-          <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
-            {d.quickActions}
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <WhatsappQuickAction
+        <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+          {d.quickActions}
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <DashboardQuickAction
             href={appWhatsappHref(appId, 'phones')}
-            label={w.navPhones}
-            desc={w.actionPhonesDesc}
+            title={w.navPhones}
+            description={w.actionPhonesDesc}
             icon={Phone}
-            variant="accent"
             isRtl={isRtl}
           />
-          <WhatsappQuickAction
+          <DashboardQuickAction
             href={appWhatsappHref(appId, 'templates')}
-            label={w.navTemplates}
-            desc={w.actionTemplatesDesc}
+            title={w.navTemplates}
+            description={w.actionTemplatesDesc}
             icon={ScrollText}
-            variant="soft"
             isRtl={isRtl}
           />
-          <WhatsappQuickAction
+          <DashboardQuickAction
+            href={appWhatsappHref(appId, 'logs')}
+            title={w.navLogs}
+                  description={w.actionLogsDesc}
+            icon={MessageSquare}
+            isRtl={isRtl}
+          />
+          <DashboardQuickAction
             href={appWhatsappApi(appId)}
-            label={w.viewApiDocs}
-            desc={w.actionApiDocsDesc}
+            title={w.viewApiDocs}
+            description={w.actionApiDocsDesc}
             icon={BookOpen}
-            variant="soft"
             isRtl={isRtl}
           />
-          <WhatsappQuickAction
+          <DashboardQuickAction
             href={appApiKeysNew(appId)}
-            label={w.createApiKey}
-            desc={w.actionApiKeyDesc}
+            title={w.createApiKey}
+            description={w.actionApiKeyDesc}
             icon={Key}
-            variant="primary"
             isRtl={isRtl}
           />
-          <WhatsappQuickAction
+          <DashboardQuickAction
             href={appWhatsappHref(appId, 'webhooks')}
-            label={w.navWebhooks}
-            desc={w.actionWebhooksDesc}
+            title={w.navWebhooks}
+            description={w.actionWebhooksDesc}
             icon={Webhook}
-            variant="soft"
             isRtl={isRtl}
           />
         </div>

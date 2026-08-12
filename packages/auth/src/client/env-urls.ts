@@ -115,7 +115,18 @@ export function resolvePageOrigin(
   options?: ResolveUrlOptions,
 ): string {
   if (typeof window !== 'undefined') return window.location.origin;
+
+  const fromEnv = envVar ? process.env[envVar]?.trim() : undefined;
+  if (fromEnv && shouldUseLocalServiceUrls(options)) {
+    try {
+      if (isLoopbackHost(new URL(fromEnv).hostname)) {
+        return trimTrailingSlash(fromEnv);
+      }
+    } catch {
+      /* ignore invalid env URL */
+    }
+  }
+
   if (shouldUseLocalServiceUrls(options)) return localDefault;
-  const fromEnv = envVar ? process.env[envVar] : undefined;
   return trimTrailingSlash(fromEnv || localDefault);
 }

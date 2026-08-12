@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TextField, Label, Input, Button } from '@heroui/react';
 import {
-  ArrowLeft,
-  ArrowRight,
   Key,
   Globe,
   FlaskConical,
@@ -33,6 +31,15 @@ import {
   validateIpEntry,
 } from '@/components/api-keys/api-key-ip-field';
 import {
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
+import {
+  AppSettingsSection,
+  settingsInputClassName,
+  settingsLabelClassName,
+} from '@/components/settings/app-settings-section';
+import {
   DEFAULT_API_KEY_SCOPES,
   computeExpiresAt,
   hasWriteScopes,
@@ -41,7 +48,11 @@ import {
 import type { ApiKeyEnvironment } from '@/lib/api/types';
 import { appApiKeys } from '@/lib/app-routes';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
-import { resolveApiKeyQuota, formatUsageCount, isQuotaAtLimit } from '@/lib/developer-plan-limits';
+import {
+  resolveApiKeyQuota,
+  formatUsageCount,
+  isQuotaAtLimit,
+} from '@/lib/developer-plan-limits';
 import { cn } from '@/lib/utils';
 
 export function CreateApiKeyForm() {
@@ -50,13 +61,13 @@ export function CreateApiKeyForm() {
   const s = t.apiKeys;
   const cp = (s.createPage ?? {}) as Record<string, string>;
   const scopeLabels = (s.scopeLabels ?? {}) as Record<string, string>;
-  const isRtl = t.common.switchLang === 'English';
-  const BackArrow = isRtl ? ArrowRight : ArrowLeft;
-
   const { app } = useCurrentApp();
   const createMutation = useCreateApiKey(app.id, app.appId);
-  const { data: subscription, isError: subscriptionError, refetch: refetchSubscription } =
-    useDeveloperSubscription();
+  const {
+    data: subscription,
+    isError: subscriptionError,
+    refetch: refetchSubscription,
+  } = useDeveloperSubscription();
   const { data: keys } = useApiKeys(app.id);
 
   const activeCount = useMemo(
@@ -180,49 +191,48 @@ export function CreateApiKeyForm() {
   if (createdKey) {
     const ss = (s.successView ?? {}) as Record<string, string>;
     return (
-      <div className="dashboard-card mx-auto max-w-lg rounded-2xl p-6 sm:rounded-3xl sm:p-8">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="relative">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--success)_12%,var(--background))]">
-              <Key className="size-7 text-[var(--success)]" />
+      <div className="mx-auto w-full max-w-xl">
+        <AppSettingsSection
+          flush
+          title={ss.heading ?? s.createKey}
+          description={ss.description}
+        >
+          <div className="flex flex-col items-center gap-5 p-5 text-center sm:p-6">
+            <div className="relative">
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--success)_12%,var(--background))]">
+                <Key className="size-6 text-[var(--success)]" />
+              </div>
+              <div className="absolute -bottom-1 -end-1 flex size-6 items-center justify-center rounded-full bg-[var(--success)] text-white ring-2 ring-[var(--surface)]">
+                <CheckCircle2 className="size-3.5" />
+              </div>
             </div>
-            <div className="absolute -bottom-1.5 -end-1.5 flex size-7 items-center justify-center rounded-full bg-[var(--success)] text-white ring-2 ring-[var(--background)]">
-              <CheckCircle2 className="size-4" />
+
+            <ApiKeysAlert variant="warning" message={ss.warning} />
+
+            <div className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
+              <code
+                dir="ltr"
+                className="flex-1 break-all text-start font-mono text-xs text-[var(--foreground)] select-all"
+              >
+                {createdKey}
+              </code>
+              <button
+                type="button"
+                onClick={() => void handleCopyKey()}
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                aria-label={ss.copy}
+              >
+                {copied ? (
+                  <Check className="size-3.5 text-[var(--success)]" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </button>
             </div>
           </div>
+        </AppSettingsSection>
 
-          <div>
-            <h2 className="text-xl font-bold text-[var(--foreground)]">
-              {ss.heading ?? s.createKey}
-            </h2>
-            <p className="mt-1.5 text-sm text-[var(--muted-foreground)]">
-              {ss.description}
-            </p>
-          </div>
-
-          <ApiKeysAlert variant="warning" message={ss.warning} />
-
-          <div className="flex w-full items-center gap-2 rounded-xl bg-[var(--surface-secondary)] p-3">
-            <code
-              dir="ltr"
-              className="flex-1 break-all text-start font-mono text-xs text-[var(--foreground)] select-all"
-            >
-              {createdKey}
-            </code>
-            <button
-              type="button"
-              onClick={() => void handleCopyKey()}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--background)] transition-colors hover:bg-[var(--surface-secondary)]"
-              aria-label={ss.copy}
-            >
-              {copied ? (
-                <Check className="size-4 text-[var(--success)]" />
-              ) : (
-                <Copy className="size-4 text-[var(--muted-foreground)]" />
-              )}
-            </button>
-          </div>
-
+        <div className="mt-4 flex justify-end">
           <Button
             onPress={() => router.push(appApiKeys(app.appId))}
             className="w-full rounded-full sm:w-auto sm:px-8"
@@ -242,20 +252,16 @@ export function CreateApiKeyForm() {
   ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-8">
-      <Link
-        href={appApiKeys(app.appId)}
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-      >
-        <BackArrow className="size-4" />
-        {cp.back}
-      </Link>
-
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 sm:gap-8">
       <ApiKeyQuotaBanner
         used={apiKeysUsed}
         limit={apiKeysLimit}
         quotaLabels={quotaLabels}
-        limitMessage={formatUsageCount(s.limitReached, apiKeysUsed, apiKeysLimit)}
+        limitMessage={formatUsageCount(
+          s.limitReached,
+          apiKeysUsed,
+          apiKeysLimit,
+        )}
         quotaTitle={cp.quotaTitle ?? s.metricQuota}
         quotaDesc={cp.quotaDesc ?? s.quotaOpenHint ?? ''}
         loadError={subscriptionError ? s.subscriptionLoadError : undefined}
@@ -269,184 +275,200 @@ export function CreateApiKeyForm() {
         <ApiKeysAlert variant="warning" message={cp.liveWriteWarning ?? ''} />
       ) : null}
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Key className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {cp.basicsSection}
-          </h2>
-        </div>
-
-        <div className="dashboard-card space-y-5 rounded-2xl p-5 sm:rounded-3xl">
+      <AppSettingsSection
+        flush
+        title={cp.basicsSection}
+        description={cp.envDesc}
+      >
+        <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:gap-y-5 sm:p-5">
           <TextField
+            isRequired
+            className="sm:col-span-2"
             value={name}
             onChange={(value) => {
               setName(value);
               clearErrors();
             }}
-            isRequired
-            isInvalid={Boolean(formError && !name.trim())}
             isDisabled={isAtLimit}
+            isInvalid={Boolean(formError && !name.trim())}
           >
-            <Label>{cp.nameLabel}</Label>
-            <Input placeholder={cp.namePlaceholder} />
+            <Label className={settingsLabelClassName}>{cp.nameLabel}</Label>
+            <Input
+              placeholder={cp.namePlaceholder}
+              className={settingsInputClassName}
+            />
           </TextField>
-
-          <div>
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              {cp.envLabel}
-            </p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {cp.envDesc}
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {(['live', 'test'] as const).map((env) => {
-                const selected = environment === env;
-                const EnvIcon = env === 'live' ? Globe : FlaskConical;
-                return (
-                  <button
-                    key={env}
-                    type="button"
-                    disabled={isAtLimit}
-                    onClick={() => setEnvironment(env)}
-                    className={cn(
-                      'flex items-start gap-3 rounded-xl border p-4 text-start transition-all disabled:cursor-not-allowed disabled:opacity-50',
-                      selected
-                        ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] ring-1 ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]'
-                        : 'border-[var(--border)] hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))]',
-                    )}
-                  >
-                    <EnvIcon
-                      className={cn(
-                        'mt-0.5 size-4 shrink-0',
-                        env === 'live'
-                          ? 'text-[var(--success)]'
-                          : 'text-[var(--warning)]',
-                      )}
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-[var(--foreground)]">
-                        {env === 'live' ? s.live : s.test}
-                      </span>
-                      <span className="mt-1 block text-xs text-[var(--muted-foreground)]">
-                        {env === 'live' ? cp.envLiveDesc : cp.envTestDesc}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Shield className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {cp.permissionsSection}
-          </h2>
         </div>
 
-        <div className="dashboard-card rounded-2xl p-5 sm:rounded-3xl">
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            {cp.scopesLabel}
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-            {cp.scopesHelp}
-          </p>
-          <div className={cn('mt-3', isAtLimit && 'pointer-events-none opacity-50')}>
-            <ApiKeyScopeGrid
-              selectedScopes={selectedScopes}
-              scopeLabels={scopeLabels}
-              onChange={(scopes) => {
-                setSelectedScopes(scopes);
+        <SettingsRowDivider />
+
+        <SettingsRow
+          isStatic
+          icon={environment === 'live' ? Globe : FlaskConical}
+          title={cp.envLabel}
+          subtitle={
+            environment === 'live' ? cp.envLiveDesc : cp.envTestDesc
+          }
+        />
+
+        <SettingsRowDivider />
+
+        <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+          {(['live', 'test'] as const).map((env) => {
+            const selected = environment === env;
+            const EnvIcon = env === 'live' ? Globe : FlaskConical;
+            return (
+              <button
+                key={env}
+                type="button"
+                disabled={isAtLimit}
+                onClick={() => setEnvironment(env)}
+                className={cn(
+                  'flex items-start gap-3 rounded-xl border px-3.5 py-3.5 text-start transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                  selected
+                    ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))]'
+                    : 'border-[var(--border)] bg-[var(--background)] hover:bg-[var(--surface-secondary)]/50',
+                )}
+              >
+                <EnvIcon
+                  className={cn(
+                    'mt-0.5 size-4 shrink-0',
+                    env === 'live'
+                      ? 'text-[var(--success)]'
+                      : 'text-[var(--warning)]',
+                  )}
+                />
+                <span>
+                  <span className="block text-[13px] font-medium text-[var(--foreground)]">
+                    {env === 'live' ? s.live : s.test}
+                  </span>
+                  <span className="mt-0.5 block text-[12px] text-[var(--muted-foreground)]">
+                    {env === 'live' ? cp.envLiveDesc : cp.envTestDesc}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </AppSettingsSection>
+
+      <AppSettingsSection
+        flush
+        title={cp.permissionsSection}
+        description={cp.scopesHelp}
+      >
+        <SettingsRow
+          isStatic
+          icon={Shield}
+          title={cp.scopesLabel}
+          subtitle={
+            selectedScopes.length > 0
+              ? selectedScopes
+                  .slice(0, 3)
+                  .map((scope) => scopeLabels[scope] ?? scope)
+                  .join(' · ') +
+                (selectedScopes.length > 3
+                  ? ` +${selectedScopes.length - 3}`
+                  : '')
+              : cp.scopesHelp
+          }
+        />
+        <SettingsRowDivider />
+        <div
+          className={cn(
+            'p-4 sm:p-5',
+            isAtLimit && 'pointer-events-none opacity-50',
+          )}
+        >
+          <ApiKeyScopeGrid
+            selectedScopes={selectedScopes}
+            scopeLabels={scopeLabels}
+            onChange={(scopes) => {
+              setSelectedScopes(scopes);
+              clearErrors();
+            }}
+          />
+        </div>
+      </AppSettingsSection>
+
+      <AppSettingsSection
+        flush
+        title={cp.securitySection}
+        description={cp.ipDesc}
+      >
+        <SettingsRow
+          isStatic
+          icon={Lock}
+          title={cp.ipLabel}
+          subtitle={
+            ipList.length > 0
+              ? ipList.join(' · ')
+              : (cp.ipPlaceholder ?? '—')
+          }
+        />
+        <SettingsRowDivider />
+        <div
+          className={cn(
+            'p-4 sm:p-5',
+            isAtLimit && 'pointer-events-none opacity-50',
+          )}
+        >
+          <ApiKeyIpField
+            ipInput={ipInput}
+            ipList={ipList}
+            ipError={ipError}
+            placeholder={cp.ipPlaceholder}
+            addLabel={cp.addIp}
+            removeIpLabel={s.removeIp}
+            onInputChange={(value) => {
+              setIpInput(value);
+              setIpError(null);
+            }}
+            onAdd={handleAddIp}
+            onRemove={(ip) =>
+              setIpList((prev) => prev.filter((item) => item !== ip))
+            }
+          />
+        </div>
+
+        <SettingsRowDivider />
+
+        <SettingsRow
+          isStatic
+          icon={CalendarDays}
+          title={cp.expiryLabel}
+          subtitle={
+            expirationOptions.find((o) => o.id === expiration)?.label
+          }
+        />
+        <SettingsRowDivider />
+        <div className="flex flex-wrap gap-2 p-4 sm:p-5">
+          {expirationOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              disabled={isAtLimit}
+              onClick={() => {
+                setExpiration(option.id);
                 clearErrors();
               }}
-            />
-          </div>
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                expiration === option.id
+                  ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] text-[var(--foreground)]'
+                  : 'border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)]',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
-      </section>
+      </AppSettingsSection>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Lock className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {cp.securitySection}
-          </h2>
-        </div>
-
-        <div className="dashboard-card space-y-5 rounded-2xl p-5 sm:rounded-3xl">
-          <div>
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              {cp.ipLabel}
-            </p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {cp.ipDesc}
-            </p>
-            <div className={isAtLimit ? 'pointer-events-none opacity-50' : undefined}>
-              <ApiKeyIpField
-                ipInput={ipInput}
-                ipList={ipList}
-                ipError={ipError}
-                placeholder={cp.ipPlaceholder}
-                addLabel={cp.addIp}
-                removeIpLabel={s.removeIp}
-                onInputChange={(value) => {
-                  setIpInput(value);
-                  setIpError(null);
-                }}
-                onAdd={handleAddIp}
-                onRemove={(ip) => setIpList((prev) => prev.filter((item) => item !== ip))}
-              />
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--border)] pt-5">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="size-4 text-[var(--primary)]" />
-              <p className="text-sm font-medium text-[var(--foreground)]">
-                {cp.expiryLabel}
-              </p>
-            </div>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {cp.expiryDesc}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {expirationOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  disabled={isAtLimit}
-                  onClick={() => {
-                    setExpiration(option.id);
-                    clearErrors();
-                  }}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
-                    expiration === option.id
-                      ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] text-[var(--foreground)]'
-                      : 'border-[var(--border)] text-[var(--muted-foreground)] hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))]',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="dashboard-card flex flex-col-reverse gap-3 rounded-2xl p-4 sm:flex-row sm:justify-end sm:rounded-3xl sm:p-5">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
           href={appApiKeys(app.appId)}
-          className="touch-target inline-flex w-full items-center justify-center rounded-full border border-[var(--border)] px-6 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:w-auto"
+          className="inline-flex w-full items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:w-auto"
         >
           {s.cancel}
         </Link>
@@ -454,7 +476,7 @@ export function CreateApiKeyForm() {
           type="button"
           onClick={() => void handleSubmit()}
           disabled={!name.trim() || createMutation.isPending || isAtLimit}
-          className="touch-target inline-flex w-full items-center justify-center rounded-full bg-[var(--primary)] px-8 py-2.5 text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          className="inline-flex w-full items-center justify-center rounded-full bg-[var(--primary)] px-8 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
           {createMutation.isPending ? cp.creating : cp.create}
         </button>

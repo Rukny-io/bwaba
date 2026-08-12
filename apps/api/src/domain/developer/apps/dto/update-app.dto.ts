@@ -4,6 +4,7 @@ import {
   MinLength,
   MaxLength,
   IsEmail,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsHttpsUrl } from './is-https-url.validator';
@@ -21,6 +22,19 @@ export class UpdateAppDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @ApiPropertyOptional({ description: 'بريد التواصل للتطبيق' })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  contactEmail?: string;
+
+  @ApiPropertyOptional({ description: 'بريد الشركة / Company email' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== '' && value != null)
+  @IsEmail()
+  @MaxLength(254)
+  companyEmail?: string;
 
   @ApiPropertyOptional({ description: 'معرّف محفظة الأعمال / Business portfolio ID' })
   @IsOptional()

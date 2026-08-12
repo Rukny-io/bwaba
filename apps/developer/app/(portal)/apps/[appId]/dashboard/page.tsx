@@ -1,5 +1,9 @@
 import { getDashboardUser, requireAppForUser } from '@/lib/dal';
-import { AppDashboard } from '@/components/dashboard/app-dashboard';
+import {
+  AppDashboard,
+  AppDashboardCreateKeyAction,
+} from '@/components/dashboard/app-dashboard';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { getDictionary } from '@/lib/dictionary';
 
 export default async function AppDashboardPage({
@@ -15,26 +19,17 @@ export default async function AppDashboardPage({
   const greeting = user.name ?? user.username ?? user.email ?? 'Developer';
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <header>
-        <p
-          dir="ltr"
-          className="mb-1 font-mono text-[11px] text-[var(--muted-foreground)]"
-        >
-          {app.appId}
-        </p>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {app.name}
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--muted-foreground)] sm:text-sm">
-          {t.welcome.replace('{name}', greeting)}
-        </p>
-      </header>
-
-      <AppDashboard
-        publicAppId={app.appId}
-        internalAppId={app.id}
+    <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
+      <DashboardPageHeader
+        className="mb-0"
+        title={t.title}
+        description={t.welcome
+          .replace('{name}', greeting)
+          .replace('{app}', app.name)}
+        actions={<AppDashboardCreateKeyAction publicAppId={app.appId} />}
       />
-    </div>
+
+      <AppDashboard publicAppId={app.appId} internalAppId={app.id} />
+    </section>
   );
 }

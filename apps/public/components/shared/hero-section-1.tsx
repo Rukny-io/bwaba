@@ -106,13 +106,16 @@ export function HeroSection() {
                         className="pointer-events-none absolute inset-x-0 top-0 h-[min(520px,70vh)] bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,44,48,0.07),transparent)]"
                         aria-hidden
                     />
-                    <div className="relative z-10 pt-24 sm:pt-28 md:pt-32 pb-10 sm:pb-14 md:pb-16">
+                    <div className="relative z-10 pt-8 sm:pt-10 md:pt-12 pb-10 sm:pb-14 md:pb-16">
                         <div className="mx-auto max-w-6xl px-4 sm:px-6">
                             <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-14 xl:gap-16">
                                 {/* Right — heading */}
                                 <div className="home-hero-enter flex-1 text-center lg:text-right">
                                     <h1 className="text-[2rem] sm:text-4xl md:text-5xl lg:text-[3.75rem] xl:text-[4.25rem] font-bold leading-[1.15] tracking-[-0.02em] text-[#132327]">
-                                        <span className="block">منصة رقمية</span>
+                                        <span className="block text-[1.125rem] sm:text-xl md:text-2xl font-semibold tracking-normal text-[#132327]/75" dir="ltr">
+                                            Rukny Solutions
+                                        </span>
+                                        <span className="block mt-2">منصة رقمية</span>
                                         <span className="my-2 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 sm:gap-3 lg:justify-end">
                                             <span>متكاملة لـ</span>
                                             <RotatingText />
@@ -323,11 +326,11 @@ const HeroHeader = () => {
                         <div className="flex h-14 items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-8">
                         <Link
                             href="/"
-                            aria-label="الصفحة الرئيسية — ركني"
+                            aria-label="الصفحة الرئيسية — Rukny Solutions"
                             className="group flex items-center gap-2.5 text-[#132327] transition-opacity hover:opacity-80"
                         >
                             <RuknyLogo />
-                            <span className="hidden text-[15px] font-bold tracking-[-0.02em] sm:inline">
+                            <span className="text-[14px] font-bold tracking-[-0.02em] sm:text-[15px]">
                                 Rukny Solutions
                             </span>
                         </Link>
@@ -376,6 +379,13 @@ const HeroHeader = () => {
                         </div>
 
                         <div className="flex items-center justify-end gap-2">
+                            <Link
+                                href={siteUrls.privacy}
+                                className="hidden items-center rounded-full px-3 py-2 text-[12px] font-medium transition-all lg:inline-flex"
+                                style={{ color: MUTED }}
+                            >
+                                Privacy
+                            </Link>
                             <Link
                                 href={accountsUrl}
                                 className="hidden items-center rounded-full px-3.5 py-2 text-[13px] font-medium transition-all xl:inline-flex"

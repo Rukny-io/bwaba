@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { LogoCloud } from '@/components/ui/logo-cloud';
 import Footer from '@/components/layout/footer';
 import { UnifiedPlatformSection } from '@/components/home/unified-platform-section';
+import { AppPurposeSection } from '@/components/home/app-purpose-section';
 import { WhyChooseRuknySection } from '@/components/home/why-choose-rukny-section';
 import { FinalCtaSection } from '@/components/home/final-cta-section';
 import { cn } from '@/lib/utils';
@@ -183,7 +184,7 @@ export function HeroSection() {
                     </div>
                 </section>
 
-                {/* Trusted Companies Section - LogoCloud */}
+                <AppPurposeSection />
                 <section className="relative w-full bg-white" aria-label="شركاء التقنية">
                     <div className="mx-auto w-full max-w-6xl px-4 pt-2 pb-4 sm:pb-5">
                         <p className="text-center text-[13px] font-medium text-[#132327]/55 sm:text-sm">
@@ -327,7 +328,7 @@ const HeroHeader = () => {
                         >
                             <RuknyLogo />
                             <span className="hidden text-[15px] font-bold tracking-[-0.02em] sm:inline">
-                                ركني
+                                Rukny Solutions
                             </span>
                         </Link>
 
@@ -516,7 +517,7 @@ const HeroHeader = () => {
                         onClick={() => setMenuState(false)}
                     >
                         <RuknyLogo />
-                        <span className="text-[14px] font-bold tracking-[-0.02em]">ركني</span>
+                        <span className="text-[14px] font-bold tracking-[-0.02em]">Rukny Solutions</span>
                     </Link>
 
                     <button

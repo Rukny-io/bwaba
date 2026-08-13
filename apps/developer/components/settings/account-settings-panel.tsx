@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Globe, Monitor, Moon, Sun, User } from 'lucide-react';
 import { setLocaleAction } from '@/actions/set-locale';
@@ -15,6 +16,13 @@ export function AccountSettingsPanel({ user }: { user: AuthUser }) {
   const s = t.developerSettings;
   const isEn = t.common.switchLang === 'العربية';
   const { theme, setTheme } = useTheme();
+  const [themeReady, setThemeReady] = useState(false);
+
+  useEffect(() => {
+    setThemeReady(true);
+  }, []);
+
+  const resolvedTheme = themeReady ? theme : undefined;
 
   async function handleLangChange(locale: 'ar' | 'en') {
     await setLocaleAction(locale);
@@ -63,15 +71,24 @@ export function AccountSettingsPanel({ user }: { user: AuthUser }) {
               {s.themeLabel}
             </p>
             <div className="flex flex-wrap gap-2">
-              <OptionButton active={theme === 'light'} onClick={() => setTheme('light')}>
+              <OptionButton
+                active={resolvedTheme === 'light'}
+                onClick={() => setTheme('light')}
+              >
                 <Sun className="size-3.5" />
                 {s.themeLight}
               </OptionButton>
-              <OptionButton active={theme === 'dark'} onClick={() => setTheme('dark')}>
+              <OptionButton
+                active={resolvedTheme === 'dark'}
+                onClick={() => setTheme('dark')}
+              >
                 <Moon className="size-3.5" />
                 {s.themeDark}
               </OptionButton>
-              <OptionButton active={theme === 'system'} onClick={() => setTheme('system')}>
+              <OptionButton
+                active={resolvedTheme === 'system'}
+                onClick={() => setTheme('system')}
+              >
                 <Monitor className="size-3.5" />
                 {s.themeSystem}
               </OptionButton>

@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Inbox, Link2, Loader2, Plus, Unlink, CircleCheck } from 'lucide-react';
+import {
+  CircleCheck,
+  Download,
+  Eye,
+  Inbox,
+  Link2,
+  Loader2,
+  Plus,
+  Unlink,
+} from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
@@ -13,6 +22,7 @@ import {
   useFormsMutations,
   useLinkedForms,
 } from '@/hooks/use-app-forms';
+import { useSidebarProductsOptional } from '@/hooks/use-sidebar-products';
 import { appFormConnect, appForms, appSettings } from '@/lib/app-routes';
 import { getFormsCreateUrl, getFormsDashboardUrl } from '@/lib/forms-urls';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
@@ -215,12 +225,61 @@ function EmbedSecurityCard({ appId }: { appId: string }) {
 export function FormsHub({ appId }: { appId: string }) {
   const t = useTranslations();
   const f = t.forms;
+  const p = t.products;
   const statusLabels = (f.status ?? {}) as Record<string, string>;
   const [linkOpen, setLinkOpen] = useState(false);
+  const products = useSidebarProductsOptional();
+  const formsInstalled = products?.isInstalled('forms') ?? false;
+  const productsReady = products?.hydrated ?? true;
 
-  const { data: summary, isLoading: summaryLoading } = useFormsAppSummary(appId);
-  const { data: linked, isLoading: linkedLoading } = useLinkedForms(appId);
+  const { data: summary, isLoading: summaryLoading } = useFormsAppSummary(
+    appId,
+    { enabled: productsReady && formsInstalled },
+  );
+  const { data: linked, isLoading: linkedLoading } = useLinkedForms(appId, {
+    enabled: productsReady && formsInstalled,
+  });
   const { unlinkMutation } = useFormsMutations(appId);
+
+  if (products && productsReady && !formsInstalled) {
+    const formsName = p.items?.forms?.name ?? f.title;
+    return (
+      <div className="dashboard-section-stack">
+        <DashboardPageHeader
+          eyebrow={
+            <p className="font-mono text-[11px] text-[var(--muted-foreground)]">
+              {appId}
+            </p>
+          }
+          title={p.installRequiredTitle}
+          description={p.installRequiredDesc.replace('{name}', formsName)}
+        />
+        <div className="dashboard-card rounded-2xl p-8 text-center sm:rounded-3xl">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {p.items?.forms?.desc ?? f.subtitle}
+          </p>
+          <button
+            type="button"
+            disabled={products.isInstalling}
+            onClick={() => {
+              void products.install('forms').then(
+                () => appToast.success(p.installSuccess),
+                (error) => appToast.fromError(error, p.installFailed),
+              );
+            }}
+            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
+          >
+            {products.isInstalling ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            {p.install} {formsName}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const placeholder = '…';
 

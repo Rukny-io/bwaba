@@ -20,19 +20,25 @@ export const formsAppKeys = {
     [...formsAppKeys.all(appId), 'detail', formId] as const,
 };
 
-export function useFormsAppSummary(publicAppId: string) {
+export function useFormsAppSummary(
+  publicAppId: string,
+  opts?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: formsAppKeys.summary(publicAppId),
     queryFn: () => getFormsAppSummary(publicAppId),
-    enabled: Boolean(publicAppId),
+    enabled: Boolean(publicAppId) && (opts?.enabled ?? true),
   });
 }
 
-export function useLinkedForms(publicAppId: string) {
+export function useLinkedForms(
+  publicAppId: string,
+  opts?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: formsAppKeys.linked(publicAppId),
     queryFn: () => listLinkedForms(publicAppId),
-    enabled: Boolean(publicAppId),
+    enabled: Boolean(publicAppId) && (opts?.enabled ?? true),
   });
 }
 

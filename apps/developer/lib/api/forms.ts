@@ -31,6 +31,7 @@ export interface FormsAppSummary {
   embedOrigins: string[];
   embedAllowedConfigured: string[];
   websiteOrigin: string | null;
+  formsInstalled?: boolean;
 }
 
 export interface LinkedFormDetail extends LinkedFormSummary {

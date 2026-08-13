@@ -6,8 +6,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
-  title: "Rukny - App",
-  description: "App for Rukny platform",
+  title: "Rukny Solutions",
+  description:
+    "Rukny Solutions — Arabic SaaS platform for stores, forms, profiles, and analytics.",
   icons: {
     icon: "/rukny-logo.svg",
   },

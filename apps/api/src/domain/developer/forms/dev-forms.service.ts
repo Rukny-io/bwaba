@@ -89,8 +89,36 @@ export class DevFormsService {
     return form;
   }
 
+  private emptySummary(app: {
+    appId: string;
+    websiteUrl: string | null;
+    embedAllowedOrigins: string[];
+  }) {
+    return {
+      appId: app.appId,
+      linkedCount: 0,
+      publishedCount: 0,
+      totalSubmissions: 0,
+      totalViews: 0,
+      embedOrigins: buildAllowedEmbedAncestors(app),
+      embedAllowedConfigured: app.embedAllowedOrigins,
+      websiteOrigin: parseOriginFromUrl(app.websiteUrl),
+      formsInstalled: false,
+    };
+  }
+
   async getSummary(userId: string, publicAppId: string) {
-    const app = await this.resolveOwnedAppWithForms(userId, publicAppId);
+    const app = await this.resolveOwnedApp(userId, publicAppId);
+    const installed = await this.prisma.developerAppProduct.findUnique({
+      where: {
+        developerAppId_productId: {
+          developerAppId: app.id,
+          productId: 'forms',
+        },
+      },
+      select: { id: true },
+    });
+    if (!installed) return this.emptySummary(app);
 
     const linked = await this.prisma.form.findMany({
       where: { developerAppId: app.id, ...ACTIVE_FORM_FILTER },
@@ -112,11 +140,22 @@ export class DevFormsService {
       embedOrigins: buildAllowedEmbedAncestors(app),
       embedAllowedConfigured: app.embedAllowedOrigins,
       websiteOrigin: parseOriginFromUrl(app.websiteUrl),
+      formsInstalled: true,
     };
   }
 
   async listLinked(userId: string, publicAppId: string) {
-    const app = await this.resolveOwnedAppWithForms(userId, publicAppId);
+    const app = await this.resolveOwnedApp(userId, publicAppId);
+    const installed = await this.prisma.developerAppProduct.findUnique({
+      where: {
+        developerAppId_productId: {
+          developerAppId: app.id,
+          productId: 'forms',
+        },
+      },
+      select: { id: true },
+    });
+    if (!installed) return [];
 
     const forms = await this.prisma.form.findMany({
       where: { developerAppId: app.id, ...ACTIVE_FORM_FILTER },

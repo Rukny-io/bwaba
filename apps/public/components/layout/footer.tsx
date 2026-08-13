@@ -102,7 +102,7 @@ const RuknyLogo = ({ className }: { className?: string }) => {
         className="text-2xl font-bold"
         style={{ fontFamily: "var(--font-courgette), cursive" }}
       >
-        Rukny
+        Rukny Solutions
       </span>
     </div>
   );
@@ -182,7 +182,7 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500 dark:text-gray-400 gap-4">
-          <p>© {new Date().getFullYear()} ركني. جميع الحقوق محفوظة.</p>
+          <p>© {new Date().getFullYear()} Rukny Solutions. جميع الحقوق محفوظة.</p>
           <div className="flex gap-6">
             <a href={siteUrls.privacy} className="hover:text-primary transition-colors">
               الخصوصية

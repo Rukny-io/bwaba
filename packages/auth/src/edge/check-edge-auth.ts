@@ -49,6 +49,16 @@ function userFromPayload(
   };
 }
 
+let loggedMissingJwtSecret = false;
+
+function logMissingJwtSecretOnce(): void {
+  if (loggedMissingJwtSecret) return;
+  loggedMissingJwtSecret = true;
+  console.error(
+    '[edge auth] JWT_SECRET is required in production (set it on the Next.js container)',
+  );
+}
+
 /**
  * Edge-runtime JWT check with refresh-cookie awareness.
  * Never uses hardcoded JWT secrets — JWT_SECRET is required in production.
@@ -100,7 +110,7 @@ export async function checkEdgeAuth(
   }
 
   if (process.env.NODE_ENV === 'production') {
-    console.error('[edge auth] JWT_SECRET is required in production');
+    logMissingJwtSecretOnce();
     return { isAuthenticated: false, user: null, tokenExpired: true };
   }
 

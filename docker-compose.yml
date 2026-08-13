@@ -351,6 +351,7 @@ services:
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
       NEXT_PUBLIC_DEV_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      JWT_SECRET: ${JWT_SECRET}
     networks:
       - rukny_network
 

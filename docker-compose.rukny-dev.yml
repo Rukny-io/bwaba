@@ -271,6 +271,7 @@ services:
       NEXT_PUBLIC_ACCOUNTS_URL: http://localhost:3005
       NEXT_PUBLIC_DEVELOPERS_URL: http://localhost:3004
       NEXT_PUBLIC_FORMS_URL: http://localhost:3007
+      JWT_SECRET: ${JWT_SECRET}
     networks:
       - rukny_dev_network
 

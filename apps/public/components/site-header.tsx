@@ -15,7 +15,7 @@ export function SiteHeader() {
       <div className="site-header__inner">
         <Link href="/" className="site-header__brand">
           <RuknyLogo className="h-8 w-8" />
-          <span>Rukny Solutions</span>
+          <span>Rukny</span>
         </Link>
 
         <nav className="site-header__nav" aria-label="التنقل الرئيسي">

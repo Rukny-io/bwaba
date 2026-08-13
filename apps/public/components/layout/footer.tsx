@@ -30,7 +30,7 @@ import { siteUrls } from "@/lib/site-urls";
 
 const footerConfig = {
   description:
-    "Rukny Solutions (ركني) منصة عربية متكاملة تمكّنك من إنشاء صفحتك الاحترافية، إدارة متجرك الإلكتروني، وأنشاء نماذج ذكية بكل سهولة.",
+    "Rukny (ركني) منصة عربية متكاملة تمكّنك من إنشاء صفحتك الاحترافية، إدارة متجرك الإلكتروني، وأنشاء نماذج ذكية بكل سهولة.",
   contact: {
     email: "support@rukny.io",
     phone: "+964 773 714 2672",
@@ -102,7 +102,7 @@ const RuknyLogo = ({ className }: { className?: string }) => {
         className="text-2xl font-bold"
         style={{ fontFamily: "var(--font-courgette), cursive" }}
       >
-        Rukny Solutions
+        Rukny
       </span>
     </div>
   );
@@ -182,7 +182,7 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500 dark:text-gray-400 gap-4">
-          <p>© {new Date().getFullYear()} Rukny Solutions. جميع الحقوق محفوظة.</p>
+          <p>© {new Date().getFullYear()} Rukny. جميع الحقوق محفوظة.</p>
           <div className="flex gap-6">
             <a href={siteUrls.privacy} className="hover:text-primary transition-colors">
               الخصوصية

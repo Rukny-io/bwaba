@@ -3,9 +3,9 @@ import { HeroSection } from "@/components/shared/hero-section-1";
 import { HomeAppSummary } from "@/components/home/home-app-summary";
 
 export const metadata: Metadata = {
-  title: "Rukny Solutions — منصة واحدة لكل ما تحتاجه",
+  title: "Rukny — منصة واحدة لكل ما تحتاجه",
   description:
-    "Rukny Solutions (ركني) is an Arabic SaaS platform for online stores, smart forms, profiles, and analytics. Sync form data to Google Sheets when users connect Google.",
+    "Rukny (ركني) is an Arabic SaaS platform for online stores, smart forms, profiles, and analytics. Sync form data to Google Sheets when users connect Google.",
 };
 
 export default function Home() {

@@ -1,50 +1,85 @@
 import { siteUrls } from '@/lib/site-urls';
 
 /**
- * Server-rendered summary for OAuth homepage verification (Google crawlers).
- * Kept visible above the fold — see Google App Homepage requirements.
+ * Server-rendered for Google OAuth homepage verification.
+ * App name must match OAuth consent screen: "Rukny".
  */
 export function HomeAppSummary() {
   return (
     <section
       id="app-summary"
       dir="ltr"
-      className="border-b border-[#E8ECF0] bg-[#FAFBFC] px-4 pb-4 pt-14 sm:px-6 sm:pb-5 sm:pt-[4.25rem]"
-      aria-label="About Rukny Solutions"
+      className="border-b border-[#E8ECF0] bg-[#FAFBFC] px-4 pb-5 pt-14 sm:px-6 sm:pb-6 sm:pt-[4.25rem]"
+      aria-labelledby="what-is-rukny"
     >
-      <div className="mx-auto max-w-6xl text-[13px] leading-[1.75] text-[#132327]/70 sm:text-[14px]">
-        <p>
-          <strong className="font-semibold text-[#132327]">Rukny Solutions</strong>{' '}
-          is the official application name of our Arabic SaaS platform (ركني). We
-          help businesses run online stores, smart forms, profile pages, links,
-          and analytics from one dashboard — at{' '}
-          <a href={siteUrls.app} className="underline hover:opacity-80">
-            app.rukny.io
-          </a>
-          ,{' '}
-          <a href={siteUrls.forms} className="underline hover:opacity-80">
-            forms.rukny.io
-          </a>
-          , and{' '}
-          <a href={siteUrls.accounts} className="underline hover:opacity-80">
-            accounts.rukny.io
-          </a>
-          .
-        </p>
-        <p className="mt-2">
-          <strong className="font-semibold text-[#132327]">Why we request Google user data:</strong>{' '}
-          only when a user connects Google — to sync form submissions to Google
-          Sheets they choose, and to store their integration configuration in
-          their own Google Drive (including app configuration data). We do not
-          sell personal data.{' '}
-          <a href={siteUrls.privacy} className="underline hover:opacity-80">
-            Privacy Policy
-          </a>
-          {' · '}
-          <a href={siteUrls.terms} className="underline hover:opacity-80">
-            Terms of Service
-          </a>
-        </p>
+      <div className="mx-auto max-w-6xl space-y-4 text-[13px] leading-[1.8] text-[#132327]/75 sm:text-[14px]">
+        <div>
+          <h2
+            id="what-is-rukny"
+            className="text-base font-bold text-[#132327] sm:text-lg"
+          >
+            What is Rukny?
+          </h2>
+          <p className="mt-2">
+            <strong className="font-semibold text-[#132327]">Rukny</strong> (ركني)
+            is an Arabic SaaS application that helps creators and businesses launch
+            and manage their digital presence from one place. With Rukny you can:
+          </p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            <li>Publish an online store and sell products</li>
+            <li>Build and publish smart forms and collect responses</li>
+            <li>Create a professional profile page and manage links</li>
+            <li>View analytics for visits, sales, and form submissions</li>
+          </ul>
+          <p className="mt-2">
+            Users sign in at{' '}
+            <a href={siteUrls.accounts} className="underline hover:opacity-80">
+              accounts.rukny.io
+            </a>
+            , manage their workspace at{' '}
+            <a href={siteUrls.app} className="underline hover:opacity-80">
+              app.rukny.io
+            </a>
+            , and publish forms at{' '}
+            <a href={siteUrls.forms} className="underline hover:opacity-80">
+              forms.rukny.io
+            </a>
+            .
+          </p>
+        </div>
+
+        <div>
+          <h2
+            id="google-data-use"
+            className="text-base font-bold text-[#132327] sm:text-lg"
+          >
+            How Rukny uses Google user data
+          </h2>
+          <p className="mt-2">
+            Rukny requests Google access <strong>only after</strong> a user chooses
+            to connect Google. We use it to:
+          </p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            <li>
+              Sync form submissions to Google Sheets the user selects
+            </li>
+            <li>
+              Store the user&apos;s integration settings in their own Google Drive
+              (app configuration data)
+            </li>
+          </ul>
+          <p className="mt-2">
+            We do not sell personal data. Read our{' '}
+            <a href={siteUrls.privacy} className="underline hover:opacity-80">
+              Privacy Policy
+            </a>{' '}
+            and{' '}
+            <a href={siteUrls.terms} className="underline hover:opacity-80">
+              Terms of Service
+            </a>
+            .
+          </p>
+        </div>
       </div>
     </section>
   );

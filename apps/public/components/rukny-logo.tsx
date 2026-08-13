@@ -8,7 +8,7 @@ export function RuknyLogo({
   return (
     <Image
       src="/rukny-logo.svg"
-      alt="Rukny Solutions"
+      alt="Rukny"
       width={32}
       height={32}
       className={className}

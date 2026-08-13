@@ -465,18 +465,22 @@ export class AppAnalyticsService {
     start: Date,
     end: Date,
   ): Promise<number> {
-    const rows = await this.prisma.$queryRaw<{ total: number }[]>`
-      SELECT COALESCE(SUM(t.amount), 0)::int AS total
-      FROM wallet_transactions t
-      INNER JOIN developer_wallets w ON w.id = t."walletId"
-      WHERE w."userId" = ${userId}
-        AND t.type = 'MESSAGE_CHARGE'
-        AND t.status = 'COMPLETED'
-        AND t."createdAt" >= ${start}
-        AND t."createdAt" <= ${end}
-        AND t.metadata->>'developerAppId' = ${developerAppId}
-    `;
-    return Number(rows[0]?.total) || 0;
+    try {
+      const rows = await this.prisma.$queryRaw<{ total: number }[]>`
+        SELECT COALESCE(SUM(t.amount), 0)::int AS total
+        FROM wallet_transactions t
+        INNER JOIN developer_wallets w ON w.id = t."walletId"
+        WHERE w."userId" = ${userId}
+          AND t.type = 'MESSAGE_CHARGE'
+          AND t.status = 'COMPLETED'
+          AND t."createdAt" >= ${start}
+          AND t."createdAt" <= ${end}
+          AND t.metadata->>'developerAppId' = ${developerAppId}
+      `;
+      return Number(rows[0]?.total) || 0;
+    } catch {
+      return 0;
+    }
   }
 
   private async dailyWalletSpend(
@@ -485,18 +489,22 @@ export class AppAnalyticsService {
     start: Date,
     end: Date,
   ) {
-    return this.prisma.$queryRaw<{ date: Date; total: number }[]>`
-      SELECT DATE(t."createdAt") AS date, COALESCE(SUM(t.amount), 0)::int AS total
-      FROM wallet_transactions t
-      INNER JOIN developer_wallets w ON w.id = t."walletId"
-      WHERE w."userId" = ${userId}
-        AND t.type = 'MESSAGE_CHARGE'
-        AND t.status = 'COMPLETED'
-        AND t."createdAt" >= ${start}
-        AND t."createdAt" <= ${end}
-        AND t.metadata->>'developerAppId' = ${developerAppId}
-      GROUP BY DATE(t."createdAt")
-      ORDER BY date ASC
-    `;
+    try {
+      return await this.prisma.$queryRaw<{ date: Date; total: number }[]>`
+        SELECT DATE(t."createdAt") AS date, COALESCE(SUM(t.amount), 0)::int AS total
+        FROM wallet_transactions t
+        INNER JOIN developer_wallets w ON w.id = t."walletId"
+        WHERE w."userId" = ${userId}
+          AND t.type = 'MESSAGE_CHARGE'
+          AND t.status = 'COMPLETED'
+          AND t."createdAt" >= ${start}
+          AND t."createdAt" <= ${end}
+          AND t.metadata->>'developerAppId' = ${developerAppId}
+        GROUP BY DATE(t."createdAt")
+        ORDER BY date ASC
+      `;
+    } catch {
+      return [];
+    }
   }
 }

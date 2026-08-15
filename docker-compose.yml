@@ -88,6 +88,7 @@ services:
       FORMS_FRONTEND_URL: ${FORMS_FRONTEND_URL:-https://forms.rukny.io}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.rukny.io}
       DEVELOPERS_FRONTEND_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      BUSINESS_FRONTEND_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # Trust nginx/accounts/docker hops so OAuth IP binding uses real client IP
@@ -122,7 +123,8 @@ services:
       # Instagram Integration
       INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID}
       INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
-      INSTAGRAM_REDIRECT_URI: ${INSTAGRAM_REDIRECT_URI:-http://localhost:3001/api/v1/integrations/instagram/callback}
+      INSTAGRAM_REDIRECT_URI: ${INSTAGRAM_REDIRECT_URI:-https://business.rukny.io/api/v1/integrations/instagram/callback}
+      INSTAGRAM_WEBHOOK_VERIFY_TOKEN: ${INSTAGRAM_WEBHOOK_VERIFY_TOKEN}
       # YouTube Integration
       YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
       YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
@@ -301,6 +303,7 @@ services:
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
     networks:
       - rukny_network
 
@@ -453,6 +456,7 @@ services:
       - accounts
       - developers
       - forms
+      - business
     networks:
       - rukny_network
 

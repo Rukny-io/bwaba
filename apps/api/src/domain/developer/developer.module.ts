@@ -34,6 +34,9 @@ import { ContactsService } from './contacts/contacts.service';
 import { UsageController } from './usage/usage.controller';
 import { UsageService } from './usage/usage.service';
 
+// Shared
+import { DeveloperRateLimitService } from './shared/developer-rate-limit.service';
+
 // Apps
 import { AppsController } from './apps/apps.controller';
 import { AppsService } from './apps/apps.service';
@@ -104,6 +107,7 @@ import { DevProductsService } from './products/dev-products.service';
     WebhookDeliveryProcessor,
     ContactsService,
     UsageService,
+    DeveloperRateLimitService,
   ],
   exports: [
     AppsService,
@@ -117,6 +121,7 @@ import { DevProductsService } from './products/dev-products.service';
     UsageService,
     DevFormsService,
     DevProductsService,
+    DeveloperRateLimitService,
   ],
 })
 export class DeveloperModule {}

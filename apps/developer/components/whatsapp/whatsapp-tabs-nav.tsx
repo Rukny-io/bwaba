@@ -3,10 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BookOpen,
   Contact,
   LayoutGrid,
-  MessageSquare,
   Phone,
   Webhook,
 } from 'lucide-react';
@@ -23,8 +21,6 @@ import {
 const TAB_ICONS: Record<WhatsappTabSegment, typeof LayoutGrid> = {
   overview: LayoutGrid,
   phones: Phone,
-  templates: BookOpen,
-  logs: MessageSquare,
   webhooks: Webhook,
   contacts: Contact,
 };
@@ -37,8 +33,6 @@ export function WhatsappTabsNav() {
   const labels: Record<WhatsappTabSegment, string> = {
     overview: w.navOverview,
     phones: w.navPhones,
-    templates: w.navTemplates,
-    logs: w.navLogs,
     webhooks: w.navWebhooks,
     contacts: w.navContacts,
   };

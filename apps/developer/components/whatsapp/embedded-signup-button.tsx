@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
-import { Loader2, Link2 } from 'lucide-react';
+import { Loader2, Link2, Plus } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { useEmbeddedSignupConfig, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 import { cn } from '@/lib/utils';
+
+export type EmbeddedSignupMode = 'connect' | 'add-phone';
 
 const FB_ORIGINS = new Set(['https://www.facebook.com', 'https://web.facebook.com']);
 
@@ -29,14 +31,34 @@ declare global {
   }
 }
 
+function buildSignupExtras(mode: EmbeddedSignupMode, wabaId?: string) {
+  const setup: Record<string, unknown> = {};
+
+  if (mode === 'add-phone' && wabaId) {
+    setup.whatsAppBusinessAccount = { ids: wabaId };
+  }
+
+  return {
+    setup,
+    featureType: '',
+    sessionInfoVersion: 3,
+  };
+}
+
 export function EmbeddedSignupButton({
   appId,
   className,
+  mode = 'connect',
+  wabaId: existingWabaId,
 }: {
   appId: string;
   className?: string;
+  mode?: EmbeddedSignupMode;
+  /** Required when mode is add-phone — targets the linked WABA in Meta Embedded Signup */
+  wabaId?: string;
 }) {
   const w = useTranslations().whatsapp;
+  const isAddPhone = mode === 'add-phone';
   const { data: config, isError: configError, error: configLoadError } =
     useEmbeddedSignupConfig();
   const { connectMutation } = useWhatsappMutations(appId);
@@ -104,17 +126,22 @@ export function EmbeddedSignupButton({
           return;
         }
 
-        const { wabaId } = signupMetaRef.current;
+        const { wabaId: signupWabaId } = signupMetaRef.current;
+        const wabaId = isAddPhone
+          ? existingWabaId ?? signupWabaId
+          : signupWabaId ?? existingWabaId;
 
         connectMutation.mutate(
           { code, wabaId },
           {
             onSuccess: () => {
-              appToast.success(w.connected);
+              appToast.success(isAddPhone ? w.addPhoneSuccess : w.connected);
               setLaunching(false);
             },
             onError: (err) => {
-              appToast.error(getApiErrorMessage(err, w.errorConnect));
+              appToast.error(
+                getApiErrorMessage(err, isAddPhone ? w.addPhoneFailed : w.errorConnect),
+              );
               setLaunching(false);
             },
           },
@@ -124,11 +151,7 @@ export function EmbeddedSignupButton({
         config_id: String(config.configId),
         response_type: 'code',
         override_default_response_type: true,
-        extras: {
-          setup: {},
-          featureType: '',
-          sessionInfoVersion: 3,
-        },
+        extras: buildSignupExtras(mode, existingWabaId),
       },
     );
   }
@@ -139,7 +162,17 @@ export function EmbeddedSignupButton({
     !config?.configId ||
     !sdkReady ||
     launching ||
-    connectMutation.isPending;
+    connectMutation.isPending ||
+    (isAddPhone && !existingWabaId);
+
+  const pending = launching || connectMutation.isPending;
+  const label = pending
+    ? isAddPhone
+      ? w.addingPhone
+      : w.connecting
+    : isAddPhone
+      ? w.addPhone
+      : w.connect;
 
   return (
     <>
@@ -165,12 +198,14 @@ export function EmbeddedSignupButton({
           className,
         )}
       >
-        {launching || connectMutation.isPending ? (
+        {pending ? (
           <Loader2 className="size-4 animate-spin" />
+        ) : isAddPhone ? (
+          <Plus className="size-4" />
         ) : (
           <Link2 className="size-4" />
         )}
-        {launching || connectMutation.isPending ? w.connecting : w.connect}
+        {label}
       </button>
     </>
   );

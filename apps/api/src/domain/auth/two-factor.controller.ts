@@ -800,12 +800,8 @@ export class TwoFactorController {
   ): Promise<void> {
     if (!sessionId) return;
 
-    await this.prisma.pendingTwoFactorSession
-      .delete({
-        where: { id: sessionId },
-      })
-      .catch(() => {
-        /* ignore if not found */
-      });
+    await this.prisma.pendingTwoFactorSession.deleteMany({
+      where: { id: sessionId },
+    });
   }
 }

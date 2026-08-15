@@ -14,7 +14,7 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-export function WhatsappLogsPanel() {
+export function WhatsappLogsPanel({ phoneId }: { phoneId?: string }) {
   const t = useTranslations();
   const w = t.whatsapp;
   const [direction, setDirection] = useState<string>('');
@@ -22,6 +22,7 @@ export function WhatsappLogsPanel() {
   const { data, isLoading } = useMessageLogs({
     direction: direction || undefined,
     page,
+    phoneId,
   });
 
   const logs = data?.data ?? [];

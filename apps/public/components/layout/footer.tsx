@@ -112,7 +112,7 @@ export default function Footer() {
   return (
     <footer
       dir="rtl"
-      className="bg-white dark:bg-black text-black dark:text-white px-4 sm:px-6 py-12 sm:py-16 border-t border-gray-200 dark:border-gray-800"
+      className="bg-transparent dark:bg-black text-black dark:text-white px-4 sm:px-6 py-12 sm:py-16 border-t border-gray-200 dark:border-gray-800"
     >
       <div className="max-w-7xl mx-auto">
         {/* Top Section: Logo and Description */}

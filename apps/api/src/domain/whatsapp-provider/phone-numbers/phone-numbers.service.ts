@@ -46,7 +46,11 @@ export class PhoneNumbersService {
     developerAppId: string,
   ): Prisma.DeveloperPhoneNumberWhereInput {
     return {
-      OR: [{ id: phoneId }, { phoneNumberId: phoneId }],
+      OR: [
+        { id: phoneId },
+        { phoneId },
+        { phoneNumberId: phoneId },
+      ],
       account: {
         is: {
           userId,

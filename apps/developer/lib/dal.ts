@@ -34,7 +34,7 @@ export async function getDashboardUser(): Promise<DashboardUser> {
 
   const user = await fetchCurrentUser(cookieHeader);
   if (!user) {
-    redirectToLogin();
+    redirectToLogin(accessToken || refreshToken ? 'invalid' : undefined);
   }
 
   return user;
@@ -95,8 +95,10 @@ async function fetchCurrentUser(
   }
 }
 
-function redirectToLogin(): never {
-  redirect('/login?next=/apps');
+function redirectToLogin(session?: 'expired' | 'invalid'): never {
+  const params = new URLSearchParams({ next: '/apps' });
+  if (session) params.set('session', session);
+  redirect(`/login?${params.toString()}`);
 }
 
 function getBackendUrl(): string {

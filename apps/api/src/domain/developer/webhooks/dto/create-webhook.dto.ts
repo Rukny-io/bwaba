@@ -6,6 +6,7 @@ import {
   MinLength,
   IsIn,
   MaxLength,
+  Matches,
 } from 'class-validator';
 
 export class CreateWebhookDto {
@@ -38,4 +39,10 @@ export class CreateWebhookDto {
   @IsString()
   @MaxLength(200)
   description?: string;
+
+  /** Public 16-digit app id — scopes webhook events to one project */
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{16}$/, { message: 'appId must be a 16-digit public app id' })
+  appId?: string;
 }

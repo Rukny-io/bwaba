@@ -1,8 +1,6 @@
 export const WHATSAPP_TABS = [
   { segment: 'overview', slug: '' },
   { segment: 'phones', slug: 'phone-numbers' },
-  { segment: 'templates', slug: 'templates' },
-  { segment: 'logs', slug: 'logs' },
   { segment: 'webhooks', slug: 'webhooks' },
   { segment: 'contacts', slug: 'contacts' },
 ] as const;
@@ -24,6 +22,9 @@ export function isWhatsappTabActive(
   const href = appWhatsappHref(appId, tab);
   if (tab === 'overview') {
     return pathname === href || pathname === `${href}/`;
+  }
+  if (tab === 'phones') {
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

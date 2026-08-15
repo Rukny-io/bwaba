@@ -43,7 +43,7 @@ export class PendingTwoFactorService {
         select: { id: true },
       });
       if (oldest) {
-        await this.prisma.pendingTwoFactorSession.delete({
+        await this.prisma.pendingTwoFactorSession.deleteMany({
           where: { id: oldest.id },
         });
       }
@@ -97,13 +97,9 @@ export class PendingTwoFactorService {
    * حذف جلسة معلقة
    */
   async delete(sessionId: string): Promise<void> {
-    await this.prisma.pendingTwoFactorSession
-      .delete({
-        where: { id: sessionId },
-      })
-      .catch(() => {
-        /* ignore if not found */
-      });
+    await this.prisma.pendingTwoFactorSession.deleteMany({
+      where: { id: sessionId },
+    });
   }
 
   /**

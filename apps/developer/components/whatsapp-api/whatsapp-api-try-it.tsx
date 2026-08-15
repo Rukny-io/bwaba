@@ -1,17 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Loader2, Phone, Play, Shield } from 'lucide-react';
+import { useCurrentApp } from '@/components/providers/app-context';
+import { useApiKeys } from '@/hooks/use-api-keys';
+import { executeWhatsappApiTry } from '@/lib/api/whatsapp-api-try';
 import {
   MESSAGE_ENDPOINTS,
   TEMPLATE_ENDPOINTS,
-  resolveTryUrl,
   type WhatsappApiEndpoint,
   type WhatsappApiEndpointId,
 } from '@/lib/whatsapp-api-catalog';
+import { appApiKeysNew } from '@/lib/app-routes';
 import { cn } from '@/lib/utils';
-
-const KEY_STORAGE = 'rukny_wa_api_try_key';
 
 const ALL_TRYABLE: WhatsappApiEndpoint[] = [
   ...MESSAGE_ENDPOINTS,
@@ -53,6 +55,15 @@ function isPlaceholderPhone(value: string): boolean {
   return !E164_RE.test(v);
 }
 
+function resolveTryPath(
+  tryPath: string,
+  params: { id?: string; name?: string },
+): string {
+  return `/api/v1${tryPath
+    .replace('{id}', encodeURIComponent(params.id || 'MSG_ID'))
+    .replace('{name}', encodeURIComponent(params.name || 'hello_world'))}`;
+}
+
 interface WhatsappApiTryItProps {
   labels: {
     title: string;
@@ -60,6 +71,8 @@ interface WhatsappApiTryItProps {
     apiKey: string;
     apiKeyPlaceholder: string;
     apiKeyHint: string;
+    apiKeyEmpty: string;
+    apiKeyCreateLink: string;
     endpoint: string;
     pathParam: string;
     pathParamHint: string;
@@ -71,10 +84,10 @@ interface WhatsappApiTryItProps {
     send: string;
     sending: string;
     response: string;
-    clearKey: string;
     invalidJson: string;
   };
   initialEndpointId?: WhatsappApiEndpointId;
+  initialBody?: string;
   summaries: Record<
     | 'epSendMessage'
     | 'epGetMessage'
@@ -90,21 +103,32 @@ interface WhatsappApiTryItProps {
 export function WhatsappApiTryIt({
   labels,
   initialEndpointId = 'sendMessage',
+  initialBody,
   summaries,
 }: WhatsappApiTryItProps) {
+  const { app } = useCurrentApp();
+  const { data: apiKeys, isLoading: keysLoading } = useApiKeys(app.id);
+
+  const testKeys = useMemo(
+    () =>
+      (apiKeys ?? []).filter(
+        (key) => key.environment === 'test' && key.status === 'ACTIVE',
+      ),
+    [apiKeys],
+  );
+
   const initialEndpoint =
     ALL_TRYABLE.find((e) => e.id === initialEndpointId) ?? ALL_TRYABLE[0];
   const [endpointId, setEndpointId] = useState<WhatsappApiEndpointId>(
     initialEndpoint?.id ?? 'sendMessage',
   );
-  const [apiKey, setApiKey] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return sessionStorage.getItem(KEY_STORAGE) ?? '';
-  });
+  const [apiKeySlug, setApiKeySlug] = useState('');
   const [pathValue, setPathValue] = useState('');
-  const [body, setBody] = useState(() => initialEndpoint?.exampleBody ?? '{\n  \n}');
+  const [body, setBody] = useState(
+    () => initialBody ?? initialEndpoint?.exampleBody ?? '{\n  \n}',
+  );
   const [recipient, setRecipient] = useState(() =>
-    readToFromBody(initialEndpoint?.exampleBody ?? ''),
+    readToFromBody(initialBody ?? initialEndpoint?.exampleBody ?? ''),
   );
   const [status, setStatus] = useState<number | null>(null);
   const [responseText, setResponseText] = useState('');
@@ -145,15 +169,13 @@ export function WhatsappApiTryIt({
     }
   }
 
-  function persistKey(value: string) {
-    setApiKey(value);
-    if (typeof window === 'undefined') return;
-    if (value) sessionStorage.setItem(KEY_STORAGE, value);
-    else sessionStorage.removeItem(KEY_STORAGE);
-  }
-
   async function handleSend() {
     if (!endpoint?.tryPath || !endpoint.tryMethod) return;
+
+    if (!apiKeySlug) {
+      setError(labels.apiKeyEmpty);
+      return;
+    }
 
     if (showRecipient && isPlaceholderPhone(recipient)) {
       setRecipientTouched(true);
@@ -181,29 +203,21 @@ export function WhatsappApiTryIt({
       }
     }
 
-    const url = resolveTryUrl(endpoint.tryPath, {
+    const path = resolveTryPath(endpoint.tryPath, {
       id: pathValue || undefined,
       name: pathValue || undefined,
     });
 
     try {
-      const res = await fetch(url, {
+      const result = await executeWhatsappApiTry({
+        appId: app.appId,
         method: endpoint.tryMethod,
-        headers: {
-          'X-API-Key': apiKey.trim(),
-          ...(endpoint.tryNeedsBody
-            ? { 'Content-Type': 'application/json' }
-            : {}),
-        },
-        body: endpoint.tryNeedsBody ? JSON.stringify(parsedBody) : undefined,
+        path,
+        body: parsedBody,
+        apiKeySlug,
       });
-      setStatus(res.status);
-      const text = await res.text();
-      try {
-        setResponseText(JSON.stringify(JSON.parse(text), null, 2));
-      } catch {
-        setResponseText(text || `(empty ${res.status})`);
-      }
+      setStatus(result.status);
+      setResponseText(JSON.stringify(result.body, null, 2));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Request failed');
     } finally {
@@ -252,16 +266,36 @@ export function WhatsappApiTryIt({
               <Shield className="size-3.5" />
               {labels.apiKey}
             </span>
-            <input
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={apiKey}
-              onChange={(e) => persistKey(e.target.value)}
-              placeholder={labels.apiKeyPlaceholder}
-              className="h-10 w-full rounded-xl bg-[var(--surface-secondary)] px-3 font-mono text-[13px] text-[var(--foreground)] outline-none"
-              dir="ltr"
-            />
+            {keysLoading ? (
+              <div className="flex h-10 items-center gap-2 text-[13px] text-[var(--muted-foreground)]">
+                <Loader2 className="size-4 animate-spin" />
+                …
+              </div>
+            ) : testKeys.length > 0 ? (
+              <select
+                value={apiKeySlug}
+                onChange={(e) => setApiKeySlug(e.target.value)}
+                className="h-10 w-full rounded-xl bg-[var(--surface-secondary)] px-3 font-mono text-[13px] text-[var(--foreground)] outline-none"
+                dir="ltr"
+              >
+                <option value="">{labels.apiKeyPlaceholder}</option>
+                {testKeys.map((key) => (
+                  <option key={key.slug} value={key.slug}>
+                    {key.name} — rk_test_…{key.keySuffix}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-[13px] text-[var(--muted-foreground)]">
+                {labels.apiKeyEmpty}{' '}
+                <Link
+                  href={appApiKeysNew(app.appId)}
+                  className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                >
+                  {labels.apiKeyCreateLink}
+                </Link>
+              </p>
+            )}
             <span className="block text-[11.5px] text-[var(--muted-foreground)]">
               {labels.apiKeyHint}
             </span>
@@ -347,7 +381,7 @@ export function WhatsappApiTryIt({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={loading || !apiKey.trim()}
+              disabled={loading || !apiKeySlug}
               onClick={() => void handleSend()}
               className={cn(
                 'inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)] transition disabled:opacity-40',
@@ -360,15 +394,6 @@ export function WhatsappApiTryIt({
               )}
               {loading ? labels.sending : labels.send}
             </button>
-            {apiKey ? (
-              <button
-                type="button"
-                onClick={() => persistKey('')}
-                className="h-10 rounded-xl bg-[var(--surface-secondary)] px-3 text-[13px] font-medium text-[var(--muted-foreground)]"
-              >
-                {labels.clearKey}
-              </button>
-            ) : null}
           </div>
         </div>
 

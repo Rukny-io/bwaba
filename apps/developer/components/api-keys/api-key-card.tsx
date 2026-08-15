@@ -17,20 +17,12 @@ import {
   formatApiKeyNumber,
 } from '@/lib/api-key-format';
 import { cn } from '@/lib/utils';
+import type { DashboardMetricChipTone } from '@/components/dashboard/dashboard-metric-card';
 
-const STATUS_DOT: Record<string, string> = {
-  ACTIVE: 'bg-[var(--success)]',
-  REVOKED: 'bg-[var(--danger)]',
-  EXPIRED: 'bg-[var(--warning)]',
-};
-
-const COVER_GRADIENT: Record<string, string> = {
-  live:
-    'bg-gradient-to-br from-[color-mix(in_srgb,var(--success)_16%,var(--surface))] via-[var(--surface-secondary)]/45 to-[var(--surface)]',
-  test:
-    'bg-gradient-to-br from-[color-mix(in_srgb,var(--warning)_14%,var(--surface))] via-[var(--surface-secondary)]/45 to-[var(--surface)]',
-  inactive:
-    'bg-gradient-to-br from-[color-mix(in_srgb,var(--foreground)_8%,var(--surface))] via-[var(--surface-secondary)]/40 to-[var(--surface)]',
+const STATUS_TONE: Record<string, DashboardMetricChipTone> = {
+  ACTIVE: 'success',
+  REVOKED: 'danger',
+  EXPIRED: 'warning',
 };
 
 interface ApiKeyCardProps {
@@ -94,12 +86,12 @@ function ApiKeyActions({
       <Dropdown.Trigger
         aria-label={menuLabel}
         className={cn(
-          'flex size-8 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors outline-none',
+          'flex size-7 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors outline-none',
           'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
           'data-[pressed]:bg-[var(--surface-secondary)] data-[pressed]:text-[var(--foreground)]',
         )}
       >
-        <MoreHorizontal className="size-4" />
+        <MoreHorizontal className="size-3.5" />
       </Dropdown.Trigger>
 
       <Dropdown.Popover placement="top end" className="min-w-[11rem]">
@@ -139,6 +131,13 @@ function ApiKeyActions({
   );
 }
 
+const chipToneClass: Record<DashboardMetricChipTone, string> = {
+  success: 'text-[var(--success)]',
+  warning: 'text-[var(--warning)]',
+  danger: 'text-[var(--danger)]',
+  neutral: 'text-[var(--muted-foreground)]',
+};
+
 export function ApiKeyCard({
   apiKey,
   inactive = false,
@@ -159,6 +158,7 @@ export function ApiKeyCard({
   const isLive = apiKey.environment === 'live';
   const EnvIcon = isLive ? Globe : FlaskConical;
   const envLabel = isLive ? labels.live : labels.test;
+  const statusTone = STATUS_TONE[apiKey.status] ?? 'neutral';
 
   const visibleScopes = apiKey.scopes.slice(0, 2);
   const hiddenScopeCount = Math.max(apiKey.scopes.length - visibleScopes.length, 0);
@@ -166,12 +166,17 @@ export function ApiKeyCard({
     .slice(2)
     .map((scope) => scopeLabels[scope] ?? scope)
     .join(' · ');
+  const scopeSummary = [
+    ...visibleScopes.map((scope) => scopeLabels[scope] ?? scope),
+    hiddenScopeCount > 0 ? `+${hiddenScopeCount}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const lastUsed = apiKey.lastUsedAt
     ? formatApiKeyDate(apiKey.lastUsedAt)
     : labels.never;
   const requestLine = `${formatApiKeyNumber(apiKey.requestCount)} ${labels.requests}`;
-  const coverTone = inactive ? 'inactive' : isLive ? 'live' : 'test';
 
   const openEdit = () => {
     if (editHref) router.push(editHref);
@@ -180,10 +185,9 @@ export function ApiKeyCard({
   return (
     <article
       className={cn(
-        'group dashboard-metric-tile flex flex-col rounded-2xl p-2.5 transition-[border-color,background-color] duration-200',
-        'hover:border-[color-mix(in_srgb,var(--border)_45%,var(--foreground)_12%)]',
-        inactive && 'opacity-[0.9]',
-        !inactive && editHref && 'cursor-pointer',
+        'dashboard-metric-tile group flex min-h-[7.25rem] flex-col rounded-2xl p-4 transition-colors duration-200 sm:min-h-[7.75rem] sm:p-[1.125rem]',
+        inactive && 'opacity-85',
+        !inactive && editHref && 'cursor-pointer hover:bg-[var(--surface-secondary)]',
       )}
       onClick={!inactive && editHref ? openEdit : undefined}
       role={!inactive && editHref ? 'button' : undefined}
@@ -199,129 +203,89 @@ export function ApiKeyCard({
           : undefined
       }
     >
-      <div
-        className={cn(
-          'relative aspect-[4/3] overflow-hidden rounded-xl',
-          COVER_GRADIENT[coverTone],
-          inactive && 'grayscale-[30%]',
-        )}
-      >
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
+          <span className="inline-flex items-center gap-1">
+            <EnvIcon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+            <span>{envLabel}</span>
+          </span>
+        </p>
+
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.4]"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 0)',
-            backgroundSize: '14px 14px',
-          }}
-          aria-hidden
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-[var(--surface)]/80 text-[var(--primary)]">
-            <Key className="size-5" strokeWidth={1.75} />
-          </span>
-        </div>
-        <div className="absolute start-2 top-2 flex flex-wrap gap-1">
-          <span
-            className={cn(
-              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1',
-              isLive
-                ? 'bg-[var(--surface)]/90 text-[var(--success)] ring-[color-mix(in_srgb,var(--success)_25%,transparent)]'
-                : 'bg-[var(--surface)]/90 text-[var(--warning)] ring-[color-mix(in_srgb,var(--warning)_25%,transparent)]',
-            )}
-          >
-            <EnvIcon className="size-2.5" />
-            {envLabel}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)]/90 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)] ring-1 ring-[var(--border)]/60">
-            <span
-              className={cn(
-                'size-1.5 rounded-full',
-                STATUS_DOT[apiKey.status] ?? STATUS_DOT.ACTIVE,
-                apiKey.status === 'ACTIVE' && 'animate-pulse',
-              )}
-            />
-            {statusLabel}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-0.5 pt-2.5 text-start">
-        <h3
-          className={cn(
-            'truncate text-[14px] font-semibold leading-[1.35] tracking-tight text-[var(--foreground)]',
-            inactive && 'line-through decoration-[var(--muted-foreground)]/30',
-          )}
-          title={apiKey.name}
+          className="flex shrink-0 items-center gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
-          {apiKey.name}
-        </h3>
-
-        <code
-          dir="ltr"
-          className="truncate font-mono text-[11px] text-[var(--muted-foreground)]"
-        >
-          {maskedKey}
-        </code>
-
-        <div className="flex flex-wrap items-center gap-1 pt-0.5">
-          {visibleScopes.map((scope) => (
-            <span
-              key={scope}
-              className="rounded-full bg-[var(--surface-secondary)] px-1.5 py-px text-[10px] font-medium text-[var(--foreground)]"
-            >
-              {scopeLabels[scope] ?? scope}
-            </span>
-          ))}
-          {hiddenScopeCount > 0 ? (
-            <InfoTip label={hiddenScopesLabel}>
-              <span className="cursor-default rounded-full bg-[var(--surface-secondary)] px-1.5 py-px text-[10px] font-medium">
-                +{hiddenScopeCount}
-              </span>
-            </InfoTip>
-          ) : null}
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <p className="min-w-0 truncate text-[11px] text-[var(--muted-foreground)]">
-            <span dir="ltr" lang="en">
-              {requestLine}
-            </span>
-            <span className="mx-1 text-[var(--border)]">·</span>
-            <span>{lastUsed}</span>
-          </p>
-
           {!inactive ? (
-            <div
-              className="shrink-0"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <ApiKeyActions
-                labels={labels}
-                editHref={editHref}
-                onReveal={onReveal}
-                onRevoke={onRevoke}
-              />
-            </div>
+            <ApiKeyActions
+              labels={labels}
+              editHref={editHref}
+              onReveal={onReveal}
+              onRevoke={onRevoke}
+            />
           ) : null}
+          <Key
+            className="size-[18px] text-[var(--muted-foreground)]/75"
+            strokeWidth={1.75}
+            aria-hidden
+          />
         </div>
       </div>
+
+      <h3
+        className={cn(
+          'mt-3 min-w-0 truncate text-[1.25rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.35rem]',
+          inactive && 'line-through decoration-[var(--muted-foreground)]/35',
+        )}
+        title={apiKey.name}
+      >
+        {apiKey.name}
+      </h3>
+
+      <code
+        dir="ltr"
+        className="mt-1 block min-w-0 truncate font-mono text-[11px] text-[var(--muted-foreground)] sm:text-[12px]"
+      >
+        {maskedKey}
+      </code>
+
+      <p className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+        <span className={cn('font-medium', chipToneClass[statusTone])}>
+          {statusLabel}
+        </span>
+        {scopeSummary ? (
+          <>
+            {' · '}
+            {hiddenScopeCount > 0 ? (
+              <InfoTip label={hiddenScopesLabel}>
+                <span className="cursor-default">{scopeSummary}</span>
+              </InfoTip>
+            ) : (
+              scopeSummary
+            )}
+          </>
+        ) : null}
+        {' · '}
+        <span dir="ltr" lang="en">
+          {requestLine}
+        </span>
+        {' · '}
+        <span>{lastUsed}</span>
+      </p>
     </article>
   );
 }
 
 export function ApiKeyCardSkeleton() {
   return (
-    <div className="dashboard-metric-tile animate-pulse rounded-2xl p-2.5">
-      <div className="aspect-[4/3] rounded-xl bg-[var(--surface-secondary)]/70" />
-      <div className="space-y-2 px-0.5 pt-2.5">
-        <div className="h-3.5 w-[72%] rounded-md bg-[var(--surface-secondary)]/70" />
-        <div className="h-3 w-[48%] rounded-md bg-[var(--surface-secondary)]/50" />
-        <div className="flex gap-1 pt-1">
-          <div className="h-5 w-12 rounded-full bg-[var(--surface-secondary)]/45" />
-          <div className="h-5 w-10 rounded-full bg-[var(--surface-secondary)]/45" />
-        </div>
+    <div className="dashboard-metric-tile h-[7.25rem] animate-pulse rounded-2xl p-4 sm:h-[7.75rem] sm:p-[1.125rem]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="h-3.5 w-16 rounded-md bg-[var(--surface-secondary)]/70" />
+        <div className="size-[18px] rounded-md bg-[var(--surface-secondary)]/50" />
       </div>
+      <div className="mt-3 h-5 w-[68%] rounded-md bg-[var(--surface-secondary)]/70" />
+      <div className="mt-1.5 h-3 w-[52%] rounded-md bg-[var(--surface-secondary)]/50" />
+      <div className="mt-auto h-3 w-[88%] rounded-md bg-[var(--surface-secondary)]/45 pt-3" />
     </div>
   );
 }

@@ -4,14 +4,7 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TextField, Label, Input } from '@heroui/react';
-import {
-  Key,
-  Globe,
-  FlaskConical,
-  Shield,
-  Lock,
-  CalendarDays,
-} from 'lucide-react';
+import { Globe, FlaskConical, Shield, Lock, CalendarDays, Key } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { useUpdateApiKey } from '@/hooks/use-api-keys';
@@ -21,6 +14,15 @@ import {
   ApiKeyIpField,
   validateIpEntry,
 } from '@/components/api-keys/api-key-ip-field';
+import {
+  SettingsRow,
+  SettingsRowDivider,
+} from '@/components/settings/settings-primitives';
+import {
+  AppSettingsSection,
+  settingsInputClassName,
+  settingsLabelClassName,
+} from '@/components/settings/app-settings-section';
 import type { DeveloperApiKey } from '@/lib/api/types';
 import { appApiKeys } from '@/lib/app-routes';
 import { formatApiKeyDate } from '@/lib/api-key-format';
@@ -50,7 +52,25 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
   const [ipError, setIpError] = useState<string | null>(null);
 
   const isInactive = apiKey.status !== 'ACTIVE';
-  const EnvIcon = apiKey.environment === 'live' ? Globe : FlaskConical;
+  const isLive = apiKey.environment === 'live';
+  const EnvIcon = isLive ? Globe : FlaskConical;
+  const envLabel = isLive ? s.live : s.test;
+  const maskedKey = `${apiKey.keyPrefix}•••${apiKey.keySuffix}`;
+  const statusLabel =
+    apiKey.status === 'ACTIVE'
+      ? s.active
+      : apiKey.status === 'REVOKED'
+        ? s.revoked
+        : s.expired;
+
+  const scopeSummary =
+    selectedScopes.length > 0
+      ? selectedScopes
+          .slice(0, 3)
+          .map((scope) => scopeLabels[scope] ?? scope)
+          .join(' · ') +
+        (selectedScopes.length > 3 ? ` +${selectedScopes.length - 3}` : '')
+      : ep.scopesHelp;
 
   const clearErrors = useCallback(() => {
     setFormError(null);
@@ -124,144 +144,165 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-8 sm:space-y-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 sm:gap-8">
       {isInactive ? (
         <ApiKeysAlert variant="warning" message={ep.inactiveWarning ?? ''} />
       ) : null}
 
       {formError ? <ApiKeysAlert message={formError} /> : null}
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 px-0.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
-            <Key className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {ep.basicsSection}
-          </h2>
-        </div>
-
-        <div className="dashboard-metric-tile space-y-5 rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5">
+      <AppSettingsSection flush title={ep.basicsSection}>
+        <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:gap-y-5 sm:p-5">
           <TextField
+            isRequired
+            className="sm:col-span-2"
             value={name}
             onChange={(value) => {
               setName(value);
               clearErrors();
             }}
-            isRequired
             isDisabled={isInactive}
             isInvalid={Boolean(formError && !name.trim())}
           >
-            <Label>{ep.nameLabel}</Label>
-            <Input placeholder={ep.namePlaceholder} />
+            <Label className={settingsLabelClassName}>{ep.nameLabel}</Label>
+            <Input
+              placeholder={ep.namePlaceholder}
+              className={settingsInputClassName}
+            />
           </TextField>
+        </div>
 
-          <div>
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              {ep.envLabel}
-            </p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {ep.envReadOnly}
-            </p>
-            <div
+        <SettingsRowDivider />
+
+        <SettingsRow
+          isStatic
+          icon={EnvIcon}
+          title={ep.envLabel}
+          subtitle={ep.envReadOnly}
+          trailing={
+            <span
               className={cn(
-                'mt-3 inline-flex items-center gap-2 rounded-xl border px-4 py-3',
-                apiKey.environment === 'live'
-                  ? 'border-[color-mix(in_srgb,var(--success)_30%,var(--border))] bg-[color-mix(in_srgb,var(--success)_8%,var(--background))]'
-                  : 'border-[color-mix(in_srgb,var(--warning)_30%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--background))]',
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold',
+                isLive
+                  ? 'border-[color-mix(in_srgb,var(--success)_28%,var(--border))] bg-[color-mix(in_srgb,var(--success)_10%,var(--background))] text-[var(--success)]'
+                  : 'border-[color-mix(in_srgb,var(--warning)_28%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_10%,var(--background))] text-[var(--warning)]',
               )}
             >
-              <EnvIcon
-                className={cn(
-                  'size-4',
-                  apiKey.environment === 'live'
-                    ? 'text-[var(--success)]'
+              <EnvIcon className="size-3.5" aria-hidden />
+              {envLabel}
+            </span>
+          }
+        />
+
+        <SettingsRowDivider />
+
+        <SettingsRow
+          isStatic
+          icon={Key}
+          title={ep.keyIdLabel}
+          trailing={
+            <code
+              dir="ltr"
+              className="max-w-[12rem] truncate font-mono text-[12px] text-[var(--muted-foreground)] sm:max-w-none"
+            >
+              {maskedKey}
+            </code>
+          }
+        />
+
+        <SettingsRowDivider />
+
+        <SettingsRow
+          isStatic
+          title={statusLabel}
+          trailing={
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 text-[13px] font-medium',
+                apiKey.status === 'ACTIVE'
+                  ? 'text-[var(--success)]'
+                  : apiKey.status === 'REVOKED'
+                    ? 'text-[var(--danger)]'
                     : 'text-[var(--warning)]',
+              )}
+            >
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  apiKey.status === 'ACTIVE'
+                    ? 'bg-[var(--success)]'
+                    : apiKey.status === 'REVOKED'
+                      ? 'bg-[var(--danger)]'
+                      : 'bg-[var(--warning)]',
                 )}
               />
-              <span className="text-sm font-medium">
-                {apiKey.environment === 'live' ? s.live : s.test}
-              </span>
-            </div>
-          </div>
+              {statusLabel}
+            </span>
+          }
+        />
 
-          <div className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
-            <p className="text-[11px] text-[var(--muted-foreground)]">
-              {ep.keyIdLabel}
-            </p>
-            <code dir="ltr" className="font-mono text-xs text-[var(--foreground)]">
-              {apiKey.keyPrefix}•••{apiKey.keySuffix}
-            </code>
-          </div>
-
-          {apiKey.expiresAt ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-              <CalendarDays className="size-4" />
-              <span>
-                {ep.expiresLabel}: {formatApiKeyDate(apiKey.expiresAt)}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 px-0.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
-            <Shield className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {ep.permissionsSection}
-          </h2>
-        </div>
-
-        <div
-          className={cn(
-            'dashboard-metric-tile rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5',
-            isInactive && 'pointer-events-none opacity-60',
-          )}
-        >
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            {ep.scopesLabel}
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-            {ep.scopesHelp}
-          </p>
-          <div className="mt-3">
-            <ApiKeyScopeGrid
-              selectedScopes={selectedScopes}
-              scopeLabels={scopeLabels}
-              onChange={(scopes) => {
-                setSelectedScopes(scopes);
-                clearErrors();
-              }}
+        {apiKey.expiresAt ? (
+          <>
+            <SettingsRowDivider />
+            <SettingsRow
+              isStatic
+              icon={CalendarDays}
+              title={ep.expiresLabel}
+              trailing={
+                <span className="text-[13px] text-[var(--muted-foreground)]" dir="ltr" lang="en">
+                  {formatApiKeyDate(apiKey.expiresAt)}
+                </span>
+              }
             />
-          </div>
-        </div>
-      </section>
+          </>
+        ) : null}
+      </AppSettingsSection>
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 px-0.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] ring-1 ring-[var(--border)]/50">
-            <Lock className="size-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            {ep.securitySection}
-          </h2>
-        </div>
-
+      <AppSettingsSection
+        flush
+        title={ep.permissionsSection}
+        description={ep.scopesHelp}
+      >
+        <SettingsRow
+          isStatic
+          icon={Shield}
+          title={ep.scopesLabel}
+          subtitle={scopeSummary}
+        />
+        <SettingsRowDivider />
         <div
           className={cn(
-            'dashboard-metric-tile rounded-2xl p-4 sm:rounded-[1.75rem] sm:p-5',
-            isInactive && 'pointer-events-none opacity-60',
+            'p-4 sm:p-5',
+            isInactive && 'pointer-events-none opacity-50',
           )}
         >
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            {ep.ipLabel}
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-            {ep.ipDesc}
-          </p>
+          <ApiKeyScopeGrid
+            selectedScopes={selectedScopes}
+            scopeLabels={scopeLabels}
+            onChange={(scopes) => {
+              setSelectedScopes(scopes);
+              clearErrors();
+            }}
+          />
+        </div>
+      </AppSettingsSection>
+
+      <AppSettingsSection flush title={ep.securitySection} description={ep.ipDesc}>
+        <SettingsRow
+          isStatic
+          icon={Lock}
+          title={ep.ipLabel}
+          subtitle={
+            ipList.length > 0 ? ipList.join(' · ') : (ep.ipPlaceholder ?? '—')
+          }
+        />
+        <SettingsRowDivider />
+        <div
+          className={cn(
+            'p-4 sm:p-5',
+            isInactive && 'pointer-events-none opacity-50',
+          )}
+        >
           <ApiKeyIpField
             ipInput={ipInput}
             ipList={ipList}
@@ -277,12 +318,12 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
             onRemove={(ip) => setIpList((prev) => prev.filter((item) => item !== ip))}
           />
         </div>
-      </section>
+      </AppSettingsSection>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
           href={appApiKeys(app.appId)}
-          className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+          className="inline-flex w-full items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:w-auto"
         >
           {s.cancel}
         </Link>
@@ -290,7 +331,7 @@ export function EditApiKeyForm({ apiKey }: EditApiKeyFormProps) {
           type="button"
           onClick={() => void handleSubmit()}
           disabled={!name.trim() || updateMutation.isPending || isInactive}
-          className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-8 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center rounded-full bg-[var(--primary)] px-8 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
           {updateMutation.isPending ? ep.saving : ep.save}
         </button>

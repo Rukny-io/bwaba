@@ -24,7 +24,7 @@ export default async function EditApiKeyPage({
   }
 
   return (
-    <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
+    <section className="dashboard-page mx-auto flex w-full max-w-3xl flex-col gap-5 sm:gap-6">
       <DashboardPageHeader
         className="mb-0"
         title={ep.heading}
@@ -32,7 +32,7 @@ export default async function EditApiKeyPage({
         actions={
           <Link
             href={appApiKeys(app.appId)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
           >
             {ep.back}
           </Link>

@@ -1,10 +1,9 @@
 'use client';
 
-import { Check, Copy } from 'lucide-react';
-import { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { WhatsappApiEndpoint } from '@/lib/whatsapp-api-catalog';
-import { buildCurlExample } from '@/lib/whatsapp-api-catalog';
+import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
 
 const methodClass: Record<string, string> = {
   GET: 'bg-[color-mix(in_srgb,#0f766e_18%,transparent)] text-[#0f766e]',
@@ -20,7 +19,9 @@ interface WhatsappApiEndpointCardProps {
   responseLabel: string;
   scopesLabel: string;
   onTry?: () => void;
+  tryHref?: string;
   tryLabel?: string;
+  hideCode?: boolean;
 }
 
 export function WhatsappApiEndpointCard({
@@ -31,17 +32,10 @@ export function WhatsappApiEndpointCard({
   responseLabel,
   scopesLabel,
   onTry,
+  tryHref,
   tryLabel,
+  hideCode = false,
 }: WhatsappApiEndpointCardProps) {
-  const curl = buildCurlExample(endpoint);
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(curl);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  }
-
   return (
     <article className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)]/40 px-4 py-4 sm:px-5">
@@ -72,7 +66,14 @@ export function WhatsappApiEndpointCard({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {onTry && tryLabel ? (
+          {tryHref && tryLabel ? (
+            <Link
+              href={tryHref}
+              className="rounded-xl bg-[var(--surface-secondary)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_85%,var(--foreground)_6%)]"
+            >
+              {tryLabel}
+            </Link>
+          ) : onTry && tryLabel ? (
             <button
               type="button"
               onClick={onTry}
@@ -81,14 +82,6 @@ export function WhatsappApiEndpointCard({
               {tryLabel}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-secondary)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            {copyLabel}
-          </button>
         </div>
       </div>
 
@@ -121,29 +114,36 @@ export function WhatsappApiEndpointCard({
         </div>
       ) : null}
 
-      <div className="grid gap-0 lg:grid-cols-2">
-        <pre
-          className="overflow-x-auto border-b border-[var(--border)]/40 p-4 text-[12px] leading-relaxed text-[var(--foreground)] lg:border-b-0 lg:border-e"
-          dir="ltr"
+      {!hideCode ? (
+        <div
+          className={cn(
+            'grid gap-0',
+            endpoint.exampleResponse ? 'lg:grid-cols-2' : 'grid-cols-1',
+          )}
         >
-          <code>{curl}</code>
-        </pre>
-        {endpoint.exampleResponse ? (
-          <div className="p-4">
-            <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-              {responseLabel}
-            </p>
-            <pre
-              className="overflow-x-auto text-[12px] leading-relaxed text-[var(--muted-foreground)]"
-              dir="ltr"
-            >
-              <code>{endpoint.exampleResponse}</code>
-            </pre>
+          <div
+            className={cn(
+              'border-b border-[var(--border)]/40 p-4 sm:p-5',
+              endpoint.exampleResponse && 'lg:border-b-0 lg:border-e',
+            )}
+          >
+            <WhatsappApiCodePanel endpoint={endpoint} copyLabel={copyLabel} />
           </div>
-        ) : (
-          <div className="hidden p-4 lg:block" />
-        )}
-      </div>
+          {endpoint.exampleResponse ? (
+            <div className="p-4 sm:p-5">
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                {responseLabel}
+              </p>
+              <pre
+                className="overflow-x-auto text-[12px] leading-relaxed text-[var(--muted-foreground)]"
+                dir="ltr"
+              >
+                <code>{endpoint.exampleResponse}</code>
+              </pre>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }

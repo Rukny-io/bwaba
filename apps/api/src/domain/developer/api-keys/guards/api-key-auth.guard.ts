@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeysService } from '../api-keys.service';
+import { DeveloperRateLimitService } from '../../shared/developer-rate-limit.service';
 import { getClientIp } from '../../../../core/common/utils/client-ip.util';
 
 /**
@@ -25,6 +26,7 @@ export class ApiKeyAuthGuard implements CanActivate {
   constructor(
     private apiKeysService: ApiKeysService,
     private reflector: Reflector,
+    private rateLimitService: DeveloperRateLimitService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -82,6 +84,11 @@ export class ApiKeyAuthGuard implements CanActivate {
         );
       }
     }
+
+    await this.rateLimitService.enforceApiKeyRateLimit(
+      keyData.userId,
+      keyData.id,
+    );
 
     // إضافة بيانات المفتاح إلى الطلب
     request.apiKey = keyData;

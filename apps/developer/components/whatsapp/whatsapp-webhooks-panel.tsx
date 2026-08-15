@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Loader2, Plus, Trash2, Webhook, Zap } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
+import { useCurrentApp } from '@/components/providers/app-context';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
 import {
@@ -32,8 +33,11 @@ function formatCount(value: number): string {
 
 export function WhatsappWebhooksPanel() {
   const w = useTranslations().whatsapp;
-  const { data: webhooks, isLoading } = useWebhooks();
-  const { createMutation, deleteMutation, testMutation } = useWebhookMutations();
+  const { app } = useCurrentApp();
+  const { data: webhooks, isLoading } = useWebhooks(app.appId);
+  const { createMutation, deleteMutation, testMutation } = useWebhookMutations(
+    app.appId,
+  );
 
   const [url, setUrl] = useState('');
   const [events, setEvents] = useState<string[]>(['message.delivered', 'message.received']);
@@ -132,7 +136,7 @@ export function WhatsappWebhooksPanel() {
             disabled={!url.trim() || events.length === 0 || createMutation.isPending}
             onClick={() =>
               createMutation.mutate(
-                { url: url.trim(), events },
+                { url: url.trim(), events, appId: app.appId },
                 {
                   onSuccess: (created) => {
                     setNewSecret(created.secret);

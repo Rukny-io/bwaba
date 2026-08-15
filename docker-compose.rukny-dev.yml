@@ -1,9 +1,13 @@
+# Local dev stack — always pass .env.dev for compose interpolation:
+#   docker compose --env-file .env.dev -f docker-compose.rukny-dev.yml up
 name: rukny-dev
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: always
+    env_file:
+      - ./.env.dev
     environment:
       POSTGRES_USER: ${DB_USER:-rukny_admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -45,7 +49,8 @@ services:
       - sh
       - -c
       - >-
-        node -e "const net=require('net'); const retry=()=>{const socket=net.createConnection({host:'postgres',port:5432},()=>{socket.end(); process.exit(0);}); socket.on('error',()=>setTimeout(retry,1000));}; retry();"
+        export DATABASE_URL="postgresql://$${DB_USER:-rukny_admin}:$${DB_PASSWORD}@postgres:5432/$${DB_NAME:-rukny_io}"
+        && node -e "const net=require('net'); const retry=()=>{const socket=net.createConnection({host:'postgres',port:5432},()=>{socket.end(); process.exit(0);}); socket.on('error',()=>setTimeout(retry,1000));}; retry();"
         && npx prisma db push --accept-data-loss --config prisma/prisma.config.ts
         && node dist/main
     env_file:
@@ -65,7 +70,6 @@ services:
       SESSION_FINGERPRINT_STRICT: "false"
       PORT: 3001
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://${DB_USER:-rukny_admin}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-rukny_io}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -85,7 +89,8 @@ services:
       GITHUB_CALLBACK_URL: http://localhost:3001/api/v1/auth/github/callback
       LINKEDIN_CALLBACK_URL: http://localhost:3001/api/v1/auth/linkedin/callback
       LINKEDIN_INTEGRATION_CALLBACK_URL: http://localhost:3001/api/v1/integrations/linkedin/callback
-      INSTAGRAM_REDIRECT_URI: http://localhost:3001/api/v1/integrations/instagram/callback
+      INSTAGRAM_REDIRECT_URI: ${INSTAGRAM_REDIRECT_URI:-https://localhost:3003/api/v1/integrations/instagram/callback}
+      BUSINESS_FRONTEND_URL: ${BUSINESS_FRONTEND_URL:-https://localhost:3003}
       YOUTUBE_REDIRECT_URI: http://localhost:3001/api/v1/integrations/youtube/callback
       GOOGLE_SHEETS_REDIRECT_URI: http://localhost:3001/api/v1/integrations/google-sheets/callback
       GOOGLE_DRIVE_REDIRECT_URI: http://localhost:3001/api/v1/integrations/google-drive/callback
@@ -183,16 +188,19 @@ services:
     networks:
       - rukny_dev_network
 
-  workspace:
+  business:
     build:
       context: .
-      dockerfile: apps/workspace/Dockerfile
+      dockerfile: apps/business/Dockerfile
       args:
         API_BACKEND_URL: http://api:3001
-        NEXT_PUBLIC_API_URL: /api/v1
-        NEXT_PUBLIC_API_EXTERNAL_URL: http://localhost:3001/api/v1
-        NEXT_PUBLIC_APP_URL: http://localhost:3003
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
         NEXT_PUBLIC_ACCOUNTS_URL: http://localhost:3005
+        NEXT_PUBLIC_BUSINESS_URL: http://localhost:3003
+        NEXT_PUBLIC_DEVELOPERS_URL: http://localhost:3004
+        NEXT_PUBLIC_FORMS_URL: http://localhost:3007
+        JWT_SECRET: ${JWT_SECRET}
     restart: always
     env_file:
       - ./.env.dev
@@ -203,11 +211,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3003
+      HOSTNAME: 0.0.0.0
       API_BACKEND_URL: http://api:3001
-      NEXT_PUBLIC_API_URL: /api/v1
-      NEXT_PUBLIC_API_EXTERNAL_URL: http://localhost:3001/api/v1
-      NEXT_PUBLIC_APP_URL: http://localhost:3003
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
       NEXT_PUBLIC_ACCOUNTS_URL: http://localhost:3005
+      NEXT_PUBLIC_BUSINESS_URL: http://localhost:3003
+      NEXT_PUBLIC_DEVELOPERS_URL: http://localhost:3004
+      NEXT_PUBLIC_FORMS_URL: http://localhost:3007
+      JWT_SECRET: ${JWT_SECRET}
     networks:
       - rukny_dev_network
 

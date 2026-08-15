@@ -20,10 +20,17 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-export function WhatsappTemplatesPanel({ appId }: { appId: string }) {
+export function WhatsappTemplatesPanel({
+  appId,
+  accountId: accountIdProp,
+}: {
+  appId: string;
+  accountId?: string;
+}) {
   const w = useTranslations().whatsapp;
   const { data: accounts } = useWhatsappAccounts(appId);
-  const accountId = accounts?.find((a) => a.status === 'ACTIVE')?.id;
+  const accountId =
+    accountIdProp ?? accounts?.find((a) => a.status === 'ACTIVE')?.id;
   const { data: templates, isLoading } = useWhatsappTemplates(appId, accountId);
   const { syncTemplatesMutation, createTemplateMutation } = useWhatsappMutations(appId);
   const [createOpen, setCreateOpen] = useState(false);
@@ -38,7 +45,9 @@ export function WhatsappTemplatesPanel({ appId }: { appId: string }) {
   return (
     <div className="dashboard-section-stack">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[var(--muted-foreground)]">{w.templatesPageDesc}</p>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {accountIdProp ? w.templatesPhoneScopeHint : w.templatesPageDesc}
+        </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

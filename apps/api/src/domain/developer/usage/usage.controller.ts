@@ -46,6 +46,7 @@ export class UsageController {
     @Query('limit') limit?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('phoneId') phoneId?: string,
   ) {
     return this.usageService.getMessageLogs(ws.ownerId, {
       status,
@@ -55,6 +56,7 @@ export class UsageController {
       limit: limit ? parseInt(limit, 10) : undefined,
       from,
       to,
+      phoneId,
     });
   }
 }

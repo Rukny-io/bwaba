@@ -60,7 +60,7 @@ function SectionDivider({ label, count }: { label: string; count: number }) {
 
 function ApiKeysGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
       {Array.from({ length: 4 }).map((_, i) => (
         <ApiKeyCardSkeleton key={i} />
       ))}
@@ -310,7 +310,7 @@ export function ApiKeysList() {
       ) : (
         <div
           className={cn(
-            'grid grid-cols-2 gap-3 transition-opacity duration-150 sm:gap-4 lg:grid-cols-4',
+            'grid auto-rows-fr grid-cols-2 gap-2.5 transition-opacity duration-150 sm:grid-cols-4 sm:gap-3',
             keysFetching && 'opacity-60',
           )}
           aria-busy={keysFetching || undefined}

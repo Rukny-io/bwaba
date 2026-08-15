@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { siteUrls } from '@/lib/site-urls';
+import { marketingLayout } from '@/lib/marketing-theme';
 import { AnimatedNumber } from './animated-number';
 import {
   CURRENCY,
@@ -19,18 +22,18 @@ import {
   type PricingPlan,
 } from '@rukny/forms-shared/pricing-plans';
 
+const PLAN_HREF: Record<PlanId, string> = {
+  free: siteUrls.accounts,
+  pro: siteUrls.accounts,
+  whale: siteUrls.accounts,
+  business: siteUrls.accounts,
+};
+
+const TRUST_PILLS = ['نماذج', 'متجر', 'روابط', 'تحليلات', 'تكاملات'] as const;
+
 const BRAND = '#062c30';
 const TEXT = '#132327';
-const MUTED = 'rgba(19, 35, 39, 0.55)';
 const BORDER = '#E8ECF0';
-const SURFACE = '#F6F7F8';
-
-const PLAN_HREF: Record<PlanId, string> = {
-  free: siteUrls.forms,
-  pro: siteUrls.formsLogin,
-  whale: siteUrls.formsLogin,
-  business: siteUrls.formsLogin,
-};
 
 function PlanCta({
   plan,
@@ -43,15 +46,16 @@ function PlanCta({
 
   const className =
     variant === 'card'
-      ? 'mt-6 inline-flex h-10 w-full items-center justify-center rounded-full text-[13px] font-semibold transition-opacity hover:opacity-85'
+      ? 'inline-flex h-10 w-full items-center justify-center rounded-md text-[14px] font-semibold transition-opacity hover:opacity-90'
       : variant === 'table-inline'
         ? 'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3.5 text-[11px] font-semibold transition-opacity hover:opacity-85 sm:h-9 sm:px-4 sm:text-[12px]'
         : 'inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-[12px] font-semibold transition-opacity hover:opacity-85';
 
   return (
-    <a
+    <Link
       href={PLAN_HREF[plan.id]}
       className={className}
+      data-testid="PricingOptions__primaryAction"
       style={
         isFree
           ? {
@@ -65,30 +69,16 @@ function PlanCta({
       }
     >
       {plan.ctaLabel}
-    </a>
+    </Link>
   );
 }
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
+    <ChevronDown
       aria-hidden
-      className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-      style={{ color: MUTED }}
-    >
-      <path
-        d="M5 7.5L10 12.5L15 7.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      className={cn('size-4 shrink-0 text-[#132327]/45 transition-transform duration-300', open && 'rotate-180')}
+    />
   );
 }
 
@@ -100,48 +90,109 @@ function BillingToggle({
   onChange: (p: BillingPeriod) => void;
 }) {
   return (
-    <div className="inline-flex flex-col items-center gap-2">
-      <div
-        className="inline-flex rounded-full border p-1"
-        style={{ borderColor: BORDER, backgroundColor: SURFACE }}
-        role="group"
-        aria-label="دورة الفوترة"
+    <div
+      className="inline-flex max-w-full rounded-full border border-[#E8ECF0] bg-white/80 p-1 shadow-[0_2px_12px_rgba(6,44,48,0.04)] backdrop-blur-sm"
+      role="group"
+      aria-label="دورة الفوترة"
+    >
+      <button
+        type="button"
+        onClick={() => onChange('monthly')}
+        className={cn(
+          'min-h-9 rounded-full px-4 py-2 text-[12px] font-medium transition-all duration-200 sm:px-5 sm:text-[13px]',
+          period === 'monthly' ? 'bg-[#062c30] text-white shadow-sm' : 'text-[#132327]/55 hover:text-[#132327]',
+        )}
       >
-        <button
-          type="button"
-          onClick={() => onChange('monthly')}
-          className="min-h-9 rounded-full px-5 py-2 text-[13px] font-medium transition-colors"
-          style={
-            period === 'monthly'
-              ? { backgroundColor: TEXT, color: '#ffffff' }
-              : { color: MUTED }
-          }
+        شهري
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('yearly')}
+        className={cn(
+          'flex min-h-9 items-center gap-1 rounded-full px-3 py-2 text-[12px] font-medium transition-all duration-200 sm:gap-1.5 sm:px-4 sm:text-[13px]',
+          period === 'yearly' ? 'bg-[#062c30] text-white shadow-sm' : 'text-[#132327]/55 hover:text-[#132327]',
+        )}
+      >
+        سنوي
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:text-[10px]',
+            period === 'yearly' ? 'bg-white/20 text-white' : 'bg-[#EEF2F2] text-[#02797E]',
+          )}
         >
-          شهري
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange('yearly')}
-          className="flex min-h-9 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
-          style={
-            period === 'yearly'
-              ? { backgroundColor: TEXT, color: '#ffffff' }
-              : { color: MUTED }
-          }
-        >
-          سنوي
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-            style={
-              period === 'yearly'
-                ? { backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }
-                : { backgroundColor: '#eef2f2', color: BRAND }
-            }
-          >
-            −{YEARLY_DISCOUNT_PERCENT}%
-          </span>
-        </button>
+          −{YEARLY_DISCOUNT_PERCENT}%
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function PricingHero({
+  period,
+  onPeriodChange,
+}: {
+  period: BillingPeriod;
+  onPeriodChange: (p: BillingPeriod) => void;
+}) {
+  return (
+    <header className="mx-auto w-full max-w-3xl px-4 pt-4 text-center sm:px-6 sm:pt-8 md:pt-10">
+      <div className={cn('home-hero-enter mb-4 sm:mb-5', marketingLayout.heroBadge)}>
+        <Sparkles className="size-3 shrink-0 text-[#02797E]" aria-hidden />
+        <span>أسعار شفافة — بدون مفاجآت</span>
       </div>
+
+      <h1 className={cn('home-hero-enter-delayed', marketingLayout.heroTitle)}>
+        خطط تناسب نموّ مشروعك
+      </h1>
+
+      <p className={cn('home-hero-enter-delayed mt-3 sm:mt-4', marketingLayout.heroLead, 'max-w-2xl')}>
+        ابدأ مجاناً على ركني — متجرك، نماذجك، روابطك، وتحليلاتك في منصة واحدة.
+        ارتقِ متى احتجت بأسعار بالدينار العراقي.
+      </p>
+
+      <div className="home-hero-enter-delayed mt-6 flex justify-center sm:mt-8">
+        <BillingToggle period={period} onChange={onPeriodChange} />
+      </div>
+    </header>
+  );
+}
+
+function PlanFeatureAccordion({ plan }: { plan: PricingPlan }) {
+  const introLine = plan.highlights.find((h) => h.endsWith(':'));
+  const bullets = plan.highlights.filter((h) => !h.endsWith(':'));
+  const heading = introLine ? introLine.replace(/:$/, '') : 'ما المتضمّن';
+
+  return (
+    <div
+      className="mt-6 border-t border-[#E8ECF0] pt-6"
+      data-testid="PricingOptions__featureList"
+    >
+      <details className="group" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+          <h4
+            className="text-[15px] font-normal text-[#132327]"
+            data-testid="PricingOptions__featureListHeading"
+          >
+            {heading}:
+          </h4>
+          <ChevronDown
+            aria-hidden
+            className="size-4 shrink-0 text-[#132327]/45 transition-transform duration-300 group-open:rotate-180"
+          />
+        </summary>
+        <ul className="mt-4 space-y-3">
+          {bullets.map((item) => (
+            <li
+              key={item}
+              className="flex items-start gap-2.5 text-[14px] leading-relaxed text-[#132327]/70"
+              data-testid="PricingOptions__featureListItem"
+            >
+              <Check className="mt-0.5 size-4 shrink-0 text-[#02797E]" strokeWidth={2.25} aria-hidden />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }
@@ -154,78 +205,97 @@ function PlanCard({ plan, period }: { plan: PricingPlan; period: BillingPeriod }
       ? monthlyEquivalentFromYearly(plan.priceYearly)
       : plan.priceMonthly;
 
-  const introLine = plan.highlights.find((h) => h.endsWith(':'));
-  const bullets = plan.highlights.filter((h) => !h.endsWith(':')).slice(0, introLine ? 5 : 6);
-
   return (
     <article
-      className="flex h-full flex-col rounded-4xl border p-6 sm:p-7"
-      style={{
-        borderColor: plan.popular ? BRAND : BORDER,
-        backgroundColor: '#ffffff',
-        boxShadow: plan.popular ? `0 0 0 1px ${BRAND}` : undefined,
-      }}
+      className={cn(
+        'flex min-w-0 flex-col border-b border-[#E8ECF0] p-5 sm:p-6 lg:border-b-0 lg:border-s lg:p-7 lg:first:border-s-0',
+        plan.popular &&
+          'bg-[linear-gradient(180deg,rgba(2,121,126,0.08)_0%,rgba(255,255,255,0)_100%)]',
+      )}
+      data-testid="PricingOptions__item"
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-lg font-semibold tracking-tight" style={{ color: TEXT }}>
+      <div>
+        <h3
+          className="text-xl font-bold tracking-tight text-[#132327] sm:text-2xl"
+          data-testid="PricingOptions__heading"
+        >
           {plan.name}
         </h3>
-        {plan.badge ? (
-          <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-            style={{ backgroundColor: '#eef2f2', color: BRAND }}
-          >
-            {plan.badge}
-          </span>
-        ) : null}
       </div>
 
-      <div className="mt-4 flex items-baseline gap-1">
+      <p
+        className="mt-2 text-[14px] leading-relaxed text-[#132327]/55 sm:mt-3"
+        data-testid="PricingOptions__description"
+      >
+        {plan.description}
+      </p>
+
+      <div className="mt-5 sm:mt-6" data-testid="PricingOptions__price">
         {isFree ? (
-          <span className="text-3xl font-bold tracking-tight" style={{ color: TEXT }}>
-            مجاناً
-          </span>
+          <p className="flex flex-wrap items-baseline gap-x-1">
+            <span className="text-[2rem] font-normal leading-none tracking-tight text-[#132327] sm:text-[2.5rem]">
+              مجاناً
+            </span>
+          </p>
         ) : (
-          <>
-            <AnimatedNumber value={displayPrice} className="text-3xl font-bold tracking-tight" />
-            <span className="text-sm font-medium" style={{ color: MUTED }}>
-              {CURRENCY}
-            </span>
-            <span className="text-sm" style={{ color: MUTED }}>
-              / شهر
-            </span>
-          </>
+          <p className="flex flex-wrap items-baseline gap-x-1 gap-y-1">
+            <AnimatedNumber
+              value={displayPrice}
+              className="text-[2rem] font-normal leading-none tracking-tight text-[#132327] sm:text-[2.5rem]"
+            />
+            <span className="text-xs font-normal text-[#132327]/55">{CURRENCY}</span>
+            <span className="w-full text-[14px] text-[#132327]/55 sm:w-auto">لكل حساب / شهر</span>
+          </p>
         )}
       </div>
 
-      <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
+      <div className="mt-5 sm:mt-6" data-testid="PricingOptions__actions">
+        <PlanCta plan={plan} />
+      </div>
+
+      <PlanFeatureAccordion plan={plan} />
+
+      <p className="mt-4 text-[12px] leading-relaxed text-[#132327]/50" data-testid="PricingOptions__footnote">
         {isFree
-          ? 'مجاني للأبد.'
+          ? 'مجاني للأبد — بدون بطاقة.'
           : period === 'yearly'
             ? `${formatPrice(plan.priceYearly)} ${CURRENCY} يُدفع سنوياً`
             : 'يُدفع شهرياً'}
       </p>
-
-      <p className="mt-4 text-[13px] leading-relaxed" style={{ color: MUTED }}>
-        {plan.description}
-      </p>
-
-      <PlanCta plan={plan} />
-
-      <ul className="mt-6 flex flex-1 flex-col gap-2.5 border-t pt-6" style={{ borderColor: BORDER }}>
-        {introLine ? (
-          <li className="text-[12px] font-medium leading-relaxed" style={{ color: TEXT }}>
-            {introLine}
-          </li>
-        ) : null}
-        {bullets.map((item) => (
-          <li key={item} className="flex items-start gap-2 text-[13px] leading-relaxed" style={{ color: MUTED }}>
-            <Check className="mt-0.5 size-3.5 shrink-0" style={{ color: BRAND }} strokeWidth={2.25} />
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
     </article>
+  );
+}
+
+function PricingPlansGrid({ period }: { period: BillingPeriod }) {
+  return (
+    <div className="mt-8 sm:mt-12">
+      <div
+        className="overflow-hidden rounded-2xl border border-[#E8ECF0] bg-[linear-gradient(180deg,rgba(238,242,242,0.65)_0%,rgba(255,255,255,0.98)_38%,#ffffff_100%)] shadow-[0_16px_48px_rgba(6,44,48,0.08)]"
+        data-testid="PricingOptions"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-4">
+          {PRICING_PLANS.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} period={period} />
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="mt-3 hidden grid-cols-4 gap-0 lg:grid"
+        data-testid="PricingOptions__labels"
+        aria-hidden
+      >
+        {PRICING_PLANS.map((plan) => (
+          <div key={plan.id} className="flex min-h-7 justify-center">
+            {plan.badge ? (
+              <span className="rounded-full bg-[#EEF2F2] px-3 py-1 text-[11px] font-bold text-[#02797E]">
+                {plan.badge}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -233,38 +303,38 @@ function ComparisonCell({ value, compact = false }: { value: CellValue; compact?
   if (value === true) {
     return (
       <span className="inline-flex items-center justify-center" aria-label="متضمّن">
-        <Check className={compact ? 'size-4' : 'size-[18px]'} style={{ color: BRAND }} strokeWidth={2.25} />
+        <Check
+          className={cn(compact ? 'size-4' : 'size-[18px]', 'text-[#02797E]')}
+          strokeWidth={2.25}
+          aria-hidden
+        />
       </span>
     );
   }
+
   if (value === false) {
-    return (
-      <span className="text-[13px]" style={{ color: 'rgba(19, 35, 39, 0.28)' }}>
-        —
-      </span>
-    );
+    return <span className="text-[13px] text-[#132327]/25">—</span>;
   }
+
   return (
-    <span className="text-[12px] font-medium leading-snug sm:text-[13px]" style={{ color: TEXT }}>
-      {value}
-    </span>
+    <span className="text-[12px] font-medium leading-snug text-[#132327] sm:text-[13px]">{value}</span>
   );
 }
-
-/* ─── Mobile: plan tabs + feature list ─── */
 
 function ComparisonMatrixMobile() {
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId>('pro');
   const selectedPlan = PRICING_PLANS.find((plan) => plan.id === selectedPlanId) ?? PRICING_PLANS[0];
 
   return (
-    <div className="overflow-hidden rounded-4xl border lg:hidden" style={{ borderColor: BORDER }}>
+    <div
+      id="compare-features"
+      className="overflow-hidden rounded-2xl border border-[#E8ECF0] bg-white/80 backdrop-blur-sm lg:hidden"
+    >
       <div className="pricing-comparison-sticky-header">
         <div className="pricing-comparison-sticky-inner pricing-comparison-sticky-inner--table">
           <div className="space-y-3 px-4 py-4 sm:px-5">
             <div
-              className="flex gap-1 overflow-x-auto rounded-full border p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ borderColor: BORDER, backgroundColor: SURFACE }}
+              className="flex gap-1 overflow-x-auto rounded-full border border-[#E8ECF0] bg-[#F6F7F8] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               role="tablist"
               aria-label="اختر الباقة"
             >
@@ -277,12 +347,10 @@ function ComparisonMatrixMobile() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setSelectedPlanId(plan.id)}
-                    className="min-h-9 shrink-0 rounded-full px-4 text-[13px] font-medium transition-colors"
-                    style={
-                      active
-                        ? { backgroundColor: TEXT, color: '#ffffff' }
-                        : { color: MUTED }
-                    }
+                    className={cn(
+                      'min-h-9 shrink-0 rounded-full px-4 text-[13px] font-medium transition-colors',
+                      active ? 'bg-[#062c30] text-white' : 'text-[#132327]/55',
+                    )}
                   >
                     {plan.name}
                   </button>
@@ -290,8 +358,9 @@ function ComparisonMatrixMobile() {
               })}
             </div>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px]" style={{ color: MUTED }}>
-                ميزات <span className="font-semibold" style={{ color: TEXT }}>{selectedPlan.name}</span>
+              <p className="text-[13px] text-[#132327]/55">
+                ميزات{' '}
+                <span className="font-semibold text-[#132327]">{selectedPlan.name}</span>
               </p>
               <PlanCta plan={selectedPlan} variant="table" />
             </div>
@@ -299,7 +368,7 @@ function ComparisonMatrixMobile() {
         </div>
       </div>
 
-      <div className="divide-y" style={{ borderColor: BORDER }}>
+      <div className="pricing-compare-stack divide-y divide-[#E8ECF0]">
         {FEATURE_SECTIONS.map((section) => (
           <MobileFeatureSection key={section.id} section={section} planId={selectedPlanId} />
         ))}
@@ -307,6 +376,7 @@ function ComparisonMatrixMobile() {
     </div>
   );
 }
+
 function MobileFeatureSection({
   section,
   planId,
@@ -316,39 +386,31 @@ function MobileFeatureSection({
 }) {
   return (
     <div>
-      <div className="px-4 py-5 sm:px-5" style={{ backgroundColor: SURFACE }}>
+      <div className="bg-[#F6F7F8]/80 px-4 py-5 sm:px-5">
         {section.eyebrow ? (
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: MUTED }}>
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[#132327]/45">
             {section.eyebrow}
           </p>
         ) : null}
-        <h3 className="text-base font-semibold" style={{ color: TEXT }}>
-          {section.title}
-        </h3>
+        <h3 className="text-base font-semibold text-[#132327]">{section.title}</h3>
         {section.description ? (
-          <p className="mt-1 text-[12px] leading-relaxed" style={{ color: MUTED }}>
-            {section.description}
-          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[#132327]/55">{section.description}</p>
         ) : null}
       </div>
 
-      <div className="bg-white">
+      <div>
         {section.rows.map((row, index) => (
           <div
             key={row.label}
-            className="grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3.5"
-            style={{
-              backgroundColor: index % 2 === 0 ? '#ffffff' : 'rgba(246, 247, 248, 0.6)',
-            }}
+            className={cn(
+              'grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3.5',
+              index % 2 === 0 ? 'bg-white/70' : 'bg-[#F6F7F8]/50',
+            )}
           >
             <div>
-              <span className="block text-[13px] font-medium" style={{ color: TEXT }}>
-                {row.label}
-              </span>
+              <span className="block text-[13px] font-medium text-[#132327]">{row.label}</span>
               {row.hint ? (
-                <span className="mt-0.5 block text-[11px]" style={{ color: MUTED }}>
-                  {row.hint}
-                </span>
+                <span className="mt-0.5 block text-[11px] text-[#132327]/50">{row.hint}</span>
               ) : null}
             </div>
             <ComparisonCell value={row.values[planId]} compact />
@@ -359,118 +421,125 @@ function MobileFeatureSection({
   );
 }
 
-/* ─── Desktop: GitHub Copilot-style comparison table ─── */
+const COMPARE_GRID_CLASS =
+  'grid grid-cols-[minmax(11rem,1.15fr)_repeat(4,minmax(0,1fr))]';
 
 function ComparisonTableDesktop() {
   return (
-    <div className="pricing-copilot-compare">
-      <table className="pricing-copilot-compare-table w-full text-start">
-        <thead>
-          <tr className="border-b" style={{ borderColor: BORDER }}>
-            <th className="pricing-copilot-compare-th w-[26%] min-w-[10rem] px-4 py-5 text-start align-middle sm:px-5">
-              <span className="text-base font-bold" style={{ color: TEXT }}>
-                الميزة
-              </span>
-            </th>
-            {PRICING_PLANS.map((plan) => (
-              <th
-                key={plan.id}
-                className="pricing-copilot-compare-th border-s px-3 py-6 align-middle sm:px-4"
-                style={{ borderColor: BORDER }}
-              >
-                <div className="flex flex-col items-center justify-center gap-3">
-                  <span className="text-sm font-bold sm:text-base" style={{ color: TEXT }}>
-                    {plan.name}
-                  </span>
-                  <PlanCta plan={plan} variant="table-inline" />
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {FEATURE_SECTIONS.map((section) => (
-            <SectionTableRows key={section.id} section={section} />
-          ))}
-        </tbody>
-      </table>
+    <div
+      id="compare-features"
+      className="pricing-compare-desktop overflow-hidden rounded-2xl border border-[#E8ECF0] bg-white/80 shadow-[0_8px_30px_rgba(6,44,48,0.04)] backdrop-blur-sm"
+    >
+      <div
+        className={cn(
+          COMPARE_GRID_CLASS,
+          'sticky top-20 z-30 items-end border-b border-[#E8ECF0] bg-white/97 py-5 backdrop-blur-md',
+        )}
+      >
+        <div className="px-5 pb-1">
+          <span className="text-base font-bold text-[#132327]">الميزة</span>
+        </div>
+        {PRICING_PLANS.map((plan) => (
+          <div
+            key={plan.id}
+            className={cn(
+              'flex flex-col items-center gap-2.5 border-s border-[#E8ECF0] px-3 py-1 text-center',
+              plan.popular && 'bg-[linear-gradient(180deg,rgba(2,121,126,0.08)_0%,transparent_100%)]',
+            )}
+          >
+            <span className="text-sm font-bold text-[#132327] sm:text-base">{plan.name}</span>
+            <PlanCta plan={plan} variant="table-inline" />
+          </div>
+        ))}
+      </div>
+
+      {FEATURE_SECTIONS.map((section, index) => (
+        <DesktopFeatureSection key={section.id} section={section} isFirst={index === 0} />
+      ))}
     </div>
   );
 }
 
-function SectionTableRows({ section }: { section: FeatureSection }) {
+function DesktopFeatureSection({
+  section,
+  isFirst = false,
+}: {
+  section: FeatureSection;
+  isFirst?: boolean;
+}) {
   return (
-    <>
-      <tr>
-        <td
-          colSpan={PRICING_PLANS.length + 1}
-          className="border-b px-4 py-5 sm:px-5"
-          style={{ borderColor: BORDER, backgroundColor: SURFACE }}
-        >
-          {section.eyebrow ? (
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: MUTED }}>
-              {section.eyebrow}
-            </p>
-          ) : null}
-          <p className="text-base font-semibold sm:text-lg" style={{ color: TEXT }}>
-            {section.title}
+    <section aria-labelledby={`compare-section-${section.id}`}>
+      <div
+        className={cn(
+          'border-b border-[#E8ECF0] bg-[#F6F7F8]/80 px-5 py-5',
+          !isFirst && 'border-t border-[#E8ECF0]',
+        )}
+      >
+        {section.eyebrow ? (
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[#132327]/45">
+            {section.eyebrow}
           </p>
-          {section.description ? (
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed" style={{ color: MUTED }}>
-              {section.description}
-            </p>
-          ) : null}
-        </td>
-      </tr>
-      {section.rows.map((row) => (
-        <tr
-          key={row.label}
-          className="border-b transition-colors hover:bg-[#FAFBFC]"
-          style={{ borderColor: 'rgba(232, 236, 240, 0.9)' }}
+        ) : null}
+        <h3
+          id={`compare-section-${section.id}`}
+          className="text-lg font-semibold text-[#132327] sm:text-xl"
         >
-          <td className="px-4 py-4 sm:px-5">
-            <span className="block text-[13px] font-medium sm:text-[14px]" style={{ color: TEXT }}>
-              {row.label}
-            </span>
+          {section.title}
+        </h3>
+        {section.description ? (
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#132327]/55 sm:text-[14px]">
+            {section.description}
+          </p>
+        ) : null}
+      </div>
+
+      {section.rows.map((row, index) => (
+        <div
+          key={row.label}
+          className={cn(
+            COMPARE_GRID_CLASS,
+            'items-center border-b border-[#E8ECF0]/90 last:border-b-0',
+            index % 2 === 1 && 'bg-[#F6F7F8]/35',
+          )}
+        >
+          <div className="px-5 py-4">
+            <span className="block text-[14px] font-medium text-[#132327]">{row.label}</span>
             {row.hint ? (
-              <span className="mt-0.5 block text-[11px] sm:text-[12px]" style={{ color: MUTED }}>
-                {row.hint}
-              </span>
+              <span className="mt-1 block text-[12px] leading-relaxed text-[#132327]/50">{row.hint}</span>
             ) : null}
-          </td>
+          </div>
           {PRICING_PLANS.map((plan) => (
-            <td
+            <div
               key={plan.id}
-              className="border-s px-3 py-4 text-center sm:px-4"
-              style={{ borderColor: BORDER }}
+              className={cn(
+                'flex min-h-[3.25rem] items-center justify-center border-s border-[#E8ECF0]/90 px-3 py-4 text-center',
+                plan.popular && 'bg-[#EEF2F2]/25',
+              )}
             >
               <ComparisonCell value={row.values[plan.id]} />
-            </td>
+            </div>
           ))}
-        </tr>
+        </div>
       ))}
-    </>
+    </section>
   );
 }
 
-function ComparisonMatrix({ period }: { period: BillingPeriod }) {
+function ComparisonMatrix() {
   return (
-    <section className="mt-16 sm:mt-24" aria-labelledby="comparison-heading">
-      <div className="mb-10 text-center lg:mb-12">
-        <h2
-          id="comparison-heading"
-          className="text-xl font-bold tracking-tight sm:text-2xl lg:text-[1.75rem]"
-          style={{ color: TEXT }}
-        >
-          قارن الميزات
+    <section id="compare" className="mt-14 scroll-mt-24 sm:mt-24" aria-labelledby="comparison-heading">
+      <div className="mb-8 text-center sm:mb-10 lg:mb-12">
+        <p className={cn('mb-2', marketingLayout.sectionEyebrow)}>مقارنة تفصيلية</p>
+        <h2 id="comparison-heading" className={cn(marketingLayout.sectionTitle, 'text-xl sm:text-2xl lg:text-[1.75rem]')}>
+          كل ما تحصل عليه في كل باقة
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed" style={{ color: MUTED }}>
-          جدول تفصيلي لكل ما تحصل عليه في كل باقة.
+        <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-[#132327]/55">
+          نماذج، متجر، تحليلات، تكاملات، وأمان — في جدول واحد واضح.
         </p>
       </div>
 
       <ComparisonMatrixMobile />
-      <div className="hidden rounded-4xl border lg:block" style={{ borderColor: BORDER }}>
+      <div className="hidden lg:block">
         <ComparisonTableDesktop />
       </div>
     </section>
@@ -479,28 +548,26 @@ function ComparisonMatrix({ period }: { period: BillingPeriod }) {
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
+
   return (
-    <div className="border-b last:border-b-0" style={{ borderColor: BORDER }}>
+    <div className="border-b border-[#E8ECF0] last:border-b-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 py-4 text-right sm:py-5"
       >
-        <span className="text-start text-[14px] font-medium sm:text-[15px]" style={{ color: TEXT }}>
-          {question}
-        </span>
+        <span className="text-start text-[14px] font-medium text-[#132327] sm:text-[15px]">{question}</span>
         <ChevronIcon open={open} />
       </button>
       <div
-        className={`grid transition-all duration-300 ${
-          open ? 'grid-rows-[1fr] pb-4 opacity-100 sm:pb-5' : 'grid-rows-[0fr] opacity-0'
-        }`}
+        className={cn(
+          'grid transition-all duration-300',
+          open ? 'grid-rows-[1fr] pb-4 opacity-100 sm:pb-5' : 'grid-rows-[0fr] opacity-0',
+        )}
       >
         <div className="overflow-hidden">
-          <p className="text-start text-[13px] leading-relaxed sm:text-sm" style={{ color: MUTED }}>
-            {answer}
-          </p>
+          <p className="text-start text-[13px] leading-relaxed text-[#132327]/55 sm:text-sm">{answer}</p>
         </div>
       </div>
     </div>
@@ -511,39 +578,32 @@ export function PricingView() {
   const [period, setPeriod] = useState<BillingPeriod>('monthly');
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16">
-      <header className="mx-auto max-w-3xl pt-4 text-center sm:pt-8">
-        <h1
-          className="text-[2rem] font-bold tracking-tight sm:text-4xl md:text-[2.75rem] md:leading-[1.1]"
-          style={{ color: TEXT }}
-        >
-          الأسعار
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed sm:text-base" style={{ color: MUTED }}>
-          ابدأ مجاناً وارتقِ متى احتجت. كل الباقات تشمل النماذج والمتجر والروابط والتحليلات.
-        </p>
-        <div className="mt-8 flex justify-center">
-          <BillingToggle period={period} onChange={setPeriod} />
-        </div>
-      </header>
+    <div className={cn(marketingLayout.container, 'pb-8 sm:pb-12')}>
+      <PricingHero period={period} onPeriodChange={setPeriod} />
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-14 md:grid-cols-2 xl:grid-cols-4">
-        {PRICING_PLANS.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} period={period} />
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5 sm:mt-10 sm:gap-2">
+        {TRUST_PILLS.map((item) => (
+          <span
+            key={item}
+            className="rounded-full border border-[#E8ECF0] bg-white/70 px-2.5 py-0.5 text-[11px] font-medium text-[#132327]/55 backdrop-blur-sm sm:px-3 sm:py-1 sm:text-[12px]"
+          >
+            {item}
+          </span>
         ))}
       </div>
 
-      <ComparisonMatrix period={period} />
+      <PricingPlansGrid period={period} />
 
-      <section className="mt-16 border-t pt-14 sm:mt-20 sm:pt-16" style={{ borderColor: BORDER }} aria-labelledby="faq-heading">
-        <h2
-          id="faq-heading"
-          className="mb-8 text-center text-xl font-bold tracking-tight sm:text-2xl"
-          style={{ color: TEXT }}
-        >
-          الأسئلة الشائعة
-        </h2>
-        <div className="mx-auto max-w-2xl">
+      <ComparisonMatrix />
+
+      <section className="mt-14 sm:mt-20" aria-labelledby="faq-heading">
+        <div className="mb-6 text-center sm:mb-8">
+          <p className={cn('mb-2', marketingLayout.sectionEyebrow)}>مساعدة</p>
+          <h2 id="faq-heading" className={cn(marketingLayout.sectionTitle, 'text-xl sm:text-2xl')}>
+            الأسئلة الشائعة
+          </h2>
+        </div>
+        <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-[#E8ECF0] bg-white/85 px-4 backdrop-blur-sm sm:rounded-[1.75rem] sm:px-6">
           {PRICING_FAQS.map((faq) => (
             <FaqItem key={faq.question} {...faq} />
           ))}

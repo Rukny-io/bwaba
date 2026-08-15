@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
 import { InstagramService } from './instagram.service';
+import { InstagramInboxService } from './instagram-inbox.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { InstagramWebhookGuard } from './guards/instagram-webhook.guard';
@@ -28,6 +29,7 @@ export class InstagramController {
 
   constructor(
     private readonly instagramService: InstagramService,
+    private readonly instagramInboxService: InstagramInboxService,
     private readonly config: ConfigService,
   ) {
     this.appFrontendUrl =
@@ -63,6 +65,16 @@ export class InstagramController {
       linkId,
     });
     return res.redirect(authUrl);
+  }
+
+  /**
+   * Public OAuth alignment hints (no secrets). Helps debug Invalid redirect_uri.
+   * GET /api/v1/integrations/instagram/oauth-setup
+   */
+  @Get('oauth-setup')
+  @Public()
+  getOAuthSetup() {
+    return this.instagramService.getOAuthSetup();
   }
 
   /**
@@ -414,6 +426,79 @@ export class InstagramController {
     return this.instagramService.replyToComment(req.user.id, connectionId, commentId, message);
   }
 
+  // ─── Inbox (Instagram DM) ─────────────────────────────────
+
+  /**
+   * List inbox conversations for the current user
+   * GET /api/v1/integrations/instagram/inbox/conversations
+   */
+  @Get('inbox/conversations')
+  @UseGuards(JwtAuthGuard)
+  async listInboxConversations(
+    @Req() req: any,
+    @Query('channel') channel?: string,
+  ) {
+    const normalized =
+      channel === 'instagram' || channel === 'messenger' ? channel : 'all';
+    const conversations = await this.instagramInboxService.listConversations(
+      req.user.id,
+      normalized,
+    );
+    return { conversations };
+  }
+
+  /**
+   * Get messages for a conversation
+   * GET /api/v1/integrations/instagram/inbox/conversations/:conversationId/messages
+   */
+  @Get('inbox/conversations/:conversationId/messages')
+  @UseGuards(JwtAuthGuard)
+  async getInboxMessages(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+  ) {
+    return this.instagramInboxService.getConversationMessages(
+      req.user.id,
+      conversationId,
+    );
+  }
+
+  /**
+   * Send a reply in a conversation
+   * POST /api/v1/integrations/instagram/inbox/conversations/:conversationId/messages
+   */
+  @Post('inbox/conversations/:conversationId/messages')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async sendInboxMessage(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+    @Body('text') text: string,
+  ) {
+    return this.instagramInboxService.sendMessage(
+      req.user.id,
+      conversationId,
+      text,
+    );
+  }
+
+  /**
+   * Mark conversation as read
+   * POST /api/v1/integrations/instagram/inbox/conversations/:conversationId/read
+   */
+  @Post('inbox/conversations/:conversationId/read')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async markInboxConversationRead(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+  ) {
+    return this.instagramInboxService.markConversationRead(
+      req.user.id,
+      conversationId,
+    );
+  }
+
   // ─── Meta Webhook ─────────────────────────────────────────
 
   /**
@@ -421,6 +506,7 @@ export class InstagramController {
    * GET /api/v1/integrations/instagram/webhook
    */
   @Get('webhook')
+  @Public()
   async webhookVerify(
     @Query('hub.mode') mode: string,
     @Query('hub.verify_token') verifyToken: string,
@@ -450,6 +536,7 @@ export class InstagramController {
    * X-Hub-Signature-256 HMAC over the raw body (fail closed).
    */
   @Post('webhook')
+  @Public()
   @UseGuards(InstagramWebhookGuard)
   @HttpCode(HttpStatus.OK)
   async webhookEvent(@Body() body: any) {

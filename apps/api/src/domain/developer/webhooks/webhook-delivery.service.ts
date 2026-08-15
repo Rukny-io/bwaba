@@ -6,9 +6,6 @@ import { DevWebhooksService } from './dev-webhooks.service';
 
 /**
  * 🔔 خدمة توصيل Webhook Events للمطوّرين
- *
- * تستقبل أحداث من النظام (رسائل، قوالب، إلخ)
- * وتوصّلها لـ webhooks المطوّر عبر طابور (BullMQ)
  */
 @Injectable()
 export class WebhookDeliveryService {
@@ -20,17 +17,21 @@ export class WebhookDeliveryService {
     @InjectQueue('webhook-delivery') private webhookQueue: Queue,
   ) {}
 
-  /**
-   * إرسال حدث لكل webhooks المطوّر المشتركة
-   */
-  async dispatchEvent(userId: string, eventType: string, data: any) {
+  async dispatchEvent(
+    userId: string,
+    eventType: string,
+    data: any,
+    developerAppId?: string,
+  ) {
     const webhooks = await this.webhooksService.getActiveWebhooksForEvent(
       userId,
       eventType,
+      developerAppId,
     );
 
     if (webhooks.length === 0) return;
 
+    const timestamp = Math.floor(Date.now() / 1000);
     const payload = {
       id: `evt_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
       type: eventType,
@@ -46,6 +47,7 @@ export class WebhookDeliveryService {
         payload,
         eventType,
         attemptNumber: 1,
+        unixTimestamp: timestamp,
       });
     }
 
@@ -54,9 +56,6 @@ export class WebhookDeliveryService {
     );
   }
 
-  /**
-   * معالجة توصيل webhook (يُستدعى من Queue Processor)
-   */
   async processDelivery(job: {
     webhookId: string;
     url: string;
@@ -64,10 +63,13 @@ export class WebhookDeliveryService {
     payload: any;
     eventType: string;
     attemptNumber: number;
+    unixTimestamp?: number;
   }) {
     const startTime = Date.now();
     const payloadStr = JSON.stringify(job.payload);
     const signature = this.webhooksService.signPayload(payloadStr, job.secret);
+    const unixTimestamp =
+      job.unixTimestamp ?? Math.floor(Date.now() / 1000);
 
     let success = false;
     let responseCode: number | null = null;
@@ -82,6 +84,7 @@ export class WebhookDeliveryService {
           'X-Rukny-Signature': `sha256=${signature}`,
           'X-Rukny-Event': job.eventType,
           'X-Rukny-Delivery': job.payload.id,
+          'X-Rukny-Timestamp': String(unixTimestamp),
         },
         body: payloadStr,
         signal: AbortSignal.timeout(30000),
@@ -96,7 +99,6 @@ export class WebhookDeliveryService {
 
     const duration = Date.now() - startTime;
 
-    // تسجيل النتيجة
     await this.prisma.webhookDeliveryLog.create({
       data: {
         webhookId: job.webhookId,
@@ -111,7 +113,6 @@ export class WebhookDeliveryService {
       },
     });
 
-    // تحديث حالة الـ webhook
     if (success) {
       await this.prisma.developerWebhook.update({
         where: { id: job.webhookId },
@@ -131,7 +132,6 @@ export class WebhookDeliveryService {
         },
       });
 
-      // تعطيل تلقائي بعد 10 فشل متتالي
       if (webhook.failureCount >= 10) {
         await this.prisma.developerWebhook.update({
           where: { id: job.webhookId },
@@ -145,7 +145,6 @@ export class WebhookDeliveryService {
         );
       }
 
-      // إعادة المحاولة إن لم يصل للحد
       if (!success && job.attemptNumber < 5) {
         throw new Error(
           `Webhook delivery failed: ${errorMessage || `HTTP ${responseCode}`}`,

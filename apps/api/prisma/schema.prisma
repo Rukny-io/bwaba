@@ -120,6 +120,7 @@ model User {
   workspaceMemberships      WorkspaceMember[]          @relation("workspace_member")
   workspaceInvitationsSent  WorkspaceMember[]          @relation("workspace_inviter")
   supportTickets            SupportTicket[]
+  businessWorkflows         BusinessWorkflow[]
 
   @@index([telegramChatId])
   @@index([telegramConnectedAt])
@@ -258,10 +259,26 @@ model InstagramConnection {
   updatedAt      DateTime  @updatedAt
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments       InstagramComment[]
+  inboxConversations InstagramInboxConversation[]
 
   @@unique([userId, igUserId])
   @@index([userId])
   @@map("instagram_connections")
+}
+
+model BusinessWorkflow {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String   @default("سير عمل جديد")
+  description String?
+  definition  Json
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@map("business_workflows")
 }
 
 model InstagramComment {
@@ -285,6 +302,50 @@ model InstagramComment {
   @@index([connectionId, isRead])
   @@index([mediaId])
   @@map("instagram_comments")
+}
+
+enum InstagramMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model InstagramInboxConversation {
+  id                       String   @id @default(uuid())
+  connectionId             String
+  participantIgId          String
+  participantName          String?
+  participantUsername      String?
+  participantPicUrl        String?
+  lastMessageAt            DateTime @default(now())
+  lastMessageText          String?
+  unreadCount              Int      @default(0)
+  messagingWindowExpiresAt DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  connection InstagramConnection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  messages   InstagramInboxMessage[]
+
+  @@unique([connectionId, participantIgId])
+  @@index([connectionId, lastMessageAt])
+  @@map("instagram_inbox_conversations")
+}
+
+model InstagramInboxMessage {
+  id             String                    @id @default(uuid())
+  conversationId String
+  direction      InstagramMessageDirection
+  igMessageId    String?                   @unique
+  text           String?
+  messageType    String                    @default("text")
+  sentAt         DateTime                  @default(now())
+  rawPayload     Json?
+  createdAt      DateTime                  @default(now())
+
+  conversation InstagramInboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, sentAt])
+  @@map("instagram_inbox_messages")
 }
 
 model InstagramBlock {
@@ -2529,6 +2590,7 @@ model DeveloperApp {
   apiKeys          DeveloperApiKey[]
   appWallet        DeveloperAppWallet?
   whatsappAccounts DeveloperWhatsappAccount[]
+  developerWebhooks DeveloperWebhook[]
   forms            Form[]
   installedProducts DeveloperAppProduct[]
 
@@ -2686,6 +2748,7 @@ enum QualityRating {
 /// 📞 رقم هاتف مربوط بـ WABA
 model DeveloperPhoneNumber {
   id                        String            @id @default(uuid())
+  phoneId                   String            @unique /// معرّف عام رقمي (16 رقم) للروابط — مثل appId
   accountId                 String
   phoneNumber               String /// الرقم الكامل مع الكود الدولي
   displayPhoneNumber        String? /// الرقم كما يظهر في WhatsApp
@@ -2713,6 +2776,7 @@ model DeveloperPhoneNumber {
 
   @@index([accountId])
   @@index([phoneNumberId])
+  @@index([phoneId])
   @@index([status])
   @@map("developer_phone_numbers")
 }
@@ -2895,6 +2959,7 @@ enum WebhookStatus {
 model DeveloperWebhook {
   id               String        @id @default(uuid())
   userId           String
+  developerAppId   String? /// مشروع مرتبط — null للـ webhooks القديمة
   url              String /// عنوان HTTPS لاستقبال الأحداث
   secret           String /// HMAC-SHA256 signing secret
   events           String[] /// ["message.sent", "message.delivered", ...]
@@ -2909,9 +2974,11 @@ model DeveloperWebhook {
   updatedAt        DateTime      @updatedAt
 
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp?        @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
   deliveryLogs WebhookDeliveryLog[]
 
   @@index([userId])
+  @@index([developerAppId])
   @@index([status])
   @@map("developer_webhooks")
 }

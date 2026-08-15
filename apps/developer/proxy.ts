@@ -80,22 +80,20 @@ export async function proxy(request: NextRequest) {
     const target = resolveClientNext(nextParam, '/apps');
 
     if (session === 'expired' || session === 'invalid') {
-      if (!auth.tokenExpired) {
-        return rememberLastApp(
-          request,
-          NextResponse.redirect(new URL(target, request.url)),
-        );
+      if (auth.tokenExpired) {
+        const response = NextResponse.next();
+        for (const name of [
+          'access_token',
+          'refresh_token',
+          '__Secure-access_token',
+          '__Secure-refresh_token',
+        ]) {
+          response.cookies.delete(name);
+        }
+        return rememberLastApp(request, response);
       }
-      const response = NextResponse.next();
-      for (const name of [
-        'access_token',
-        'refresh_token',
-        '__Secure-access_token',
-        '__Secure-refresh_token',
-      ]) {
-        response.cookies.delete(name);
-      }
-      return rememberLastApp(request, response);
+      // JWT still decodes at the edge but the API rejected the session — show login.
+      return rememberLastApp(request, NextResponse.next());
     }
 
     return rememberLastApp(

@@ -30,6 +30,9 @@ export function appWhatsappApi(appId: string): string {
   return `${appBase(appId)}/whatsapp-api`;
 }
 
+export { appWhatsappApiHref, isWhatsappApiSectionActive } from '@/lib/whatsapp-api-routes';
+export type { WhatsappApiSectionId } from '@/lib/whatsapp-api-routes';
+
 /** @deprecated Use appWhatsappApi */
 export function appDocs(appId: string): string {
   return appWhatsappApi(appId);

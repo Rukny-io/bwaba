@@ -73,7 +73,7 @@ export function AppAnalyticsView({
           description={a.subtitle.replace('{app}', appName)}
           actions={<AnalyticsPeriodPicker value={days} onChange={setDays} labels={periodLabels} />}
         />
-        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
@@ -148,7 +148,7 @@ export function AppAnalyticsView({
         </p>
       </DashboardPageHeader>
 
-      <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-3">
         <DashboardMetricCard
           icon={Activity}
           label={a.metricApiRequests}

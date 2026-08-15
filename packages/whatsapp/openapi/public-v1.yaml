@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: Rukny WhatsApp Public API
+  version: 1.0.0
+  description: REST API for sending WhatsApp messages with an application API key.
+servers:
+  - url: https://api.rukny.io/api/v1
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    SendTextMessage:
+      type: object
+      required: [to, type, text]
+      properties:
+        to:
+          type: string
+          example: '+9647xxxxxxxxx'
+        type:
+          type: string
+          enum: [text]
+        text:
+          type: object
+          required: [body]
+          properties:
+            body:
+              type: string
+            preview_url:
+              type: boolean
+    SendTemplateMessage:
+      type: object
+      required: [to, type, template]
+      properties:
+        to:
+          type: string
+        type:
+          type: string
+          enum: [template]
+        template:
+          type: object
+          required: [name, language]
+          properties:
+            name:
+              type: string
+              example: otp_verify
+            language:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: ar
+            components:
+              type: array
+              items:
+                type: object
+paths:
+  /whatsapp/messages:
+    post:
+      tags: [Messages]
+      summary: Send a WhatsApp message
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SendTextMessage'
+                - $ref: '#/components/schemas/SendTemplateMessage'
+      responses:
+        '200':
+          description: Message accepted
+  /whatsapp/messages/{id}:
+    get:
+      tags: [Messages]
+      summary: Get message delivery status
+      operationId: getMessage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message status
+  /whatsapp/templates:
+    get:
+      tags: [Templates]
+      summary: List templates
+      operationId: listTemplates
+      responses:
+        '200':
+          description: Template list
+    post:
+      tags: [Templates]
+      summary: Create template
+      operationId: createTemplate
+      responses:
+        '201':
+          description: Created
+  /whatsapp/templates/{name}:
+    get:
+      tags: [Templates]
+      summary: Get template by name
+      operationId: getTemplate
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template
+    delete:
+      tags: [Templates]
+      summary: Delete template
+      operationId: deleteTemplate
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+  /whatsapp/templates/sync:
+    post:
+      tags: [Templates]
+      summary: Sync templates from Meta
+      operationId: syncTemplates
+      responses:
+        '200':
+          description: Sync started

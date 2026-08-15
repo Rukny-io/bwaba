@@ -9,9 +9,12 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
 import { QuotaService } from '../shared/quota.service';
+import { DeveloperRateLimitService } from '../../developer/shared/developer-rate-limit.service';
 import { WalletService } from '../../developer/wallet/wallet.service';
 import { WebhookDeliveryService } from '../../developer/webhooks/webhook-delivery.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { MessagingSecurityService } from './messaging-security.service';
+import { WhatsAppMessageIdempotencyService } from './whatsapp-message-idempotency.service';
 
 @Injectable()
 export class MessagingService {
@@ -22,24 +25,55 @@ export class MessagingService {
     private metaApi: MetaApiService,
     private tokenEncryption: TokenEncryptionService,
     private quotaService: QuotaService,
+    private rateLimitService: DeveloperRateLimitService,
     private walletService: WalletService,
     private webhookDelivery: WebhookDeliveryService,
+    private messagingSecurity: MessagingSecurityService,
+    private idempotency: WhatsAppMessageIdempotencyService,
   ) {}
 
-  /**
-   * إرسال رسالة WhatsApp
-   *
-   * التدفق:
-   * 1. التحقق من الحصة
-   * 2. جلب WABA + phone number
-   * 3. فك تشفير access token
-   * 4. إرسال عبر Meta API
-   * 5. تسجيل في message log
-   * 6. خصم من المحفظة
-   * 7. إرسال webhook event
-   */
-  async sendMessage(userId: string, apiKeyId: string, dto: SendMessageDto) {
-    // 1. التحقق من الحصة
+  async sendMessage(
+    userId: string,
+    apiKeyId: string,
+    dto: SendMessageDto,
+    idempotencyKey?: string,
+  ) {
+    if (idempotencyKey) {
+      const claim = await this.idempotency.claim(apiKeyId, idempotencyKey);
+      if (claim === 'replay') {
+        const stored = await this.idempotency.getStoredResult(
+          apiKeyId,
+          idempotencyKey,
+        );
+        if (stored) return stored;
+      }
+    }
+
+    try {
+      const result = await this.sendMessageInternal(
+        userId,
+        apiKeyId,
+        dto,
+      );
+
+      if (idempotencyKey) {
+        await this.idempotency.storeResult(apiKeyId, idempotencyKey, result);
+      }
+
+      return result;
+    } catch (error) {
+      if (idempotencyKey) {
+        await this.idempotency.releaseClaim(apiKeyId, idempotencyKey);
+      }
+      throw error;
+    }
+  }
+
+  private async sendMessageInternal(
+    userId: string,
+    apiKeyId: string,
+    dto: SendMessageDto,
+  ) {
     await this.quotaService.enforceQuota(userId, 'messages');
 
     const apiKey = await this.prisma.developerApiKey.findFirst({
@@ -51,12 +85,25 @@ export class MessagingService {
       throw new ForbiddenException('API key is not linked to an app');
     }
 
-    // 2. جلب WABA وأرقام الهاتف
+    const developerAppId = apiKey.developerAppId;
+    const normalizedTo = this.messagingSecurity.normalizeE164(dto.to);
+    dto.to = normalizedTo;
+
+    const approvedTemplate = await this.messagingSecurity.resolveApprovedTemplate(
+      developerAppId,
+      userId,
+      dto,
+    );
+
+    if (approvedTemplate?.category === 'AUTHENTICATION') {
+      await this.rateLimitService.enforceOtpRateLimit(userId, normalizedTo);
+    }
+
     const accounts = await this.prisma.developerWhatsappAccount.findMany({
       where: {
         userId,
         status: 'ACTIVE',
-        developerAppId: apiKey.developerAppId,
+        developerAppId,
       },
       include: {
         phoneNumbers: {
@@ -71,12 +118,10 @@ export class MessagingService {
       );
     }
 
-    // تحديد الحساب ورقم الهاتف
     let account;
     let phoneNumber;
 
     if (dto.phoneNumberId) {
-      // البحث عن الرقم المحدد
       for (const acc of accounts) {
         const phone = acc.phoneNumbers.find(
           (p) => p.phoneNumberId === dto.phoneNumberId,
@@ -91,7 +136,6 @@ export class MessagingService {
         throw new NotFoundException('Phone number not found or not active');
       }
     } else {
-      // استخدام أول حساب وأول رقم
       account = accounts[0];
       phoneNumber = account.phoneNumbers[0];
       if (!phoneNumber) {
@@ -99,7 +143,6 @@ export class MessagingService {
       }
     }
 
-    // 3. فك تشفير access token
     if (!account.accessTokenEncrypted) {
       throw new BadRequestException('WABA account token is not available');
     }
@@ -107,13 +150,13 @@ export class MessagingService {
       account.accessTokenEncrypted,
     );
 
-    // 4. تسجيل الرسالة (حالة ACCEPTED)
     const messageLog = await this.prisma.whatsappMessageLog.create({
       data: {
         userId,
         accountId: account.id,
         phoneNumberId: phoneNumber.id,
         apiKeyId,
+        templateId: approvedTemplate?.id,
         direction: 'OUTBOUND',
         messageType: dto.type.toUpperCase() as any,
         status: 'ACCEPTED',
@@ -123,7 +166,6 @@ export class MessagingService {
       },
     });
 
-    // 5. إرسال عبر Meta API
     try {
       const metaPayload = this.buildMetaPayload(dto);
       const result = await this.metaApi.sendMessage(
@@ -134,7 +176,6 @@ export class MessagingService {
 
       const metaMessageId = result.messages?.[0]?.id;
 
-      // تحديث حالة الرسالة
       await this.prisma.whatsappMessageLog.update({
         where: { id: messageLog.id },
         data: {
@@ -144,26 +185,33 @@ export class MessagingService {
         },
       });
 
-      // 6. زيادة عداد الرسائل
       await this.quotaService.incrementMessageCount(userId);
 
-      // 7. خصم من المحفظة (تحديد الفئة)
-      const category = dto.type === 'template' ? 'MARKETING' : 'UTILITY';
+      const walletCategory = approvedTemplate
+        ? this.messagingSecurity.walletCategoryForTemplate(
+            approvedTemplate.category,
+          )
+        : 'UTILITY';
+
       await this.walletService.chargeMessage(
         userId,
-        apiKey.developerAppId,
+        developerAppId,
         messageLog.id,
-        category,
+        walletCategory,
       );
 
-      // 8. إرسال webhook event
-      await this.webhookDelivery.dispatchEvent(userId, 'message.sent', {
-        messageId: messageLog.id,
-        metaMessageId,
-        to: dto.to,
-        type: dto.type,
-        status: 'sent',
-      });
+      await this.webhookDelivery.dispatchEvent(
+        userId,
+        'message.sent',
+        {
+          messageId: messageLog.id,
+          metaMessageId,
+          to: dto.to,
+          type: dto.type,
+          status: 'sent',
+        },
+        developerAppId,
+      );
 
       return {
         id: messageLog.id,
@@ -174,7 +222,6 @@ export class MessagingService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      // تسجيل الفشل
       const errorData = error.response?.data?.error || {};
       await this.prisma.whatsappMessageLog.update({
         where: { id: messageLog.id },
@@ -186,16 +233,20 @@ export class MessagingService {
         },
       });
 
-      // إرسال webhook event للفشل
-      await this.webhookDelivery.dispatchEvent(userId, 'message.failed', {
-        messageId: messageLog.id,
-        to: dto.to,
-        type: dto.type,
-        error: {
-          code: errorData.code,
-          message: errorData.message || error.message,
+      await this.webhookDelivery.dispatchEvent(
+        userId,
+        'message.failed',
+        {
+          messageId: messageLog.id,
+          to: dto.to,
+          type: dto.type,
+          error: {
+            code: errorData.code,
+            message: errorData.message || error.message,
+          },
         },
-      });
+        developerAppId,
+      );
 
       throw new BadRequestException({
         message: 'Failed to send message',
@@ -205,9 +256,6 @@ export class MessagingService {
     }
   }
 
-  /**
-   * الحصول على حالة رسالة
-   */
   async getMessageStatus(userId: string, messageId: string) {
     const message = await this.prisma.whatsappMessageLog.findFirst({
       where: { id: messageId, userId },
@@ -235,9 +283,6 @@ export class MessagingService {
     return message;
   }
 
-  /**
-   * بناء payload لـ Meta API
-   */
   private buildMetaPayload(dto: SendMessageDto): any {
     const payload: any = {
       messaging_product: 'whatsapp',
@@ -259,9 +304,6 @@ export class MessagingService {
     return payload;
   }
 
-  /**
-   * بناء محتوى لتسجيله في message log
-   */
   private buildContent(dto: SendMessageDto): any {
     const content: any = { type: dto.type };
 
@@ -274,9 +316,6 @@ export class MessagingService {
     return content;
   }
 
-  /**
-   * تنسيق رقم الهاتف
-   */
   private formatPhoneNumber(phone: string): string {
     return phone.replace(/[\s\-\(\)\+]/g, '');
   }

@@ -92,9 +92,11 @@ function LoginContent() {
   const sessionMessage =
     sessionFlag === 'expired'
       ? 'انتهت جلستك. سجّل الدخول مرة أخرى.'
-      : sessionFlag === 'logout'
-        ? 'تم تسجيل الخروج بنجاح.'
-        : null;
+      : sessionFlag === 'invalid'
+        ? 'تعذّر التحقق من الجلسة. سجّل الدخول مرة أخرى.'
+        : sessionFlag === 'logout'
+          ? 'تم تسجيل الخروج بنجاح.'
+          : null;
 
   return (
     <AuthShell className="max-w-[460px]">

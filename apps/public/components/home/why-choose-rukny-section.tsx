@@ -48,7 +48,7 @@ const PILLARS: Pillar[] = [
 export function WhyChooseRuknySection() {
   return (
     <section
-      className="border-t bg-white px-4 py-16 sm:px-6 sm:py-20 md:py-24"
+      className="border-t px-4 py-16 sm:px-6 sm:py-20 md:py-24"
       style={{ borderColor: BORDER }}
       dir="rtl"
       aria-labelledby="why-rukny-heading"

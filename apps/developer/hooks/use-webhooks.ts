@@ -11,21 +11,22 @@ import {
 } from '@/lib/api/webhooks';
 
 export const webhooksKeys = {
-  all: ['developer-webhooks'] as const,
+  all: (appId?: string) => ['developer-webhooks', appId ?? 'all'] as const,
 };
 
-export function useWebhooks() {
+export function useWebhooks(appId?: string) {
   return useQuery({
-    queryKey: webhooksKeys.all,
-    queryFn: listWebhooks,
+    queryKey: webhooksKeys.all(appId),
+    queryFn: () => listWebhooks(appId),
   });
 }
 
-export function useWebhookMutations() {
+export function useWebhookMutations(appId?: string) {
   const queryClient = useQueryClient();
 
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: webhooksKeys.all });
+    void queryClient.invalidateQueries({ queryKey: webhooksKeys.all(appId) });
+    void queryClient.invalidateQueries({ queryKey: webhooksKeys.all() });
   };
 
   return {

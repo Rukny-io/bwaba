@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { requireProductInstalled } from '@/lib/dal';
+import { WhatsappApiChrome } from '@/components/whatsapp-api/whatsapp-api-chrome';
 
 export default async function WhatsappApiProductLayout({
   children,
@@ -10,5 +11,5 @@ export default async function WhatsappApiProductLayout({
 }) {
   const { appId } = await params;
   await requireProductInstalled(appId, 'whatsappApi');
-  return children;
+  return <WhatsappApiChrome>{children}</WhatsappApiChrome>;
 }

@@ -1,5 +1,5 @@
-import { WhatsappApiDocs } from '@/components/whatsapp-api/whatsapp-api-docs';
+import { WhatsappApiOverview } from '@/components/whatsapp-api/whatsapp-api-overview';
 
 export default function WhatsappApiPage() {
-  return <WhatsappApiDocs />;
+  return <WhatsappApiOverview />;
 }

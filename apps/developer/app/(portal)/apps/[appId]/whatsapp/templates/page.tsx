@@ -1,9 +1,11 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { appWhatsappHref } from '@/lib/whatsapp-routes';
 
-import { useCurrentApp } from '@/components/providers/app-context';
-import { WhatsappTemplatesPanel } from '@/components/whatsapp/whatsapp-templates-panel';
-
-export default function WhatsappTemplatesPage() {
-  const { app } = useCurrentApp();
-  return <WhatsappTemplatesPanel appId={app.appId} />;
+export default async function WhatsappTemplatesRedirect({
+  params,
+}: {
+  params: Promise<{ appId: string }>;
+}) {
+  const { appId } = await params;
+  redirect(appWhatsappHref(appId, 'phones'));
 }

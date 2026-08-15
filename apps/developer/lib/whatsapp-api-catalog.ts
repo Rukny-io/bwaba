@@ -10,11 +10,13 @@ export const WHATSAPP_API_TRY_BASE = '/api/v1';
 
 export type WhatsappApiSectionId =
   | 'overview'
+  | 'auth'
   | 'messages'
   | 'templates'
   | 'webhooks'
   | 'errors'
-  | 'try';
+  | 'try'
+  | 'sdks';
 
 export type HttpMethod = 'GET' | 'POST' | 'DELETE';
 
@@ -59,21 +61,41 @@ export interface WhatsappApiEndpoint {
 
 export const WHATSAPP_API_SECTIONS: {
   id: WhatsappApiSectionId;
+  slug: string;
   labelKey:
     | 'navOverview'
+    | 'navAuth'
     | 'navMessages'
     | 'navTemplates'
     | 'navWebhooks'
     | 'navErrors'
-    | 'navTry';
+    | 'navTry'
+    | 'navSdks';
 }[] = [
-  { id: 'overview', labelKey: 'navOverview' },
-  { id: 'messages', labelKey: 'navMessages' },
-  { id: 'templates', labelKey: 'navTemplates' },
-  { id: 'webhooks', labelKey: 'navWebhooks' },
-  { id: 'errors', labelKey: 'navErrors' },
-  { id: 'try', labelKey: 'navTry' },
+  { id: 'overview', slug: '', labelKey: 'navOverview' },
+  { id: 'auth', slug: 'auth', labelKey: 'navAuth' },
+  { id: 'messages', slug: 'messages', labelKey: 'navMessages' },
+  { id: 'templates', slug: 'templates', labelKey: 'navTemplates' },
+  { id: 'webhooks', slug: 'webhooks', labelKey: 'navWebhooks' },
+  { id: 'errors', slug: 'errors', labelKey: 'navErrors' },
+  { id: 'try', slug: 'try', labelKey: 'navTry' },
+  { id: 'sdks', slug: 'sdks', labelKey: 'navSdks' },
 ];
+
+/** Primary docs tabs — Auth and Errors stay reachable from Overview. */
+export const WHATSAPP_API_NAV_SECTIONS = WHATSAPP_API_SECTIONS.filter((section) =>
+  (
+    ['overview', 'messages', 'templates', 'webhooks', 'try', 'sdks'] as const
+  ).includes(
+    section.id as
+      | 'overview'
+      | 'messages'
+      | 'templates'
+      | 'webhooks'
+      | 'try'
+      | 'sdks',
+  ),
+);
 
 export const MESSAGE_ENDPOINTS: WhatsappApiEndpoint[] = [
   {
@@ -272,6 +294,11 @@ export const WEBHOOK_EVENTS = [
   'message.read',
   'message.failed',
   'message.received',
+  'template.approved',
+  'template.rejected',
+  'template.status_updated',
+  'account.status_updated',
+  'phone.quality_updated',
 ] as const;
 
 export const COMMON_ERRORS = [

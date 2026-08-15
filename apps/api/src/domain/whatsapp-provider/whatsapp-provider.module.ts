@@ -29,6 +29,12 @@ import { PhoneNumbersController } from './phone-numbers/phone-numbers.controller
 import { MetaWebhookService } from './webhooks/meta-webhook.service';
 import { MetaWebhookController } from './webhooks/meta-webhook.controller';
 
+// Messaging security
+import { MessagingSecurityService } from './messaging/messaging-security.service';
+import { WhatsAppMessageIdempotencyService } from './messaging/whatsapp-message-idempotency.service';
+import { WhatsappApiTryController } from './messaging/whatsapp-api-try.controller';
+import { WhatsappApiTryService } from './messaging/whatsapp-api-try.service';
+
 @Module({
   imports: [PrismaModule, RedisModule, ConfigModule, DeveloperModule],
   controllers: [
@@ -37,6 +43,7 @@ import { MetaWebhookController } from './webhooks/meta-webhook.controller';
     TemplatesController,
     PhoneNumbersController,
     MetaWebhookController,
+    WhatsappApiTryController,
   ],
   providers: [
     MetaApiService,
@@ -44,6 +51,9 @@ import { MetaWebhookController } from './webhooks/meta-webhook.controller';
     QuotaService,
     WabaService,
     MessagingService,
+    MessagingSecurityService,
+    WhatsAppMessageIdempotencyService,
+    WhatsappApiTryService,
     TemplatesService,
     PhoneNumbersService,
     MetaWebhookService,

@@ -3,14 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowRight, ChevronDown, Menu, X, ShoppingBag, ClipboardList, UserCircle2, TrendingUp, BrainCircuit, LayoutGrid } from 'lucide-react';
+import { ArrowRight, ChevronDown, Menu, X, ShoppingBag, ClipboardList, UserCircle2, TrendingUp, BrainCircuit, LayoutGrid, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LogoCloud } from '@/components/ui/logo-cloud';
+import { HeroSection as MarketingHero, LogosSection } from '@/components/ui/hero-1';
+import { ParallaxScrolling } from '@/components/ui/parallax-scrolling';
 import Footer from '@/components/layout/footer';
-import { UnifiedPlatformSection } from '@/components/home/unified-platform-section';
-import { AppPurposeSection } from '@/components/home/app-purpose-section';
 import { WhyChooseRuknySection } from '@/components/home/why-choose-rukny-section';
-import { FinalCtaSection } from '@/components/home/final-cta-section';
+import { ConsultationCtaSection } from '@/components/home/consultation-cta-section';
 import { cn } from '@/lib/utils';
 import { siteUrls } from '@/lib/site-urls';
 import type { Variants } from 'framer-motion';
@@ -36,178 +35,19 @@ const transitionVariants = {
     },
 } satisfies { item: Variants };
 
-const rotatingItems = [
-    { text: 'روابطك', color: '#FF2B3A' },
-    { text: 'منتجاتك', color: '#FF2B3A' },
-    { text: 'نماذجك', color: '#FF2B3A' },
-    { text: 'إعلاناتك', color: '#FF2B3A' },
-    { text: 'أعمالك', color: '#FF2B3A' },
-];
-
-const ITEM_H = 1.15;
-
-function RotatingText() {
-    const [index, setIndex] = React.useState(0);
-
-    React.useEffect(() => {
-        const timer = setInterval(() => {
-            setIndex((prev) => (prev + 1) % rotatingItems.length);
-        }, 2800);
-        return () => clearInterval(timer);
-    }, []);
-
-    return (
-        <span
-            className="inline-block overflow-hidden align-bottom"
-            style={{ height: `${ITEM_H}em` }}
-        >
-            <motion.span
-                className="flex flex-col will-change-transform"
-                animate={{ y: `-${index * ITEM_H}em` }}
-                transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-            >
-                {rotatingItems.map((item) => (
-                    <span
-                        key={item.text}
-                        className="block shrink-0 font-bold"
-                        style={{
-                            height: `${ITEM_H}em`,
-                            lineHeight: `${ITEM_H}em`,
-                            color: item.color,
-                        }}
-                    >
-                        {item.text}
-                    </span>
-                ))}
-            </motion.span>
-        </span>
-    );
-}
-
-const trustedLogos = [
-    { src: '/logos/tL_v571NdZ0.svg', alt: 'Meta' },
-    { src: '/logos/facebook-wordmark.svg', alt: 'Facebook' },
-    { src: '/logos/whatsapp-wordmark.svg', alt: 'WhatsApp' },
-    { src: '/logos/instagram-wordmark.svg', alt: 'Instagram' },
-    { src: '/logos/udemy.svg', alt: 'Udemy' },
-    { src: '/logos/google-wordmark.svg', alt: 'Google' },
-    { src: '/logos/gemini_wordmark.svg', alt: 'Gemini' },
-    { src: '/logos/notion-full.svg', alt: 'Notion' },
-    { src: '/logos/microsoft.svg', alt: 'Microsoft' },
-];
-
 export function HeroSection() {
     return (
         <>
             <HeroHeader />
-            <main className="bg-white text-[#132327] min-h-screen" dir="rtl">
-                <section className="relative overflow-hidden bg-white">
-                    <div
-                        className="pointer-events-none absolute inset-x-0 top-0 h-[min(520px,70vh)] bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,44,48,0.07),transparent)]"
-                        aria-hidden
-                    />
-                    <div className="relative z-10 pt-8 sm:pt-10 md:pt-12 pb-10 sm:pb-14 md:pb-16">
-                        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                            <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-14 xl:gap-16">
-                                {/* Right — heading */}
-                                <div className="home-hero-enter flex-1 text-center lg:text-right">
-                                    <h1 className="text-[2rem] sm:text-4xl md:text-5xl lg:text-[3.75rem] xl:text-[4.25rem] font-bold leading-[1.15] tracking-[-0.02em] text-[#132327]">
-                                        <span className="block text-[1.125rem] sm:text-xl md:text-2xl font-semibold tracking-normal text-[#132327]/75" dir="ltr">
-                                            Rukny
-                                        </span>
-                                        <span className="block mt-2">منصة رقمية</span>
-                                        <span className="my-2 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 sm:gap-3 lg:justify-end">
-                                            <span>متكاملة لـ</span>
-                                            <RotatingText />
-                                        </span>
-                                        <span className="block">على الانترنت</span>
-                                    </h1>
-                                </div>
+            <main className="min-h-screen overflow-x-clip pt-20 text-[#132327]" dir="rtl">
+                <MarketingHero />
+                <LogosSection />
 
-                                {/* Left — badge, copy, CTA */}
-                                <div className="home-hero-enter-delayed flex flex-1 flex-col gap-5 text-center sm:gap-6 lg:text-right">
-                                    <span className="inline-flex w-fit items-center self-center rounded-full border border-[#132327]/15 px-4 py-1.5 text-[13px] font-medium text-[#132327]/70 lg:self-end">
-                                        نسخة مستقرة
-                                    </span>
-
-                                    <p className="text-[15px] sm:text-base leading-[1.75] text-[#132327]/60">
-                                        أطلق مشروعك على الانترنت خلال دقائق.
-                                        أنشئ متجرك، أضف منتجاتك وروابطك ونماذجك،
-                                        وتواصل مع عملائك — كل ذلك من لوحة تحكم واحدة.
-                                    </p>
-
-                                    <div className="flex flex-wrap justify-center gap-2 lg:justify-end">
-                                        {heroTags.map((tag) => (
-                                            <Link
-                                                key={tag.label}
-                                                href={tag.href}
-                                                className="rounded-full border border-[#132327]/10 bg-white px-3.5 py-1 text-[12px] font-medium text-[#132327]/55 transition-colors hover:border-[#132327]/20 hover:bg-[#FAFBFC] hover:text-[#132327]/80"
-                                            >
-                                                {tag.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex flex-col items-center gap-3 pt-1 sm:flex-row sm:justify-center lg:justify-end">
-                                        <Link
-                                            href={siteUrls.accounts}
-                                            className="inline-flex h-11 min-w-[9.5rem] items-center justify-center rounded-full px-7 text-[14px] font-semibold text-white shadow-[0_2px_10px_rgba(6,44,48,0.22)] transition-all hover:opacity-90 hover:shadow-[0_4px_16px_rgba(6,44,48,0.28)]"
-                                            style={{ backgroundColor: BRAND }}
-                                        >
-                                            ابدأ مجاناً
-                                        </Link>
-                                        <Link
-                                            href="/pricing"
-                                            className="group inline-flex items-center gap-1 text-[14px] font-medium text-[#132327]/55 transition-colors hover:text-[#132327]"
-                                        >
-                                            <span>الأسعار</span>
-                                            <ArrowRight className="size-3.5 rotate-180 transition-transform group-hover:-translate-x-0.5" />
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="home-hero-enter-delayed mx-auto max-w-6xl px-4 sm:px-6 mt-12 sm:mt-14 md:mt-16">
-                            <div className="flex flex-col items-center justify-between gap-4 border-t border-[#E8ECF0] pt-5 text-center text-[13px] sm:flex-row sm:text-start sm:text-sm">
-                                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[#132327]/50 sm:justify-start">
-                                    {['متاجر', 'روابط', 'نماذج', 'تحليلات'].map((item, i) => (
-                                        <React.Fragment key={item}>
-                                            <span>{item}</span>
-                                            {i < 3 && (
-                                                <span className="hidden size-1 rounded-full bg-[#132327]/15 sm:inline-block" />
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                    <span className="font-semibold text-[#132327]">كلها في منصة واحدة</span>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <AppPurposeSection />
-                <section className="relative w-full bg-white" aria-label="شركاء التقنية">
-                    <div className="mx-auto w-full max-w-6xl px-4 pt-2 pb-4 sm:pb-5">
-                        <p className="text-center text-[13px] font-medium text-[#132327]/55 sm:text-sm">
-                            نعتمد على أحدث التقنيات من الشركات الرائدة
-                        </p>
-                    </div>
-
-                    <div className="relative overflow-hidden border-y border-[#E8ECF0] bg-[#FAFBFC] py-5 sm:py-6" dir="ltr">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-white to-transparent sm:w-28" />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-white to-transparent sm:w-28" />
-
-                        <LogoCloud logos={trustedLogos} />
-                    </div>
-                </section>
-
-                <UnifiedPlatformSection />
+                <ParallaxScrolling />
 
                 <WhyChooseRuknySection />
 
-                <FinalCtaSection />
+                <ConsultationCtaSection />
 
                 <Footer />
             </main>
@@ -221,21 +61,18 @@ const MUTED = 'rgba(19, 35, 39, 0.55)';
 const BORDER = '#E8ECF0';
 const SURFACE = '#F6F7F8';
 
-const heroTags = [
-    { label: 'روابط', href: '#features' },
-    { label: 'منتجات', href: '#features' },
-    { label: 'نماذج', href: '#features' },
-    { label: 'إعلانات', href: '#features' },
-    { label: 'مطورين', href: '/developers' },
-] as const;
-
 const accountsUrl = siteUrls.accounts;
 
 const NAV_LINK_CLASS =
-    'cursor-pointer text-[14px] font-medium transition-all duration-200 text-[#132327]/75 hover:bg-[#132327]/[0.05] hover:text-[#132327]';
+    'relative z-10 cursor-pointer rounded-full px-3.5 py-2 text-[13.5px] font-medium text-[#132327]/70 transition-[color,transform] duration-200 hover:text-[#132327] active:scale-[0.98]';
 
-const NAV_LINK_ACTIVE =
-    'bg-[#132327]/[0.07] text-[#132327]';
+const NAV_LINK_ACTIVE = 'text-[#132327]';
+
+type NavIndicator = {
+    left: number;
+    width: number;
+    opacity: number;
+};
 
 const menuItems = [
     { name: 'المطورين', href: '/developers' },
@@ -248,17 +85,49 @@ const productItems = [
     { name: 'الملف الشخصي', href: '/products/profile', icon: UserCircle2, description: 'صفحة شخصية احترافية لعملك' },
     { name: 'التحليلات', href: '/products/analytics', icon: TrendingUp, description: 'راقب أداء أعمالك بالتفصيل' },
     { name: 'الذكاء الاصطناعي', href: '/products/ai', icon: BrainCircuit, description: 'أدوات ذكية لتطوير أعمالك' },
-];
+    { name: 'Workspace', href: '/products/workspace', icon: Briefcase, description: 'أدر مشاريعك وفريقك من مكان واحد' },
+] as const;
+
+const PRODUCTS_MENU_CLOSE_DELAY = 160;
 
 const HeroHeader = () => {
     const pathname = usePathname();
     const [menuState, setMenuState] = React.useState(false);
     const [isScrolled, setIsScrolled] = React.useState(false);
     const [productMenuOpen, setProductMenuOpen] = React.useState(false);
+    const [navIndicator, setNavIndicator] = React.useState<NavIndicator>({
+        left: 0,
+        width: 0,
+        opacity: 0,
+    });
     const dropdownRef = React.useRef<HTMLDivElement>(null);
+    const navPillRef = React.useRef<HTMLDivElement>(null);
+    const navItemRefs = React.useRef<Map<string, HTMLElement>>(new Map());
+    const closeMenuTimerRef = React.useRef<number | null>(null);
 
     const isNavActive = (href: string) =>
         href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+
+    const clearCloseMenuTimer = React.useCallback(() => {
+        if (closeMenuTimerRef.current !== null) {
+            window.clearTimeout(closeMenuTimerRef.current);
+            closeMenuTimerRef.current = null;
+        }
+    }, []);
+
+    const openProductMenu = React.useCallback(() => {
+        clearCloseMenuTimer();
+        setProductMenuOpen(true);
+    }, [clearCloseMenuTimer]);
+
+    const scheduleCloseProductMenu = React.useCallback(() => {
+        clearCloseMenuTimer();
+        closeMenuTimerRef.current = window.setTimeout(() => {
+            setProductMenuOpen(false);
+        }, PRODUCTS_MENU_CLOSE_DELAY);
+    }, [clearCloseMenuTimer]);
+
+    React.useEffect(() => () => clearCloseMenuTimer(), [clearCloseMenuTimer]);
 
     React.useEffect(() => {
         const handleScroll = () => {
@@ -299,6 +168,44 @@ const HeroHeader = () => {
         setMenuState(false);
     }, [pathname]);
 
+    const setNavItemRef = React.useCallback((key: string, node: HTMLElement | null) => {
+        if (node) navItemRefs.current.set(key, node);
+        else navItemRefs.current.delete(key);
+    }, []);
+
+    const updateNavIndicator = React.useCallback((key: string | null) => {
+        const container = navPillRef.current;
+        const target = key ? navItemRefs.current.get(key) : null;
+
+        if (!container || !target) {
+            setNavIndicator((prev) => ({ ...prev, opacity: 0 }));
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+
+        setNavIndicator({
+            left: targetRect.left - containerRect.left,
+            width: targetRect.width,
+            opacity: 1,
+        });
+    }, []);
+
+    const getActiveNavKey = React.useCallback(() => {
+        if (productMenuOpen) return 'products';
+        if (isNavActive('/developers')) return '/developers';
+        if (isNavActive('/pricing')) return '/pricing';
+        return null;
+    }, [pathname, productMenuOpen]);
+
+    React.useEffect(() => {
+        const syncIndicator = () => updateNavIndicator(getActiveNavKey());
+        syncIndicator();
+        window.addEventListener('resize', syncIndicator);
+        return () => window.removeEventListener('resize', syncIndicator);
+    }, [getActiveNavKey, updateNavIndicator]);
+
     // Lock body scroll when mobile menu is open
     React.useEffect(() => {
         document.body.style.overflow = menuState ? 'hidden' : '';
@@ -308,20 +215,13 @@ const HeroHeader = () => {
     return (
         <header dir="rtl" className="relative">
             {/* Desktop — nav + dropdown mega menu */}
-            <div
-                className={cn(
-                    'fixed inset-x-0 top-0 z-50 hidden transition-all duration-300 lg:block',
-                    isScrolled
-                        ? 'border-b bg-white/78 backdrop-blur-xl'
-                        : 'border-b border-transparent bg-transparent',
-                )}
-                style={{ borderColor: isScrolled ? BORDER : 'transparent' }}
-            >
+            <div className="fixed inset-x-0 top-0 z-50 hidden border-b border-transparent transition-all duration-300 lg:block">
                 <div className="mx-auto max-w-6xl px-4 sm:px-6">
                     <div
                         ref={dropdownRef}
                         className="relative"
-                        onMouseLeave={() => setProductMenuOpen(false)}
+                        onMouseEnter={clearCloseMenuTimer}
+                        onMouseLeave={scheduleCloseProductMenu}
                     >
                         <div className="flex h-14 items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-8">
                         <Link
@@ -336,39 +236,77 @@ const HeroHeader = () => {
                         </Link>
 
                         <div
+                            ref={navPillRef}
                             className={cn(
-                                'flex items-center justify-center gap-0.5 rounded-full p-0.5 transition-all duration-300',
-                                !isScrolled && !productMenuOpen
-                                    ? 'border border-[#132327]/[0.07] bg-white/55 shadow-[0_2px_16px_rgba(19,35,39,0.05)] backdrop-blur-md'
-                                    : 'border border-transparent bg-transparent',
+                                'group/nav relative isolate flex items-center justify-center gap-0.5 rounded-full p-1 transition-all duration-500',
+                                isScrolled || productMenuOpen
+                                    ? 'border border-[#132327]/[0.08] bg-white/88 shadow-[0_8px_32px_rgba(19,35,39,0.08),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl'
+                                    : 'border border-[#132327]/[0.08] bg-white/62 shadow-[0_2px_20px_rgba(19,35,39,0.06),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-xl',
                             )}
+                            onMouseLeave={() => updateNavIndicator(getActiveNavKey())}
                         >
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    aria-expanded={productMenuOpen}
-                                    aria-haspopup="true"
-                                    onClick={() => setProductMenuOpen(!productMenuOpen)}
+                            <span
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.08)_100%)] opacity-80"
+                            />
+                            <span
+                                aria-hidden
+                                className="pointer-events-none absolute -inset-px rounded-full opacity-0 transition-opacity duration-500 group-hover/nav:opacity-100"
+                                style={{
+                                    background:
+                                        'linear-gradient(135deg, rgba(6,44,48,0.12), rgba(19,35,39,0.04) 45%, rgba(255,255,255,0.35) 100%)',
+                                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                    WebkitMaskComposite: 'xor',
+                                    maskComposite: 'exclude',
+                                    padding: '1px',
+                                }}
+                            />
+                            <motion.span
+                                aria-hidden
+                                className="pointer-events-none absolute top-1 bottom-1 rounded-full border border-[#132327]/[0.05] bg-[#132327]/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+                                animate={{
+                                    left: navIndicator.left,
+                                    width: navIndicator.width,
+                                    opacity: navIndicator.opacity,
+                                }}
+                                transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.75 }}
+                            />
+                            <button
+                                ref={(node) => setNavItemRef('products', node)}
+                                type="button"
+                                aria-expanded={productMenuOpen}
+                                aria-haspopup="true"
+                                onMouseEnter={() => {
+                                    updateNavIndicator('products');
+                                    openProductMenu();
+                                }}
+                                onFocus={() => {
+                                    updateNavIndicator('products');
+                                    openProductMenu();
+                                }}
+                                onClick={() => setProductMenuOpen((open) => !open)}
+                                className={cn(
+                                    'flex items-center gap-1.5',
+                                    NAV_LINK_CLASS,
+                                    productMenuOpen && NAV_LINK_ACTIVE,
+                                )}
+                            >
+                                <span>المنتجات</span>
+                                <ChevronDown
                                     className={cn(
-                                        'flex items-center gap-1.5 rounded-full px-3.5 py-2 transition-all',
-                                        productMenuOpen ? NAV_LINK_ACTIVE : NAV_LINK_CLASS,
+                                        'size-3.5 opacity-55 transition-transform duration-300 ease-out',
+                                        productMenuOpen && 'rotate-180 opacity-80',
                                     )}
-                                >
-                                    <span>المنتجات</span>
-                                    <ChevronDown
-                                        className={cn(
-                                            'size-3.5 opacity-55 transition-transform duration-300',
-                                            productMenuOpen && 'rotate-180',
-                                        )}
-                                    />
-                                </button>
-                            </div>
+                                />
+                            </button>
                             {menuItems.map((item) => (
                                 <Link
                                     key={item.name}
+                                    ref={(node) => setNavItemRef(item.href, node)}
                                     href={item.href}
+                                    onMouseEnter={() => updateNavIndicator(item.href)}
+                                    onFocus={() => updateNavIndicator(item.href)}
                                     className={cn(
-                                        'rounded-full px-3.5 py-2',
                                         NAV_LINK_CLASS,
                                         isNavActive(item.href) && NAV_LINK_ACTIVE,
                                     )}
@@ -379,13 +317,6 @@ const HeroHeader = () => {
                         </div>
 
                         <div className="flex items-center justify-end gap-2">
-                            <Link
-                                href={siteUrls.privacy}
-                                className="hidden items-center rounded-full px-3 py-2 text-[12px] font-medium transition-all lg:inline-flex"
-                                style={{ color: MUTED }}
-                            >
-                                Privacy
-                            </Link>
                             <Link
                                 href={accountsUrl}
                                 className="hidden items-center rounded-full px-3.5 py-2 text-[13px] font-medium transition-all xl:inline-flex"
@@ -406,103 +337,148 @@ const HeroHeader = () => {
 
                     <AnimatePresence>
                         {productMenuOpen && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-[#E8ECF0]/80 bg-white/95 shadow-[0_12px_40px_rgba(19,35,39,0.08)] backdrop-blur-xl"
-                            >
-                                <div
-                                    className="flex items-center justify-between px-6 py-3.5 sm:px-7"
+                            <>
+                                <motion.div
+                                    key="products-menu-backdrop"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.22 }}
+                                    className="fixed inset-x-0 bottom-0 top-14 z-40 bg-[#132327]/[0.035] backdrop-blur-[1.5px]"
+                                    aria-hidden
+                                    onClick={() => setProductMenuOpen(false)}
+                                />
+
+                                <motion.div
+                                    key="products-menu-panel"
+                                    initial={{ opacity: 0, y: 14, scale: 0.985 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.99 }}
+                                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                                    className="products-mega-menu absolute top-[calc(100%+0.4rem)] left-0 right-0 z-50"
+                                    role="menu"
+                                    aria-label="منتجات ركني"
                                 >
-                                    <p className="text-[12px] font-medium" style={{ color: MUTED }}>
-                                        منتجات ركني
-                                    </p>
-                                    <Link
-                                        href="/products"
-                                        className="group inline-flex items-center gap-1 text-[13px] font-medium transition-colors"
-                                        style={{ color: MUTED }}
-                                        onClick={() => setProductMenuOpen(false)}
-                                    >
-                                        <span className="group-hover:text-[#132327]">عرض الكل</span>
-                                        <ArrowRight className="size-3.5 rotate-180 transition-transform group-hover:-translate-x-0.5" />
-                                    </Link>
-                                </div>
+                                    <div className="overflow-hidden rounded-[1.625rem] border border-[#132327]/[0.08] bg-white/96 shadow-[0_28px_90px_rgba(19,35,39,0.14),0_10px_30px_rgba(19,35,39,0.06),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl">
+                                        <div className="grid lg:grid-cols-[1fr_18.5rem]">
+                                            <div className="grid gap-2.5 p-3 sm:grid-cols-2 sm:p-4">
+                                                {productItems.map((item, index) => {
+                                                    const active = isNavActive(item.href);
 
-                                <div className="grid lg:grid-cols-[1fr_17.5rem]">
-                                    <div className="grid gap-px sm:grid-cols-2" style={{ backgroundColor: BORDER }}>
-                                        {productItems.map((item, index) => (
-                                            <Link
-                                                key={item.name}
-                                                href={item.href}
-                                                className={cn(
-                                                    'group relative flex gap-3.5 bg-white px-5 py-4 transition-colors hover:bg-[#FAFBFC] sm:px-6 sm:py-5',
-                                                    index === productItems.length - 1 && 'sm:col-span-2',
-                                                )}
-                                                onClick={() => setProductMenuOpen(false)}
+                                                    return (
+                                                        <motion.div
+                                                            key={item.href}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{
+                                                                delay: 0.04 + index * 0.045,
+                                                                duration: 0.28,
+                                                                ease: [0.22, 1, 0.36, 1],
+                                                            }}
+                                                        >
+                                                            <Link
+                                                                href={item.href}
+                                                                role="menuitem"
+                                                                className={cn(
+                                                                    'products-mega-menu__item group relative flex h-full gap-3.5 overflow-hidden rounded-[1.125rem] border p-4 transition-all duration-300 sm:p-[1.125rem]',
+                                                                    active
+                                                                        ? 'border-[#062c30]/15 bg-white shadow-[0_10px_30px_rgba(6,44,48,0.08)]'
+                                                                        : 'border-transparent bg-[#F6F7F8]/80 hover:-translate-y-0.5 hover:border-[#132327]/[0.08] hover:bg-[#FAFBFC] hover:shadow-[0_12px_32px_rgba(19,35,39,0.08)]',
+                                                                )}
+                                                                onClick={() => setProductMenuOpen(false)}
+                                                            >
+                                                                <span
+                                                                    aria-hidden
+                                                                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(238,242,242,0.95)_0%,rgba(255,255,255,0.98)_68%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                                                />
+                                                                <span
+                                                                    className="relative flex size-11 shrink-0 items-center justify-center rounded-[0.9rem] bg-[#EEF2F2] text-[#062c30] transition-all duration-300 group-hover:scale-[1.05] group-hover:bg-[#E4ECEB]"
+                                                                >
+                                                                    <item.icon className="size-[19px]" strokeWidth={1.65} aria-hidden />
+                                                                </span>
+                                                                <div className="relative min-w-0 flex-1">
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <div>
+                                                                            <p className="text-[10px] font-medium tracking-[0.12em] text-[#132327]/38">
+                                                                                {String(index + 1).padStart(2, '0')}
+                                                                            </p>
+                                                                            <p className="mt-0.5 text-[14px] font-semibold leading-snug text-[#132327] transition-colors group-hover:text-[#062c30]">
+                                                                                {item.name === 'Workspace' ? (
+                                                                                    <span dir="ltr">{item.name}</span>
+                                                                                ) : (
+                                                                                    item.name
+                                                                                )}
+                                                                            </p>
+                                                                        </div>
+                                                                        <ArrowRight
+                                                                            className="mt-1 size-3.5 shrink-0 rotate-180 text-[#132327]/35 opacity-0 transition-all duration-200 group-hover:-translate-x-0.5 group-hover:opacity-100"
+                                                                            aria-hidden
+                                                                        />
+                                                                    </div>
+                                                                    <p className="mt-1.5 text-[12px] leading-[1.65] text-[#132327]/55">
+                                                                        {item.description}
+                                                                    </p>
+                                                                </div>
+                                                            </Link>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div
+                                                className="relative flex flex-col justify-between border-t px-5 py-5 sm:px-6 sm:py-6 lg:border-t-0 lg:border-r"
+                                                style={{ borderColor: BORDER }}
                                             >
-                                                <span
-                                                    className="flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-[1.04]"
-                                                    style={{ backgroundColor: SURFACE, color: BRAND }}
-                                                >
-                                                    <item.icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
-                                                </span>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="mb-1 font-mono text-[10px] tracking-wide" style={{ color: MUTED }}>
-                                                        {String(index + 1).padStart(2, '0')}
-                                                    </p>
-                                                    <p className="text-[14px] font-semibold leading-snug transition-colors group-hover:text-[#062c30]" style={{ color: TEXT }}>
-                                                        {item.name}
-                                                    </p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed" style={{ color: MUTED }}>
-                                                        {item.description}
-                                                    </p>
-                                                </div>
-                                                <ArrowRight
-                                                    className="size-3.5 shrink-0 rotate-180 self-center opacity-0 transition-all duration-200 group-hover:-translate-x-0.5 group-hover:opacity-45"
-                                                    style={{ color: MUTED }}
+                                                <div
                                                     aria-hidden
+                                                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,#F9FBFB_0%,#EEF4F4_52%,#E8F0F0_100%)]"
                                                 />
-                                            </Link>
-                                        ))}
-                                    </div>
-
-                                    <div
-                                        className="flex flex-col justify-between border-t px-6 py-6 lg:border-t-0 lg:border-r"
-                                        style={{ borderColor: BORDER, backgroundColor: '#FAFBFC' }}
-                                    >
-                                        <div>
-                                            <p className="mb-2 text-[12px] font-medium" style={{ color: MUTED }}>
-                                                للمؤسسات
-                                            </p>
-                                            <h3 className="text-[15px] font-bold leading-snug" style={{ color: TEXT }}>
-                                                مشروع خاص أو مؤسسة؟
-                                            </h3>
-                                            <p className="mt-2 text-[13px] leading-[1.75]" style={{ color: MUTED }}>
-                                                حلول مخصصة تناسب احتياجات فريقك — من التكامل إلى الدعم المباشر.
-                                            </p>
+                                                <div
+                                                    aria-hidden
+                                                    className="pointer-events-none absolute -left-8 top-8 size-28 rounded-full bg-[#062c30]/[0.05] blur-2xl"
+                                                />
+                                                <div className="relative">
+                                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-[#132327]/42">
+                                                        للمؤسسات
+                                                    </p>
+                                                    <h3 className="mt-2 text-[1.05rem] font-bold leading-snug tracking-[-0.02em] text-[#132327]">
+                                                        مشروع خاص أو مؤسسة؟
+                                                    </h3>
+                                                    <p className="mt-2.5 text-[13px] leading-[1.75] text-[#132327]/58">
+                                                        حلول مخصصة تناسب احتياجات فريقك — من التكامل إلى الدعم المباشر.
+                                                    </p>
+                                                    <ul className="mt-4 space-y-2 text-[12px] text-[#132327]/55">
+                                                        {['تكاملات مخصصة', 'دعم مباشر', 'إعداد للفرق'].map((feature) => (
+                                                            <li key={feature} className="flex items-center gap-2">
+                                                                <span className="size-1.5 rounded-full bg-[#062c30]/35" />
+                                                                {feature}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                                <div className="relative mt-6 space-y-2">
+                                                    <Link
+                                                        href="/contact"
+                                                        className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold text-white shadow-[0_4px_16px_rgba(6,44,48,0.22)] transition-all hover:-translate-y-0.5 hover:opacity-95 hover:shadow-[0_8px_24px_rgba(6,44,48,0.28)]"
+                                                        style={{ backgroundColor: BRAND }}
+                                                        onClick={() => setProductMenuOpen(false)}
+                                                    >
+                                                        <span>احجز استشارة</span>
+                                                        <ArrowRight className="size-3.5 rotate-180" />
+                                                    </Link>
+                                                    <Link
+                                                        href="/pricing"
+                                                        className="inline-flex h-9 w-full items-center justify-center rounded-full text-[12px] font-medium text-[#132327]/58 transition-colors hover:bg-white/70 hover:text-[#132327]"
+                                                        onClick={() => setProductMenuOpen(false)}
+                                                    >
+                                                        أو اطّلع على الأسعار
+                                                    </Link>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <Link
-                                            href="/contact"
-                                            className="mt-6 inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold text-white shadow-[0_2px_10px_rgba(6,44,48,0.18)] transition-all hover:opacity-90"
-                                            style={{ backgroundColor: BRAND }}
-                                            onClick={() => setProductMenuOpen(false)}
-                                        >
-                                            <span>احجز استشارة</span>
-                                            <ArrowRight className="size-3.5 rotate-180" />
-                                        </Link>
-                                        <Link
-                                            href="/pricing"
-                                            className="mt-2 inline-flex h-9 items-center justify-center text-[12px] font-medium transition-colors hover:text-[#132327]"
-                                            style={{ color: MUTED }}
-                                            onClick={() => setProductMenuOpen(false)}
-                                        >
-                                            أو اطّلع على الأسعار
-                                        </Link>
                                     </div>
-                                </div>
-                            </motion.div>
+                                </motion.div>
+                            </>
                         )}
                     </AnimatePresence>
                     </div>
@@ -512,12 +488,9 @@ const HeroHeader = () => {
             {/* Mobile nav */}
             <nav
                 className={cn(
-                    'fixed top-0 left-0 z-50 w-full transition-all duration-300 lg:hidden',
-                    isScrolled || menuState
-                        ? 'border-b bg-white/90 py-2.5 shadow-[0_1px_0_rgba(19,35,39,0.04)] backdrop-blur-xl'
-                        : 'border-b border-transparent bg-transparent py-3',
+                    'fixed top-0 left-0 z-50 w-full border-b border-transparent transition-all duration-300 lg:hidden',
+                    isScrolled || menuState ? 'py-2.5' : 'py-3',
                 )}
-                style={{ borderColor: isScrolled || menuState ? BORDER : 'transparent' }}
             >
                 <div className="mx-auto flex h-11 max-w-6xl items-center justify-between px-4 sm:px-6">
                     <Link

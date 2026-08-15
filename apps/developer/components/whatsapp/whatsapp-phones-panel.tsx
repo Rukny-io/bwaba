@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { CircleCheck, Clock, Loader2, Phone, Send } from 'lucide-react';
+import Link from 'next/link';
+import { CircleCheck, Clock, Loader2, Phone, RefreshCw, Send } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
@@ -14,9 +15,12 @@ import {
   whatsappBtnSecondary,
   whatsappInputClass,
 } from '@/components/whatsapp/whatsapp-ui';
-import { usePhoneNumbers, useWhatsappMutations } from '@/hooks/use-whatsapp';
+import { EmbeddedSignupButton } from '@/components/whatsapp/embedded-signup-button';
+import { usePhoneNumbers, useWhatsappAccounts, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import type { WhatsappPhoneSummary } from '@/lib/api/types';
+import { appWhatsappPhoneHref } from '@/lib/whatsapp-phone-routes';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
+import { cn } from '@/lib/utils';
 
 const inputClass = whatsappInputClass;
 
@@ -24,7 +28,44 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-function PhoneCard({
+function PhonePickerCard({ appId, phone }: { appId: string; phone: WhatsappPhoneSummary }) {
+  const w = useTranslations().whatsapp;
+
+  return (
+    <Link
+      href={appWhatsappPhoneHref(appId, phone.phoneId)}
+      className="dashboard-panel group flex flex-col gap-4 rounded-2xl p-5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_60%,var(--surface))] sm:rounded-3xl sm:p-6"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
+          <Phone className="size-5" strokeWidth={1.6} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3
+              className="font-mono text-base font-semibold text-[var(--foreground)] sm:text-lg"
+              dir="ltr"
+            >
+              {phone.displayPhoneNumber || phone.phoneNumber}
+            </h3>
+            <PhoneStatusBadge status={phone.status} />
+          </div>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            {phone.verifiedName || w.businessName}
+          </p>
+          <p className="mt-2 font-mono text-[11px] text-[var(--muted-foreground)]" dir="ltr">
+            {w.phonePublicId}: {phone.phoneId}
+          </p>
+        </div>
+      </div>
+      <p className="text-[12.5px] font-medium text-[var(--primary)] group-hover:underline">
+        {w.openPhoneWorkspace}
+      </p>
+    </Link>
+  );
+}
+
+export function PhoneCard({
   phone,
   registerId,
   pin,
@@ -247,18 +288,14 @@ function PhoneCard({
 export function WhatsappPhonesPanel({ appId }: { appId: string }) {
   const w = useTranslations().whatsapp;
   const { data: phones, isLoading } = usePhoneNumbers(appId);
-  const { registerMutation, profileMutation, testMessageMutation } =
-    useWhatsappMutations(appId);
+  const { data: accounts, isLoading: accountsLoading } = useWhatsappAccounts(appId);
+  const { refreshMutation } = useWhatsappMutations(appId);
 
-  const [registerId, setRegisterId] = useState<string | null>(null);
-  const [pin, setPin] = useState('');
-  const [testId, setTestId] = useState<string | null>(null);
-  const [testTo, setTestTo] = useState('');
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [about, setAbout] = useState('');
-  const [email, setEmail] = useState('');
+  const activeAccount =
+    accounts?.find((a) => a.status === 'ACTIVE') ?? accounts?.[0] ?? null;
+  const linkedWabaId = activeAccount?.wabaId;
 
-  if (isLoading) {
+  if (isLoading || accountsLoading) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="size-6 animate-spin text-[var(--muted-foreground)]" />
@@ -267,11 +304,24 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
   }
 
   if (!phones?.length) {
+    const emptyAction =
+      linkedWabaId ? (
+        <EmbeddedSignupButton
+          appId={appId}
+          mode="add-phone"
+          wabaId={linkedWabaId}
+          className={whatsappBtnPrimary}
+        />
+      ) : (
+        <EmbeddedSignupButton appId={appId} />
+      );
+
     return (
       <WhatsappEmptyState
         icon={Phone}
         title={w.noPhones}
         description={w.noPhonesDesc}
+        action={emptyAction}
       />
     );
   }
@@ -283,6 +333,45 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
 
   return (
     <div className="dashboard-section-stack">
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+            {w.phonePickerTitle}
+          </h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+            {w.phonePickerDesc}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
+          {linkedWabaId ? (
+            <EmbeddedSignupButton
+              appId={appId}
+              mode="add-phone"
+              wabaId={linkedWabaId}
+              className={whatsappBtnPrimary}
+            />
+          ) : null}
+          {activeAccount ? (
+            <button
+              type="button"
+              disabled={refreshMutation.isPending}
+              onClick={() =>
+                refreshMutation.mutate(activeAccount.id, {
+                  onSuccess: () => appToast.success(w.refresh),
+                  onError: (e) => appToast.error(getApiErrorMessage(e)),
+                })
+              }
+              className={whatsappBtnSecondary}
+            >
+              <RefreshCw
+                className={cn('size-3.5', refreshMutation.isPending && 'animate-spin')}
+              />
+              {w.refresh}
+            </button>
+          ) : null}
+        </div>
+      </section>
+
       <DashboardGrid>
         <DashboardMetricCard
           icon={Phone}
@@ -304,29 +393,9 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
         />
       </DashboardGrid>
 
-      <div className="space-y-4 sm:space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
         {phones.map((phone) => (
-          <PhoneCard
-            key={phone.id}
-            phone={phone}
-            registerId={registerId}
-            pin={pin}
-            setRegisterId={setRegisterId}
-            setPin={setPin}
-            testId={testId}
-            testTo={testTo}
-            setTestId={setTestId}
-            setTestTo={setTestTo}
-            profileId={profileId}
-            about={about}
-            email={email}
-            setProfileId={setProfileId}
-            setAbout={setAbout}
-            setEmail={setEmail}
-            registerMutation={registerMutation}
-            testMessageMutation={testMessageMutation}
-            profileMutation={profileMutation}
-          />
+          <PhonePickerCard key={phone.id} appId={appId} phone={phone} />
         ))}
       </div>
     </div>

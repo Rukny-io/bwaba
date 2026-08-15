@@ -6,6 +6,7 @@ import {
   createWhatsappTemplate,
   disconnectWhatsappAccount,
   getEmbeddedSignupConfig,
+  getPhoneNumber,
   listPhoneNumbers,
   listWhatsappAccounts,
   listWhatsappTemplates,
@@ -20,6 +21,8 @@ export const whatsappKeys = {
   all: (appId: string) => ['whatsapp', appId] as const,
   accounts: (appId: string) => [...whatsappKeys.all(appId), 'accounts'] as const,
   phones: (appId: string) => [...whatsappKeys.all(appId), 'phones'] as const,
+  phone: (appId: string, phoneId: string) =>
+    [...whatsappKeys.phones(appId), phoneId] as const,
   templates: (appId: string, accountId?: string) =>
     [...whatsappKeys.all(appId), 'templates', accountId ?? 'all'] as const,
   signupConfig: () => ['whatsapp', 'signup-config'] as const,
@@ -46,6 +49,14 @@ export function usePhoneNumbers(appId: string) {
     queryKey: whatsappKeys.phones(appId),
     queryFn: () => listPhoneNumbers(appId),
     enabled: Boolean(appId),
+  });
+}
+
+export function usePhoneNumber(appId: string, phoneId: string) {
+  return useQuery({
+    queryKey: whatsappKeys.phone(appId, phoneId),
+    queryFn: () => getPhoneNumber(appId, phoneId),
+    enabled: Boolean(appId && phoneId),
   });
 }
 

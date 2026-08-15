@@ -62,6 +62,17 @@ export async function refreshWhatsappAccount(
   return data;
 }
 
+export async function getPhoneNumber(
+  appId: string,
+  phoneId: string,
+): Promise<WhatsappPhoneSummary> {
+  const { data } = await api.get<WhatsappPhoneSummary>(
+    `/developer/whatsapp/phone-numbers/${phoneId}`,
+    appParams(appId),
+  );
+  return data;
+}
+
 export async function listPhoneNumbers(
   appId: string,
 ): Promise<WhatsappPhoneSummary[]> {

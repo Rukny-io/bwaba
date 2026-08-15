@@ -262,31 +262,47 @@ services:
     networks:
       - rukny_network
 
-#   # ─── Next.js Workspace App ───
-#   workspace:
-#     build:
-#       context: ./apps/workspace
-#       dockerfile: Dockerfile
-#       args:
-#         - API_BACKEND_URL=http://api:3001
-#         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_EXTERNAL_URL:-https://api.rukny.io/api/v1}
-#         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
-#         - NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
-#         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
-#         - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
-#         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
-#         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
-#     container_name: rukny_workspace
-#     restart: always
-#     ports:
-#       - "127.0.0.1:3003:3003"
-#     depends_on:
-#       - api
-#     environment:
-#       API_BACKEND_URL: http://api:3001
-#       API_URL: http://api:3001
-#     networks:
-#       - rukny_network
+  # ─── Next.js Business Hub (apps/business) ───
+  business:
+    build:
+      context: .
+      dockerfile: apps/business/Dockerfile
+      args:
+        API_BACKEND_URL: http://api:3001
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_EXTERNAL_URL:-https://api.rukny.io/api/v1}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
+        NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
+        NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
+        NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+        NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+        NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
+        NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
+        JWT_SECRET: ${JWT_SECRET}
+    container_name: rukny_business
+    restart: always
+    ports:
+      - "127.0.0.1:3003:3003"
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      HOSTNAME: 0.0.0.0
+      API_BACKEND_URL: http://api:3001
+      API_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_EXTERNAL_URL:-https://api.rukny.io/api/v1}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
+      NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
+      NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
+      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+      NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
+      NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+    networks:
+      - rukny_network
 
   # ─── Next.js Public App ───
   public:

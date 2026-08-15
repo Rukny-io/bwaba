@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { randomBytes, createHmac } from 'crypto';
+import { assertUrlSafe } from '../../../core/common/utils/ssrf-guard';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { resolveLimitValue } from '../subscriptions/dev-plan-limits.config';
@@ -20,17 +21,33 @@ export class DevWebhooksService {
     private devSubscriptions: DevSubscriptionsService,
   ) {}
 
-  /**
-   * إنشاء webhook جديد
-   */
+  private async resolveDeveloperAppId(
+    userId: string,
+    publicAppId?: string,
+  ): Promise<string | null> {
+    if (!publicAppId) return null;
+
+    const app = await this.prisma.developerApp.findFirst({
+      where: { appId: publicAppId, userId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!app) {
+      throw new NotFoundException('App not found');
+    }
+    return app.id;
+  }
+
   async create(userId: string, dto: CreateWebhookDto) {
     await this.checkWebhookLimit(userId);
+    await assertUrlSafe(dto.url);
 
+    const developerAppId = await this.resolveDeveloperAppId(userId, dto.appId);
     const secret = `whsec_${randomBytes(32).toString('hex')}`;
 
     const webhook = await this.prisma.developerWebhook.create({
       data: {
         userId,
+        developerAppId,
         url: dto.url,
         secret,
         events: dto.events,
@@ -40,16 +57,20 @@ export class DevWebhooksService {
 
     return {
       ...webhook,
-      secret, // يُعرض مرة واحدة فقط
+      secret,
     };
   }
 
-  /**
-   * قائمة webhooks
-   */
-  async findAll(userId: string) {
+  async findAll(userId: string, publicAppId?: string) {
+    const developerAppId = publicAppId
+      ? await this.resolveDeveloperAppId(userId, publicAppId)
+      : null;
+
     return this.prisma.developerWebhook.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(developerAppId ? { developerAppId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -58,6 +79,7 @@ export class DevWebhooksService {
         status: true,
         description: true,
         failureCount: true,
+        developerAppId: true,
         lastSuccessAt: true,
         lastFailureAt: true,
         lastResponseCode: true,
@@ -67,14 +89,15 @@ export class DevWebhooksService {
     });
   }
 
-  /**
-   * تحديث webhook
-   */
   async update(userId: string, webhookId: string, dto: UpdateWebhookDto) {
     const webhook = await this.prisma.developerWebhook.findFirst({
       where: { id: webhookId, userId },
     });
     if (!webhook) throw new NotFoundException('Webhook not found');
+
+    if (dto.url) {
+      await assertUrlSafe(dto.url);
+    }
 
     return this.prisma.developerWebhook.update({
       where: { id: webhookId },
@@ -90,14 +113,12 @@ export class DevWebhooksService {
         events: true,
         status: true,
         description: true,
+        developerAppId: true,
         updatedAt: true,
       },
     });
   }
 
-  /**
-   * حذف webhook
-   */
   async remove(userId: string, webhookId: string) {
     const webhook = await this.prisma.developerWebhook.findFirst({
       where: { id: webhookId, userId },
@@ -108,9 +129,6 @@ export class DevWebhooksService {
     return { success: true };
   }
 
-  /**
-   * تدوير المفتاح السري
-   */
   async rotateSecret(userId: string, webhookId: string) {
     const webhook = await this.prisma.developerWebhook.findFirst({
       where: { id: webhookId, userId },
@@ -127,15 +145,13 @@ export class DevWebhooksService {
     return { secret: newSecret };
   }
 
-  /**
-   * اختبار webhook بحدث تجريبي
-   */
   async test(userId: string, webhookId: string) {
     const webhook = await this.prisma.developerWebhook.findFirst({
       where: { id: webhookId, userId },
     });
     if (!webhook) throw new NotFoundException('Webhook not found');
 
+    const timestamp = Math.floor(Date.now() / 1000);
     const testPayload = {
       id: `evt_test_${randomBytes(8).toString('hex')}`,
       type: 'test',
@@ -145,10 +161,8 @@ export class DevWebhooksService {
       },
     };
 
-    const signature = this.signPayload(
-      JSON.stringify(testPayload),
-      webhook.secret,
-    );
+    const payloadStr = JSON.stringify(testPayload);
+    const signature = this.signPayload(payloadStr, webhook.secret);
 
     try {
       const response = await fetch(webhook.url, {
@@ -157,8 +171,10 @@ export class DevWebhooksService {
           'Content-Type': 'application/json',
           'X-Rukny-Signature': `sha256=${signature}`,
           'X-Rukny-Event': 'test',
+          'X-Rukny-Delivery': testPayload.id,
+          'X-Rukny-Timestamp': String(timestamp),
         },
-        body: JSON.stringify(testPayload),
+        body: payloadStr,
         signal: AbortSignal.timeout(10000),
       });
 
@@ -178,29 +194,25 @@ export class DevWebhooksService {
     }
   }
 
-  /**
-   * الحصول على webhooks النشطة لمستخدم وحدث معيّن
-   */
-  async getActiveWebhooksForEvent(userId: string, eventType: string) {
+  async getActiveWebhooksForEvent(
+    userId: string,
+    eventType: string,
+    developerAppId?: string,
+  ) {
     return this.prisma.developerWebhook.findMany({
       where: {
         userId,
         status: 'ACTIVE',
         events: { has: eventType },
+        ...(developerAppId ? { developerAppId } : {}),
       },
     });
   }
 
-  /**
-   * توقيع payload بـ HMAC-SHA256
-   */
   signPayload(payload: string, secret: string): string {
     return createHmac('sha256', secret).update(payload).digest('hex');
   }
 
-  /**
-   * التحقق من حدود webhooks
-   */
   private async checkWebhookLimit(userId: string) {
     const allowed = await this.devSubscriptions.checkResourceLimit(
       userId,

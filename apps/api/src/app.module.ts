@@ -78,6 +78,7 @@ import { DevModule } from './dev/dev.module';
 // Domain - Developer Portal & WhatsApp Provider
 import { DeveloperModule } from './domain/developer/developer.module';
 import { WhatsAppProviderModule } from './domain/whatsapp-provider/whatsapp-provider.module';
+import { BusinessHubModule } from './domain/business-hub/business-hub.module';
 
 // Infrastructure
 // Use the UploadModule under `modules` which provides presign/confirm endpoints
@@ -166,6 +167,9 @@ import { SharedModule } from './shared/modules/shared.module';
 
     // Domain - WhatsApp Tech Provider
     WhatsAppProviderModule,
+
+    // Domain - Business Hub
+    BusinessHubModule,
 
     // Integrations
     GoogleCalendarModule,

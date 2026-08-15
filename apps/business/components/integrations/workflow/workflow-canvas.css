@@ -1,0 +1,38 @@
+.workflow-canvas {
+  background: color-mix(in srgb, var(--background) 92%, var(--surface-secondary));
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.workflow-canvas .react-flow__node {
+  font-family: inherit;
+}
+
+.workflow-canvas .react-flow__edge-path {
+  stroke: color-mix(in srgb, var(--foreground) 35%, transparent);
+  stroke-width: 2;
+}
+
+.workflow-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--primary);
+}
+
+.workflow-controls {
+  border-radius: 9999px !important;
+  border: 1px solid var(--border) !important;
+  background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.workflow-controls button {
+  border: none !important;
+  background: transparent !important;
+  color: var(--foreground) !important;
+}
+
+.workflow-controls button:hover {
+  background: var(--surface-secondary) !important;
+}

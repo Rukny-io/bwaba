@@ -9,6 +9,7 @@ export async function getMessageLogs(params?: {
   limit?: number;
   from?: string;
   to?: string;
+  phoneId?: string;
 }): Promise<MessageLogsPage> {
   const { data } = await api.get<MessageLogsPage>(
     '/developer/usage/messages',

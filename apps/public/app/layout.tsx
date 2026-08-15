@@ -3,6 +3,7 @@ import { thmanyahSans } from "@rukny/thmanyah-font/next"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { RadialBackground } from "@/components/ui/light-theme-tailwind-css-background-snippet"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
@@ -33,7 +34,10 @@ export default function RootLayout({
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          {children}
+          <div className="relative isolate min-h-full">
+            <RadialBackground />
+            <div className="relative z-0 min-h-full">{children}</div>
+          </div>
         </ThemeProvider>
       </body>
     </html>

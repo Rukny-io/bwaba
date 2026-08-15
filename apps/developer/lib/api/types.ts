@@ -104,6 +104,10 @@ export function isValidAppId(appId: string): boolean {
   return APP_ID_PATTERN.test(appId);
 }
 
+export function isValidPhoneId(phoneId: string): boolean {
+  return APP_ID_PATTERN.test(phoneId);
+}
+
 export type ApiKeyStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 export type ApiKeyEnvironment = 'live' | 'test';
 
@@ -196,6 +200,7 @@ export interface WhatsappAccountSummary {
 
 export interface WhatsappPhoneSummary {
   id: string;
+  phoneId: string;
   phoneNumber: string;
   phoneNumberId: string;
   displayPhoneNumber?: string | null;

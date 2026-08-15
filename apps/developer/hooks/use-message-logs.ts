@@ -13,6 +13,7 @@ export function useMessageLogs(filters?: {
   status?: string;
   direction?: string;
   page?: number;
+  phoneId?: string;
 }) {
   return useQuery({
     queryKey: messageLogsKeys.list(filters ?? {}),

@@ -86,6 +86,9 @@ export class MetaWebhookService {
     try {
       const log = await this.prisma.whatsappMessageLog.findFirst({
         where: { metaMessageId: messageId },
+        include: {
+          account: { select: { developerAppId: true } },
+        },
       });
 
       if (!log) return;
@@ -110,6 +113,7 @@ export class MetaWebhookService {
           timestamp: status?.timestamp,
           ...(status?.errors?.[0] ? { error: status.errors[0] } : {}),
         },
+        log.account.developerAppId,
       );
     } catch (error) {
       this.logger.error(
@@ -128,6 +132,9 @@ export class MetaWebhookService {
     try {
       const phone = await this.prisma.developerPhoneNumber.findFirst({
         where: { phoneNumberId },
+        include: {
+          account: { select: { developerAppId: true } },
+        },
       });
 
       if (!phone) return;
@@ -151,15 +158,20 @@ export class MetaWebhookService {
         },
       });
 
-      await this.webhookDelivery.dispatchEvent(userId, 'message.received', {
-        messageId: log.id,
-        from,
-        to: phone.phoneNumber,
-        type: message?.type,
-        content: message,
-        contact: contact?.profile,
-        timestamp: message?.timestamp,
-      });
+      await this.webhookDelivery.dispatchEvent(
+        userId,
+        'message.received',
+        {
+          messageId: log.id,
+          from,
+          to: phone.phoneNumber,
+          type: message?.type,
+          content: message,
+          contact: contact?.profile,
+          timestamp: message?.timestamp,
+        },
+        phone.account.developerAppId,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to handle incoming message: ${error.message}`,
@@ -219,6 +231,7 @@ export class MetaWebhookService {
           event,
           reason: value?.reason,
         },
+        account.developerAppId,
       );
     } catch (error) {
       this.logger.error(
@@ -251,6 +264,7 @@ export class MetaWebhookService {
           event,
           details: value,
         },
+        account.developerAppId,
       );
     } catch (error) {
       this.logger.error(

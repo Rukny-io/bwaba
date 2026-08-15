@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
 import { generateSocialLinkId } from '../../core/common/utils/secure-id.util';
+import { InstagramInboxService } from './instagram-inbox.service';
 
 const IG_OAUTH_BASE = 'https://www.instagram.com/oauth/authorize';
 const IG_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
@@ -36,6 +37,7 @@ export class InstagramService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly cacheManager: CacheManager,
+    private readonly instagramInboxService: InstagramInboxService,
   ) {
     this.appId = this.config.get<string>('INSTAGRAM_APP_ID') ?? '';
     this.appSecret = this.config.get<string>('INSTAGRAM_APP_SECRET') ?? '';
@@ -55,22 +57,43 @@ export class InstagramService {
     }
   }
 
+  private readonly oauthScopes = [
+    'instagram_business_basic',
+    'instagram_business_manage_messages',
+    'instagram_business_manage_comments',
+    'instagram_business_content_publish',
+    'instagram_business_manage_insights',
+  ] as const;
+
+  /** Non-secret OAuth config for Meta dashboard alignment checks. */
+  getOAuthSetup() {
+    this.ensureConfigured();
+
+    return {
+      clientId: this.appId,
+      redirectUri: this.redirectUri,
+      authorizeEndpoint: IG_OAUTH_BASE,
+      scopes: [...this.oauthScopes],
+      metaDashboardPath:
+        'Instagram → API setup with Instagram login → Set up Instagram business login → Business login settings → OAuth redirect URIs',
+      metaAppUrl: `https://developers.facebook.com/apps/${this.appId}/`,
+      sampleAuthorizeUrl: this.getAuthUrl('setup-preview'),
+      notes: [
+        'Use the Instagram App ID from Business login settings (not Facebook Login redirect URIs).',
+        'redirect_uri must match character-for-character, including https, host, port, and path.',
+      ],
+    };
+  }
+
   /** Build OAuth authorization URL */
   getAuthUrl(state: string): string {
     this.ensureConfigured();
-
-    const scopes = [
-      'instagram_business_basic',
-      'instagram_business_manage_messages',
-      'instagram_business_manage_comments',
-      'instagram_business_content_publish',
-    ].join(',');
 
     const params = new URLSearchParams({
       client_id: this.appId,
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      scope: scopes,
+      scope: this.oauthScopes.join(','),
       state,
     });
 
@@ -1181,6 +1204,8 @@ export class InstagramService {
         }
       }
     }
+
+    await this.instagramInboxService.processWebhookPayload(payload);
     return { success: true };
   }
 

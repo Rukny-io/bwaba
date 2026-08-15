@@ -10,6 +10,7 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
 import { ConnectWabaDto } from './dto/connect-waba.dto';
+import { generateNumericPublicId } from '../shared/public-id.util';
 
 @Injectable()
 export class WabaService {
@@ -197,6 +198,7 @@ export class WabaService {
         phoneNumbers: {
           select: {
             id: true,
+            phoneId: true,
             phoneNumber: true,
             phoneNumberId: true,
             displayPhoneNumber: true,
@@ -295,6 +297,18 @@ export class WabaService {
     });
   }
 
+  private async generateUniquePhoneId(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const phoneId = generateNumericPublicId();
+      const exists = await this.prisma.developerPhoneNumber.findUnique({
+        where: { phoneId },
+        select: { id: true },
+      });
+      if (!exists) return phoneId;
+    }
+    throw new BadRequestException('Failed to generate phone id');
+  }
+
   private async syncPhoneNumbers(
     accountId: string,
     wabaId: string,
@@ -304,6 +318,14 @@ export class WabaService {
       const phoneData = await this.metaApi.getPhoneNumbers(wabaId, accessToken);
 
       for (const phone of phoneData.data || []) {
+        const existingPhone = await this.prisma.developerPhoneNumber.findUnique({
+          where: { phoneNumberId: phone.id },
+          select: { id: true, phoneId: true },
+        });
+
+        const phoneId =
+          existingPhone?.phoneId ?? (await this.generateUniquePhoneId());
+
         await this.prisma.developerPhoneNumber.upsert({
           where: { phoneNumberId: phone.id },
           update: {
@@ -320,8 +342,10 @@ export class WabaService {
               phone.is_official_business_account || false,
             platformType: phone.platform_type,
             codeVerificationStatus: phone.code_verification_status,
+            ...(existingPhone?.phoneId ? {} : { phoneId }),
           },
           create: {
+            phoneId,
             accountId,
             phoneNumber:
               phone.display_phone_number?.replace(/[\s\-]/g, '') || '',

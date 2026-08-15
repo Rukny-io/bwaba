@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ConsultationCtaSection } from '@/components/home/consultation-cta-section';
 import Footer from '@/components/layout/footer';
 import { PricingView } from '@/components/pricing/pricing-view';
 import { MarketingHeader } from '@/components/shared/hero-section-1';
@@ -13,8 +14,9 @@ export default function PricingPage() {
   return (
     <>
       <MarketingHeader />
-      <main className="bg-white pt-16 text-[#132327] sm:pt-[4.5rem]" dir="rtl">
+      <main className="min-h-screen overflow-x-clip pt-20 text-[#132327]" dir="rtl">
         <PricingView />
+        <ConsultationCtaSection />
       </main>
       <Footer />
     </>

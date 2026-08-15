@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -117,6 +117,7 @@ export class UsageService {
       limit?: number;
       from?: string;
       to?: string;
+      phoneId?: string;
     },
   ) {
     const page = options?.page || 1;
@@ -127,6 +128,19 @@ export class UsageService {
     if (options?.status) where.status = options.status;
     if (options?.direction) where.direction = options.direction;
     if (options?.type) where.messageType = options.type;
+    if (options?.phoneId) {
+      const phone = await this.prisma.developerPhoneNumber.findFirst({
+        where: {
+          phoneId: options.phoneId,
+          account: { userId },
+        },
+        select: { id: true },
+      });
+      if (!phone) {
+        throw new NotFoundException('Phone number not found');
+      }
+      where.phoneNumberId = phone.id;
+    }
     if (options?.from || options?.to) {
       where.createdAt = {};
       if (options?.from) where.createdAt.gte = new Date(options.from);

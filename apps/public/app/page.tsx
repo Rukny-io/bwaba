@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/shared/hero-section-1";
-import { HomeAppSummary } from "@/components/home/home-app-summary";
 
 export const metadata: Metadata = {
   title: "Rukny — منصة واحدة لكل ما تحتاجه",
@@ -9,10 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return (
-    <>
-      <HomeAppSummary />
-      <HeroSection />
-    </>
-  );
+  return <HeroSection />;
 }

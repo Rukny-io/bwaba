@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -38,8 +39,11 @@ export class DevWebhooksController {
   @Get()
   @RequiresWorkspacePermission('developer:webhooks:read')
   @ApiOperation({ summary: 'قائمة webhooks' })
-  findAll(@ActiveWorkspace() ws: WorkspaceContext) {
-    return this.webhooksService.findAll(ws.ownerId);
+  findAll(
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Query('appId') appId?: string,
+  ) {
+    return this.webhooksService.findAll(ws.ownerId, appId);
   }
 
   @Patch(':id')

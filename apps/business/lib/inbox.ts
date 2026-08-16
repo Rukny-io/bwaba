@@ -64,14 +64,14 @@ export async function fetchInboxConversations(options?: {
   channel?: InboxChannelTab;
   connectionId?: string | null;
 }): Promise<InboxConversation[]> {
+  const params: Record<string, string | undefined> = {};
+  const channel = normalizeChannel(options?.channel);
+  if (channel) params.channel = channel;
+  if (options?.connectionId) params.connectionId = options.connectionId;
+
   const { data } = await api.get<{ conversations: InboxConversation[] }>(
     '/integrations/instagram/inbox/conversations',
-    {
-      params: {
-        channel: normalizeChannel(options?.channel),
-        connectionId: options?.connectionId ?? undefined,
-      },
-    },
+    params,
   );
   return data.conversations ?? [];
 }

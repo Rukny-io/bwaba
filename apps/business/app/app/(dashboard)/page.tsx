@@ -24,7 +24,7 @@ export default async function InboxPage() {
   ]);
 
   const greeting = user.name ?? user.username ?? user.email;
-  const { metrics, connectedAccounts } = home;
+  const { metrics, connectedAccounts, recentConversations } = home;
   const hasInstagram = connectedAccounts.length > 0;
 
   return (
@@ -81,7 +81,10 @@ export default async function InboxPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-3 lg:gap-4">
         <DashboardHomeConnectedAccounts accounts={connectedAccounts} />
-        <DashboardHomeRecentConversations />
+        <DashboardHomeRecentConversations
+          conversations={recentConversations}
+          hasInstagramAccounts={hasInstagram}
+        />
         <DashboardHomeChannelStatus hasInstagram={hasInstagram} />
       </div>
 

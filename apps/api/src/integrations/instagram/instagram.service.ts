@@ -8,6 +8,7 @@ import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../core/cache/cache.manager';
 import { generateSocialLinkId } from '../../core/common/utils/secure-id.util';
 import { InstagramInboxService } from './instagram-inbox.service';
+import { enableInstagramWebhookSubscriptions } from './instagram-webhook.util';
 
 const IG_OAUTH_BASE = 'https://www.instagram.com/oauth/authorize';
 const IG_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
@@ -240,6 +241,8 @@ export class InstagramService {
         mediaCount: profile.media_count ?? null,
       },
     });
+
+    void this.enableInboxWebhookSubscriptions(longToken);
 
     return {
       success: true,
@@ -1046,7 +1049,18 @@ export class InstagramService {
       },
     });
 
+    void this.enableInboxWebhookSubscriptions(longToken);
+
     return { success: true, username: profile.username, connectionId: connection.id };
+  }
+
+  private async enableInboxWebhookSubscriptions(accessToken: string): Promise<void> {
+    const result = await enableInstagramWebhookSubscriptions(accessToken);
+    if (!result.ok) {
+      console.warn(
+        `[Instagram] subscribed_apps failed: ${result.error ?? 'unknown error'}`,
+      );
+    }
   }
 
   // ─── Insights & Comments ───────────────────────────────────

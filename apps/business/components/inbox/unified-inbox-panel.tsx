@@ -382,11 +382,12 @@ function ConversationThread({
 export function UnifiedInboxPanel() {
   const searchParams = useSearchParams();
   const channelTab = parseInboxChannelTab(searchParams.get('channel'));
+  const conversationFromUrl = searchParams.get('conversation');
 
   const [accounts, setAccounts] = useState<InstagramConnection[]>([]);
   const [conversations, setConversations] = useState<InboxConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
-    null,
+    conversationFromUrl,
   );
   const [loading, setLoading] = useState(true);
 
@@ -411,8 +412,17 @@ export function UnifiedInboxPanel() {
   }, [loadData]);
 
   useEffect(() => {
-    setSelectedConversationId(null);
-  }, [channelTab]);
+    setSelectedConversationId(conversationFromUrl);
+  }, [conversationFromUrl, channelTab]);
+
+  useEffect(() => {
+    if (!conversationFromUrl || loading) return;
+
+    const exists = conversations.some((conversation) => conversation.id === conversationFromUrl);
+    if (!exists) {
+      setSelectedConversationId(null);
+    }
+  }, [conversationFromUrl, conversations, loading]);
 
   const handleConversationUpdated = useCallback((updated: InboxConversation) => {
     setConversations((prev) =>

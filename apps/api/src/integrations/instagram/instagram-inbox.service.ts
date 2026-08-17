@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { enableInstagramWebhookSubscriptions } from './instagram-webhook.util';
 
 const IG_GRAPH_BASE = 'https://graph.instagram.com/v22.0';
 const MESSAGING_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -32,8 +33,15 @@ export class InstagramInboxService {
   /** Process Instagram messaging webhook payload (object: instagram). */
   async processWebhookPayload(payload: any): Promise<void> {
     if (payload.object !== 'instagram' && payload.object !== 'page') {
+      this.logger.debug(
+        `Ignored webhook object type: ${String(payload.object)}`,
+      );
       return;
     }
+
+    this.logger.log(
+      `Processing ${payload.object} webhook with ${payload.entry?.length ?? 0} entries`,
+    );
 
     for (const entry of payload.entry || []) {
       const igUserId = entry.id ? String(entry.id) : null;
@@ -62,7 +70,7 @@ export class InstagramInboxService {
       where: { igUserId },
     });
     if (!conn) {
-      this.logger.debug(`No connection for igUserId=${igUserId}`);
+      this.logger.warn(`No Instagram connection for igUserId=${igUserId}`);
       return;
     }
 
@@ -202,6 +210,31 @@ export class InstagramInboxService {
     }
   }
 
+  private ensureWebhookSubscriptionsForConnections(
+    connections: Array<{
+      accessToken: string;
+      tokenExpiry: Date | null;
+    }>,
+  ): void {
+    const now = Date.now();
+
+    for (const conn of connections) {
+      const tokenStillValid =
+        !conn.tokenExpiry || new Date(conn.tokenExpiry).getTime() > now;
+      if (!tokenStillValid) continue;
+
+      void enableInstagramWebhookSubscriptions(conn.accessToken).then(
+        (result) => {
+          if (!result.ok) {
+            this.logger.warn(
+              `subscribed_apps failed: ${result.error ?? 'unknown error'}`,
+            );
+          }
+        },
+      );
+    }
+  }
+
   async listConversations(
     userId: string,
     channel: InboxChannelFilter = 'all',
@@ -212,10 +245,12 @@ export class InstagramInboxService {
 
     const connections = await this.connectionModel.findMany({
       where: { userId },
-      select: { id: true },
+      select: { id: true, accessToken: true, tokenExpiry: true },
     });
     const connectionIds = connections.map((c: { id: string }) => c.id);
     if (connectionIds.length === 0) return [];
+
+    this.ensureWebhookSubscriptionsForConnections(connections);
 
     const rows = await this.conversationModel.findMany({
       where: { connectionId: { in: connectionIds } },

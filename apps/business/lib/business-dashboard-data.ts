@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { getServerAuthHeaders } from '@rukny/auth/server';
 import { formatNumber } from '@/lib/dashboard-format';
+import type { InboxConversation } from '@/lib/inbox';
 
 export interface MetricCardData {
   value: string;
@@ -32,6 +33,7 @@ export interface BusinessDashboardMetrics {
 export interface BusinessDashboardHomeData {
   metrics: BusinessDashboardMetrics;
   connectedAccounts: InstagramAccountSummary[];
+  recentConversations: InboxConversation[];
 }
 
 function buildCookieHeader(items: { name: string; value: string }[]): string {
@@ -46,30 +48,46 @@ function getBackendUrl(): string {
   );
 }
 
-async function fetchInstagramConnections(): Promise<InstagramAccountSummary[]> {
+async function fetchWithAuth<T>(path: string): Promise<T | null> {
   try {
     const cookieStore = await cookies();
     const cookieHeader = buildCookieHeader(cookieStore.getAll());
-    const res = await fetch(
-      `${getBackendUrl()}/api/v1/integrations/instagram/connections`,
-      {
-        headers: await getServerAuthHeaders(cookieHeader),
-        cache: 'no-store',
-      },
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      connections?: InstagramAccountSummary[];
-    };
-    return data.connections ?? [];
+    const res = await fetch(`${getBackendUrl()}${path}`, {
+      headers: await getServerAuthHeaders(cookieHeader),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
   } catch {
-    return [];
+    return null;
   }
 }
 
-function buildMetrics(accounts: InstagramAccountSummary[]): BusinessDashboardMetrics {
+async function fetchInstagramConnections(): Promise<InstagramAccountSummary[]> {
+  const data = await fetchWithAuth<{ connections?: InstagramAccountSummary[] }>(
+    '/api/v1/integrations/instagram/connections',
+  );
+  return data?.connections ?? [];
+}
+
+async function fetchInboxConversations(): Promise<InboxConversation[]> {
+  const data = await fetchWithAuth<{ conversations?: InboxConversation[] }>(
+    '/api/v1/integrations/instagram/inbox/conversations?channel=instagram',
+  );
+  return data?.conversations ?? [];
+}
+
+function buildMetrics(
+  accounts: InstagramAccountSummary[],
+  conversations: InboxConversation[],
+): BusinessDashboardMetrics {
   const count = accounts.length;
   const instagramReady = count > 0;
+  const unreadTotal = conversations.reduce(
+    (sum, conversation) => sum + conversation.unreadCount,
+    0,
+  );
+  const openThreads = conversations.length;
 
   return {
     connectedAccounts: {
@@ -80,16 +98,21 @@ function buildMetrics(accounts: InstagramAccountSummary[]): BusinessDashboardMet
       tabular: true,
     },
     unreadMessages: {
-      value: formatNumber(0),
-      chip: 'قريباً',
-      chipTone: 'warning',
+      value: formatNumber(unreadTotal),
+      chip: unreadTotal > 0 ? 'تحتاج متابعة' : instagramReady ? 'لا رسائل جديدة' : 'اربط Instagram',
+      chipTone: unreadTotal > 0 ? 'warning' : instagramReady ? 'success' : 'neutral',
       comparisonPrimary: 'رسائل غير مقروءة',
       tabular: true,
     },
     openThreads: {
-      value: formatNumber(0),
-      chip: 'قريباً',
-      chipTone: 'warning',
+      value: formatNumber(openThreads),
+      chip:
+        openThreads > 0
+          ? 'Instagram Direct'
+          : instagramReady
+            ? 'لا محادثات بعد'
+            : 'اربط Instagram',
+      chipTone: openThreads > 0 ? 'success' : instagramReady ? 'neutral' : 'warning',
       comparisonPrimary: 'محادثات مفتوحة',
       tabular: true,
     },
@@ -104,10 +127,14 @@ function buildMetrics(accounts: InstagramAccountSummary[]): BusinessDashboardMet
 }
 
 export async function getBusinessDashboardHomeData(): Promise<BusinessDashboardHomeData> {
-  const connectedAccounts = await fetchInstagramConnections();
+  const [connectedAccounts, conversations] = await Promise.all([
+    fetchInstagramConnections(),
+    fetchInboxConversations(),
+  ]);
 
   return {
-    metrics: buildMetrics(connectedAccounts),
+    metrics: buildMetrics(connectedAccounts, conversations),
     connectedAccounts: connectedAccounts.slice(0, 3),
+    recentConversations: conversations.slice(0, 3),
   };
 }

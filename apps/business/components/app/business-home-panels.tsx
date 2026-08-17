@@ -10,6 +10,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { InstagramAccountSummary } from '@/lib/business-dashboard-data';
+import { APP_BASE } from '@/lib/business-routes';
+import type { InboxConversation } from '@/lib/inbox';
 import { instagramAccountPath } from '@/lib/instagram';
 import { cn } from '@/lib/utils';
 
@@ -186,20 +188,81 @@ export function DashboardHomeConnectedAccounts({
   );
 }
 
-export function DashboardHomeRecentConversations() {
+function formatConversationTime(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('ar', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+}
+
+function inboxConversationPath(conversationId: string): string {
+  return `${APP_BASE}/inbox?conversation=${encodeURIComponent(conversationId)}`;
+}
+
+export function DashboardHomeRecentConversations({
+  conversations,
+  hasInstagramAccounts,
+}: {
+  conversations: InboxConversation[];
+  hasInstagramAccounts: boolean;
+}) {
+  const items = conversations.slice(0, HOME_PANEL_LIMIT);
+
   return (
     <PanelShell>
       <PanelHeader
         title="محادثات حديثة"
         icon={MessagesSquare}
-        href="/app/inbox"
+        href={`${APP_BASE}/inbox`}
         linkLabel="صندوق الوارد"
       />
-      <EmptyState
-        icon={MessageCircle}
-        title="لا توجد محادثات بعد"
-        description="ستظهر هنا أحدث رسائل Instagram و Messenger."
-      />
+
+      {items.length === 0 ? (
+        <EmptyState
+          icon={MessageCircle}
+          title="لا توجد محادثات بعد"
+          description={
+            hasInstagramAccounts
+              ? 'أرسل DM لحسابك على Instagram لتظهر هنا.'
+              : 'اربط Instagram لاستقبال رسائل Direct.'
+          }
+          actionHref={hasInstagramAccounts ? `${APP_BASE}/inbox` : `${APP_BASE}/instagram`}
+          actionLabel={hasInstagramAccounts ? 'فتح صندوق الوارد' : 'ربط Instagram'}
+        />
+      ) : (
+        <ul className="flex flex-1 flex-col gap-0.5">
+          {items.map((conversation) => (
+            <li key={conversation.id}>
+              <ListRow
+                href={inboxConversationPath(conversation.id)}
+                icon={Instagram}
+                title={conversation.participantName}
+                meta={
+                  <>
+                    <span className="line-clamp-1">{conversation.preview || '—'}</span>
+                    {conversation.unreadCount > 0 ? (
+                      <>
+                        <span aria-hidden> · </span>
+                        <span>{conversation.unreadCount} غير مقروء</span>
+                      </>
+                    ) : null}
+                    {conversation.updatedAt ? (
+                      <>
+                        <span aria-hidden> · </span>
+                        <span>{formatConversationTime(conversation.updatedAt)}</span>
+                      </>
+                    ) : null}
+                  </>
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </PanelShell>
   );
 }

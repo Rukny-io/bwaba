@@ -17,7 +17,8 @@ import * as crypto from 'crypto';
  *
  * This guard:
  *  - reads the raw body captured in main.ts (`req.rawBody`),
- *  - recomputes the HMAC-SHA256 with `INSTAGRAM_APP_SECRET`,
+ *  - recomputes the HMAC-SHA256 with the Meta app secret (`INSTAGRAM_WEBHOOK_APP_SECRET`,
+ *    then `WHATSAPP_APP_SECRET`, then `INSTAGRAM_APP_SECRET`),
  *  - compares in constant time (`crypto.timingSafeEqual`),
  *  - FAILS CLOSED (403) when the secret is unset, the header is missing, the
  *    raw body is unavailable, or the signature does not match.
@@ -28,16 +29,24 @@ export class InstagramWebhookGuard implements CanActivate {
 
   constructor(private readonly config: ConfigService) {}
 
+  private getWebhookAppSecret(): string | undefined {
+    return (
+      this.config.get<string>('INSTAGRAM_WEBHOOK_APP_SECRET') ??
+      this.config.get<string>('WHATSAPP_APP_SECRET') ??
+      this.config.get<string>('INSTAGRAM_APP_SECRET')
+    );
+  }
+
   canActivate(context: ExecutionContext): boolean {
     const req = context
       .switchToHttp()
       .getRequest<Request & { rawBody?: Buffer }>();
 
-    const appSecret = this.config.get<string>('INSTAGRAM_APP_SECRET');
+    const appSecret = this.getWebhookAppSecret();
     if (!appSecret) {
       // No secret configured → cannot verify → reject (fail closed).
       this.logger.error(
-        'INSTAGRAM_APP_SECRET is not set — rejecting Instagram webhook (fail closed).',
+        'No Meta app secret for Instagram webhooks — set INSTAGRAM_WEBHOOK_APP_SECRET or WHATSAPP_APP_SECRET (fail closed).',
       );
       throw new ForbiddenException('Webhook signature verification unavailable');
     }

@@ -22,10 +22,10 @@ export $(grep -v '^#' .env.production | xargs)
 
 # ─── Build and start containers ───
 echo "📦 Building Docker images..."
-docker compose -f docker-compose.yml build
+docker compose --env-file .env.production -f docker-compose.yml build
 
 echo "🔄 Starting services..."
-docker compose -f docker-compose.yml up -d
+docker compose --env-file .env.production -f docker-compose.yml up -d
 
 echo "⏳ Waiting for services to be ready..."
 sleep 10
@@ -33,7 +33,7 @@ sleep 10
 # ─── Check status ───
 echo ""
 echo "📊 Service Status:"
-docker compose -f docker-compose.yml ps
+docker compose --env-file .env.production -f docker-compose.yml ps
 
 echo ""
 echo "✅ Deployment complete!"

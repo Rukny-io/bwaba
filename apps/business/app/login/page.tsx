@@ -11,6 +11,7 @@ import {
   resolveClientNext,
 } from '@/lib/auth-redirect';
 import { clearOAuthParamsFromUrl, readOAuthCallbackParams } from '@/lib/oauth-callback';
+import { resetAuthClientState } from '@/lib/api-client';
 
 function GoogleIcon() {
   return (
@@ -43,6 +44,10 @@ function LoginContent() {
     [searchParams],
   );
   const sessionFlag = searchParams.get('session');
+
+  useEffect(() => {
+    resetAuthClientState();
+  }, []);
 
   useEffect(() => {
     const { code, next: hashNext } = readOAuthCallbackParams(searchParams);

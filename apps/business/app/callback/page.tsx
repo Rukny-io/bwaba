@@ -15,6 +15,7 @@ import {
   readStashedOAuthParams,
   stashOAuthParams,
 } from '@/lib/oauth-callback';
+import { resetAuthClientState } from '@/lib/api-client';
 
 function CallbackContent() {
   const router = useRouter();
@@ -25,6 +26,7 @@ function CallbackContent() {
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
+    resetAuthClientState();
 
     const fromUrl = readOAuthCallbackParams(searchParams);
     if (fromUrl.code) {

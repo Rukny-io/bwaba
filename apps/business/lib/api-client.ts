@@ -12,6 +12,7 @@ import {
 export { clearCsrfToken, getCsrfToken, setCsrfToken };
 
 const REFRESH_STATE_KEY = '__business_refresh_state__';
+const REFRESH_BLOCK_KEY = 'rukny_business_auth_block';
 
 interface RefreshState {
   refreshFailed: boolean;
@@ -34,11 +35,51 @@ export interface RefreshResult {
   csrfToken?: string;
 }
 
+/** Reset client auth state after a fresh login (login page / callback). */
+export function resetAuthClientState(): void {
+  if (typeof window === 'undefined') return;
+  clearCsrfToken();
+  try {
+    localStorage.removeItem(REFRESH_BLOCK_KEY);
+  } catch {
+    /* ignore */
+  }
+  const state = getGlobalRefreshState();
+  state.refreshFailed = false;
+  state.refreshPromise = null;
+  try {
+    delete (window as unknown as Record<string, unknown>)[
+      '__business_auth_redirect_lock__'
+    ];
+  } catch {
+    /* ignore */
+  }
+}
+
+function isRefreshBlocked(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(REFRESH_BLOCK_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function blockRefreshAttempts(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(REFRESH_BLOCK_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
 function handleAuthFailure(): void {
   const state = getGlobalRefreshState();
   clearCsrfToken();
   state.refreshFailed = true;
   state.refreshPromise = null;
+  blockRefreshAttempts();
   notifySessionExpiredAndRedirect();
 }
 
@@ -46,7 +87,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function postRefresh(maxAttempts = 3): Promise<Response> {
+function extractErrorMessage(body: unknown): string {
+  if (!body || typeof body !== 'object') return '';
+  const record = body as { message?: string | string[]; error?: string };
+  const raw = record.message ?? record.error ?? '';
+  return Array.isArray(raw) ? raw[0] ?? '' : raw;
+}
+
+function isTerminalSessionMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('session has been revoked') ||
+    m.includes('session has expired') ||
+    m.includes('session not found') ||
+    m.includes('invalid token type') ||
+    m.includes('missing session id') ||
+    m.includes('please login again')
+  );
+}
+
+async function postRefresh(maxAttempts = 2): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const csrf = getCsrfToken();
   if (csrf) headers['X-CSRF-Token'] = csrf;
@@ -62,21 +122,16 @@ async function postRefresh(maxAttempts = 3): Promise<Response> {
 
     if (lastResponse.ok) return lastResponse;
 
-    if (lastResponse.status === 401 || lastResponse.status === 403) {
-      return lastResponse;
-    }
-
-    if (lastResponse.status === 429) {
+    if (
+      lastResponse.status === 401 ||
+      lastResponse.status === 403 ||
+      lastResponse.status === 429
+    ) {
       return lastResponse;
     }
 
     const body = await lastResponse.clone().json().catch(() => ({}));
-    const message =
-      typeof body?.message === 'string'
-        ? body.message
-        : typeof body?.error === 'string'
-          ? body.error
-          : '';
+    const message = extractErrorMessage(body);
 
     if (!message.includes('TOKEN_REFRESH_IN_PROGRESS') || attempt === maxAttempts - 1) {
       return lastResponse;
@@ -90,18 +145,19 @@ async function postRefresh(maxAttempts = 3): Promise<Response> {
 
 export async function refreshOnce(): Promise<RefreshResult> {
   const state = getGlobalRefreshState();
-  if (state.refreshFailed) return { success: false };
+  if (state.refreshFailed || isRefreshBlocked()) return { success: false };
   if (state.refreshPromise) return state.refreshPromise;
 
   state.refreshPromise = (async (): Promise<RefreshResult> => {
     try {
       const response = await postRefresh();
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (
+          response.status === 401 ||
+          response.status === 403 ||
+          response.status === 429
+        ) {
           handleAuthFailure();
-        } else if (response.status === 429) {
-          // Stop refresh storms when throttled — user must wait or re-login.
-          state.refreshFailed = true;
         }
         return { success: false };
       }
@@ -109,6 +165,11 @@ export async function refreshOnce(): Promise<RefreshResult> {
       if (data.success && data.csrf_token) {
         setCsrfToken(data.csrf_token);
         state.refreshFailed = false;
+        try {
+          localStorage.removeItem(REFRESH_BLOCK_KEY);
+        } catch {
+          /* ignore */
+        }
         return { success: true, csrfToken: data.csrf_token };
       }
       handleAuthFailure();
@@ -206,6 +267,19 @@ async function apiClient<T>(
   });
 
   if (response.status === 401) {
+    const errorBody = await response.clone().json().catch(() => null);
+    const sessionMessage = extractErrorMessage(errorBody);
+
+    if (isTerminalSessionMessage(sessionMessage)) {
+      handleAuthFailure();
+      throw new ApiException(401, sessionMessage || 'Session has been revoked');
+    }
+
+    if (isRefreshBlocked() || getGlobalRefreshState().refreshFailed) {
+      handleAuthFailure();
+      throw new ApiException(401, sessionMessage || 'Unauthorized');
+    }
+
     const refreshed = await refreshOnce();
     if (refreshed.success) {
       const retryCsrf = getCsrfToken();
@@ -220,10 +294,7 @@ async function apiClient<T>(
         ...rest,
       });
     } else {
-      const refreshState = getGlobalRefreshState();
-      if (refreshState.refreshFailed) {
-        handleAuthFailure();
-      }
+      throw new ApiException(401, sessionMessage || 'Unauthorized');
     }
   }
 

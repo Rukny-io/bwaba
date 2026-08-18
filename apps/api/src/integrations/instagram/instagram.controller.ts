@@ -21,6 +21,7 @@ import { InstagramInboxService } from './instagram-inbox.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { InstagramWebhookGuard } from './guards/instagram-webhook.guard';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @Controller('integrations/instagram')
 export class InstagramController {
@@ -433,6 +434,7 @@ export class InstagramController {
    * GET /api/v1/integrations/instagram/inbox/conversations
    */
   @Get('inbox/conversations')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async listInboxConversations(
     @Req() req: any,
@@ -452,6 +454,7 @@ export class InstagramController {
    * GET /api/v1/integrations/instagram/inbox/conversations/:conversationId/messages
    */
   @Get('inbox/conversations/:conversationId/messages')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   async getInboxMessages(
     @Req() req: any,
@@ -468,6 +471,7 @@ export class InstagramController {
    * POST /api/v1/integrations/instagram/inbox/conversations/:conversationId/messages
    */
   @Post('inbox/conversations/:conversationId/messages')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async sendInboxMessage(
@@ -487,6 +491,7 @@ export class InstagramController {
    * POST /api/v1/integrations/instagram/inbox/conversations/:conversationId/read
    */
   @Post('inbox/conversations/:conversationId/read')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async markInboxConversationRead(
@@ -507,6 +512,7 @@ export class InstagramController {
    */
   @Get('webhook')
   @Public()
+  @SkipThrottle()
   async webhookVerify(
     @Query('hub.mode') mode: string,
     @Query('hub.verify_token') verifyToken: string,
@@ -537,6 +543,7 @@ export class InstagramController {
    */
   @Post('webhook')
   @Public()
+  @SkipThrottle()
   @UseGuards(InstagramWebhookGuard)
   @HttpCode(HttpStatus.OK)
   async webhookEvent(@Body() body: any) {

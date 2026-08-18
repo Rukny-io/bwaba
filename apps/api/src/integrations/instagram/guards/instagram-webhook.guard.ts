@@ -15,8 +15,8 @@ import * as crypto from 'crypto';
  * Meta signs every webhook POST with `X-Hub-Signature-256: sha256=<hex>` where
  * the HMAC is computed over the *raw* request body using the app secret.
  *
- * Instagram (ruknyio) and WhatsApp use different Meta apps — never prefer
- * WHATSAPP_APP_SECRET before Instagram secrets or valid POSTs are rejected.
+ * Meta signs webhooks with the **App Secret** from App Dashboard → Settings → Basic
+ * (ruknyio app 1575734613921683). This may differ from Instagram Login app secret.
  */
 @Injectable()
 export class InstagramWebhookGuard implements CanActivate {
@@ -27,6 +27,7 @@ export class InstagramWebhookGuard implements CanActivate {
   private getWebhookAppSecrets(): string[] {
     const candidates = [
       this.config.get<string>('INSTAGRAM_WEBHOOK_APP_SECRET'),
+      this.config.get<string>('META_APP_SECRET'),
       this.config.get<string>('INSTAGRAM_APP_SECRET'),
       this.config.get<string>('FACEBOOK_APP_SECRET'),
       this.config.get<string>('WHATSAPP_APP_SECRET'),

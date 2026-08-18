@@ -66,6 +66,10 @@ async function postRefresh(maxAttempts = 3): Promise<Response> {
       return lastResponse;
     }
 
+    if (lastResponse.status === 429) {
+      return lastResponse;
+    }
+
     const body = await lastResponse.clone().json().catch(() => ({}));
     const message =
       typeof body?.message === 'string'
@@ -93,8 +97,11 @@ export async function refreshOnce(): Promise<RefreshResult> {
     try {
       const response = await postRefresh();
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
           handleAuthFailure();
+        } else if (response.status === 429) {
+          // Stop refresh storms when throttled — user must wait or re-login.
+          state.refreshFailed = true;
         }
         return { success: false };
       }
@@ -212,6 +219,11 @@ async function apiClient<T>(
         body: body !== undefined ? JSON.stringify(body) : undefined,
         ...rest,
       });
+    } else {
+      const refreshState = getGlobalRefreshState();
+      if (refreshState.refreshFailed) {
+        handleAuthFailure();
+      }
     }
   }
 

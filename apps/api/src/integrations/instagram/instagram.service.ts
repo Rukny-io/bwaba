@@ -1206,13 +1206,23 @@ export class InstagramService {
     }
 
     for (const entry of payload.entry || []) {
-      // Sometimes igUserId is entry.id, sometimes it's inside the change (for pages).
-      // For instagram object, entry.id is the Instagram Business Account ID.
-      const igUserId = entry.id; 
-      
+      // For instagram object, entry.id is the Instagram professional account ID.
+      const igUserId = entry.id;
+
+      // Business Login format: field/value directly on entry (not only entry.changes).
+      if (
+        entry.field === 'comments' ||
+        entry.field === 'live_comments'
+      ) {
+        console.log(
+          `[Instagram Webhook] Processing entry field: ${entry.field}`,
+        );
+        await this.processCommentWebhook(igUserId, entry.value);
+      }
+
       for (const change of entry.changes || []) {
         console.log(`[Instagram Webhook] Processing change for field: ${change.field}`);
-        
+
         if (change.field === 'comments' || change.field === 'live_comments') {
           await this.processCommentWebhook(igUserId, change.value);
         }

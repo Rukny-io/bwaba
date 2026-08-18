@@ -66,17 +66,21 @@ export class InstagramInboxService {
     const message = event.message;
     if (!message || message.is_deleted) return;
 
-    const conn = await this.connectionModel.findFirst({
-      where: { igUserId },
-    });
-    if (!conn) {
-      this.logger.warn(`No Instagram connection for igUserId=${igUserId}`);
-      return;
-    }
-
     const senderId = String(event.sender?.id ?? '');
     const recipientId = String(event.recipient?.id ?? '');
     if (!senderId || !recipientId) return;
+
+    const conn = await this.findConnectionForMessagingEvent(
+      igUserId,
+      senderId,
+      recipientId,
+    );
+    if (!conn) {
+      this.logger.warn(
+        `No Instagram connection for entry.id=${igUserId} sender=${senderId} recipient=${recipientId}`,
+      );
+      return;
+    }
 
     const isEcho = Boolean(message.is_echo);
     const participantIgId = isEcho ? recipientId : senderId;
@@ -142,6 +146,27 @@ export class InstagramInboxService {
     if (direction === 'INBOUND') {
       void this.tryEnrichParticipantProfile(conn, conversation.id, participantIgId);
     }
+  }
+
+  private async findConnectionForMessagingEvent(
+    entryIgUserId: string,
+    senderId: string,
+    recipientId: string,
+  ) {
+    const candidateIds = [
+      entryIgUserId,
+      senderId,
+      recipientId,
+    ].filter(Boolean);
+
+    for (const igUserId of candidateIds) {
+      const conn = await this.connectionModel.findFirst({
+        where: { igUserId },
+      });
+      if (conn) return conn;
+    }
+
+    return null;
   }
 
   private extractMessageContent(message: any): {

@@ -15,13 +15,8 @@ import * as crypto from 'crypto';
  * Meta signs every webhook POST with `X-Hub-Signature-256: sha256=<hex>` where
  * the HMAC is computed over the *raw* request body using the app secret.
  *
- * This guard:
- *  - reads the raw body captured in main.ts (`req.rawBody`),
- *  - recomputes the HMAC-SHA256 with the Meta app secret (`INSTAGRAM_WEBHOOK_APP_SECRET`,
- *    then `WHATSAPP_APP_SECRET`, then `INSTAGRAM_APP_SECRET`),
- *  - compares in constant time (`crypto.timingSafeEqual`),
- *  - FAILS CLOSED (403) when the secret is unset, the header is missing, the
- *    raw body is unavailable, or the signature does not match.
+ * Instagram (ruknyio) and WhatsApp use different Meta apps — never prefer
+ * WHATSAPP_APP_SECRET before Instagram secrets or valid POSTs are rejected.
  */
 @Injectable()
 export class InstagramWebhookGuard implements CanActivate {
@@ -29,11 +24,28 @@ export class InstagramWebhookGuard implements CanActivate {
 
   constructor(private readonly config: ConfigService) {}
 
-  private getWebhookAppSecret(): string | undefined {
+  private getWebhookAppSecrets(): string[] {
+    const candidates = [
+      this.config.get<string>('INSTAGRAM_WEBHOOK_APP_SECRET'),
+      this.config.get<string>('INSTAGRAM_APP_SECRET'),
+      this.config.get<string>('FACEBOOK_APP_SECRET'),
+      this.config.get<string>('WHATSAPP_APP_SECRET'),
+    ];
+
+    return [...new Set(candidates.filter((secret): secret is string => Boolean(secret)))];
+  }
+
+  private signatureMatches(rawBody: Buffer, signature: string, secret: string): boolean {
+    const expected =
+      'sha256=' +
+      crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    const providedBuf = Buffer.from(signature, 'utf8');
+    const expectedBuf = Buffer.from(expected, 'utf8');
+
     return (
-      this.config.get<string>('INSTAGRAM_WEBHOOK_APP_SECRET') ??
-      this.config.get<string>('WHATSAPP_APP_SECRET') ??
-      this.config.get<string>('INSTAGRAM_APP_SECRET')
+      providedBuf.length === expectedBuf.length &&
+      crypto.timingSafeEqual(providedBuf, expectedBuf)
     );
   }
 
@@ -42,11 +54,10 @@ export class InstagramWebhookGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Request & { rawBody?: Buffer }>();
 
-    const appSecret = this.getWebhookAppSecret();
-    if (!appSecret) {
-      // No secret configured → cannot verify → reject (fail closed).
+    const secrets = this.getWebhookAppSecrets();
+    if (secrets.length === 0) {
       this.logger.error(
-        'No Meta app secret for Instagram webhooks — set INSTAGRAM_WEBHOOK_APP_SECRET or WHATSAPP_APP_SECRET (fail closed).',
+        'No Meta app secret for Instagram webhooks — set INSTAGRAM_WEBHOOK_APP_SECRET or INSTAGRAM_APP_SECRET (fail closed).',
       );
       throw new ForbiddenException('Webhook signature verification unavailable');
     }
@@ -66,18 +77,14 @@ export class InstagramWebhookGuard implements CanActivate {
       throw new ForbiddenException('Cannot verify webhook signature');
     }
 
-    const expected =
-      'sha256=' +
-      crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+    const matched = secrets.some((secret) =>
+      this.signatureMatches(rawBody, signature, secret),
+    );
 
-    const providedBuf = Buffer.from(signature, 'utf8');
-    const expectedBuf = Buffer.from(expected, 'utf8');
-
-    if (
-      providedBuf.length !== expectedBuf.length ||
-      !crypto.timingSafeEqual(providedBuf, expectedBuf)
-    ) {
-      this.logger.warn('Instagram webhook rejected: signature mismatch');
+    if (!matched) {
+      this.logger.warn(
+        `Instagram webhook rejected: signature mismatch (tried ${secrets.length} configured secret(s))`,
+      );
       throw new ForbiddenException('Invalid webhook signature');
     }
 

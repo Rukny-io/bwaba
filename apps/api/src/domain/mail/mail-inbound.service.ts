@@ -361,10 +361,25 @@ export class MailInboundService {
     if (!bucket) {
       throw new BadRequestException('MAIL_S3_BUCKET_RAW is not configured.');
     }
-    const keys = await this.listRawKeys(
-      bucket,
-      Math.min(Math.max(limit, 1), 100),
-    );
+    let keys: string[];
+    try {
+      keys = await this.listRawKeys(
+        bucket,
+        Math.min(Math.max(limit, 1), 100),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.includes('not authorized') ||
+        message.includes('AccessDenied') ||
+        message.includes('ListBucket')
+      ) {
+        throw new BadRequestException(
+          `AWS IAM missing s3:ListBucket/GetObject on ${bucket}. Update user rukny-platform policy.`,
+        );
+      }
+      throw error;
+    }
     return this.importRawKeys(
       keys.filter((k) => k !== 'AMAZON_SES_SETUP_NOTIFICATION'),
     );

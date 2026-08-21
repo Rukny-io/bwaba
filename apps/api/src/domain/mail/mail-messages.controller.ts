@@ -19,6 +19,7 @@ import {
   SendMailMessageDto,
   UpdateMailMessageDto,
 } from './dto/mail-message.dto';
+import { MailInboundService } from './mail-inbound.service';
 import { MailMessagesService } from './mail-messages.service';
 
 @ApiTags('Mail - Messages')
@@ -26,7 +27,10 @@ import { MailMessagesService } from './mail-messages.service';
 @UseGuards(JwtAuthGuard)
 @Controller({ path: 'mail/apps/:appId/messages', version: '1' })
 export class MailMessagesController {
-  constructor(private readonly messages: MailMessagesService) {}
+  constructor(
+    private readonly messages: MailMessagesService,
+    private readonly inbound: MailInboundService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List messages for a Mail app' })
@@ -66,6 +70,20 @@ export class MailMessagesController {
     @Query('mailboxId') mailboxId?: string,
   ) {
     return this.messages.counts(user.id, appId, mailboxId);
+  }
+
+  @Post('import-inbound')
+  @ApiOperation({
+    summary: 'Import recent raw SES emails from S3 into the inbox',
+  })
+  @ApiQuery({ name: 'take', required: false })
+  async importInbound(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Query('take') take?: string,
+  ) {
+    await this.messages.assertOwnedApp(user.id, appId);
+    return this.inbound.importRecentRaw(take ? Number(take) : 30);
   }
 
   @Post('send')

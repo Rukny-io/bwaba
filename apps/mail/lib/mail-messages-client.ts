@@ -189,3 +189,28 @@ export async function updateMailMessage(
   }
   return data;
 }
+
+export async function importInboundMailMessages(
+  appId: string,
+  take = 30,
+): Promise<{
+  bucket: string;
+  results: Array<{ key: string; handled: string }>;
+}> {
+  const params = new URLSearchParams({ take: String(take) });
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/import-inbound?${params.toString()}`,
+    { method: "POST" },
+  );
+  const data = await readJson<{
+    bucket?: string;
+    results?: Array<{ key: string; handled: string }>;
+  }>(response);
+  if (!response.ok) {
+    throw new Error(errorMessage(data, "Could not import inbound mail."));
+  }
+  return {
+    bucket: data.bucket ?? "",
+    results: data.results ?? [],
+  };
+}

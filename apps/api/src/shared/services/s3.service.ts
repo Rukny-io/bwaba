@@ -595,6 +595,28 @@ export class S3Service implements OnModuleInit {
   }
 
   /**
+   * List object keys in a bucket (newest-ish by default listing order).
+   */
+  async listObjectKeys(
+    bucket: string,
+    opts: { maxKeys?: number; prefix?: string } = {},
+  ): Promise<string[]> {
+    this.validateBucket(bucket);
+    const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+    const maxKeys = Math.min(Math.max(opts.maxKeys ?? 50, 1), 200);
+    const response = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        MaxKeys: maxKeys,
+        Prefix: opts.prefix,
+      }),
+    );
+    return (response.Contents ?? [])
+      .map((obj) => obj.Key)
+      .filter((key): key is string => Boolean(key));
+  }
+
+  /**
    * Delete all files for a user (when deleting account)
    * Deletes all files under: users/{userId}/
    */

@@ -26,6 +26,7 @@ import {
 import {
   getMailMessage,
   getMailMessageCounts,
+  importInboundMailMessages,
   listMailMessages,
   sendMailMessage,
   updateMailMessage,
@@ -142,6 +143,7 @@ export function MailInboxShell() {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [mobileShowReader, setMobileShowReader] = useState(false);
@@ -369,6 +371,40 @@ export function MailInboxShell() {
       showToast("Inbox updated");
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function handleImportInbound() {
+    if (!appId || !selectedMailboxId) return;
+    setImporting(true);
+    try {
+      const result = await importInboundMailMessages(appId, 40);
+      const stored = result.results.filter(
+        (r) => r.handled === "stored_inbound",
+      ).length;
+      const unmatched = result.results.filter(
+        (r) => r.handled === "no_matching_mailbox",
+      ).length;
+      const failed = result.results.filter(
+        (r) => r.handled === "error" || r.handled === "s3_not_found",
+      ).length;
+      await Promise.all([
+        loadMessages(appId, selectedMailboxId, folder, { quiet: true }),
+        loadCounts(appId, selectedMailboxId),
+      ]);
+      if (stored > 0) {
+        showToast(`Imported ${stored} message${stored === 1 ? "" : "s"}`);
+      } else if (unmatched > 0) {
+        showToast("Found mail in S3 but no matching mailbox");
+      } else if (failed > 0) {
+        showToast("Could not read S3 mail — check IAM GetObject permission");
+      } else {
+        showToast("No new inbound mail to import");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -614,6 +650,8 @@ export function MailInboxShell() {
               loading={messagesLoading}
               refreshing={refreshing}
               onRefresh={handleRefresh}
+              onImportInbound={handleImportInbound}
+              importing={importing}
               error={error}
             />
           </div>

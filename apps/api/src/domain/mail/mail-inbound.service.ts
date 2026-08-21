@@ -1,9 +1,15 @@
 import {
   Injectable,
   Logger,
+  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  GetObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import {
   MailMailboxStatus,
   MailMessageDirection,
@@ -13,7 +19,6 @@ import {
 import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
-import { S3Service } from '../../shared/services/s3.service';
 
 type SesReceiptAction = {
   type?: string;
@@ -44,10 +49,10 @@ type SesReceivedNotification = {
 @Injectable()
 export class MailInboundService {
   private readonly logger = new Logger(MailInboundService.name);
+  private mailS3: S3Client | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly s3: S3Service,
     private readonly config: ConfigService,
   ) {}
 
@@ -65,6 +70,61 @@ export class MailInboundService {
       this.config.get<string>('WORKSPACE_S3_BUCKET_RAW')?.trim() ||
       ''
     );
+  }
+
+  private mailRegion() {
+    return (
+      this.config.get<string>('MAIL_AWS_REGION')?.trim() ||
+      this.config.get<string>('AWS_REGION')?.trim() ||
+      'eu-north-1'
+    );
+  }
+
+  private getMailS3(): S3Client {
+    if (this.mailS3) return this.mailS3;
+    const accessKeyId = this.config.get<string>('AWS_ACCESS_KEY_ID')?.trim();
+    const secretAccessKey = this.config
+      .get<string>('AWS_SECRET_ACCESS_KEY')
+      ?.trim();
+    this.mailS3 = new S3Client({
+      region: this.mailRegion(),
+      ...(accessKeyId && secretAccessKey
+        ? { credentials: { accessKeyId, secretAccessKey } }
+        : {}),
+    });
+    return this.mailS3;
+  }
+
+  private async getRawObject(bucket: string, key: string): Promise<Buffer | null> {
+    try {
+      const response = await this.getMailS3().send(
+        new GetObjectCommand({ Bucket: bucket, Key: key }),
+      );
+      if (!response.Body) return null;
+      const stream = response.Body as NodeJS.ReadableStream;
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks);
+    } catch (error) {
+      const name = error instanceof Error ? error.name : 'Error';
+      if (name === 'NoSuchKey') return null;
+      this.logger.warn(`Mail S3 get failed s3://${bucket}/${key}: ${name}`);
+      throw error;
+    }
+  }
+
+  private async listRawKeys(bucket: string, maxKeys: number): Promise<string[]> {
+    const response = await this.getMailS3().send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        MaxKeys: maxKeys,
+      }),
+    );
+    return (response.Contents ?? [])
+      .map((obj) => obj.Key)
+      .filter((key): key is string => Boolean(key));
   }
 
   private addressesFrom(
@@ -192,7 +252,7 @@ export class MailInboundService {
       return { ok: true, handled: 'missing_s3_location' };
     }
 
-    const raw = await this.s3.getObject(bucket, key);
+    const raw = await this.getRawObject(bucket, key);
     if (!raw) {
       this.logger.warn(`Raw mail object not found s3://${bucket}/${key}`);
       return { ok: true, handled: 's3_not_found' };
@@ -213,6 +273,63 @@ export class MailInboundService {
       ok: true,
       handled: stored ? 'stored_inbound' : 'no_matching_mailbox',
     };
+  }
+
+  /**
+   * Import raw MIME objects already stored by SES (recovery / catch-up).
+   */
+  async importRawKeys(keys: string[]) {
+    const bucket = this.rawBucket();
+    if (!bucket) {
+      throw new BadRequestException('MAIL_S3_BUCKET_RAW is not configured.');
+    }
+
+    const results: Array<{ key: string; handled: string }> = [];
+    for (const key of keys) {
+      const trimmed = key.trim();
+      if (!trimmed || trimmed === 'AMAZON_SES_SETUP_NOTIFICATION') {
+        continue;
+      }
+      try {
+        const raw = await this.getRawObject(bucket, trimmed);
+        if (!raw) {
+          results.push({ key: trimmed, handled: 's3_not_found' });
+          continue;
+        }
+        const parsed = await simpleParser(raw);
+        const stored = await this.storeInboundMessage({
+          parsed,
+          rawS3Key: trimmed,
+          sesMessageId: null,
+          destinations: this.addressesFrom(parsed.to),
+        });
+        results.push({
+          key: trimmed,
+          handled: stored ? 'stored_inbound' : 'no_matching_mailbox',
+        });
+      } catch (error) {
+        this.logger.error(
+          `Import failed for s3://${bucket}/${trimmed}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        results.push({ key: trimmed, handled: 'error' });
+      }
+    }
+    return { bucket, results };
+  }
+
+  async importRecentRaw(limit = 30) {
+    const bucket = this.rawBucket();
+    if (!bucket) {
+      throw new BadRequestException('MAIL_S3_BUCKET_RAW is not configured.');
+    }
+    const keys = await this.listRawKeys(
+      bucket,
+      Math.min(Math.max(limit, 1), 100),
+    );
+    return this.importRawKeys(
+      keys.filter((k) => k !== 'AMAZON_SES_SETUP_NOTIFICATION'),
+    );
   }
 
   private async storeInboundMessage(input: {

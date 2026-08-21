@@ -123,6 +123,14 @@ export class MailMessagesService {
     return { app, mailbox };
   }
 
+  async assertOwnedApp(userId: string, appId: string) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { appId, userId, status: MailAppStatus.ACTIVE },
+    });
+    if (!app) throw new NotFoundException('Mail app not found.');
+    return app;
+  }
+
   async list(
     userId: string,
     appId: string,

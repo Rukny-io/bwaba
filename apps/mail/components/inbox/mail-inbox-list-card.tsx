@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
 import type { MailMessageFolderApi } from "@/lib/mail-messages-client";
@@ -29,7 +29,9 @@ type Props = {
   search: string;
   loading?: boolean;
   refreshing?: boolean;
+  importing?: boolean;
   onRefresh?: () => void;
+  onImportInbound?: () => void;
   error?: string;
 };
 
@@ -94,7 +96,9 @@ export function MailInboxListCard({
   search,
   loading = false,
   refreshing = false,
+  importing = false,
   onRefresh,
+  onImportInbound,
   error = "",
 }: Props) {
   const unreadCount = messages.filter((m) => m.unread).length;
@@ -115,6 +119,20 @@ export function MailInboxListCard({
             </p>
           </div>
           <div className="flex items-center gap-1">
+            {onImportInbound ? (
+              <button
+                type="button"
+                onClick={onImportInbound}
+                disabled={importing || !mailboxAddress}
+                className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] disabled:opacity-40"
+                aria-label="Import inbound from S3"
+                title="Import inbound from S3"
+              >
+                <Download
+                  className={cn("size-3.5", importing && "animate-pulse")}
+                />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onRefresh}

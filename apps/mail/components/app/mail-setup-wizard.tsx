@@ -14,7 +14,11 @@ import {
 import { ArrowLeft, ArrowRight, Check, Globe, ShieldCheck } from "lucide-react";
 import { DnsRecordsTable } from "@/components/app/dns-records-table";
 import { applyDnsCheckResults, normalizeDomain, validateDomain, type MailDomainSetup } from "@/lib/mail-domain";
-import { readMailDomainSetup, writeMailDomainSetup } from "@/lib/mail-domain-storage";
+import {
+  readMailDomainSetup,
+  setMailWizardDismissed,
+  writeMailDomainSetup,
+} from "@/lib/mail-domain-storage";
 import { createDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
 
 type Step = 1 | 2 | 3;
@@ -118,6 +122,7 @@ export function MailSetupWizard() {
       const next = applyDnsCheckResults(setup, result.results, result.verified, result.waiting);
       persist(next);
       if (result.verified) {
+        setMailWizardDismissed(false);
         router.refresh();
         router.replace("/app");
         return;
@@ -137,6 +142,18 @@ export function MailSetupWizard() {
     } finally {
       setVerifying(false);
     }
+  }
+
+  function handleSkipToDashboard() {
+    if (!setup) return;
+    // Keep domain + DNS records; verification can finish later from Domain settings.
+    persist({
+      ...setup,
+      status: setup.status === "ACTIVE" ? "ACTIVE" : "PENDING_DNS",
+    });
+    setMailWizardDismissed(true);
+    router.refresh();
+    window.location.assign("/app");
   }
 
   return (
@@ -263,26 +280,44 @@ export function MailSetupWizard() {
             ) : null}
 
             {step === 3 ? (
-              <Button
-                type="button"
-                className="h-11 flex-1 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
-                isDisabled={verifying}
-                onPress={() => void handleVerify()}
-              >
-                {verifying ? (
-                  <span className="flex items-center gap-2">
-                    <Spinner size="sm" />
-                    Checking DNS
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <ShieldCheck className="size-4" />
-                    Check DNS
-                  </span>
-                )}
-              </Button>
+              <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 rounded-xl font-medium"
+                  isDisabled={verifying || !setup}
+                  onPress={handleSkipToDashboard}
+                >
+                  Skip
+                </Button>
+                <Button
+                  type="button"
+                  className="h-11 flex-1 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
+                  isDisabled={verifying}
+                  onPress={() => void handleVerify()}
+                >
+                  {verifying ? (
+                    <span className="flex items-center gap-2">
+                      <Spinner size="sm" />
+                      Checking DNS
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck className="size-4" />
+                      Check DNS
+                    </span>
+                  )}
+                </Button>
+              </div>
             ) : null}
           </div>
+
+          {step === 3 ? (
+            <p className="text-center text-[11px] leading-relaxed text-[var(--muted-foreground)]">
+              Verification can take minutes to hours depending on your DNS provider. You can skip
+              and verify later from Domain settings.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

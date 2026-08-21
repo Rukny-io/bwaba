@@ -103,6 +103,15 @@ function clearAuthCookies(response: NextResponse) {
   return response;
 }
 
+function clearMailAppCookie(response: NextResponse) {
+  response.cookies.set(MAIL_APP_ID_COOKIE, "", {
+    path: "/",
+    maxAge: 0,
+    sameSite: "lax",
+  });
+  return response;
+}
+
 function redirectToApps(request: NextRequest, reason?: string) {
   const url = new URL(DEFAULT_APP_PATH, resolveMailRequestOrigin(request));
   if (reason) url.searchParams.set("error", reason);
@@ -128,6 +137,7 @@ async function loadUserSlotMap(
       headers: {
         cookie: request.headers.get("cookie") || "",
         "user-agent": request.headers.get("user-agent") || "",
+        "accept-language": request.headers.get("accept-language") || "",
       },
       cache: "no-store",
     });
@@ -163,20 +173,25 @@ export async function proxy(request: NextRequest) {
   if (matchesPrefix(pathname, PUBLIC_PREFIXES)) {
     const auth = await checkMailAuth(request);
     const isAuthPage = matchesPrefix(pathname, AUTH_PAGES);
+    const session = request.nextUrl.searchParams.get("session");
 
-    if (isAuthPage && auth.isAuthenticated && auth.user && pathname !== "/callback") {
-      const session = request.nextUrl.searchParams.get("session");
-      const nextParam = request.nextUrl.searchParams.get("next");
-      const target = resolveClientNext(nextParam, DEFAULT_APP_PATH);
-
-      if (session === "expired" || session === "invalid") {
-        if (auth.tokenExpired) {
-          return clearAuthCookies(NextResponse.next());
+    if (isAuthPage && pathname !== "/callback") {
+      // Recoverable session (access expired but refresh present): keep cookies.
+      if (auth.isAuthenticated && auth.user) {
+        if (session === "expired" || session === "invalid" || session === "logout") {
+          return NextResponse.next();
         }
-        return NextResponse.next();
+        const nextParam = request.nextUrl.searchParams.get("next");
+        const target = resolveClientNext(nextParam, DEFAULT_APP_PATH);
+        return redirectPath(request, target);
       }
 
-      return redirectPath(request, target);
+      // Dead session on login — clear leftovers immediately.
+      if (session === "expired" || session === "invalid" || session === "logout") {
+        const response = clearAuthCookies(NextResponse.next());
+        clearMailAppCookie(response);
+        return response;
+      }
     }
 
     return NextResponse.next();
@@ -194,7 +209,13 @@ export async function proxy(request: NextRequest) {
     if (auth.tokenExpired) {
       loginUrl.searchParams.set("session", "expired");
     }
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    // Fully dead session (no refresh): clear leftover cookies immediately.
+    if (auth.tokenExpired) {
+      clearAuthCookies(response);
+      clearMailAppCookie(response);
+    }
+    return response;
   }
 
   const cookieAppId = request.cookies.get(MAIL_APP_ID_COOKIE)?.value ?? "";
@@ -203,6 +224,9 @@ export async function proxy(request: NextRequest) {
   const isBillingArea = matchesPrefix(pathname, BILLING_PREFIXES);
   const ready = request.cookies.get(MAIL_READY_COOKIE)?.value === "1";
   const slotFromPath = parseMailSlot(pathname);
+  const isSlottedProduct = SLOTTED_PRODUCT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 
   // Resolve /u{N}/… → rewrite to product path + bind cookie to owned appId.
   // Never fall through to Next for /uN/* — there is no filesystem route (would 404).
@@ -214,7 +238,9 @@ export async function proxy(request: NextRequest) {
     const map = await loadUserSlotMap(request, auth.user.id);
     const appId = map ? resolveAppIdFromSlot(map, slotFromPath) : null;
     if (!appId) {
-      return redirectToApps(request, "not_found");
+      const response = redirectToApps(request, "not_found");
+      clearMailAppCookie(response);
+      return response;
     }
 
     const innerPath = stripMailSlotPrefix(pathname);
@@ -243,31 +269,31 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Legacy unscoped product URLs → redirect into the user's slot.
-  if (
-    auth.user &&
-    hasAppCookie &&
-    SLOTTED_PRODUCT_PREFIXES.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    )
-  ) {
-    const map = await loadUserSlotMap(request, auth.user.id);
-    const slot = map?.apps[cookieAppId];
-    if (typeof slot === "number") {
-      return redirectPath(request, mailSlotPath(slot, pathname));
+  // Bare /app (and other product paths) are internal rewrites only — never a
+  // public URL. Always send the user to /u{N}/… or the /apps picker.
+  if (isSlottedProduct) {
+    if (auth.user && hasAppCookie) {
+      const map = await loadUserSlotMap(request, auth.user.id);
+      const slot = map?.apps[cookieAppId];
+      if (typeof slot === "number") {
+        return redirectPath(request, mailSlotPath(slot, pathname));
+      }
+      const response = redirectToApps(request, "app_required");
+      clearMailAppCookie(response);
+      return response;
     }
+    return redirectToApps(request, "app_required");
   }
 
   if (pathname === "/") {
-    if (!hasAppCookie) return redirectToApps(request);
-    if (auth.user) {
+    if (auth.user && hasAppCookie) {
       const map = await loadUserSlotMap(request, auth.user.id);
       const slot = map?.apps[cookieAppId];
       if (typeof slot === "number") {
         return redirectPath(request, mailSlotPath(slot, "/app"));
       }
     }
-    return redirectPath(request, "/app");
+    return redirectToApps(request);
   }
 
   if (!hasAppCookie && !isAppsArea && !isBillingArea) {
@@ -282,7 +308,9 @@ export async function proxy(request: NextRequest) {
         return redirectPath(request, mailSlotPath(slot, "/app"));
       }
     }
-    return redirectPath(request, "/app");
+    const response = redirectToApps(request, "app_required");
+    clearMailAppCookie(response);
+    return response;
   }
 
   const response = NextResponse.next();

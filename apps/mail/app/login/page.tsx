@@ -3,17 +3,16 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@heroui/react";
+import { AuthLoadingCard } from "@/components/auth/auth-status-card";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { fetchCurrentUser } from "@/lib/api/auth";
 import {
-  buildMailCallbackUrl,
   DEFAULT_APP_PATH,
   getAccountsLoginUrl,
-  getFacebookOAuthUrl,
   getGoogleOAuthUrl,
   resolveClientNext,
 } from "@/lib/auth-redirect";
 import { clearOAuthHash, readOAuthCallbackParams } from "@/lib/oauth-callback";
+import { resetAuthClientState } from "@/lib/api-client";
 
 function GoogleIcon() {
   return (
@@ -38,14 +37,6 @@ function GoogleIcon() {
   );
 }
 
-function FacebookIcon() {
-  return (
-    <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-    </svg>
-  );
-}
-
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,105 +47,63 @@ function LoginContent() {
   const sessionFlag = searchParams.get("session");
 
   useEffect(() => {
+    resetAuthClientState();
+  }, []);
+
+  useEffect(() => {
     const { code, next: hashNext } = readOAuthCallbackParams(searchParams);
-    if (code) {
-      clearOAuthHash();
-      const callback = new URL("/callback", window.location.origin);
-      callback.searchParams.set("code", code);
-      if (hashNext) callback.searchParams.set("next", hashNext);
-      else if (searchParams.get("next")) {
-        callback.searchParams.set("next", searchParams.get("next")!);
-      }
-      router.replace(callback.pathname + callback.search);
-      return;
+    if (!code) return;
+
+    const callback = new URL("/callback", window.location.origin);
+    callback.searchParams.set("code", code);
+    if (hashNext) callback.searchParams.set("next", hashNext);
+    else if (searchParams.get("next")) {
+      callback.searchParams.set("next", searchParams.get("next")!);
     }
-
-    let cancelled = false;
-    (async () => {
-      const user = await fetchCurrentUser();
-      if (!cancelled && user) {
-        window.location.replace(nextPath);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router, searchParams, nextPath]);
-
-  const sessionMessage =
-    sessionFlag === "expired"
-      ? "Your session expired. Sign in again."
-      : sessionFlag === "invalid"
-        ? "Could not verify your session. Sign in again."
-        : sessionFlag === "logout"
-          ? "Signed out successfully."
-          : null;
+    clearOAuthHash();
+    router.replace(callback.pathname + callback.search);
+  }, [router, searchParams]);
 
   return (
-    <AuthShell className="max-w-[460px]">
-      <section className="w-full bg-[var(--background)]/95 px-5 py-6 sm:px-7 sm:py-8">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-[var(--secondary)] px-4 py-2 text-xs font-medium text-[var(--secondary-foreground)]">
-            Welcome
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Sign in</h1>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--muted-foreground)]">
-            Create a Mail app, connect your domain, and start sending.
+    <AuthShell>
+      <div className="w-full rounded-[1.75rem] bg-[var(--surface)] p-6 sm:p-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+            Welcome to Mail
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {sessionFlag === "expired"
+              ? "Your session expired. Sign in to continue."
+              : sessionFlag === "invalid"
+                ? "Could not verify your session. Sign in again."
+                : sessionFlag === "logout"
+                  ? "Signed out successfully."
+                  : "Create a Mail app, connect your domain, and start sending."}
           </p>
         </div>
 
-        <div className="w-full space-y-4">
-          {sessionMessage ? (
-            <p
-              className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_35%,transparent)] bg-[color-mix(in_srgb,var(--warning)_12%,var(--background))] px-3 py-2 text-center text-xs text-[var(--warning-foreground)]"
-              role="status"
-            >
-              {sessionMessage}
-            </p>
-          ) : null}
-
+        <div className="mt-8 space-y-3">
           <Button
-            className="h-11 w-full rounded-full bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-95"
+            className="h-11 w-full rounded-full bg-[var(--foreground)] text-[var(--background)]"
             onPress={() => {
-              localStorage.setItem("auth_next", buildMailCallbackUrl(nextPath));
-              window.location.href = getAccountsLoginUrl(nextPath);
-            }}
-          >
-            Continue with Rukny
-          </Button>
-
-          <div className="my-5 flex w-full items-center gap-3">
-            <span className="h-px flex-1 bg-[var(--border)]" />
-            <span className="shrink-0 text-xs text-[var(--muted-foreground)]">or</span>
-            <span className="h-px flex-1 bg-[var(--border)]" />
-          </div>
-
-          <Button
-            variant="outline"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium transition-all hover:bg-[var(--surface-secondary)]"
-            onPress={() => {
-              localStorage.setItem("auth_next", buildMailCallbackUrl(nextPath));
               window.location.href = getGoogleOAuthUrl(nextPath);
             }}
           >
             <GoogleIcon />
-            Continue with Google
+            <span className="ms-2">Continue with Google</span>
           </Button>
 
           <Button
-            variant="outline"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium transition-all hover:bg-[var(--surface-secondary)]"
+            variant="secondary"
+            className="h-11 w-full rounded-full"
             onPress={() => {
-              localStorage.setItem("auth_next", buildMailCallbackUrl(nextPath));
-              window.location.href = getFacebookOAuthUrl(nextPath);
+              window.location.href = getAccountsLoginUrl(nextPath);
             }}
           >
-            <FacebookIcon />
-            Continue with Facebook
+            Sign in with Rukny
           </Button>
         </div>
-      </section>
+      </div>
     </AuthShell>
   );
 }
@@ -164,10 +113,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <AuthShell>
-          <div className="w-full py-12 text-center">
-            <div className="mx-auto size-10 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
-            <p className="mt-4 text-sm text-[var(--muted-foreground)]">Loading…</p>
-          </div>
+          <AuthLoadingCard title="Loading" description="Just a moment…" />
         </AuthShell>
       }
     >

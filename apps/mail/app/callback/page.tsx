@@ -4,7 +4,9 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveAccountsUrl } from "@rukny/auth/client/env-urls";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthErrorCard, AuthLoadingCard } from "@/components/auth/auth-status-card";
 import { exchangeCodeOnce, fetchCurrentUser } from "@/lib/api/auth";
+import { resetAuthClientState } from "@/lib/api-client";
 import { DEFAULT_APP_PATH, resolveClientNext } from "@/lib/auth-redirect";
 import {
   clearOAuthParamsFromUrl,
@@ -23,6 +25,7 @@ function CallbackContent() {
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
+    resetAuthClientState();
 
     const fromUrl = readOAuthCallbackParams(searchParams);
     if (fromUrl.code) {
@@ -102,33 +105,24 @@ function CallbackContent() {
   if (error) {
     return (
       <AuthShell>
-        <section className="w-full px-5 py-6 text-center">
-          <h1 className="mb-4 text-xl font-bold">Sign-in failed</h1>
-          <p className="mb-4 text-sm text-[var(--danger)]">{error}</p>
-          <button
-            type="button"
-            className="text-sm font-medium underline"
-            onClick={() => {
-              clearStashedOAuthParams();
-              router.replace("/login");
-            }}
-          >
-            Back to sign in
-          </button>
-        </section>
+        <AuthErrorCard
+          title="Sign-in failed"
+          description={error}
+          onAction={() => {
+            clearStashedOAuthParams();
+            router.replace("/login");
+          }}
+        />
       </AuthShell>
     );
   }
 
   return (
     <AuthShell>
-      <section className="w-full px-5 py-6 text-center">
-        <h1 className="mb-4 text-xl font-bold">Signing you in</h1>
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="size-10 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
-          <p className="text-sm text-[var(--muted-foreground)]">Verifying your Rukny account…</p>
-        </div>
-      </section>
+      <AuthLoadingCard
+        title="Signing you in"
+        description="Verifying your Rukny account…"
+      />
     </AuthShell>
   );
 }
@@ -138,9 +132,7 @@ export default function CallbackPage() {
     <Suspense
       fallback={
         <AuthShell>
-          <section className="w-full px-5 py-6 text-center">
-            <p className="text-sm text-[var(--muted-foreground)]">Loading…</p>
-          </section>
+          <AuthLoadingCard title="Loading" description="Just a moment…" />
         </AuthShell>
       }
     >

@@ -13,7 +13,7 @@ export function MailHeader() {
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-start bg-transparent px-3 pt-3 pb-2 sm:flex sm:px-5 sm:pt-4">
       <nav
         aria-label="Main"
-        className="pointer-events-auto inline-flex w-auto max-w-full items-center gap-0.5 rounded-full border border-white/25 bg-white/14 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_10px_36px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:gap-1 sm:p-1.5"
+        className="pointer-events-auto inline-flex w-auto max-w-full items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--foreground)_10%,var(--border))] bg-[var(--surface)]/90 p-1 shadow-[0_10px_36px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:gap-1 sm:p-1.5"
       >
         {header.map((item) => {
           const active = isNavItemActive(pathname, item.href, item.exact);

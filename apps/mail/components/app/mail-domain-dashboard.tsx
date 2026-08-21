@@ -115,7 +115,7 @@ export function MailDomainDashboard({ setup: initial }: { setup: MailDomainSetup
           >
             Mailboxes
           </Link>
-          <div className="inline-flex items-center gap-0.5 rounded-full border border-white/25 bg-white/14 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_10px_36px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-1.5">
+          <div className="inline-flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--foreground)_10%,var(--border))] bg-[var(--surface)]/90 p-1 shadow-[0_10px_36px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-1.5">
             <Pill onPress={() => void disconnect()}>Remove domain</Pill>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MailMailboxesOverview } from "@/components/app/mail-mailboxes-overview";
 import { MailSetupWizard } from "@/components/app/mail-setup-wizard";
 import {
+  isMailWizardDismissed,
   readMailDomainSetup,
   writeMailDomainSetup,
 } from "@/lib/mail-domain-storage";
@@ -16,6 +17,7 @@ export function MailAppPage() {
   const router = useRouter();
   const [setup, setSetup] = useState<MailDomainSetup | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [wizardDismissed, setWizardDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +28,8 @@ export function MailAppPage() {
         window.location.assign("/apps?error=app_required");
         return;
       }
+
+      setWizardDismissed(isMailWizardDismissed(appId));
 
       // Server (Redis-backed) is source of truth — localStorage only mirrors after success.
       try {
@@ -61,7 +65,8 @@ export function MailAppPage() {
     return <div className="min-h-dvh bg-[var(--background)]" />;
   }
 
-  if (setup?.status === "ACTIVE") {
+  // ACTIVE = fully verified. Dismissed = user skipped DNS wait (propagation can take hours).
+  if (setup && (setup.status === "ACTIVE" || wizardDismissed)) {
     return <MailMailboxesOverview setup={setup} />;
   }
 

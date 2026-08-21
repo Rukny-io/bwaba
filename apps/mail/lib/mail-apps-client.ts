@@ -1,3 +1,5 @@
+import { sessionFetch } from "@/lib/api-client";
+
 export type MailAppStatus = "ACTIVE" | "ARCHIVED";
 export type MailAppType = "BUSINESS" | "CONSUMER";
 
@@ -29,7 +31,7 @@ function errorMessage(data: { message?: string | string[] }, fallback: string) {
 }
 
 export async function listMailApps(): Promise<MailApp[]> {
-  const response = await fetch("/api/v1/mail/apps", { credentials: "include" });
+  const response = await sessionFetch("/api/v1/mail/apps");
   const data = await readJson<{ apps?: MailApp[] }>(response);
   if (!response.ok) throw new Error(errorMessage(data, "Could not load Mail apps."));
   return data.apps ?? [];
@@ -38,9 +40,8 @@ export async function listMailApps(): Promise<MailApp[]> {
 export async function sendMailAppOtp(input: {
   phoneNumber: string;
 }): Promise<{ sent: boolean; expiresInSeconds: number }> {
-  const response = await fetch("/api/v1/mail/apps/otp/send", {
+  const response = await sessionFetch("/api/v1/mail/apps/otp/send", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -58,9 +59,8 @@ export async function verifyMailAppOtp(input: {
   phoneNumber: string;
   code: string;
 }): Promise<{ verified: boolean }> {
-  const response = await fetch("/api/v1/mail/apps/otp/verify", {
+  const response = await sessionFetch("/api/v1/mail/apps/otp/verify", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -78,9 +78,8 @@ export async function createMailApp(input: {
   otpCode: string;
   description?: string;
 }): Promise<MailApp> {
-  const response = await fetch("/api/v1/mail/apps", {
+  const response = await sessionFetch("/api/v1/mail/apps", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -92,9 +91,7 @@ export async function createMailApp(input: {
 }
 
 export async function getMailApp(appId: string): Promise<MailApp> {
-  const response = await fetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
-    credentials: "include",
-  });
+  const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`);
   const data = await readJson<{ app?: MailApp }>(response);
   if (!response.ok || !data.app) {
     throw new Error(errorMessage(data, "Mail app not found."));
@@ -106,9 +103,8 @@ export async function updateMailApp(
   appId: string,
   input: { name?: string; description?: string; primaryDomain?: string | null },
 ): Promise<MailApp> {
-  const response = await fetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
+  const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
     method: "PATCH",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });

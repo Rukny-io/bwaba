@@ -1,3 +1,5 @@
+import { sessionFetch } from "@/lib/api-client";
+
 export type MailMailboxView = {
   id: string;
   appId: string;
@@ -26,9 +28,8 @@ function errorMessage(data: { message?: string | string[]; error?: string }, fal
 }
 
 export async function listMailMailboxes(appId: string): Promise<MailMailboxView[]> {
-  const response = await fetch(
+  const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
-    { credentials: "include" },
   );
   const data = await readJson<{ mailboxes?: MailMailboxView[] }>(response);
   if (!response.ok) {
@@ -41,11 +42,10 @@ export async function createMailMailbox(
   appId: string,
   input: { localPart: string; password: string; enable2fa?: boolean; displayName?: string },
 ): Promise<MailMailboxView> {
-  const response = await fetch(
+  const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
     {
       method: "POST",
-      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     },
@@ -62,11 +62,10 @@ export async function changeMailMailboxPassword(
   mailboxId: string,
   password: string,
 ): Promise<MailMailboxView> {
-  const response = await fetch(
+  const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/password`,
     {
       method: "POST",
-      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     },
@@ -83,11 +82,10 @@ export async function setMailMailbox2fa(
   mailboxId: string,
   enabled: boolean,
 ): Promise<MailMailboxView> {
-  const response = await fetch(
+  const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/2fa`,
     {
       method: "POST",
-      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled }),
     },
@@ -100,9 +98,9 @@ export async function setMailMailbox2fa(
 }
 
 export async function deleteMailMailbox(appId: string, mailboxId: string): Promise<void> {
-  const response = await fetch(
+  const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}`,
-    { method: "DELETE", credentials: "include" },
+    { method: "DELETE" },
   );
   const data = await readJson(response);
   if (!response.ok) {

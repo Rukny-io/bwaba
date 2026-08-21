@@ -10,6 +10,11 @@ export const MAIL_SES = {
 } as const;
 
 export const MAIL_READY_COOKIE = "rukny-mail-ready";
+/**
+ * Shows Mail chrome (sidebar + top nav) after domain setup is started/skipped,
+ * even before DNS verification sets MAIL_READY_COOKIE.
+ */
+export const MAIL_SHELL_COOKIE = "rukny-mail-shell";
 /** Survives logout — last bound domain for the account (restore hint). */
 export const MAIL_BOUND_DOMAIN_COOKIE = "rukny_mail_bound_domain";
 /** @deprecated cleared on logout; was developer-app scoped */

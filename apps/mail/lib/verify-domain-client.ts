@@ -1,3 +1,4 @@
+import { sessionFetch } from "@/lib/api-client";
 import type { DnsRecordStatus, MailDomainSetup } from "@/lib/mail-domain";
 
 export type DomainVerifyResponse = {
@@ -26,10 +27,9 @@ async function readApiJson<T extends { error?: string }>(
 }
 
 export async function createDomainRequest(domain: string): Promise<MailDomainSetup> {
-  const response = await fetch("/api/mail/domains", {
+  const response = await sessionFetch("/api/mail/domains", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    credentials: "include",
     body: JSON.stringify({ domain }),
   });
   const data = await readApiJson<{ setup?: MailDomainSetup; error?: string }>(response);
@@ -46,8 +46,7 @@ export async function restoreDomainSetupRequest(): Promise<MailDomainSetup | nul
   if (restoreInflight) return restoreInflight;
 
   restoreInflight = (async () => {
-    const response = await fetch("/api/mail/setup", {
-      credentials: "include",
+    const response = await sessionFetch("/api/mail/setup", {
       headers: { Accept: "application/json" },
     });
     const data = await readApiJson<{ setup?: MailDomainSetup | null; error?: string }>(
@@ -68,9 +67,8 @@ export async function restoreDomainSetupRequest(): Promise<MailDomainSetup | nul
 }
 
 export async function deleteDomainRequest(domain: string) {
-  const response = await fetch(`/api/mail/domains?domain=${encodeURIComponent(domain)}`, {
+  const response = await sessionFetch(`/api/mail/domains?domain=${encodeURIComponent(domain)}`, {
     method: "DELETE",
-    credentials: "include",
     headers: { Accept: "application/json" },
   });
   const data = await readApiJson<{ error?: string }>(response);
@@ -83,10 +81,9 @@ export async function verifyDomainRequest(
   domain: string,
   tokens: string[] = [],
 ): Promise<DomainVerifyResponse> {
-  const response = await fetch("/api/mail/verify-domain", {
+  const response = await sessionFetch("/api/mail/verify-domain", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    credentials: "include",
     body: JSON.stringify({ domain, tokens }),
   });
   const data = await readApiJson<DomainVerifyResponse & { error?: string }>(response);

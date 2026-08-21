@@ -1,3 +1,4 @@
+import { sessionFetch } from "@/lib/api-client";
 import {
   isMailPlanId,
   toApiMailPlan,
@@ -48,7 +49,7 @@ function errorMessage(data: { message?: string | string[]; error?: string }, fal
 }
 
 export async function fetchMailPlans() {
-  const response = await fetch("/api/v1/mail/plans", { credentials: "include" });
+  const response = await sessionFetch("/api/v1/mail/plans");
   const data = await readJson<PlansResponse>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load plans."));
@@ -69,7 +70,7 @@ export async function fetchMailPlans() {
 }
 
 export async function fetchMailSubscription(): Promise<MailSubscriptionView | null> {
-  const response = await fetch("/api/v1/mail/subscription", { credentials: "include" });
+  const response = await sessionFetch("/api/v1/mail/subscription");
   const data = await readJson<{ subscription?: MailSubscriptionView | null }>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load subscription."));
@@ -89,9 +90,8 @@ export async function activateMailSubscription(
   planId: MailPlanId,
   mailboxCount: number,
 ): Promise<MailSubscriptionView> {
-  const response = await fetch("/api/v1/mail/subscription", {
+  const response = await sessionFetch("/api/v1/mail/subscription", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       plan: toApiMailPlan(planId),
@@ -114,9 +114,8 @@ export async function activateMailSubscription(
 }
 
 export async function cancelMailSubscription(): Promise<void> {
-  const response = await fetch("/api/v1/mail/subscription", {
+  const response = await sessionFetch("/api/v1/mail/subscription", {
     method: "DELETE",
-    credentials: "include",
   });
   const data = await readJson(response);
   if (!response.ok) {

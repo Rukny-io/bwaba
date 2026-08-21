@@ -4,6 +4,7 @@ import {
   MAIL_DOMAIN_MAP_COOKIE,
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
+  MAIL_SHELL_COOKIE,
 } from "@/lib/ses";
 import { clearMailAppIdCookie } from "@/lib/mail-app-id";
 
@@ -15,6 +16,7 @@ function clearMailSessionCookies() {
   clearMailAppIdCookie();
   clearCookie(MAIL_READY_COOKIE);
   clearCookie(MAIL_READY_APP_COOKIE);
+  clearCookie(MAIL_SHELL_COOKIE);
   clearCookie(MAIL_DOMAIN_MAP_COOKIE);
   clearCookie(MAIL_BOUND_DOMAIN_COOKIE);
   clearCsrfToken();

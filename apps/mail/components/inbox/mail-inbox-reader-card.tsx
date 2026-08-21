@@ -97,6 +97,16 @@ export function MailInboxReaderCard({
     );
   }
 
+  const isOutbound =
+    Boolean(mailboxAddress) &&
+    message.fromEmail.toLowerCase() === mailboxAddress!.toLowerCase();
+  const replyToAddress = isOutbound
+    ? message.to || message.fromEmail
+    : message.fromEmail;
+  const replyToLabel = isOutbound
+    ? message.to || message.from
+    : message.from;
+
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
       <div className="flex shrink-0 items-center gap-3 px-2 py-2.5 sm:px-3">
@@ -110,7 +120,7 @@ export function MailInboxReaderCard({
         </button>
 
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-sm font-semibold text-[var(--secondary-foreground)]">
-          {initials(message.from)}
+          {initials(isOutbound ? replyToLabel : message.from)}
         </span>
 
         <div className="min-w-0 flex-1">
@@ -124,7 +134,7 @@ export function MailInboxReaderCard({
           </div>
           <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
             {message.fromEmail}
-            {mailboxAddress ? ` · to ${mailboxAddress}` : ""}
+            {message.to ? ` · to ${message.to}` : ""}
           </p>
         </div>
 
@@ -164,11 +174,11 @@ export function MailInboxReaderCard({
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <span className="text-xs text-[var(--muted-foreground)]">To</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0f1f3] py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] dark:bg-[var(--surface-secondary)]">
-                <span className="flex size-5 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
-                  {initials(message.from)}
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#f0f1f3] py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] dark:bg-[var(--surface-secondary)]">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
+                  {initials(replyToLabel)}
                 </span>
-                {message.fromEmail}
+                <span className="truncate">{replyToAddress}</span>
               </span>
             </div>
             <button

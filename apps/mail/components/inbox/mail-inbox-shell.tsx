@@ -63,7 +63,8 @@ function toRow(msg: MailMessageView): InboxMessageRow {
     id: msg.id,
     from: displayName(msg),
     fromEmail: msg.fromAddress,
-    to: msg.to[0] ?? "",
+    to: msg.to.join(", "),
+    toList: msg.to,
     subject: msg.subject || "(no subject)",
     preview: msg.preview || body.slice(0, 140),
     body,
@@ -105,6 +106,17 @@ function mapCounts(c: MailFolderCounts): Record<InboxFolderId, number> {
     archive: c.archive,
     trash: c.trash,
   };
+}
+
+function replyTarget(message: InboxMessageRow, mailboxAddress: string | null) {
+  const mine = mailboxAddress?.trim().toLowerCase();
+  if (mine && message.fromEmail.toLowerCase() === mine) {
+    const targets =
+      message.toList?.filter((e) => e.toLowerCase() !== mine) ??
+      parseEmails(message.to).filter((e) => e !== mine);
+    return targets[0] || message.to || message.fromEmail;
+  }
+  return message.fromEmail;
 }
 
 export function MailInboxShell() {
@@ -298,7 +310,7 @@ export function MailInboxShell() {
       ? message.subject
       : `Re: ${message.subject}`;
     openCompose({
-      to: message.fromEmail,
+      to: replyTarget(message, selected?.address ?? null),
       subject,
       body: "",
       replyToMessageId: message.id,
@@ -311,7 +323,7 @@ export function MailInboxShell() {
       subject: message.subject.startsWith("Fwd:")
         ? message.subject
         : `Fwd: ${message.subject}`,
-      body: `\n\n---------- Forwarded message ----------\nFrom: ${message.from} <${message.fromEmail}>\nSubject: ${message.subject}\n\n${message.body}`,
+      body: `\n\n---------- Forwarded message ----------\nFrom: ${message.from} <${message.fromEmail}>\nTo: ${message.to}\nSubject: ${message.subject}\n\n${message.body}`,
     });
   }
 
@@ -422,6 +434,11 @@ export function MailInboxShell() {
 
   async function onSendReply(message: InboxMessageRow) {
     if (!appId || !selectedMailboxId || !replyBody.trim()) return;
+    const to = replyTarget(message, selected?.address ?? null);
+    if (!to) {
+      showToast("No reply recipient.");
+      return;
+    }
     setReplySending(true);
     try {
       const subject = message.subject.startsWith("Re:")
@@ -429,7 +446,7 @@ export function MailInboxShell() {
         : `Re: ${message.subject}`;
       await sendMailMessage(appId, {
         mailboxId: selectedMailboxId,
-        to: [message.fromEmail],
+        to: parseEmails(to),
         subject,
         bodyText: replyBody.trim(),
         replyToMessageId: message.id,

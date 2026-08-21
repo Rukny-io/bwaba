@@ -10,6 +10,7 @@ export type InboxMessageRow = {
   from: string;
   fromEmail: string;
   to: string;
+  toList?: string[];
   subject: string;
   preview: string;
   body: string;
@@ -31,6 +32,21 @@ type Props = {
   onRefresh?: () => void;
   error?: string;
 };
+
+function rowPrimaryLabel(
+  message: InboxMessageRow,
+  folder: InboxFolderId,
+  mailboxAddress: string | null,
+) {
+  const mine = mailboxAddress?.toLowerCase();
+  const isOutbound =
+    folder === "sent" ||
+    (Boolean(mine) && message.fromEmail.toLowerCase() === mine);
+  if (isOutbound) {
+    return message.to || "To (unknown)";
+  }
+  return message.from;
+}
 
 function formatWhen(iso: string) {
   try {
@@ -143,6 +159,11 @@ export function MailInboxListCard({
           <ul className="space-y-0.5">
             {messages.map((message) => {
               const active = selectedId === message.id;
+              const primary = rowPrimaryLabel(
+                message,
+                folder,
+                mailboxAddress,
+              );
               return (
                 <li key={message.id}>
                   <button
@@ -163,7 +184,7 @@ export function MailInboxListCard({
                           : "bg-[var(--surface-secondary)] text-[var(--foreground)]",
                       )}
                     >
-                      {initials(message.from)}
+                      {initials(primary)}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
@@ -175,7 +196,7 @@ export function MailInboxListCard({
                               : "font-medium text-[var(--foreground)]",
                           )}
                         >
-                          {message.from}
+                          {primary}
                         </span>
                         <span className="shrink-0 text-[10px] text-[var(--muted-foreground)]">
                           {formatWhen(message.receivedAt)}

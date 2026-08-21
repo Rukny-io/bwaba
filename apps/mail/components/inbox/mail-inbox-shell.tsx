@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Info, Search, Settings } from "lucide-react";
+import { PenSquare, Search, Settings, X } from "lucide-react";
+import { cn } from "@heroui/react";
 import {
   MailInboxSidebar,
   type InboxFolderId,
@@ -155,6 +156,8 @@ export function MailInboxShell() {
   const [sendError, setSendError] = useState("");
   const [replyBody, setReplyBody] = useState("");
   const [replySending, setReplySending] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selected = mailboxes.find((m) => m.id === selectedMailboxId) ?? null;
 
@@ -349,17 +352,6 @@ export function MailInboxShell() {
     loadCounts,
     showToast,
   ]);
-
-  const selectMailbox = useCallback((id: string) => {
-    if (id === "manage" || id === "none") return;
-    setSelectedMailboxId(id);
-    setSelectedMessageId(null);
-    setMobileShowReader(false);
-    setReplyBody("");
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(MAILBOX_STORAGE_KEY, id);
-    }
-  }, []);
 
   const visibleMessages = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -579,6 +571,14 @@ export function MailInboxShell() {
     if (next) void onSelectMessage(next.id);
   }
 
+  useEffect(() => {
+    if (!searchOpen) return;
+    const id = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [searchOpen]);
+
   if (loading) {
     return (
       <div className="flex h-dvh items-center justify-center bg-white text-sm text-[var(--muted-foreground)] dark:bg-[var(--background)]">
@@ -603,22 +603,31 @@ export function MailInboxShell() {
 
   return (
     <div className="relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
-      <header className="flex shrink-0 items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5">
-        <Link href={appHref} className="flex min-w-0 items-center gap-2.5">
+      <header
+        className={cn(
+          "relative z-20 flex shrink-0 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5",
+          mobileShowReader && selectedMessage ? "max-md:hidden" : "",
+        )}
+      >
+        <Link
+          href={appHref}
+          className="relative z-10 flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-80"
+        >
           <Image
             src="/rukny-logo.svg"
             alt=""
-            width={30}
-            height={30}
+            width={28}
+            height={28}
             className="shrink-0 dark:brightness-0 dark:invert"
             priority
           />
-          <span className="hidden truncate text-sm font-semibold tracking-tight text-[var(--foreground)] sm:inline">
+          <span className="hidden truncate text-[15px] font-semibold tracking-tight text-[var(--foreground)] md:inline">
             Rukny Mail
           </span>
         </Link>
 
-        <label className="mx-auto flex h-11 w-full max-w-xl items-center gap-2 rounded-full bg-[#f0f1f3] px-4 dark:bg-[var(--surface-secondary)]">
+        {/* Desktop / large tablet search */}
+        <label className="mx-auto hidden h-11 w-full max-w-xl items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-4 transition-[box-shadow] focus-within:shadow-[0_0_0_3px_var(--brand-blue-soft)] md:flex">
           <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
           <input
             value={search}
@@ -628,32 +637,80 @@ export function MailInboxShell() {
           />
         </label>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <HeaderIcon label="Info">
-            <Info className="size-4" />
-          </HeaderIcon>
+        {/* Mobile actions: search expands over this cluster */}
+        <div className="relative ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5 md:ml-0 md:flex-none md:gap-1">
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 right-0 z-20 flex items-center md:hidden",
+              "origin-right transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              searchOpen
+                ? "pointer-events-auto translate-x-0 scale-100 opacity-100"
+                : "pointer-events-none translate-x-3 scale-95 opacity-0",
+            )}
+          >
+            <label className="flex h-10 w-full items-center gap-2 rounded-full bg-[var(--surface-secondary)] pl-3.5 pr-1.5 shadow-sm">
+              <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+              <input
+                ref={searchInputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search in mail"
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+              />
+              <button
+                type="button"
+                aria-label="Close search"
+                onClick={() => setSearchOpen(false)}
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-white hover:text-[var(--foreground)] dark:hover:bg-[var(--surface)]"
+              >
+                <X className="size-4" />
+              </button>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Search"
+            onClick={() => setSearchOpen(true)}
+            className={cn(
+              "inline-flex size-10 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] md:hidden",
+              searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
+            )}
+          >
+            <Search className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onCompose}
+            className={cn(
+              "inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] transition-[opacity,transform] active:scale-[0.98] lg:hidden",
+              searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
+            )}
+          >
+            <PenSquare className="size-3.5" aria-hidden />
+            Compose
+          </button>
+
           <Link
             href={settingsHref}
             aria-label="Settings"
-            className="inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+            className={cn(
+              "inline-flex size-10 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] sm:size-9",
+              searchOpen ? "max-md:pointer-events-none max-md:opacity-0" : "opacity-100",
+            )}
           >
             <Settings className="size-4" />
           </Link>
-          <HeaderIcon label="Notifications">
-            <Bell className="size-4" />
-          </HeaderIcon>
-          <span className="ml-1 flex size-9 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-xs font-semibold text-[var(--secondary-foreground)]">
+          <span className="ml-0.5 hidden size-9 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-xs font-semibold text-[var(--secondary-foreground)] sm:flex">
             RM
           </span>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-3 overflow-hidden px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
-        <div className="hidden h-full shrink-0 sm:flex">
+      <div className="flex min-h-0 flex-1 gap-0 overflow-hidden px-0 pb-0 md:gap-3 md:px-3 md:pb-3 lg:gap-4 lg:px-4 lg:pb-4">
+        <div className="hidden h-full shrink-0 lg:flex">
           <MailInboxSidebar
-            mailboxes={mailboxes}
-            selectedMailboxId={selectedMailboxId}
-            onSelectMailbox={selectMailbox}
             folder={folder}
             onFolderChange={(id) => {
               setFolder(id);
@@ -666,16 +723,18 @@ export function MailInboxShell() {
           />
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden">
-          <div className="flex shrink-0 items-center gap-2 sm:hidden">
-            <button
-              type="button"
-              onClick={onCompose}
-              className="inline-flex h-10 shrink-0 items-center rounded-full bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div
+            className={cn(
+              "shrink-0 px-3 pb-2.5 pt-0 lg:hidden",
+              mobileShowReader && selectedMessage ? "max-md:hidden" : "",
+            )}
+          >
+            <div
+              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              role="tablist"
+              aria-label="Mail folders"
             >
-              Compose
-            </button>
-            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5">
               {(
                 [
                   "inbox",
@@ -686,99 +745,127 @@ export function MailInboxShell() {
                   "archive",
                   "trash",
                 ] as InboxFolderId[]
-              ).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setFolder(id);
-                    setSelectedMessageId(null);
-                    setMobileShowReader(false);
-                  }}
-                  className={
-                    folder === id
-                      ? "shrink-0 rounded-full bg-[var(--brand-blue-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--secondary-foreground)]"
-                      : "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)]"
-                  }
-                >
-                  {id === "starred" ? "Favorites" : id.charAt(0).toUpperCase() + id.slice(1)}
-                  {(counts[id] ?? 0) > 0 ? ` ${counts[id]}` : ""}
-                </button>
-              ))}
+              ).map((id) => {
+                const active = folder === id;
+                const count = counts[id] ?? 0;
+                const label =
+                  id === "starred"
+                    ? "Favorites"
+                    : id.charAt(0).toUpperCase() + id.slice(1);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setFolder(id);
+                      setSelectedMessageId(null);
+                      setMobileShowReader(false);
+                    }}
+                    className={cn(
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors duration-150",
+                      active
+                        ? "bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.12)]"
+                        : "bg-[var(--surface-secondary)]/70 text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]",
+                    )}
+                  >
+                    {label}
+                    {count > 0 ? (
+                      <span
+                        className={cn(
+                          "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums",
+                          active
+                            ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                            : "bg-white text-[var(--muted-foreground)] dark:bg-[var(--surface)]",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden rounded-[1.75rem] bg-[#f0f1f3] p-2 sm:rounded-[2rem] sm:p-2.5 dark:bg-[var(--surface-secondary)]">
-          <div
-            className={
-              mobileShowReader && selectedMessage
-                ? "hidden h-full min-w-0 shrink-0 sm:flex"
-                : "flex h-full min-w-0 flex-1 lg:flex-none"
-            }
-          >
-            <MailInboxListCard
-              folder={folder}
-              mailboxAddress={selected?.address ?? null}
-              messages={visibleMessages}
-              selectedId={selectedMessageId}
-              onSelect={onSelectMessage}
-              search={search}
-              loading={messagesLoading}
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              onImportInbound={handleImportInbound}
-              importing={importing}
-              error={error}
-            />
-          </div>
+          <div className="mx-3 mb-3 flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden rounded-[1.5rem] bg-[#eef0f3] p-2 sm:rounded-[1.75rem] md:mx-0 md:mb-0 lg:gap-2.5 lg:rounded-[2rem] lg:p-2.5 dark:bg-[var(--surface-secondary)]">
+            <div
+              className={cn(
+                "h-full min-w-0",
+                mobileShowReader && selectedMessage
+                  ? "hidden md:flex md:w-[280px] md:shrink-0 lg:w-[340px] xl:w-[380px]"
+                  : "flex w-full flex-1 md:min-w-[280px] lg:w-[340px] lg:flex-none xl:w-[380px]",
+              )}
+            >
+              <MailInboxListCard
+                folder={folder}
+                mailboxAddress={selected?.address ?? null}
+                messages={visibleMessages}
+                selectedId={selectedMessageId}
+                onSelect={onSelectMessage}
+                search={search}
+                loading={messagesLoading}
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                onImportInbound={handleImportInbound}
+                importing={importing}
+                error={error}
+              />
+            </div>
 
-          <div
-            className={
-              mobileShowReader && selectedMessage
-                ? "flex h-full min-w-0 flex-1"
-                : "hidden h-full min-w-0 flex-1 lg:flex"
-            }
-          >
-            <MailInboxReaderCard
-              message={selectedMessage}
-              mailboxAddress={selected?.address ?? null}
-              index={selectedIndex}
-              total={visibleMessages.length}
-              replyBody={replyBody}
-              onReplyBodyChange={setReplyBody}
-              replySending={replySending}
-              onSendReply={() =>
-                selectedMessage ? void onSendReply(selectedMessage) : undefined
-              }
-              onBack={() => {
-                setMobileShowReader(false);
-                setSelectedMessageId(null);
-                setReplyBody("");
-              }}
-              onCompose={onCompose}
-              onReply={() =>
-                selectedMessage ? onReply(selectedMessage) : undefined
-              }
-              onForward={() =>
-                selectedMessage ? onForward(selectedMessage) : undefined
-              }
-              onToggleStar={() =>
-                selectedMessage ? void onToggleStar(selectedMessage) : undefined
-              }
-              onTrash={() =>
-                selectedMessage ? void onTrash(selectedMessage) : undefined
-              }
-              onPrev={
-                selectedIndex > 0 ? () => selectByOffset(-1) : undefined
-              }
-              onNext={
-                selectedIndex >= 0 &&
-                selectedIndex < visibleMessages.length - 1
-                  ? () => selectByOffset(1)
-                  : undefined
-              }
-            />
-          </div>
+            <div
+              className={cn(
+                "h-full min-w-0 flex-1",
+                mobileShowReader && selectedMessage
+                  ? "flex"
+                  : "hidden lg:flex",
+              )}
+            >
+              <MailInboxReaderCard
+                message={selectedMessage}
+                mailboxAddress={selected?.address ?? null}
+                index={selectedIndex}
+                total={visibleMessages.length}
+                replyBody={replyBody}
+                onReplyBodyChange={setReplyBody}
+                replySending={replySending}
+                onSendReply={() =>
+                  selectedMessage
+                    ? void onSendReply(selectedMessage)
+                    : undefined
+                }
+                onBack={() => {
+                  setMobileShowReader(false);
+                  setSelectedMessageId(null);
+                  setReplyBody("");
+                }}
+                onCompose={onCompose}
+                onReply={() =>
+                  selectedMessage ? onReply(selectedMessage) : undefined
+                }
+                onForward={() =>
+                  selectedMessage ? onForward(selectedMessage) : undefined
+                }
+                onToggleStar={() =>
+                  selectedMessage
+                    ? void onToggleStar(selectedMessage)
+                    : undefined
+                }
+                onTrash={() =>
+                  selectedMessage ? void onTrash(selectedMessage) : undefined
+                }
+                onPrev={
+                  selectedIndex > 0 ? () => selectByOffset(-1) : undefined
+                }
+                onNext={
+                  selectedIndex >= 0 &&
+                  selectedIndex < visibleMessages.length - 1
+                    ? () => selectByOffset(1)
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -794,7 +881,7 @@ export function MailInboxShell() {
       />
 
       {toast ? (
-        <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[var(--foreground)] px-4 py-2.5 text-xs font-medium text-[var(--background)]">
+        <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 animate-[inbox-toast_280ms_ease-out] rounded-full bg-[var(--foreground)] px-4 py-2.5 text-xs font-medium text-[var(--background)] shadow-lg">
           {toast}
         </div>
       ) : null}
@@ -818,23 +905,5 @@ export function MailInboxShell() {
         </div>
       ) : null}
     </div>
-  );
-}
-
-function HeaderIcon({
-  children,
-  label,
-}: {
-  children: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      className="inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
-    >
-      {children}
-    </button>
   );
 }

@@ -9,6 +9,65 @@ import {
 
 export const DEFAULT_APP_PATH = "/apps";
 
+/** Bind / wildcard hosts that must never appear in browser redirects. */
+function isUnusablePublicHost(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  return !host || host === "0.0.0.0" || host === "::" || host === "::0";
+}
+
+/**
+ * Absolute origin for server-side redirects.
+ *
+ * Next standalone listens on HOSTNAME=0.0.0.0; using `request.url` as the base
+ * then produces Location: https://0.0.0.0:3009/... Prefer forwarded Host /
+ * NEXT_PUBLIC_MAIL_URL instead.
+ */
+export function resolveMailRequestOrigin(request: Request): string {
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+  const forwardedHost = request.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  const hostHeader = request.headers.get("host")?.trim();
+
+  let requestUrl: URL | null = null;
+  try {
+    requestUrl = new URL(request.url);
+  } catch {
+    requestUrl = null;
+  }
+
+  const proto =
+    forwardedProto ||
+    requestUrl?.protocol.replace(/:$/, "") ||
+    "https";
+
+  for (const candidate of [forwardedHost, hostHeader]) {
+    if (!candidate) continue;
+    const hostname = candidate.split(":")[0] || candidate;
+    if (isUnusablePublicHost(hostname)) continue;
+    return `${proto}://${candidate}`;
+  }
+
+  const configured = process.env.NEXT_PUBLIC_MAIL_URL?.trim();
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      /* ignore invalid env */
+    }
+  }
+
+  if (requestUrl && !isUnusablePublicHost(requestUrl.hostname)) {
+    return requestUrl.origin;
+  }
+
+  return LOCAL_SERVICE_URLS.mail;
+}
+
 export function getMailOrigin(): string {
   return resolvePageOrigin(LOCAL_SERVICE_URLS.mail, "NEXT_PUBLIC_MAIL_URL");
 }

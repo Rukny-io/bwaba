@@ -17,18 +17,20 @@ import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
 } from "@/lib/ses";
+import { resolveMailRequestOrigin } from "@/lib/auth-redirect";
 
 type RouteCtx = { params: Promise<{ appId: string }> };
 
 export async function GET(request: Request, ctx: RouteCtx) {
   const { appId } = await ctx.params;
+  const origin = resolveMailRequestOrigin(request);
   if (!isValidMailAppId(appId)) {
-    return NextResponse.redirect(new URL("/apps?error=invalid", request.url));
+    return NextResponse.redirect(new URL("/apps?error=invalid", origin));
   }
 
   const session = await requireMailSession();
   if (!session) {
-    const login = new URL("/login", request.url);
+    const login = new URL("/login", origin);
     login.searchParams.set("next", `/apps/${appId}/open`);
     return NextResponse.redirect(login);
   }
@@ -42,7 +44,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     };
   }>(`/mail/apps/${encodeURIComponent(appId)}`);
   if (!appResult.ok) {
-    const response = NextResponse.redirect(new URL("/apps?error=not_found", request.url));
+    const response = NextResponse.redirect(new URL("/apps?error=not_found", origin));
     response.cookies.set(MAIL_APP_ID_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
@@ -51,7 +53,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
 
   const slotIndex = appResult.data.app.slotIndex;
   if (!Number.isInteger(slotIndex) || slotIndex < 0) {
-    return NextResponse.redirect(new URL("/apps?error=invalid", request.url));
+    return NextResponse.redirect(new URL("/apps?error=invalid", origin));
   }
 
   const jar = await cookies();
@@ -100,7 +102,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
 
   // Always land on mailboxes overview (/app), never inbox.
   const landing = `/u${slotIndex}/app`;
-  const response = NextResponse.redirect(new URL(landing, request.url), 303);
+  const response = NextResponse.redirect(new URL(landing, origin), 303);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("Pragma", "no-cache");
   response.cookies.set(MAIL_APP_ID_COOKIE, appId, {

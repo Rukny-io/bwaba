@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEFAULT_APP_PATH, resolveClientNext, resolveSafeNext } from "@/lib/auth-redirect";
+import {
+  DEFAULT_APP_PATH,
+  resolveClientNext,
+  resolveMailRequestOrigin,
+  resolveSafeNext,
+} from "@/lib/auth-redirect";
 import { isValidMailAppId, MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
 import { checkMailAuth } from "@/lib/middleware-auth";
 import { MAIL_READY_COOKIE } from "@/lib/ses";
@@ -99,9 +104,13 @@ function clearAuthCookies(response: NextResponse) {
 }
 
 function redirectToApps(request: NextRequest, reason?: string) {
-  const url = new URL(DEFAULT_APP_PATH, request.url);
+  const url = new URL(DEFAULT_APP_PATH, resolveMailRequestOrigin(request));
   if (reason) url.searchParams.set("error", reason);
   return NextResponse.redirect(url);
+}
+
+function redirectPath(request: NextRequest, path: string) {
+  return NextResponse.redirect(new URL(path, resolveMailRequestOrigin(request)));
 }
 
 const API_BACKEND_URL =
@@ -167,18 +176,19 @@ export async function proxy(request: NextRequest) {
         return NextResponse.next();
       }
 
-      return NextResponse.redirect(new URL(target, request.url));
+      return redirectPath(request, target);
     }
 
     return NextResponse.next();
   }
 
   const auth = await checkMailAuth(request);
+  const origin = resolveMailRequestOrigin(request);
 
   if (!auth.isAuthenticated) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", origin);
     const nextTarget =
-      resolveSafeNext(pathname + request.nextUrl.search, request.url) ||
+      resolveSafeNext(pathname + request.nextUrl.search, origin) ||
       DEFAULT_APP_PATH;
     loginUrl.searchParams.set("next", nextTarget);
     if (auth.tokenExpired) {
@@ -214,9 +224,7 @@ export async function proxy(request: NextRequest) {
         : innerPath;
 
     if (isDomainGated(rewritePath) && !ready) {
-      return NextResponse.redirect(
-        new URL(mailSlotPath(slotFromPath, "/app"), request.url),
-      );
+      return redirectPath(request, mailSlotPath(slotFromPath, "/app"));
     }
 
     const url = request.nextUrl.clone();
@@ -246,9 +254,7 @@ export async function proxy(request: NextRequest) {
     const map = await loadUserSlotMap(request, auth.user.id);
     const slot = map?.apps[cookieAppId];
     if (typeof slot === "number") {
-      return NextResponse.redirect(
-        new URL(mailSlotPath(slot, pathname), request.url),
-      );
+      return redirectPath(request, mailSlotPath(slot, pathname));
     }
   }
 
@@ -258,12 +264,10 @@ export async function proxy(request: NextRequest) {
       const map = await loadUserSlotMap(request, auth.user.id);
       const slot = map?.apps[cookieAppId];
       if (typeof slot === "number") {
-        return NextResponse.redirect(
-          new URL(mailSlotPath(slot, "/app"), request.url),
-        );
+        return redirectPath(request, mailSlotPath(slot, "/app"));
       }
     }
-    return NextResponse.redirect(new URL("/app", request.url));
+    return redirectPath(request, "/app");
   }
 
   if (!hasAppCookie && !isAppsArea && !isBillingArea) {
@@ -275,10 +279,10 @@ export async function proxy(request: NextRequest) {
       const map = await loadUserSlotMap(request, auth.user.id);
       const slot = map?.apps[cookieAppId];
       if (typeof slot === "number") {
-        return NextResponse.redirect(new URL(mailSlotPath(slot, "/app"), request.url));
+        return redirectPath(request, mailSlotPath(slot, "/app"));
       }
     }
-    return NextResponse.redirect(new URL("/app", request.url));
+    return redirectPath(request, "/app");
   }
 
   const response = NextResponse.next();

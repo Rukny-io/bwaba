@@ -1,0 +1,38 @@
+=== rg ===
+rg: /home/bwaba/Documents/rukny-v1/packages/auth: No such file or directory (os error 2)
+
+===== apps/mail/lib/auth-redirect.ts =====
+nl: /home/bwaba/Documents/rukny-v1/apps/mail/lib/auth-redirect.ts: No such file or directory
+MISSING
+
+===== apps/mail/lib/oauth-callback.ts =====
+nl: /home/bwaba/Documents/rukny-v1/apps/mail/lib/oauth-callback.ts: No such file or directory
+MISSING
+
+===== apps/mail/proxy.ts =====
+nl: /home/bwaba/Documents/rukny-v1/apps/mail/proxy.ts: No such file or directory
+MISSING
+
+===== apps/mail/app/apps/[appId]/open/route.ts =====
+nl: '/home/bwaba/Documents/rukny-v1/apps/mail/app/apps/[appId]/open/route.ts': No such file or directory
+MISSING
+
+===== packages/auth/src/client/env-urls.ts =====
+nl: /home/bwaba/Documents/rukny-v1/packages/auth/src/client/env-urls.ts: No such file or directory
+MISSING
+
+===== packages/auth/src/client/oauth-callback.ts =====
+nl: /home/bwaba/Documents/rukny-v1/packages/auth/src/client/oauth-callback.ts: No such file or directory
+MISSING
+
+===== packages/auth/src/middleware/middleware.ts =====
+nl: /home/bwaba/Documents/rukny-v1/packages/auth/src/middleware/middleware.ts: No such file or directory
+MISSING
+
+===== packages/auth/src/utils/utils.ts =====
+nl: /home/bwaba/Documents/rukny-v1/packages/auth/src/utils/utils.ts: No such file or directory
+MISSING
+
+===== packages/auth/src/config/config.ts =====
+nl: /home/bwaba/Documents/rukny-v1/packages/auth/src/config/config.ts: No such file or directory
+MISSING

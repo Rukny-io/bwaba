@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { RefreshCw, Settings2, Star } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
-
-export type InboxListFilter = "primary" | "promotions" | "socials";
+import type { MailMessageFolderApi } from "@/lib/mail-messages-client";
 
 export type InboxMessageRow = {
   id: string;
@@ -18,20 +16,20 @@ export type InboxMessageRow = {
   receivedAt: string;
   unread: boolean;
   starred: boolean;
-  category?: InboxListFilter;
-  tag?: string;
-  tagTone?: "blue" | "amber" | "rose" | "emerald";
+  folder?: MailMessageFolderApi;
 };
 
 type Props = {
   folder: InboxFolderId;
   mailboxAddress: string | null;
   messages: InboxMessageRow[];
-  filter: InboxListFilter;
-  onFilterChange: (filter: InboxListFilter) => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
   search: string;
+  loading?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  error?: string;
 };
 
 function formatWhen(iso: string) {
@@ -60,45 +58,31 @@ function initials(name: string) {
     .join("");
 }
 
-const FILTERS: { id: InboxListFilter; label: string }[] = [
-  { id: "primary", label: "Primary" },
-  { id: "promotions", label: "Promotions" },
-  { id: "socials", label: "Socials" },
-];
-
-const TAG_TONES: Record<NonNullable<InboxMessageRow["tagTone"]>, string> = {
-  blue: "bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]",
-  amber: "bg-amber-100 text-amber-800",
-  rose: "bg-rose-100 text-rose-800",
-  emerald: "bg-emerald-100 text-emerald-800",
+const FOLDER_LABELS: Record<InboxFolderId, string> = {
+  inbox: "Inbox",
+  starred: "Favorites",
+  scheduled: "Snoozed",
+  sent: "Sent",
+  drafts: "Drafts",
+  spam: "Spam",
+  archive: "Archive",
+  trash: "Trash",
 };
 
 export function MailInboxListCard({
   folder,
   mailboxAddress,
   messages,
-  filter,
-  onFilterChange,
   selectedId,
   onSelect,
   search,
+  loading = false,
+  refreshing = false,
+  onRefresh,
+  error = "",
 }: Props) {
-  const filtered = useMemo(() => {
-    let list = messages.filter((m) => (m.category ?? "primary") === filter);
-    const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (m) =>
-          m.from.toLowerCase().includes(q) ||
-          m.subject.toLowerCase().includes(q) ||
-          m.preview.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [filter, messages, search]);
-
   const unreadCount = messages.filter((m) => m.unread).length;
-  const folderLabel = folder.charAt(0).toUpperCase() + folder.slice(1);
+  const folderLabel = FOLDER_LABELS[folder] ?? folder;
 
   return (
     <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] bg-white lg:w-[320px] xl:w-[360px] dark:bg-[var(--surface)]">
@@ -117,41 +101,25 @@ export function MailInboxListCard({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              onClick={onRefresh}
+              disabled={!onRefresh || refreshing || !mailboxAddress}
+              className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] disabled:opacity-40"
               aria-label="Refresh"
             >
-              <RefreshCw className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-              aria-label="Filters"
-            >
-              <Settings2 className="size-3.5" />
+              <RefreshCw
+                className={cn("size-3.5", refreshing && "animate-spin")}
+              />
             </button>
           </div>
         </div>
-
-        <div className="flex gap-1">
-          {FILTERS.map((item) => {
-            const active = filter === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onFilterChange(item.id)}
-                className={cn(
-                  "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-semibold transition-colors",
-                  active
-                    ? "bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]",
-                )}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+        {search.trim() ? (
+          <p className="text-[11px] text-[var(--muted-foreground)]">
+            Filtered by “{search.trim()}”
+          </p>
+        ) : null}
+        {error ? (
+          <p className="text-xs text-[var(--danger)]">{error}</p>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
@@ -159,13 +127,21 @@ export function MailInboxListCard({
           <p className="px-3 py-10 text-center text-sm text-[var(--muted-foreground)]">
             Select a mailbox to load messages.
           </p>
-        ) : filtered.length === 0 ? (
+        ) : loading ? (
           <p className="px-3 py-10 text-center text-sm text-[var(--muted-foreground)]">
-            No messages in this view.
+            Loading messages…
+          </p>
+        ) : folder === "scheduled" ? (
+          <p className="px-3 py-10 text-center text-sm text-[var(--muted-foreground)]">
+            Snoozed messages are not available yet.
+          </p>
+        ) : messages.length === 0 ? (
+          <p className="px-3 py-10 text-center text-sm text-[var(--muted-foreground)]">
+            No messages in this folder.
           </p>
         ) : (
           <ul className="space-y-0.5">
-            {filtered.map((message) => {
+            {messages.map((message) => {
               const active = selectedId === message.id;
               return (
                 <li key={message.id}>
@@ -211,24 +187,17 @@ export function MailInboxListCard({
                       <span className="mt-0.5 block truncate text-xs text-[var(--muted-foreground)]">
                         {message.preview}
                       </span>
-                      {message.tag ? (
-                        <span
-                          className={cn(
-                            "mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                            TAG_TONES[message.tagTone ?? "blue"],
-                          )}
-                        >
-                          {message.tag}
-                        </span>
-                      ) : null}
                     </span>
-                    <Star
+                    <span
                       className={cn(
-                        "mt-1 size-3.5 shrink-0",
+                        "mt-1 size-2 shrink-0 rounded-full",
                         message.starred
-                          ? "fill-[var(--warning)] text-[var(--warning)]"
-                          : "text-[var(--muted-foreground)]/40",
+                          ? "bg-[var(--warning)]"
+                          : message.unread
+                            ? "bg-[var(--primary)]"
+                            : "bg-transparent",
                       )}
+                      aria-hidden
                     />
                   </button>
                 </li>

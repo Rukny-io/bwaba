@@ -7,11 +7,9 @@ import {
   ChevronDown,
   Clock,
   FileText,
-  Folder,
   Inbox,
   Mail,
   PenSquare,
-  Plus,
   Send,
   Star,
   Trash2,
@@ -43,12 +41,6 @@ const FOLDERS: {
   { id: "spam", label: "Spam", icon: AlertTriangle },
   { id: "archive", label: "Archive", icon: Archive },
   { id: "trash", label: "Trash", icon: Trash2 },
-];
-
-const LABELS = [
-  { id: "work", label: "Work", color: "#f59e0b", count: 2 },
-  { id: "alerts", label: "Alerts", color: "#ef4444", count: 1 },
-  { id: "product", label: "Product", color: "#10b981", count: 0 },
 ];
 
 type Props = {
@@ -156,36 +148,6 @@ export function MailInboxSidebar({
           );
         })}
 
-        <div className="mt-3 px-3">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-              Labels
-            </p>
-            <button
-              type="button"
-              className="inline-flex size-6 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface)]"
-              aria-label="Add label"
-            >
-              <Plus className="size-3.5" />
-            </button>
-          </div>
-          <ul className="space-y-0.5">
-            {LABELS.map((label) => (
-              <li key={label.id}>
-                <button
-                  type="button"
-                  className="flex h-9 w-full items-center gap-2.5 rounded-full px-1 text-sm text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
-                >
-                  <Folder className="size-3.5 shrink-0" style={{ color: label.color }} />
-                  <span className="flex-1 text-left">{label.label}</span>
-                  {label.count > 0 ? (
-                    <span className="text-[11px] tabular-nums opacity-70">{label.count}</span>
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
       </nav>
     </aside>
   );

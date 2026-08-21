@@ -4,92 +4,107 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Bell, Info, Search, Settings } from "lucide-react";
 import {
-  Bell,
-  Info,
-  Search,
-  Settings,
-} from "lucide-react";
-import { MailInboxSidebar, type InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
+  MailInboxSidebar,
+  type InboxFolderId,
+} from "@/components/inbox/mail-inbox-sidebar";
 import {
   MailInboxListCard,
-  type InboxListFilter,
   type InboxMessageRow,
 } from "@/components/inbox/mail-inbox-list-card";
 import { MailInboxReaderCard } from "@/components/inbox/mail-inbox-reader-card";
+import {
+  MailComposeModal,
+  type ComposeDraft,
+} from "@/components/inbox/mail-compose-modal";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
   listMailMailboxes,
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
+import {
+  getMailMessage,
+  getMailMessageCounts,
+  listMailMessages,
+  sendMailMessage,
+  updateMailMessage,
+  type MailFolderCounts,
+  type MailMessageFolderApi,
+  type MailMessageView,
+} from "@/lib/mail-messages-client";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 
 const MAILBOX_STORAGE_KEY = "rukny_mail_selected_mailbox";
 
-/** Demo rows until SES inbound is wired. */
-function buildDemoMessages(mailbox: string): InboxMessageRow[] {
-  return [
-    {
-      id: "demo-1",
-      from: "Amazon SES",
-      fromEmail: "no-reply@amazonses.com",
-      to: mailbox,
-      subject: "DKIM setup SUCCESS for your domain",
-      preview: "DKIM verification completed in Europe (Stockholm) region.",
-      body: `Hi,\n\nYour domain identity is verified for sending with Amazon SES.\n\nDKIM status: SUCCESS\nRegion: eu-north-1\n\nYou can now send from addresses on this domain. Inbound delivery to ${mailbox} will appear here once receiving is enabled.\n\n— Amazon SES`,
-      receivedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
-      unread: true,
-      starred: true,
-      category: "primary",
-      tag: "Security",
-      tagTone: "rose",
-    },
-    {
-      id: "demo-2",
-      from: "Rukny Mail",
-      fromEmail: "hello@rukny.io",
-      to: mailbox,
-      subject: "Welcome to your business inbox",
-      preview: "Your mailbox is ready. Compose and live receive are next.",
-      body: `Welcome,\n\nThis is a preview of your Rukny Mail inbox layout.\n\n• Left: folders & mailbox switcher\n• Middle: message list card\n• Right: reading pane\n\nReal messages will replace these samples after SES send/receive is connected.\n\n— Rukny`,
-      receivedAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
-      unread: true,
-      starred: false,
-      category: "primary",
-      tag: "Getting started",
-      tagTone: "blue",
-    },
-    {
-      id: "demo-3",
-      from: "DNS Monitor",
-      fromEmail: "alerts@rukny.io",
-      to: mailbox,
-      subject: "MX records look healthy",
-      preview: "Inbound MX for your domain resolved correctly.",
-      body: `Hello,\n\nWe checked your domain DNS and MX points to inbound-smtp.eu-north-1.amazonaws.com.\n\nNo action needed right now.\n\n— Rukny Mail`,
-      receivedAt: new Date(Date.now() - 28 * 3600_000).toISOString(),
-      unread: false,
-      starred: false,
-      category: "primary",
-      tag: "DNS",
-      tagTone: "emerald",
-    },
-    {
-      id: "demo-4",
-      from: "Product Updates",
-      fromEmail: "news@rukny.io",
-      to: mailbox,
-      subject: "New mail features this month",
-      preview: "Aliases, workflows, and smarter inbox filters.",
-      body: `Hi there,\n\nHere's what's new in Rukny Mail this month — stay tuned as we wire live SES delivery.\n\n— Product`,
-      receivedAt: new Date(Date.now() - 50 * 3600_000).toISOString(),
-      unread: false,
-      starred: false,
-      category: "promotions",
-      tag: "Promo",
-      tagTone: "amber",
-    },
-  ];
+const FOLDER_TO_API: Partial<Record<InboxFolderId, MailMessageFolderApi>> = {
+  inbox: "INBOX",
+  sent: "SENT",
+  drafts: "DRAFTS",
+  spam: "SPAM",
+  archive: "ARCHIVE",
+  trash: "TRASH",
+};
+
+function displayName(msg: MailMessageView) {
+  return msg.fromName?.trim() || msg.from?.name?.trim() || msg.fromAddress;
+}
+
+function toRow(msg: MailMessageView): InboxMessageRow {
+  const when = msg.receivedAt || msg.sentAt || msg.createdAt;
+  const body =
+    msg.bodyText?.trim() ||
+    (msg.bodyHtml
+      ? msg.bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+      : "") ||
+    msg.preview ||
+    "";
+  return {
+    id: msg.id,
+    from: displayName(msg),
+    fromEmail: msg.fromAddress,
+    to: msg.to[0] ?? "",
+    subject: msg.subject || "(no subject)",
+    preview: msg.preview || body.slice(0, 140),
+    body,
+    receivedAt: when,
+    unread: msg.unread,
+    starred: msg.starred,
+    folder: msg.folder,
+  };
+}
+
+function parseEmails(raw: string): string[] {
+  return raw
+    .split(/[,;\s]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function emptyCounts(): Record<InboxFolderId, number> {
+  return {
+    inbox: 0,
+    starred: 0,
+    scheduled: 0,
+    sent: 0,
+    drafts: 0,
+    spam: 0,
+    archive: 0,
+    trash: 0,
+  };
+}
+
+function mapCounts(c: MailFolderCounts): Record<InboxFolderId, number> {
+  return {
+    inbox: c.inbox,
+    starred: c.starred,
+    scheduled: 0,
+    sent: c.sent,
+    drafts: c.drafts,
+    spam: c.spam,
+    archive: c.archive,
+    trash: c.trash,
+  };
 }
 
 export function MailInboxShell() {
@@ -98,33 +113,113 @@ export function MailInboxShell() {
   const appHref = withMailSlot("/app", slot);
   const settingsHref = withMailSlot("/settings", slot);
 
+  const [appId, setAppId] = useState<string | null>(null);
   const [mailboxes, setMailboxes] = useState<MailMailboxView[]>([]);
-  const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null);
+  const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(
+    null,
+  );
   const [folder, setFolder] = useState<InboxFolderId>("inbox");
-  const [filter, setFilter] = useState<InboxListFilter>("primary");
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null,
+  );
+  const [messages, setMessages] = useState<InboxMessageRow[]>([]);
+  const [counts, setCounts] = useState<Record<InboxFolderId, number>>(
+    emptyCounts,
+  );
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [composeHint, setComposeHint] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
   const [mobileShowReader, setMobileShowReader] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeInitial, setComposeInitial] = useState<ComposeDraft | null>(
+    null,
+  );
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [replyBody, setReplyBody] = useState("");
+  const [replySending, setReplySending] = useState(false);
+
+  const selected = mailboxes.find((m) => m.id === selectedMailboxId) ?? null;
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2800);
+  }, []);
+
+  const loadCounts = useCallback(
+    async (id: string, mailboxId: string | null) => {
+      try {
+        const next = await getMailMessageCounts(id, mailboxId ?? undefined);
+        setCounts(mapCounts(next));
+      } catch {
+        /* keep previous counts */
+      }
+    },
+    [],
+  );
+
+  const loadMessages = useCallback(
+    async (
+      id: string,
+      mailboxId: string | null,
+      folderId: InboxFolderId,
+      opts?: { quiet?: boolean },
+    ) => {
+      if (!mailboxId) {
+        setMessages([]);
+        return;
+      }
+      if (folderId === "scheduled") {
+        setMessages([]);
+        return;
+      }
+      if (!opts?.quiet) setMessagesLoading(true);
+      try {
+        const result =
+          folderId === "starred"
+            ? await listMailMessages(id, {
+                mailboxId,
+                starred: true,
+                take: 100,
+              })
+            : await listMailMessages(id, {
+                mailboxId,
+                folder: FOLDER_TO_API[folderId] ?? "INBOX",
+                take: 100,
+              });
+        setMessages(result.messages.map(toRow));
+        setError("");
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Could not load messages.",
+        );
+        setMessages([]);
+      } finally {
+        if (!opts?.quiet) setMessagesLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const appId = readMailAppIdFromDocument();
-      if (!appId) {
+      const id = readMailAppIdFromDocument();
+      if (!id) {
         if (!cancelled) {
           setError("Open a Mail app first.");
           setLoading(false);
         }
         return;
       }
+      setAppId(id);
       try {
-        const boxes = await listMailMailboxes(appId);
+        const boxes = await listMailMailboxes(id);
         if (cancelled) return;
         setMailboxes(boxes);
-
         const stored =
           typeof window !== "undefined"
             ? window.localStorage.getItem(MAILBOX_STORAGE_KEY)
@@ -136,7 +231,9 @@ export function MailInboxShell() {
         setSelectedMailboxId(initial);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Could not load mailboxes.");
+          setError(
+            err instanceof Error ? err.message : "Could not load mailboxes.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -147,36 +244,38 @@ export function MailInboxShell() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!appId || !selectedMailboxId) {
+      setMessages([]);
+      setCounts(emptyCounts());
+      return;
+    }
+    void loadMessages(appId, selectedMailboxId, folder);
+    void loadCounts(appId, selectedMailboxId);
+  }, [appId, selectedMailboxId, folder, loadMessages, loadCounts]);
+
   const selectMailbox = useCallback((id: string) => {
     if (id === "manage" || id === "none") return;
     setSelectedMailboxId(id);
     setSelectedMessageId(null);
     setMobileShowReader(false);
+    setReplyBody("");
     if (typeof window !== "undefined") {
       window.localStorage.setItem(MAILBOX_STORAGE_KEY, id);
     }
   }, []);
 
-  const selected = mailboxes.find((m) => m.id === selectedMailboxId) ?? null;
-
-  const messages = useMemo(() => {
-    if (!selected?.address || folder !== "inbox") return [];
-    return buildDemoMessages(selected.address);
-  }, [folder, selected?.address]);
-
   const visibleMessages = useMemo(() => {
-    let list = messages.filter((m) => (m.category ?? "primary") === filter);
     const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (m) =>
-          m.from.toLowerCase().includes(q) ||
-          m.subject.toLowerCase().includes(q) ||
-          m.preview.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [filter, messages, search]);
+    if (!q) return messages;
+    return messages.filter(
+      (m) =>
+        m.from.toLowerCase().includes(q) ||
+        m.fromEmail.toLowerCase().includes(q) ||
+        m.subject.toLowerCase().includes(q) ||
+        m.preview.toLowerCase().includes(q),
+    );
+  }, [messages, search]);
 
   const selectedMessage =
     visibleMessages.find((m) => m.id === selectedMessageId) ?? null;
@@ -184,38 +283,171 @@ export function MailInboxShell() {
     ? visibleMessages.findIndex((m) => m.id === selectedMessage.id)
     : -1;
 
-  const counts = useMemo(
-    () =>
-      ({
-        inbox: messages.length,
-        starred: messages.filter((m) => m.starred).length,
-        scheduled: 0,
-        sent: 0,
-        drafts: 0,
-        spam: 0,
-        archive: 0,
-        trash: 0,
-      }) satisfies Record<InboxFolderId, number>,
-    [messages],
-  );
-
-  function onCompose() {
-    setComposeHint(true);
-    window.setTimeout(() => setComposeHint(false), 3200);
+  function openCompose(draft?: ComposeDraft | null) {
+    setSendError("");
+    setComposeInitial(draft ?? null);
+    setComposeOpen(true);
   }
 
-  function onSelectMessage(id: string) {
+  function onCompose() {
+    openCompose(null);
+  }
+
+  function onReply(message: InboxMessageRow) {
+    const subject = message.subject.startsWith("Re:")
+      ? message.subject
+      : `Re: ${message.subject}`;
+    openCompose({
+      to: message.fromEmail,
+      subject,
+      body: "",
+      replyToMessageId: message.id,
+    });
+  }
+
+  function onForward(message: InboxMessageRow) {
+    openCompose({
+      to: "",
+      subject: message.subject.startsWith("Fwd:")
+        ? message.subject
+        : `Fwd: ${message.subject}`,
+      body: `\n\n---------- Forwarded message ----------\nFrom: ${message.from} <${message.fromEmail}>\nSubject: ${message.subject}\n\n${message.body}`,
+    });
+  }
+
+  async function handleSend(draft: ComposeDraft) {
+    if (!appId || !selectedMailboxId) {
+      setSendError("Select a mailbox first.");
+      return;
+    }
+    setSending(true);
+    setSendError("");
+    try {
+      await sendMailMessage(appId, {
+        mailboxId: selectedMailboxId,
+        to: parseEmails(draft.to),
+        cc: draft.cc ? parseEmails(draft.cc) : undefined,
+        subject: draft.subject,
+        bodyText: draft.body,
+        replyToMessageId: draft.replyToMessageId,
+      });
+      setComposeOpen(false);
+      showToast("Message sent");
+      await loadMessages(appId, selectedMailboxId, folder, { quiet: true });
+      await loadCounts(appId, selectedMailboxId);
+      if (folder !== "sent") {
+        setFolder("sent");
+        setSelectedMessageId(null);
+      }
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleRefresh() {
+    if (!appId || !selectedMailboxId) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadMessages(appId, selectedMailboxId, folder, { quiet: true }),
+        loadCounts(appId, selectedMailboxId),
+      ]);
+      showToast("Inbox updated");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function onSelectMessage(id: string) {
     setSelectedMessageId(id);
     setMobileShowReader(true);
+    setReplyBody("");
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, unread: false } : m)),
+    );
+    if (!appId) return;
+    try {
+      const full = await getMailMessage(appId, id);
+      const row = toRow(full);
+      setMessages((prev) => prev.map((m) => (m.id === id ? row : m)));
+      void loadCounts(appId, selectedMailboxId);
+    } catch {
+      /* list preview is enough */
+    }
+  }
+
+  async function onToggleStar(message: InboxMessageRow) {
+    if (!appId) return;
+    const next = !message.starred;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === message.id ? { ...m, starred: next } : m)),
+    );
+    try {
+      await updateMailMessage(appId, message.id, { isStarred: next });
+      await loadCounts(appId, selectedMailboxId);
+      if (folder === "starred" && !next) {
+        setMessages((prev) => prev.filter((m) => m.id !== message.id));
+        if (selectedMessageId === message.id) {
+          setSelectedMessageId(null);
+          setMobileShowReader(false);
+        }
+      }
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id ? { ...m, starred: message.starred } : m,
+        ),
+      );
+      showToast(err instanceof Error ? err.message : "Could not update star.");
+    }
+  }
+
+  async function onTrash(message: InboxMessageRow) {
+    if (!appId) return;
+    try {
+      await updateMailMessage(appId, message.id, { folder: "TRASH" });
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      if (selectedMessageId === message.id) {
+        setSelectedMessageId(null);
+        setMobileShowReader(false);
+      }
+      await loadCounts(appId, selectedMailboxId);
+      showToast("Moved to Trash");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not move message.");
+    }
+  }
+
+  async function onSendReply(message: InboxMessageRow) {
+    if (!appId || !selectedMailboxId || !replyBody.trim()) return;
+    setReplySending(true);
+    try {
+      const subject = message.subject.startsWith("Re:")
+        ? message.subject
+        : `Re: ${message.subject}`;
+      await sendMailMessage(appId, {
+        mailboxId: selectedMailboxId,
+        to: [message.fromEmail],
+        subject,
+        bodyText: replyBody.trim(),
+        replyToMessageId: message.id,
+      });
+      setReplyBody("");
+      showToast("Reply sent");
+      await loadCounts(appId, selectedMailboxId);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Reply failed.");
+    } finally {
+      setReplySending(false);
+    }
   }
 
   function selectByOffset(delta: number) {
     if (selectedIndex < 0) return;
     const next = visibleMessages[selectedIndex + delta];
-    if (next) {
-      setSelectedMessageId(next.id);
-      setMobileShowReader(true);
-    }
+    if (next) void onSelectMessage(next.id);
   }
 
   if (loading) {
@@ -288,7 +520,6 @@ export function MailInboxShell() {
       </header>
 
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden px-3 pb-3 sm:gap-4 sm:px-4 sm:pb-4">
-        {/* Isolated sidebar — outside the gray stage */}
         <div className="hidden h-full shrink-0 sm:flex">
           <MailInboxSidebar
             mailboxes={mailboxes}
@@ -298,16 +529,57 @@ export function MailInboxShell() {
             onFolderChange={(id) => {
               setFolder(id);
               setSelectedMessageId(null);
-              setFilter("primary");
               setMobileShowReader(false);
+              setReplyBody("");
             }}
             counts={counts}
             onCompose={onCompose}
           />
         </div>
 
-        {/* Gray stage: groups Index + Reader cards */}
-        <div className="flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden rounded-[1.75rem] bg-[#f0f1f3] p-2 sm:rounded-[2rem] sm:p-2.5 dark:bg-[var(--surface-secondary)]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div className="flex shrink-0 items-center gap-2 sm:hidden">
+            <button
+              type="button"
+              onClick={onCompose}
+              className="inline-flex h-10 shrink-0 items-center rounded-full bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"
+            >
+              Compose
+            </button>
+            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5">
+              {(
+                [
+                  "inbox",
+                  "starred",
+                  "sent",
+                  "drafts",
+                  "spam",
+                  "archive",
+                  "trash",
+                ] as InboxFolderId[]
+              ).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setFolder(id);
+                    setSelectedMessageId(null);
+                    setMobileShowReader(false);
+                  }}
+                  className={
+                    folder === id
+                      ? "shrink-0 rounded-full bg-[var(--brand-blue-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--secondary-foreground)]"
+                      : "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)]"
+                  }
+                >
+                  {id === "starred" ? "Favorites" : id.charAt(0).toUpperCase() + id.slice(1)}
+                  {(counts[id] ?? 0) > 0 ? ` ${counts[id]}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden rounded-[1.75rem] bg-[#f0f1f3] p-2 sm:rounded-[2rem] sm:p-2.5 dark:bg-[var(--surface-secondary)]">
           <div
             className={
               mobileShowReader && selectedMessage
@@ -318,12 +590,14 @@ export function MailInboxShell() {
             <MailInboxListCard
               folder={folder}
               mailboxAddress={selected?.address ?? null}
-              messages={messages}
-              filter={filter}
-              onFilterChange={setFilter}
+              messages={visibleMessages}
               selectedId={selectedMessageId}
               onSelect={onSelectMessage}
               search={search}
+              loading={messagesLoading}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              error={error}
             />
           </div>
 
@@ -339,27 +613,58 @@ export function MailInboxShell() {
               mailboxAddress={selected?.address ?? null}
               index={selectedIndex}
               total={visibleMessages.length}
+              replyBody={replyBody}
+              onReplyBodyChange={setReplyBody}
+              replySending={replySending}
+              onSendReply={() =>
+                selectedMessage ? void onSendReply(selectedMessage) : undefined
+              }
               onBack={() => {
                 setMobileShowReader(false);
                 setSelectedMessageId(null);
+                setReplyBody("");
               }}
               onCompose={onCompose}
+              onReply={() =>
+                selectedMessage ? onReply(selectedMessage) : undefined
+              }
+              onForward={() =>
+                selectedMessage ? onForward(selectedMessage) : undefined
+              }
+              onToggleStar={() =>
+                selectedMessage ? void onToggleStar(selectedMessage) : undefined
+              }
+              onTrash={() =>
+                selectedMessage ? void onTrash(selectedMessage) : undefined
+              }
               onPrev={
                 selectedIndex > 0 ? () => selectByOffset(-1) : undefined
               }
               onNext={
-                selectedIndex >= 0 && selectedIndex < visibleMessages.length - 1
+                selectedIndex >= 0 &&
+                selectedIndex < visibleMessages.length - 1
                   ? () => selectByOffset(1)
                   : undefined
               }
             />
           </div>
+          </div>
         </div>
       </div>
 
-      {composeHint ? (
+      <MailComposeModal
+        open={composeOpen}
+        fromAddress={selected?.address ?? null}
+        initial={composeInitial}
+        sending={sending}
+        error={sendError}
+        onClose={() => setComposeOpen(false)}
+        onSend={handleSend}
+      />
+
+      {toast ? (
         <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[var(--foreground)] px-4 py-2.5 text-xs font-medium text-[var(--background)]">
-          Compose & SES send coming next
+          {toast}
         </div>
       ) : null}
 

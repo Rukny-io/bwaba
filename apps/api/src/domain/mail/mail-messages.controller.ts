@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -14,7 +15,10 @@ import {
   AuthenticatedUser,
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
-import { SendMailMessageDto } from './dto/mail-message.dto';
+import {
+  SendMailMessageDto,
+  UpdateMailMessageDto,
+} from './dto/mail-message.dto';
 import { MailMessagesService } from './mail-messages.service';
 
 @ApiTags('Mail - Messages')
@@ -32,6 +36,7 @@ export class MailMessagesController {
     required: false,
     enum: MailMessageFolder,
   })
+  @ApiQuery({ name: 'starred', required: false })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'take', required: false })
   list(
@@ -39,15 +44,28 @@ export class MailMessagesController {
     @Param('appId') appId: string,
     @Query('mailboxId') mailboxId?: string,
     @Query('folder') folder?: MailMessageFolder,
+    @Query('starred') starred?: string,
     @Query('cursor') cursor?: string,
     @Query('take') take?: string,
   ) {
     return this.messages.list(user.id, appId, {
       mailboxId,
       folder,
+      starred: starred === '1' || starred === 'true',
       cursor,
       take: take ? Number(take) : undefined,
     });
+  }
+
+  @Get('counts')
+  @ApiOperation({ summary: 'Folder message counts for a mailbox' })
+  @ApiQuery({ name: 'mailboxId', required: false })
+  counts(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Query('mailboxId') mailboxId?: string,
+  ) {
+    return this.messages.counts(user.id, appId, mailboxId);
   }
 
   @Post('send')
@@ -68,5 +86,16 @@ export class MailMessagesController {
     @Param('messageId') messageId: string,
   ) {
     return this.messages.getOne(user.id, appId, messageId);
+  }
+
+  @Patch(':messageId')
+  @ApiOperation({ summary: 'Update message (star, read, move folder)' })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: UpdateMailMessageDto,
+  ) {
+    return this.messages.update(user.id, appId, messageId, dto);
   }
 }

@@ -2,26 +2,14 @@
 
 import {
   ArrowLeft,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock,
   CornerUpLeft,
   CornerUpRight,
-  FileSpreadsheet,
-  FileText,
-  ImageIcon,
-  Link2,
-  Paperclip,
-  Plus,
   Reply,
   Send,
-  Smile,
   Star,
   Trash2,
-  Type,
-  Video,
-  X,
 } from "lucide-react";
 import type { InboxMessageRow } from "@/components/inbox/mail-inbox-list-card";
 
@@ -30,8 +18,16 @@ type Props = {
   mailboxAddress: string | null;
   index: number;
   total: number;
+  replyBody: string;
+  onReplyBodyChange: (value: string) => void;
+  replySending?: boolean;
+  onSendReply?: () => void;
   onBack: () => void;
   onCompose: () => void;
+  onReply?: () => void;
+  onForward?: () => void;
+  onToggleStar?: () => void;
+  onTrash?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
 };
@@ -63,8 +59,16 @@ export function MailInboxReaderCard({
   mailboxAddress,
   index,
   total,
+  replyBody,
+  onReplyBodyChange,
+  replySending = false,
+  onSendReply,
   onBack,
   onCompose,
+  onReply,
+  onForward,
+  onToggleStar,
+  onTrash,
   onPrev,
   onNext,
 }: Props) {
@@ -95,7 +99,6 @@ export function MailInboxReaderCard({
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
-      {/* Header — sits on gray stage */}
       <div className="flex shrink-0 items-center gap-3 px-2 py-2.5 sm:px-3">
         <button
           type="button"
@@ -116,20 +119,17 @@ export function MailInboxReaderCard({
               {message.from}
             </p>
             <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)] dark:bg-[var(--surface)]">
-              Inbox
+              {message.folder ?? "INBOX"}
             </span>
           </div>
-          <button
-            type="button"
-            className="mt-0.5 inline-flex items-center gap-0.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-          >
-            to me
-            <ChevronDown className="size-3" />
-          </button>
+          <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
+            {message.fromEmail}
+            {mailboxAddress ? ` · to ${mailboxAddress}` : ""}
+          </p>
         </div>
 
         <div className="ml-auto flex items-center gap-0.5">
-          <IconBtn label="Star">
+          <IconBtn label="Star" onClick={onToggleStar}>
             <Star
               className={
                 message.starred
@@ -138,16 +138,12 @@ export function MailInboxReaderCard({
               }
             />
           </IconBtn>
-          <IconBtn label="Snooze">
-            <Clock className="size-4" />
-          </IconBtn>
-          <IconBtn label="Delete">
+          <IconBtn label="Delete" onClick={onTrash}>
             <Trash2 className="size-4" />
           </IconBtn>
         </div>
       </div>
 
-      {/* Body on gray */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 sm:px-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[1.35rem]">
@@ -159,36 +155,10 @@ export function MailInboxReaderCard({
         </div>
 
         <div className="mt-5 max-w-none whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--foreground)]">
-          {message.body}
-        </div>
-
-        <div className="mt-6 border-t border-dashed border-[var(--primary)]/35" />
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {[
-            "Thanks, got it.",
-            "I'll follow up soon.",
-            "Please send more details.",
-          ].map((label) => (
-            <button
-              key={label}
-              type="button"
-              onClick={onCompose}
-              className="rounded-full border border-[var(--primary)]/35 bg-white px-3.5 py-2 text-xs font-medium text-[var(--secondary-foreground)] hover:bg-[var(--brand-blue-soft)] dark:bg-[var(--surface)]"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          <AttachmentChip icon={FileSpreadsheet} name="DKIM-report.xlsx" size="48 KB" />
-          <AttachmentChip icon={FileText} name="Mailbox-setup.docx" size="92 KB" />
-          <AttachmentChip icon={Video} name="Team sync" size="Meet" />
+          {message.body || message.preview || "(Empty message)"}
         </div>
       </div>
 
-      {/* White reply card only */}
       <div className="shrink-0 px-2 pb-1 sm:px-3">
         <div className="rounded-[1.75rem] bg-white p-3.5 sm:p-4 dark:bg-[var(--surface)]">
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -198,49 +168,34 @@ export function MailInboxReaderCard({
                 <span className="flex size-5 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
                   {initials(message.from)}
                 </span>
-                {message.from}
-                <X className="size-3 opacity-45" aria-hidden />
+                {message.fromEmail}
               </span>
             </div>
-            <span className="shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
-              Cc · Bcc
-            </span>
+            <button
+              type="button"
+              onClick={onReply}
+              className="shrink-0 text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            >
+              Full compose
+            </button>
           </div>
 
           <textarea
             rows={2}
+            value={replyBody}
+            onChange={(e) => onReplyBodyChange(e.target.value)}
             placeholder="Write a reply…"
             className="w-full resize-none bg-transparent text-sm leading-relaxed text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
-            disabled
           />
 
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-0.5 text-[var(--muted-foreground)]">
-              <IconBtn label="Emoji">
-                <Smile className="size-4" />
-              </IconBtn>
-              <IconBtn label="Attach">
-                <Paperclip className="size-4" />
-              </IconBtn>
-              <IconBtn label="Link">
-                <Link2 className="size-4" />
-              </IconBtn>
-              <IconBtn label="Format">
-                <Type className="size-4" />
-              </IconBtn>
-              <IconBtn label="Image">
-                <ImageIcon className="size-4" />
-              </IconBtn>
-              <IconBtn label="More">
-                <Plus className="size-4" />
-              </IconBtn>
-            </div>
+          <div className="mt-1 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onCompose}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"
+              onClick={onSendReply}
+              disabled={replySending || !replyBody.trim()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-50"
             >
-              Send
+              {replySending ? "Sending…" : "Send"}
               <Send className="size-3.5" />
             </button>
           </div>
@@ -249,7 +204,7 @@ export function MailInboxReaderCard({
         <div className="mt-2 flex items-center justify-between border-t border-[var(--border)]/60 px-1 pt-2 text-xs font-medium text-[var(--muted-foreground)]">
           <button
             type="button"
-            onClick={onCompose}
+            onClick={onReply}
             className="inline-flex items-center gap-1.5 hover:text-[var(--foreground)]"
           >
             <CornerUpLeft className="size-3.5" />
@@ -280,7 +235,7 @@ export function MailInboxReaderCard({
           </div>
           <button
             type="button"
-            onClick={onCompose}
+            onClick={onForward}
             className="inline-flex items-center gap-1.5 hover:text-[var(--foreground)]"
           >
             Forward
@@ -292,37 +247,20 @@ export function MailInboxReaderCard({
   );
 }
 
-function AttachmentChip({
-  icon: Icon,
-  name,
-  size,
-}: {
-  icon: typeof FileText;
-  name: string;
-  size: string;
-}) {
-  return (
-    <div className="inline-flex min-w-[9.5rem] items-center gap-2.5 rounded-2xl bg-white px-3 py-2.5 dark:bg-[var(--surface)]">
-      <Icon className="size-5 shrink-0 text-[var(--primary)]" />
-      <div className="min-w-0">
-        <p className="truncate text-xs font-semibold text-[var(--foreground)]">{name}</p>
-        <p className="text-[10px] text-[var(--muted-foreground)]">{size}</p>
-      </div>
-    </div>
-  );
-}
-
 function IconBtn({
   children,
   label,
+  onClick,
 }: {
   children: React.ReactNode;
   label: string;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      onClick={onClick}
       className="inline-flex size-8 items-center justify-center rounded-xl text-[var(--muted-foreground)] hover:bg-[#e8eaed] hover:text-[var(--foreground)] dark:hover:bg-[var(--surface-secondary)]"
     >
       {children}

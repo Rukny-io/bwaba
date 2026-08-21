@@ -129,6 +129,7 @@ export class MailMessagesService {
     opts: {
       mailboxId?: string;
       folder?: MailMessageFolder;
+      starred?: boolean;
       take?: number;
       cursor?: string;
     } = {},
@@ -139,16 +140,17 @@ export class MailMessagesService {
     if (!app) throw new NotFoundException('Mail app not found.');
 
     const take = Math.min(Math.max(opts.take ?? 50, 1), 100);
-    const folder = opts.folder ?? MailMessageFolder.INBOX;
 
     const where: Prisma.MailMessageWhereInput = {
       userId,
-      folder,
       mailbox: {
         mailAppId: app.id,
         status: { not: MailMailboxStatus.DELETED },
         ...(opts.mailboxId ? { id: opts.mailboxId } : {}),
       },
+      ...(opts.starred
+        ? { isStarred: true }
+        : { folder: opts.folder ?? MailMessageFolder.INBOX }),
     };
 
     const rows = await this.prisma.mailMessage.findMany({
@@ -193,6 +195,96 @@ export class MailMessagesService {
     }
 
     return this.toView(row);
+  }
+
+  async counts(userId: string, appId: string, mailboxId?: string) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { appId, userId, status: MailAppStatus.ACTIVE },
+    });
+    if (!app) throw new NotFoundException('Mail app not found.');
+
+    const mailboxFilter = {
+      mailAppId: app.id,
+      status: { not: MailMailboxStatus.DELETED },
+      ...(mailboxId ? { id: mailboxId } : {}),
+    };
+
+    const [byFolder, starred] = await Promise.all([
+      this.prisma.mailMessage.groupBy({
+        by: ['folder'],
+        where: { userId, mailbox: mailboxFilter },
+        _count: { _all: true },
+      }),
+      this.prisma.mailMessage.count({
+        where: { userId, isStarred: true, mailbox: mailboxFilter },
+      }),
+    ]);
+
+    const folderCounts: Record<MailMessageFolder, number> = {
+      INBOX: 0,
+      SENT: 0,
+      DRAFTS: 0,
+      TRASH: 0,
+      SPAM: 0,
+      ARCHIVE: 0,
+    };
+    for (const row of byFolder) {
+      folderCounts[row.folder] = row._count._all;
+    }
+
+    return {
+      inbox: folderCounts.INBOX,
+      sent: folderCounts.SENT,
+      drafts: folderCounts.DRAFTS,
+      trash: folderCounts.TRASH,
+      spam: folderCounts.SPAM,
+      archive: folderCounts.ARCHIVE,
+      starred,
+    };
+  }
+
+  async update(
+    userId: string,
+    appId: string,
+    messageId: string,
+    dto: {
+      isStarred?: boolean;
+      isRead?: boolean;
+      folder?: MailMessageFolder;
+    },
+  ) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { appId, userId, status: MailAppStatus.ACTIVE },
+    });
+    if (!app) throw new NotFoundException('Mail app not found.');
+
+    const row = await this.prisma.mailMessage.findFirst({
+      where: {
+        id: messageId,
+        userId,
+        mailbox: { mailAppId: app.id },
+      },
+    });
+    if (!row) throw new NotFoundException('Message not found.');
+
+    if (
+      dto.isStarred === undefined &&
+      dto.isRead === undefined &&
+      dto.folder === undefined
+    ) {
+      throw new BadRequestException('No updates provided.');
+    }
+
+    const updated = await this.prisma.mailMessage.update({
+      where: { id: row.id },
+      data: {
+        ...(dto.isStarred !== undefined ? { isStarred: dto.isStarred } : {}),
+        ...(dto.isRead !== undefined ? { isRead: dto.isRead } : {}),
+        ...(dto.folder !== undefined ? { folder: dto.folder } : {}),
+      },
+    });
+
+    return this.toView(updated);
   }
 
   async send(userId: string, appId: string, dto: SendMailMessageDto) {

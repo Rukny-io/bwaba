@@ -1,7 +1,9 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
@@ -10,6 +12,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MailMessageFolder } from '@prisma/client';
 
 export class SendMailMessageDto {
   @ApiProperty({ description: 'Mailbox UUID to send from' })
@@ -65,4 +68,21 @@ export class SendMailMessageDto {
   @IsOptional()
   @IsUUID()
   replyToMessageId?: string;
+}
+
+export class UpdateMailMessageDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isStarred?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isRead?: boolean;
+
+  @ApiPropertyOptional({ enum: MailMessageFolder })
+  @IsOptional()
+  @IsEnum(MailMessageFolder)
+  folder?: MailMessageFolder;
 }

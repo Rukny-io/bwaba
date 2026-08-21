@@ -4,8 +4,7 @@ type RedisClient = {
   set: (
     key: string,
     value: string,
-    mode: "EX",
-    ttl: number,
+    ...args: Array<string | number>
   ) => Promise<unknown>;
   del: (...keys: string[]) => Promise<unknown>;
   on: (event: string, listener: (...args: unknown[]) => void) => unknown;
@@ -110,6 +109,22 @@ export async function redisSetJson(
     await redis.set(key, JSON.stringify(value), "EX", Math.max(1, ttlSeconds));
   } catch {
     // ignore
+  }
+}
+
+/** Persist JSON without TTL (domain bindings, etc.). */
+export async function redisSetJsonPersist(
+  key: string,
+  value: unknown,
+): Promise<boolean> {
+  const redis = getMailRedis();
+  if (!redis) return false;
+  try {
+    if (redis.status !== "ready" && redis.status !== "connecting") return false;
+    await redis.set(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
   }
 }
 

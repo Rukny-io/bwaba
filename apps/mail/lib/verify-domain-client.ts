@@ -8,14 +8,31 @@ export type DomainVerifyResponse = {
   error?: string;
 };
 
+async function readApiJson<T extends { error?: string }>(
+  response: Response,
+): Promise<T> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const hint =
+      response.status === 502 || response.status === 503 || response.status === 504
+        ? "Mail service or SES is unavailable. Check mail container logs and AWS credentials."
+        : response.status === 401 || response.status === 403
+          ? "Please login again, then open your Mail app."
+          : `Unexpected server response (${response.status}).`;
+    throw new Error(hint);
+  }
+}
+
 export async function createDomainRequest(domain: string): Promise<MailDomainSetup> {
   const response = await fetch("/api/mail/domains", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "include",
     body: JSON.stringify({ domain }),
   });
-  const data = (await response.json()) as { setup?: MailDomainSetup; error?: string };
+  const data = await readApiJson<{ setup?: MailDomainSetup; error?: string }>(response);
   if (!response.ok || !data.setup) {
     throw new Error(data.error || "Could not add this domain.");
   }
@@ -29,8 +46,13 @@ export async function restoreDomainSetupRequest(): Promise<MailDomainSetup | nul
   if (restoreInflight) return restoreInflight;
 
   restoreInflight = (async () => {
-    const response = await fetch("/api/mail/setup", { credentials: "include" });
-    const data = (await response.json()) as { setup?: MailDomainSetup | null; error?: string };
+    const response = await fetch("/api/mail/setup", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const data = await readApiJson<{ setup?: MailDomainSetup | null; error?: string }>(
+      response,
+    );
     if (response.status === 200 && (data.setup === null || data.setup === undefined)) {
       return null;
     }
@@ -49,8 +71,9 @@ export async function deleteDomainRequest(domain: string) {
   const response = await fetch(`/api/mail/domains?domain=${encodeURIComponent(domain)}`, {
     method: "DELETE",
     credentials: "include",
+    headers: { Accept: "application/json" },
   });
-  const data = (await response.json()) as { error?: string };
+  const data = await readApiJson<{ error?: string }>(response);
   if (!response.ok) {
     throw new Error(data.error || "Could not remove this domain.");
   }
@@ -62,11 +85,11 @@ export async function verifyDomainRequest(
 ): Promise<DomainVerifyResponse> {
   const response = await fetch("/api/mail/verify-domain", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "include",
     body: JSON.stringify({ domain, tokens }),
   });
-  const data = (await response.json()) as DomainVerifyResponse & { error?: string };
+  const data = await readApiJson<DomainVerifyResponse & { error?: string }>(response);
   if (!response.ok) {
     throw new Error(data.error || "Could not check DNS.");
   }

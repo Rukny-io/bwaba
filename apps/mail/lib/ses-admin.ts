@@ -55,7 +55,9 @@ export async function ensureSesDomainIdentity(domain: string) {
       }),
     );
   } catch (error) {
-    if (!isAlreadyExists(error)) throw error;
+    if (!isAlreadyExists(error)) {
+      throw new Error(formatSesError(error));
+    }
   }
 
   try {
@@ -72,9 +74,13 @@ export async function ensureSesDomainIdentity(domain: string) {
 
   let tokens: string[] = [];
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    const identity = await getIdentity(domain);
-    tokens = identity.DkimAttributes?.Tokens ?? [];
-    if (tokens.length >= 3) break;
+    try {
+      const identity = await getIdentity(domain);
+      tokens = identity.DkimAttributes?.Tokens ?? [];
+      if (tokens.length >= 3) break;
+    } catch (error) {
+      if (attempt === 3) throw new Error(formatSesError(error));
+    }
     await new Promise((resolve) => setTimeout(resolve, 800));
   }
 

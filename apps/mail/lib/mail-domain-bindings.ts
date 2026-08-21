@@ -1,6 +1,10 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { MailDomainStatus } from "@/lib/mail-domain";
+import {
+  redisGetJson,
+  redisSetJsonPersist,
+} from "@/lib/redis";
 
 export type MailDomainBinding = {
   domain: string;
@@ -15,10 +19,11 @@ export type MailDomainBinding = {
 /** Keyed by Mail appId — one domain per app; domains are unique across apps. */
 type BindingMap = Record<string, MailDomainBinding>;
 
+const REDIS_BINDINGS_KEY = "mail:domain-bindings";
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "mail-domain-bindings.json");
 
-async function readMap(): Promise<BindingMap> {
+async function readFileMap(): Promise<BindingMap> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     const parsed = JSON.parse(raw) as BindingMap;
@@ -28,9 +33,31 @@ async function readMap(): Promise<BindingMap> {
   }
 }
 
-async function writeMap(map: BindingMap) {
+async function writeFileMap(map: BindingMap) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DATA_FILE, `${JSON.stringify(map, null, 2)}\n`, "utf8");
+}
+
+async function readMap(): Promise<BindingMap> {
+  const fromRedis = await redisGetJson<BindingMap>(REDIS_BINDINGS_KEY);
+  if (fromRedis && typeof fromRedis === "object") {
+    return fromRedis;
+  }
+
+  // One-time migrate from local file (dev / pre-Redis deploys).
+  const fromFile = await readFileMap();
+  if (Object.keys(fromFile).length > 0) {
+    await redisSetJsonPersist(REDIS_BINDINGS_KEY, fromFile);
+  }
+  return fromFile;
+}
+
+async function writeMap(map: BindingMap) {
+  const saved = await redisSetJsonPersist(REDIS_BINDINGS_KEY, map);
+  // Keep a local copy when Redis is down (single-node fallback).
+  if (!saved) {
+    await writeFileMap(map);
+  }
 }
 
 export async function getMailDomainBinding(mailAppId: string): Promise<MailDomainBinding | null> {
@@ -74,7 +101,7 @@ export async function upsertMailDomainBinding(
     sesCheckedAt: binding.sesCheckedAt ?? previous?.sesCheckedAt,
   };
 
-  // Skip disk write when nothing meaningful changed.
+  // Skip write when nothing meaningful changed.
   if (
     previous &&
     previous.domain === next.domain &&

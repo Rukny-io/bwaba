@@ -54,64 +54,6 @@ export class MailMessagesService {
     return `/api/media/${cleaned}`;
   }
 
-  /** Absolute URL for images embedded in outbound HTML (Gmail must fetch it). */
-  private mediaPublicUrl(key: string | null | undefined) {
-    const path = this.mediaPath(key);
-    if (!path) return null;
-    const base = (
-      process.env.API_PUBLIC_URL ||
-      process.env.API_URL ||
-      process.env.AUTH_BASE_URL ||
-      ''
-    ).replace(/\/$/, '');
-    return base ? `${base}${path}` : path;
-  }
-
-  private escapeHtml(value: string) {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  private textToHtml(text: string) {
-    return this.escapeHtml(text).replace(/\r\n|\r|\n/g, '<br/>');
-  }
-
-  /** Sender card + body so recipients (Gmail etc.) see the mailbox photo. */
-  private wrapOutboundHtml(input: {
-    fromName: string | null;
-    fromAddress: string;
-    avatarUrl: string | null;
-    bodyHtml: string;
-  }) {
-    const name = this.escapeHtml(
-      input.fromName?.trim() || input.fromAddress,
-    );
-    const email = this.escapeHtml(input.fromAddress);
-    const initial = this.escapeHtml(
-      (input.fromName?.trim() || input.fromAddress).charAt(0).toUpperCase() ||
-        '?',
-    );
-    const avatar = input.avatarUrl
-      ? `<img src="${this.escapeHtml(input.avatarUrl)}" width="48" height="48" alt="" style="border-radius:9999px;display:block;width:48px;height:48px;object-fit:cover;" />`
-      : `<div style="width:48px;height:48px;border-radius:9999px;background:#dbeafe;color:#1e40af;font-weight:700;font-size:18px;line-height:48px;text-align:center;">${initial}</div>`;
-
-    return `<!DOCTYPE html><html><body style="margin:0;padding:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;background:#ffffff;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0;border-collapse:collapse;">
-  <tr>
-    <td style="padding-right:12px;vertical-align:middle;">${avatar}</td>
-    <td style="vertical-align:middle;">
-      <div style="font-weight:600;font-size:15px;line-height:1.35;color:#0f172a;">${name}</div>
-      <div style="font-size:12px;line-height:1.4;color:#64748b;">${email}</div>
-    </td>
-  </tr>
-</table>
-<div style="font-size:15px;line-height:1.65;color:#0f172a;">${input.bodyHtml}</div>
-</body></html>`;
-  }
-
   private toView(
     row: {
       id: string;
@@ -418,16 +360,7 @@ export class MailMessagesService {
       (bodyHtml
         ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
         : '');
-    const innerHtml = bodyHtml?.trim()
-      ? bodyHtml.trim()
-      : this.textToHtml(plainText);
-    const avatarUrl = this.mediaPublicUrl(mailbox.avatarKey);
-    const outboundHtml = this.wrapOutboundHtml({
-      fromName: mailbox.displayName,
-      fromAddress,
-      avatarUrl,
-      bodyHtml: innerHtml,
-    });
+    const outboundHtml = bodyHtml?.trim() || undefined;
     const snippet = this.snippetFrom(plainText || undefined, outboundHtml);
 
     const queued = await this.prisma.mailMessage.create({
@@ -448,7 +381,7 @@ export class MailMessagesService {
         replyTo: fromAddress,
         subject: dto.subject.trim(),
         bodyText: plainText || null,
-        bodyHtml: outboundHtml,
+        bodyHtml: outboundHtml ?? null,
         snippet,
         isRead: true,
       },

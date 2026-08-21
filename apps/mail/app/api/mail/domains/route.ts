@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   const session = await requireMailAppSession({ fresh: true });
   if (!session) {
     return NextResponse.json(
-      { error: "Create and open a Mail app first." },
-      { status: 403 },
+      { error: "Please login again, then open your Mail app." },
+      { status: 401 },
     );
   }
 
@@ -71,8 +71,8 @@ export async function DELETE(request: Request) {
   const session = await requireMailAppSession({ fresh: true });
   if (!session) {
     return NextResponse.json(
-      { error: "Create and open a Mail app first." },
-      { status: 403 },
+      { error: "Please login again, then open your Mail app." },
+      { status: 401 },
     );
   }
 

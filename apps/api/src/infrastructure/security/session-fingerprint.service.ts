@@ -76,6 +76,20 @@ export class SessionFingerprintService {
     return createHash('sha256').update(data).digest('hex').substring(0, 32);
   }
 
+  /** Stable slice of the fingerprint (language + client id) — ignores UA churn. */
+  private stableComponents(headers: {
+    'accept-language'?: string;
+    'x-client-fingerprint'?: string;
+  }): { acceptLanguage: string; clientFp: string; stableHash: string } {
+    const acceptLanguage = headers['accept-language'] || '';
+    const clientFp = headers['x-client-fingerprint'] || '';
+    const stableHash = createHash('sha256')
+      .update(`${acceptLanguage}|${clientFp}`)
+      .digest('hex')
+      .substring(0, 32);
+    return { acceptLanguage, clientFp, stableHash };
+  }
+
   /**
    * ربط بصمة بجلسة
    */
@@ -83,12 +97,22 @@ export class SessionFingerprintService {
     sessionId: string,
     fingerprint: string,
     userId: string,
+    headers?: {
+      'user-agent'?: string;
+      'accept-language'?: string;
+      'x-client-fingerprint'?: string;
+    },
   ): Promise<void> {
     const key = `session:fingerprint:${sessionId}`;
+    const stable = this.stableComponents(headers || {});
 
     await this.redis.hmset(key, {
       fingerprint,
       userId,
+      acceptLanguage: stable.acceptLanguage,
+      clientFp: stable.clientFp,
+      stableHash: stable.stableHash,
+      userAgent: headers?.['user-agent'] || '',
       createdAt: Date.now().toString(),
       lastVerified: Date.now().toString(),
     });
@@ -107,9 +131,16 @@ export class SessionFingerprintService {
   async verifySessionFingerprint(
     sessionId: string,
     currentFingerprint: string,
+    headers?: {
+      'user-agent'?: string;
+      'accept-language'?: string;
+      'x-client-fingerprint'?: string;
+    },
   ): Promise<{
     valid: boolean;
     mismatch: boolean;
+    /** UA (or similar) changed but stable components still match — rebind, don't revoke. */
+    softMismatch: boolean;
     confidence: number;
     hadStored: boolean;
   }> {
@@ -118,7 +149,13 @@ export class SessionFingerprintService {
 
     if (!stored || !stored.fingerprint) {
       // 🔒 F-01: لا توجد بصمة مخزنة — نُبلغ المتصل ليطبّق Trust-On-First-Use
-      return { valid: true, mismatch: false, confidence: 50, hadStored: false };
+      return {
+        valid: true,
+        mismatch: false,
+        softMismatch: false,
+        confidence: 50,
+        hadStored: false,
+      };
     }
 
     const storedFingerprint = stored.fingerprint;
@@ -126,7 +163,13 @@ export class SessionFingerprintService {
     // تطابق تام
     if (storedFingerprint === currentFingerprint) {
       await this.redis.hset(key, 'lastVerified', Date.now().toString());
-      return { valid: true, mismatch: false, confidence: 100, hadStored: true };
+      return {
+        valid: true,
+        mismatch: false,
+        softMismatch: false,
+        confidence: 100,
+        hadStored: true,
+      };
     }
 
     // حساب نسبة التشابه
@@ -143,6 +186,52 @@ export class SessionFingerprintService {
       return {
         valid: true,
         mismatch: false,
+        softMismatch: false,
+        confidence: similarity,
+        hadStored: true,
+      };
+    }
+
+    // UA churn (DevTools mobile, Brave, desktop↔phone) with same locale/client id.
+    // Rebind instead of treating as session theft.
+    const currentStable = this.stableComponents(headers || {});
+    const hasStableMeta = Boolean(
+      stored.stableHash || stored.acceptLanguage || stored.clientFp,
+    );
+    const storedStable =
+      stored.stableHash ||
+      this.stableComponents({
+        'accept-language': stored.acceptLanguage,
+        'x-client-fingerprint': stored.clientFp,
+      }).stableHash;
+
+    if (!hasStableMeta) {
+      // Legacy Redis records (pre-component storage): upgrade by rebinding once.
+      this.logger.warn(
+        `Fingerprint legacy upgrade for session ${sessionId.substring(0, 8)} — will rebind`,
+      );
+      return {
+        valid: true,
+        mismatch: true,
+        softMismatch: true,
+        confidence: similarity,
+        hadStored: true,
+      };
+    }
+
+    if (
+      storedStable &&
+      currentStable.stableHash === storedStable &&
+      // Require at least one stable signal so empty||empty cannot soft-match forever.
+      (currentStable.acceptLanguage !== '' || currentStable.clientFp !== '')
+    ) {
+      this.logger.warn(
+        `Fingerprint soft mismatch (UA churn) for session ${sessionId.substring(0, 8)} — will rebind`,
+      );
+      return {
+        valid: true,
+        mismatch: true,
+        softMismatch: true,
         confidence: similarity,
         hadStored: true,
       };
@@ -155,6 +244,7 @@ export class SessionFingerprintService {
     return {
       valid: false,
       mismatch: true,
+      softMismatch: false,
       confidence: similarity,
       hadStored: true,
     };

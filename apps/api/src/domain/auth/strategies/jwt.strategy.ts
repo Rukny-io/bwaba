@@ -156,24 +156,30 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // 🔒 F-01: Session fingerprint verification — detect stolen sessions.
+    const fpHeaders = {
+      'user-agent': req.headers?.['user-agent'] as string | undefined,
+      'accept-language': req.headers?.['accept-language'] as string | undefined,
+      'x-client-fingerprint': req.headers?.[
+        'x-client-fingerprint'
+      ] as string | undefined,
+    };
     const currentFingerprint =
-      this.sessionFingerprintService.generateSimpleFingerprint({
-        'user-agent': req.headers?.['user-agent'],
-        'accept-language': req.headers?.['accept-language'],
-        'x-client-fingerprint': req.headers?.['x-client-fingerprint'],
-      });
+      this.sessionFingerprintService.generateSimpleFingerprint(fpHeaders);
     const fpResult =
       await this.sessionFingerprintService.verifySessionFingerprint(
         session.id,
         currentFingerprint,
+        fpHeaders,
       );
 
     // Trust-On-First-Use: أول طلب لجلسة بلا بصمة مخزّنة يربط البصمة الحالية.
-    if (!fpResult.hadStored) {
+    // Soft mismatch: تغيّر User-Agent فقط (DevTools / mobile) مع ثبات اللغة — أعد الربط.
+    if (!fpResult.hadStored || fpResult.softMismatch) {
       await this.sessionFingerprintService.bindFingerprintToSession(
         session.id,
         currentFingerprint,
         session.userId,
+        fpHeaders,
       );
     } else if (fpResult.mismatch && !fpResult.valid) {
       // 🔒 القرار مبني على البيئة — في التطوير/Compose المحلي نعيد الربط بدل الإبطال.
@@ -226,6 +232,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         session.id,
         currentFingerprint,
         session.userId,
+        fpHeaders,
       );
     }
 

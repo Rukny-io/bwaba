@@ -16,14 +16,22 @@ function downloadFile(filename: string, contents: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-const TYPE_ORDER: MailDnsRecord["type"][] = ["MX", "CNAME", "TXT"];
 const COLUMNS = "grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1.45fr)]";
 
 function groupedRecords(records: MailDnsRecord[]) {
-  return TYPE_ORDER.map((type) => ({
-    type,
-    records: records.filter((record) => record.type === type),
-  })).filter((group) => group.records.length > 0);
+  const mx = records.filter((record) => record.type === "MX");
+  const dkim = records.filter((record) => record.purpose === "DKIM");
+  const txt = records.filter((record) => record.type === "TXT");
+  const otherCname = records.filter(
+    (record) => record.type === "CNAME" && record.purpose !== "DKIM",
+  );
+
+  return [
+    { title: "MX", records: mx },
+    { title: "DKIM", records: dkim },
+    { title: "CNAME", records: otherCname },
+    { title: "TXT", records: txt },
+  ].filter((group) => group.records.length > 0);
 }
 
 function groupStatus(records: MailDnsRecord[]): MailDnsRecord["status"] {
@@ -40,16 +48,6 @@ function statusDot(status: MailDnsRecord["status"]) {
   return "bg-[var(--muted-foreground)]/35";
 }
 
-function displayValue(value: string) {
-  if (value.endsWith("._domainkey") && value.length > 28) {
-    return `${value.slice(0, 12)}…._domainkey`;
-  }
-  if (value.endsWith(".dkim.amazonses.com") && value.length > 36) {
-    return `${value.slice(0, 14)}….dkim.amazonses.com`;
-  }
-  return value;
-}
-
 function CopyCell({
   value,
   copied,
@@ -62,10 +60,10 @@ function CopyCell({
   return (
     <div className="flex min-h-9 min-w-0 items-center gap-1.5">
       <span
-        className="min-w-0 flex-1 truncate font-mono text-xs leading-5 text-[var(--foreground)]"
+        className="min-w-0 flex-1 break-all font-mono text-xs leading-5 text-[var(--foreground)]"
         title={value}
       >
-        {displayValue(value)}
+        {value}
       </span>
       <button
         type="button"
@@ -141,7 +139,7 @@ export function DnsRecordsTable({
       <ul className="grid gap-3">
         {groupedRecords(records).map((group) => (
           <li
-            key={group.type}
+            key={group.title}
             className="flex flex-col rounded-2xl bg-[var(--surface)] px-5 py-4"
           >
             <div className="mb-2 flex h-5 shrink-0 items-center gap-2">
@@ -149,7 +147,7 @@ export function DnsRecordsTable({
                 <span className={cn("size-1.5 rounded-full", statusDot(groupStatus(group.records)))} />
               ) : null}
               <span className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
-                {group.type}
+                {group.title}
               </span>
               <span className="text-[12px] tabular-nums text-[var(--muted-foreground)]">
                 {group.records.length}

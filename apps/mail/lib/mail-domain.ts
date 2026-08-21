@@ -85,9 +85,9 @@ export function buildDnsRecords(domain: string, dkimTokens: string[] = []): Mail
       purpose: "DMARC",
       type: "TXT",
       host: "_dmarc",
-      value: "v=DMARC1; p=none; rua=mailto:dmarc@rukny.io",
+      value: "v=DMARC1; p=none;",
       status: "pending",
-      hint: "Start with p=none, then tighten after mail is stable.",
+      hint: "Same value SES shows. Start with p=none. For BIMI, later raise to p=quarantine then p=reject (pct=100).",
     },
     {
       id: "mail-from-mx",
@@ -121,6 +121,36 @@ export function createMailDomainSetup(domain: string, dkimTokens: string[] = [])
     lastCheckedAt: null,
     createdAt: new Date().toISOString(),
   };
+}
+
+/** Keep stored setups aligned with the latest DNS template (e.g. DMARC row). */
+export function syncMailDomainRecords(setup: MailDomainSetup): MailDomainSetup {
+  const fromRecords = setup.records
+    .filter((record) => record.purpose === "DKIM" && record.host.includes("._domainkey"))
+    .map((record) => record.host.replace(/\._domainkey$/i, ""))
+    .filter(Boolean);
+  const tokens = (setup.dkimTokens?.length ? setup.dkimTokens : fromRecords).filter(Boolean);
+  const template = buildDnsRecords(setup.domain, tokens);
+  const previous = new Map(setup.records.map((record) => [record.id, record]));
+  return {
+    ...setup,
+    mailFromHost: `mail.${setup.domain}`,
+    dkimTokens: tokens,
+    records: template.map((record) => {
+      const existing = previous.get(record.id);
+      return existing
+        ? {
+            ...record,
+            status: existing.status,
+          }
+        : record;
+    }),
+  };
+}
+
+/** Recommended DMARC when ready for BIMI / stronger protection. */
+export function dmarcEnforcementValue() {
+  return "v=DMARC1; p=quarantine; pct=100;";
 }
 
 export function applyDnsCheckResults(

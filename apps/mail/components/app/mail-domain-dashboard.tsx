@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@heroui/react";
 import { Check } from "lucide-react";
 import { DnsRecordsTable } from "@/components/app/dns-records-table";
-import { applyDnsCheckResults, type MailDomainSetup } from "@/lib/mail-domain";
+import {
+  applyDnsCheckResults,
+  syncMailDomainRecords,
+  type MailDomainSetup,
+} from "@/lib/mail-domain";
 import { writeMailDomainSetup } from "@/lib/mail-domain-storage";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import { deleteDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
@@ -41,13 +45,20 @@ export function MailDomainDashboard({ setup: initial }: { setup: MailDomainSetup
   const slot = parseMailSlot(pathname);
   const href = (path: string) => withMailSlot(path, slot);
 
-  const [setup, setSetup] = useState(initial);
+  const [setup, setSetup] = useState(() => syncMailDomainRecords(initial));
   const [checking, setChecking] = useState(false);
   const verified = setup.status === "ACTIVE";
 
+  useEffect(() => {
+    const synced = syncMailDomainRecords(initial);
+    setSetup(synced);
+    writeMailDomainSetup(synced);
+  }, [initial]);
+
   function persist(next: MailDomainSetup) {
-    setSetup(next);
-    writeMailDomainSetup(next);
+    const synced = syncMailDomainRecords(next);
+    setSetup(synced);
+    writeMailDomainSetup(synced);
   }
 
   async function disconnect() {
@@ -69,7 +80,9 @@ export function MailDomainDashboard({ setup: initial }: { setup: MailDomainSetup
     });
     try {
       const result = await verifyDomainRequest(setup.domain, setup.dkimTokens ?? []);
-      persist(applyDnsCheckResults(setup, result.results, result.verified, result.waiting));
+      persist(
+        applyDnsCheckResults(setup, result.results, result.verified, result.waiting),
+      );
     } catch {
       persist({
         ...setup,

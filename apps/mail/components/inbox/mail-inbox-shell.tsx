@@ -268,6 +268,50 @@ export function MailInboxShell() {
     void loadCounts(appId, selectedMailboxId);
   }, [appId, selectedMailboxId, folder, loadMessages, loadCounts]);
 
+  // Instant updates via SSE (no polling interval).
+  useEffect(() => {
+    if (!appId) return;
+    const url = `/api/v1/mail/apps/${encodeURIComponent(appId)}/messages/stream`;
+    const source = new EventSource(url, { withCredentials: true });
+
+    source.onmessage = (event) => {
+      try {
+        const data = JSON.parse(String(event.data)) as {
+          type?: string;
+          mailboxId?: string;
+          folder?: string;
+        };
+        if (!data?.type || data.type === 'ping' || data.type === 'connected') {
+          return;
+        }
+        if (data.type !== 'mail.changed') return;
+        if (
+          selectedMailboxId &&
+          data.mailboxId &&
+          data.mailboxId !== selectedMailboxId
+        ) {
+          void loadCounts(appId, selectedMailboxId);
+          return;
+        }
+        if (!selectedMailboxId) return;
+        void loadMessages(appId, selectedMailboxId, folder, { quiet: true });
+        void loadCounts(appId, selectedMailboxId);
+      } catch {
+        /* ignore malformed events */
+      }
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [
+    appId,
+    selectedMailboxId,
+    folder,
+    loadMessages,
+    loadCounts,
+  ]);
+
   // Catch-up: if Inbox is empty but SES already wrote to S3, import once.
   useEffect(() => {
     if (!appId || !selectedMailboxId || folder !== "inbox") return;

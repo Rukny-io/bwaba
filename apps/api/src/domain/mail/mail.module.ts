@@ -13,6 +13,7 @@ import { MailMessagesController } from './mail-messages.controller';
 import { MailMessagesService } from './mail-messages.service';
 import { MailSesService } from './mail-ses.service';
 import { MailInboundService } from './mail-inbound.service';
+import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesWebhookController } from './mail-ses-webhook.controller';
 
 @Module({
@@ -36,6 +37,7 @@ import { MailSesWebhookController } from './mail-ses-webhook.controller';
     MailMessagesService,
     MailSesService,
     MailInboundService,
+    MailRealtimeService,
   ],
   exports: [
     MailSubscriptionsService,
@@ -44,6 +46,7 @@ import { MailSesWebhookController } from './mail-ses-webhook.controller';
     MailMessagesService,
     MailSesService,
     MailInboundService,
+    MailRealtimeService,
   ],
 })
 export class MailModule {}

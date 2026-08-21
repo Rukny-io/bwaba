@@ -2,14 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  MessageEvent,
   Param,
   Patch,
   Post,
   Query,
+  Sse,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { MailMessageFolder } from '@prisma/client';
+import { Observable } from 'rxjs';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import {
   AuthenticatedUser,
@@ -21,6 +24,7 @@ import {
 } from './dto/mail-message.dto';
 import { MailInboundService } from './mail-inbound.service';
 import { MailMessagesService } from './mail-messages.service';
+import { MailRealtimeService } from './mail-realtime.service';
 
 @ApiTags('Mail - Messages')
 @ApiBearerAuth()
@@ -30,6 +34,7 @@ export class MailMessagesController {
   constructor(
     private readonly messages: MailMessagesService,
     private readonly inbound: MailInboundService,
+    private readonly realtime: MailRealtimeService,
   ) {}
 
   @Get()
@@ -70,6 +75,34 @@ export class MailMessagesController {
     @Query('mailboxId') mailboxId?: string,
   ) {
     return this.messages.counts(user.id, appId, mailboxId);
+  }
+
+  @Sse('stream')
+  @ApiOperation({ summary: 'Realtime mail change stream (SSE)' })
+  async stream(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ): Promise<Observable<MessageEvent>> {
+    await this.messages.assertOwnedApp(user.id, appId);
+    return new Observable<MessageEvent>((subscriber) => {
+      subscriber.next({
+        data: { type: 'connected', appId },
+      } as MessageEvent);
+
+      const unsubscribe = this.realtime.subscribe(appId, (event) => {
+        subscriber.next({ data: event } as MessageEvent);
+      });
+
+      // Keep proxies/browsers from closing idle SSE connections.
+      const heartbeat = setInterval(() => {
+        subscriber.next({ data: { type: 'ping' } } as MessageEvent);
+      }, 25_000);
+
+      return () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+      };
+    });
   }
 
   @Post('import-inbound')

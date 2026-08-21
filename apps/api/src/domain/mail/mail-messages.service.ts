@@ -14,6 +14,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SendMailMessageDto } from './dto/mail-message.dto';
+import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class MailMessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ses: MailSesService,
+    private readonly realtime: MailRealtimeService,
   ) {}
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
@@ -384,6 +386,15 @@ export class MailMessagesService {
           sentAt: new Date(),
           errorMessage: null,
         },
+      });
+
+      this.realtime.publish({
+        type: 'mail.changed',
+        appId,
+        mailboxId: mailbox.id,
+        folder: MailMessageFolder.SENT,
+        messageId: sent.id,
+        direction: 'OUTBOUND',
       });
 
       return this.toView(sent);

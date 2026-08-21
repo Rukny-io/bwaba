@@ -19,6 +19,7 @@ import {
 import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { MailRealtimeService } from './mail-realtime.service';
 
 type SesReceiptAction = {
   type?: string;
@@ -54,6 +55,7 @@ export class MailInboundService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly realtime: MailRealtimeService,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -455,33 +457,45 @@ export class MailInboundService {
       if (parent) threadId = parent.threadId;
     }
 
-    return this.prisma.mailMessage.create({
-      data: {
-        mailboxId: mailbox.id,
-        userId: mailbox.mailApp.userId,
-        threadId,
-        messageId,
-        inReplyTo,
-        direction: MailMessageDirection.INBOUND,
-        folder: MailMessageFolder.INBOX,
-        status: MailMessageStatus.RECEIVED,
-        fromAddress,
-        fromName,
-        toAddresses: toFromParsed.length
-          ? toFromParsed
-          : [`${mailbox.localPart}@${mailbox.domain}`],
-        ccAddresses: this.addressesFrom(input.parsed.cc),
-        bccAddresses: [],
-        subject: input.parsed.subject?.trim() || '(no subject)',
-        bodyText,
-        bodyHtml,
-        snippet: this.snippetFrom(bodyText, bodyHtml),
-        isRead: false,
-        sesMessageId: input.sesMessageId,
-        rawS3Key: input.rawS3Key,
-        receivedAt: input.parsed.date || new Date(),
-      },
-    });
+    return this.prisma.mailMessage
+      .create({
+        data: {
+          mailboxId: mailbox.id,
+          userId: mailbox.mailApp.userId,
+          threadId,
+          messageId,
+          inReplyTo,
+          direction: MailMessageDirection.INBOUND,
+          folder: MailMessageFolder.INBOX,
+          status: MailMessageStatus.RECEIVED,
+          fromAddress,
+          fromName,
+          toAddresses: toFromParsed.length
+            ? toFromParsed
+            : [`${mailbox.localPart}@${mailbox.domain}`],
+          ccAddresses: this.addressesFrom(input.parsed.cc),
+          bccAddresses: [],
+          subject: input.parsed.subject?.trim() || '(no subject)',
+          bodyText,
+          bodyHtml,
+          snippet: this.snippetFrom(bodyText, bodyHtml),
+          isRead: false,
+          sesMessageId: input.sesMessageId,
+          rawS3Key: input.rawS3Key,
+          receivedAt: input.parsed.date || new Date(),
+        },
+      })
+      .then((created) => {
+        this.realtime.publish({
+          type: 'mail.changed',
+          appId: mailbox.mailApp.appId,
+          mailboxId: mailbox.id,
+          folder: MailMessageFolder.INBOX,
+          messageId: created.id,
+          direction: 'INBOUND',
+        });
+        return created;
+      });
   }
 
   private headerAddresses(parsed: ParsedMail, headerName: string): string[] {
@@ -515,7 +529,7 @@ export class MailInboundService {
           status: MailMailboxStatus.ACTIVE,
         },
         include: {
-          mailApp: { select: { userId: true, status: true } },
+          mailApp: { select: { userId: true, status: true, appId: true } },
         },
       });
       if (mailbox && mailbox.mailApp.status === 'ACTIVE') {
@@ -537,7 +551,7 @@ export class MailInboundService {
           status: MailMailboxStatus.ACTIVE,
         },
         include: {
-          mailApp: { select: { userId: true, status: true } },
+          mailApp: { select: { userId: true, status: true, appId: true } },
         },
       });
       if (mailbox && mailbox.mailApp.status === 'ACTIVE') {

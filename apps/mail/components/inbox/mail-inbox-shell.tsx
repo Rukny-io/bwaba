@@ -268,6 +268,46 @@ export function MailInboxShell() {
     void loadCounts(appId, selectedMailboxId);
   }, [appId, selectedMailboxId, folder, loadMessages, loadCounts]);
 
+  // Catch-up: if Inbox is empty but SES already wrote to S3, import once.
+  useEffect(() => {
+    if (!appId || !selectedMailboxId || folder !== "inbox") return;
+    if (messagesLoading || messages.length > 0) return;
+    let cancelled = false;
+    const key = `rukny_mail_auto_import_${appId}_${selectedMailboxId}`;
+    if (typeof window !== "undefined" && sessionStorage.getItem(key)) return;
+    (async () => {
+      try {
+        if (typeof window !== "undefined") sessionStorage.setItem(key, "1");
+        const result = await importInboundMailMessages(appId, 40);
+        if (cancelled) return;
+        const stored = result.results.filter(
+          (r) => r.handled === "stored_inbound",
+        ).length;
+        if (stored > 0) {
+          await loadMessages(appId, selectedMailboxId, "inbox", {
+            quiet: true,
+          });
+          await loadCounts(appId, selectedMailboxId);
+          showToast(`Imported ${stored} inbound message${stored === 1 ? "" : "s"}`);
+        }
+      } catch {
+        /* IAM/API not ready yet */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    appId,
+    selectedMailboxId,
+    folder,
+    messagesLoading,
+    messages.length,
+    loadMessages,
+    loadCounts,
+    showToast,
+  ]);
+
   const selectMailbox = useCallback((id: string) => {
     if (id === "manage" || id === "none") return;
     setSelectedMailboxId(id);

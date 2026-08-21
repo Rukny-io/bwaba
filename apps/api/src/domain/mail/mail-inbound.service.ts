@@ -95,24 +95,44 @@ export class MailInboundService {
     return this.mailS3;
   }
 
-  private async getRawObject(bucket: string, key: string): Promise<Buffer | null> {
-    try {
-      const response = await this.getMailS3().send(
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
-      );
-      if (!response.Body) return null;
-      const stream = response.Body as NodeJS.ReadableStream;
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  private async getRawObject(
+    bucket: string,
+    key: string,
+    attempts = 3,
+  ): Promise<Buffer | null> {
+    let lastError: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const response = await this.getMailS3().send(
+          new GetObjectCommand({ Bucket: bucket, Key: key }),
+        );
+        if (!response.Body) return null;
+        const stream = response.Body as NodeJS.ReadableStream;
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        return Buffer.concat(chunks);
+      } catch (error) {
+        lastError = error;
+        const name = error instanceof Error ? error.name : 'Error';
+        if (name === 'NoSuchKey') {
+          if (i < attempts - 1) {
+            await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+            continue;
+          }
+          return null;
+        }
+        this.logger.warn(`Mail S3 get failed s3://${bucket}/${key}: ${name}`);
+        if (i < attempts - 1) {
+          await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+          continue;
+        }
+        throw error;
       }
-      return Buffer.concat(chunks);
-    } catch (error) {
-      const name = error instanceof Error ? error.name : 'Error';
-      if (name === 'NoSuchKey') return null;
-      this.logger.warn(`Mail S3 get failed s3://${bucket}/${key}: ${name}`);
-      throw error;
     }
+    if (lastError) throw lastError;
+    return null;
   }
 
   private async listRawKeys(bucket: string, maxKeys: number): Promise<string[]> {
@@ -229,28 +249,31 @@ export class MailInboundService {
   ): Promise<{ ok: true; handled: string }> {
     const type = notification.notificationType || '';
     if (type && type !== 'Received') {
-      // Bounce/Complaint can be wired later
       this.logger.debug(`Ignoring SES notificationType=${type}`);
       return { ok: true, handled: `ignored_${type || 'unknown'}` };
     }
 
     const action = notification.receipt?.action;
-    const bucket =
-      action?.bucketName ||
-      this.rawBucket() ||
-      undefined;
-    const key =
+    // When SNS is the last receipt action, action.type is SNS (no bucket/key).
+    // SES still stores the raw MIME under mail.messageId in the S3 bucket.
+    const bucket = (action?.bucketName || this.rawBucket() || '').trim();
+    const key = (
       action?.objectKey ||
       (notification.mail?.messageId
         ? `${action?.objectKeyPrefix || ''}${notification.mail.messageId}`
-        : undefined);
+        : '')
+    ).trim();
 
     if (!bucket || !key) {
       this.logger.warn(
-        'Inbound notification missing S3 bucket/key — configure SES receipt rule S3 action',
+        `Inbound notification missing S3 location bucket=${bucket || '-'} key=${key || '-'} actionType=${action?.type || '-'}`,
       );
       return { ok: true, handled: 'missing_s3_location' };
     }
+
+    this.logger.log(
+      `Inbound Received → s3://${bucket}/${key} recipients=${(notification.receipt?.recipients || notification.mail?.destination || []).join(',')}`,
+    );
 
     const raw = await this.getRawObject(bucket, key);
     if (!raw) {
@@ -259,20 +282,27 @@ export class MailInboundService {
     }
 
     const parsed = await simpleParser(raw);
+    const headerDestinations = [
+      ...(notification.mail?.commonHeaders?.to || []),
+      ...this.headerAddresses(parsed, 'delivered-to'),
+      ...this.headerAddresses(parsed, 'x-original-to'),
+      ...this.headerAddresses(parsed, 'envelope-to'),
+    ];
+
     const stored = await this.storeInboundMessage({
       parsed,
       rawS3Key: key,
       sesMessageId: notification.mail?.messageId || null,
-      destinations:
-        notification.receipt?.recipients ||
-        notification.mail?.destination ||
-        [],
+      destinations: [
+        ...(notification.receipt?.recipients || []),
+        ...(notification.mail?.destination || []),
+        ...headerDestinations,
+      ],
     });
 
-    return {
-      ok: true,
-      handled: stored ? 'stored_inbound' : 'no_matching_mailbox',
-    };
+    const handled = stored ? 'stored_inbound' : 'no_matching_mailbox';
+    this.logger.log(`Inbound handled=${handled} key=${key}`);
+    return { ok: true, handled };
   }
 
   /**
@@ -301,12 +331,20 @@ export class MailInboundService {
           parsed,
           rawS3Key: trimmed,
           sesMessageId: null,
-          destinations: this.addressesFrom(parsed.to),
+          destinations: [
+            ...this.addressesFrom(parsed.to),
+            ...this.headerAddresses(parsed, 'delivered-to'),
+            ...this.headerAddresses(parsed, 'x-original-to'),
+            ...this.headerAddresses(parsed, 'envelope-to'),
+          ],
         });
         results.push({
           key: trimmed,
           handled: stored ? 'stored_inbound' : 'no_matching_mailbox',
         });
+        this.logger.log(
+          `Import key=${trimmed} handled=${stored ? 'stored_inbound' : 'no_matching_mailbox'}`,
+        );
       } catch (error) {
         this.logger.error(
           `Import failed for s3://${bucket}/${trimmed}`,
@@ -431,12 +469,30 @@ export class MailInboundService {
     });
   }
 
+  private headerAddresses(parsed: ParsedMail, headerName: string): string[] {
+    const value = parsed.headers?.get(headerName);
+    if (!value) return [];
+    const raw = Array.isArray(value) ? value.join(', ') : String(value);
+    return raw
+      .split(/[,;]+/)
+      .map((part) => {
+        const match = part.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        return match?.[0]?.toLowerCase() || '';
+      })
+      .filter(Boolean);
+  }
+
   private async resolveMailbox(addresses: string[]) {
     for (const address of addresses) {
-      const at = address.lastIndexOf('@');
+      const normalized = address.trim().toLowerCase();
+      const at = normalized.lastIndexOf('@');
       if (at <= 0) continue;
-      const localPart = address.slice(0, at).toLowerCase();
-      const domain = address.slice(at + 1).toLowerCase();
+      let localPart = normalized.slice(0, at);
+      const domain = normalized.slice(at + 1);
+      // help+tag@domain → help
+      const plus = localPart.indexOf('+');
+      if (plus > 0) localPart = localPart.slice(0, plus);
+
       const mailbox = await this.prisma.mailMailbox.findFirst({
         where: {
           localPart,
@@ -448,6 +504,31 @@ export class MailInboundService {
         },
       });
       if (mailbox && mailbox.mailApp.status === 'ACTIVE') {
+        return mailbox;
+      }
+    }
+
+    // Fallback: match local-part on any active mailbox for known domains in candidates
+    for (const address of addresses) {
+      const normalized = address.trim().toLowerCase();
+      const at = normalized.lastIndexOf('@');
+      if (at <= 0) continue;
+      let localPart = normalized.slice(0, at);
+      const plus = localPart.indexOf('+');
+      if (plus > 0) localPart = localPart.slice(0, plus);
+      const mailbox = await this.prisma.mailMailbox.findFirst({
+        where: {
+          localPart,
+          status: MailMailboxStatus.ACTIVE,
+        },
+        include: {
+          mailApp: { select: { userId: true, status: true } },
+        },
+      });
+      if (mailbox && mailbox.mailApp.status === 'ACTIVE') {
+        this.logger.warn(
+          `Mailbox matched by localPart only: ${localPart}@${mailbox.domain} (wanted ${normalized})`,
+        );
         return mailbox;
       }
     }

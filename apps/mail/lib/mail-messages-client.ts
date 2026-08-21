@@ -20,6 +20,7 @@ export type MailMessageView = {
   from: { name?: string; email: string };
   fromAddress: string;
   fromName: string | null;
+  fromAvatarUrl?: string | null;
   to: string[];
   cc: string[];
   bcc: string[];

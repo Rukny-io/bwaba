@@ -117,7 +117,9 @@ export function MailInboxReaderCard({
   const displayName = isOutbound
     ? message.from || mailboxAddress || "Me"
     : message.from;
-  const headerAvatarUrl = isOutbound ? mailboxAvatarUrl : null;
+  const headerAvatarUrl = isOutbound
+    ? message.fromAvatarUrl || mailboxAvatarUrl
+    : null;
 
   return (
     <section

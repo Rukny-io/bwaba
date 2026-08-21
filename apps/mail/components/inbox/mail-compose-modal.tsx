@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { Send, X } from "lucide-react";
+import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 
 export type ComposeDraft = {
   to: string;
@@ -14,6 +15,8 @@ export type ComposeDraft = {
 type Props = {
   open: boolean;
   fromAddress: string | null;
+  fromAvatarUrl?: string | null;
+  fromDisplayName?: string | null;
   initial?: ComposeDraft | null;
   sending?: boolean;
   error?: string;
@@ -31,6 +34,8 @@ function parseRecipients(raw: string): string[] {
 export function MailComposeModal({
   open,
   fromAddress,
+  fromAvatarUrl = null,
+  fromDisplayName = null,
   initial,
   sending = false,
   error = "",
@@ -94,18 +99,28 @@ export function MailComposeModal({
         className="relative z-10 flex max-h-[min(92dvh,720px)] w-full max-w-xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-xl dark:bg-[var(--surface)]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 py-3.5 sm:px-5">
-          <div className="min-w-0">
-            <h2
-              id={titleId}
-              className="text-base font-semibold tracking-tight text-[var(--foreground)]"
-            >
-              {initial?.replyToMessageId ? "Reply" : "New message"}
-            </h2>
+          <div className="flex min-w-0 items-center gap-3">
             {fromAddress ? (
-              <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
-                From {fromAddress}
-              </p>
+              <MailPersonAvatar
+                name={fromDisplayName || fromAddress}
+                email={fromAddress}
+                avatarUrl={fromAvatarUrl}
+                className="size-10"
+              />
             ) : null}
+            <div className="min-w-0">
+              <h2
+                id={titleId}
+                className="text-base font-semibold tracking-tight text-[var(--foreground)]"
+              >
+                {initial?.replyToMessageId ? "Reply" : "New message"}
+              </h2>
+              {fromAddress ? (
+                <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
+                  From {fromAddress}
+                </p>
+              ) : null}
+            </div>
           </div>
           <button
             type="button"

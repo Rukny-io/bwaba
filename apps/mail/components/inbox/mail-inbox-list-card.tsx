@@ -10,6 +10,7 @@ export type InboxMessageRow = {
   id: string;
   from: string;
   fromEmail: string;
+  fromAvatarUrl?: string | null;
   to: string;
   toList?: string[];
   subject: string;
@@ -24,6 +25,7 @@ export type InboxMessageRow = {
 type Props = {
   folder: InboxFolderId;
   mailboxAddress: string | null;
+  mailboxAvatarUrl?: string | null;
   messages: InboxMessageRow[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -94,6 +96,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 export function MailInboxListCard({
   folder,
   mailboxAddress,
+  mailboxAvatarUrl = null,
   messages,
   selectedId,
   onSelect,
@@ -219,7 +222,11 @@ export function MailInboxListCard({
                     <MailPersonAvatar
                       name={primary}
                       email={outbound ? message.to : message.fromEmail}
-                      avatarUrl={null}
+                      avatarUrl={
+                        outbound
+                          ? message.fromAvatarUrl || mailboxAvatarUrl
+                          : null
+                      }
                       className={cn(
                         "size-10",
                         active

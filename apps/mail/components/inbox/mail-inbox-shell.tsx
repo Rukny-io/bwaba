@@ -66,6 +66,7 @@ function toRow(msg: MailMessageView): InboxMessageRow {
     id: msg.id,
     from: displayName(msg),
     fromEmail: msg.fromAddress,
+    fromAvatarUrl: msg.fromAvatarUrl ?? null,
     to: msg.to.join(", "),
     toList: msg.to,
     subject: msg.subject || "(no subject)",
@@ -823,6 +824,7 @@ export function MailInboxShell() {
               <MailInboxListCard
                 folder={folder}
                 mailboxAddress={selected?.address ?? null}
+                mailboxAvatarUrl={selected?.avatarUrl ?? null}
                 messages={visibleMessages}
                 selectedId={selectedMessageId}
                 onSelect={onSelectMessage}
@@ -896,6 +898,8 @@ export function MailInboxShell() {
       <MailComposeModal
         open={composeOpen}
         fromAddress={selected?.address ?? null}
+        fromAvatarUrl={selected?.avatarUrl ?? null}
+        fromDisplayName={selected?.displayName ?? selected?.localPart ?? null}
         initial={composeInitial}
         sending={sending}
         error={sendError}

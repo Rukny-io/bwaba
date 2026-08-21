@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
+import { Camera, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
 import { Checkbox, cn, Dropdown, Input, Label, TextField } from "@heroui/react";
 import type { MailDomainSetup } from "@/lib/mail-domain";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
@@ -13,9 +13,12 @@ import {
   createMailMailbox,
   deleteMailMailbox,
   listMailMailboxes,
+  removeMailMailboxAvatar,
   setMailMailbox2fa,
+  uploadMailMailboxAvatar,
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
+import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import {
   fetchMailSubscription,
   type MailSubscriptionView,
@@ -60,6 +63,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const [passwordModal, setPasswordModal] = useState<MailMailboxView | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [avatarUploadingId, setAvatarUploadingId] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const avatarTargetIdRef = useRef<string | null>(null);
 
   const refreshMailboxes = useCallback(async (id: string) => {
     const list = await listMailMailboxes(id);
@@ -197,6 +203,53 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     }
   }
 
+  function pickAvatar(mailboxId: string) {
+    avatarTargetIdRef.current = mailboxId;
+    avatarInputRef.current?.click();
+  }
+
+  async function onAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const mailboxId = avatarTargetIdRef.current;
+    e.target.value = "";
+    if (!appId || !file || !mailboxId) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Choose a JPEG, PNG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Photo must be 5MB or smaller.");
+      return;
+    }
+
+    setAvatarUploadingId(mailboxId);
+    setError("");
+    try {
+      await uploadMailMailboxAvatar(appId, mailboxId, file);
+      await refreshMailboxes(appId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not upload photo.");
+    } finally {
+      setAvatarUploadingId(null);
+      avatarTargetIdRef.current = null;
+    }
+  }
+
+  async function onRemoveAvatar(mailboxId: string) {
+    if (!appId || avatarUploadingId) return;
+    setAvatarUploadingId(mailboxId);
+    setError("");
+    try {
+      await removeMailMailboxAvatar(appId, mailboxId);
+      await refreshMailboxes(appId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove photo.");
+    } finally {
+      setAvatarUploadingId(null);
+    }
+  }
+
   function onMailboxAction(box: MailMailboxView, key: React.Key) {
     const action = String(key);
     switch (action) {
@@ -204,6 +257,12 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         setError("");
         setNewPassword("");
         setPasswordModal(box);
+        break;
+      case "photo":
+        pickAvatar(box.id);
+        break;
+      case "remove-photo":
+        void onRemoveAvatar(box.id);
         break;
       case "app-passwords":
         setError("App passwords are coming soon.");
@@ -236,6 +295,13 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
 
   return (
     <section className="dashboard-page mx-auto flex w-full max-w-[890px] flex-col gap-6">
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => void onAvatarFileChange(e)}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           Mailboxes
@@ -542,12 +608,34 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       className="border-b border-[var(--separator)] last:border-b-0"
                     >
                       <td className="px-5 py-4 align-middle sm:px-6">
-                        <p className="font-semibold text-[var(--foreground)]">{box.address}</p>
-                        <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                          {box.hasPassword ? "Password set" : "No password"}
-                          {box.totpEnabled ? " · 2FA on" : ""}
-                          {" · aliases coming soon"}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => pickAvatar(box.id)}
+                            disabled={avatarUploadingId === box.id}
+                            className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                            aria-label={`Change photo for ${box.address}`}
+                            title="Change photo"
+                          >
+                            <MailPersonAvatar
+                              name={box.displayName || box.localPart}
+                              email={box.address}
+                              avatarUrl={box.avatarUrl}
+                              className="size-11"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Camera className="size-3.5 text-white" />
+                            </span>
+                          </button>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[var(--foreground)]">{box.address}</p>
+                            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                              {box.hasPassword ? "Password set" : "No password"}
+                              {box.totpEnabled ? " · 2FA on" : ""}
+                              {avatarUploadingId === box.id ? " · Uploading…" : ""}
+                            </p>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-4 align-middle">
                         <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--foreground)]">
@@ -597,6 +685,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                               className="min-w-[12.5rem] overflow-hidden rounded-2xl"
                             >
                               <Dropdown.Menu onAction={(key) => onMailboxAction(box, key)}>
+                                <Dropdown.Item id="photo" textValue="Change photo">
+                                  Change photo
+                                </Dropdown.Item>
+                                {box.avatarUrl ? (
+                                  <Dropdown.Item id="remove-photo" textValue="Remove photo">
+                                    Remove photo
+                                  </Dropdown.Item>
+                                ) : null}
                                 <Dropdown.Item id="password" textValue="Change Password">
                                   Change Password
                                 </Dropdown.Item>

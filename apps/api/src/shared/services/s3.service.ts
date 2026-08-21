@@ -533,6 +533,21 @@ export class S3Service implements OnModuleInit {
   }
 
   /**
+   * Generate S3 key for a Mail mailbox avatar
+   * Path: users/{userId}/mail/{appId}/mailboxes/{mailboxId}/avatar/{filename}
+   */
+  getMailMailboxAvatarKey(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    filename: string,
+  ): string {
+    const safe = (value: string) =>
+      value.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 80) || 'x';
+    return `users/${safe(userId)}/mail/${safe(appId)}/mailboxes/${safe(mailboxId)}/avatar/${filename}`;
+  }
+
+  /**
    * Generate S3 key for user profile cover
    * Path: users/{userId}/profile/cover/{filename}
    */

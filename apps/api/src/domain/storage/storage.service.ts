@@ -665,6 +665,105 @@ export class StorageService {
   }
 
   /**
+   * Upload a Mail mailbox avatar (tenant-scoped key, re-encoded WebP).
+   * Does not touch the user profile AVATAR category.
+   */
+  async uploadMailMailboxAvatar(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    file: Express.Multer.File,
+  ): Promise<string> {
+    this.validateFileExtension(file?.originalname);
+
+    const buffer = await this.normalizeFileToBuffer(file);
+    const incomingSize =
+      (file && (file.size ?? buffer.length)) || buffer.length;
+
+    if (incomingSize > this.MAX_AVATAR_SIZE) {
+      throw new BadRequestException('File exceeds 5MB limit.');
+    }
+
+    const hasSpace = await this.checkStorageLimit(userId, incomingSize);
+    if (!hasSpace) {
+      throw new BadRequestException('Not enough storage space.');
+    }
+
+    const fileType = await fileTypeFromBuffer(buffer);
+    if (!fileType || !this.ALLOWED_IMAGE_TYPES.includes(fileType.mime)) {
+      throw new BadRequestException(
+        'Invalid file type. Allowed: JPEG, PNG, WebP, GIF.',
+      );
+    }
+
+    const processedImage = await sharp(buffer)
+      .rotate()
+      .resize(this.AVATAR_SIZE, this.AVATAR_SIZE, {
+        fit: 'cover',
+        position: 'center',
+      })
+      .webp({ quality: 90 })
+      .toBuffer();
+
+    const [blurHash, dimensions] = await Promise.all([
+      this.generateBlurHash(processedImage),
+      this.getImageDimensions(processedImage),
+    ]);
+
+    const filename = `${uuidv4()}.webp`;
+    const key = this.s3Service.getMailMailboxAvatarKey(
+      userId,
+      appId,
+      mailboxId,
+      filename,
+    );
+
+    await this.deleteFileByEntityAndCategory(
+      userId,
+      mailboxId,
+      FileCategory.MAIL_MAILBOX_AVATAR,
+    );
+
+    await this.s3Service.uploadBuffer(
+      this.bucket,
+      key,
+      processedImage,
+      'image/webp',
+    );
+
+    await this.trackFile(userId, {
+      key,
+      fileName: file.originalname || filename,
+      fileType: 'image/webp',
+      fileSize: BigInt(processedImage.length),
+      category: FileCategory.MAIL_MAILBOX_AVATAR,
+      entityId: mailboxId,
+      blurHash,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
+    this.logger.log(
+      `Mail mailbox avatar uploaded user=${userId} mailbox=${mailboxId} key=${key}`,
+    );
+    return key;
+  }
+
+  /**
+   * Remove tracked mailbox avatar files (S3 + DB). Safe if none exist.
+   */
+  async deleteMailMailboxAvatar(
+    userId: string,
+    mailboxId: string,
+  ): Promise<void> {
+    await this.deleteFileByEntityAndCategory(
+      userId,
+      mailboxId,
+      FileCategory.MAIL_MAILBOX_AVATAR,
+    );
+  }
+
+  /**
    * Upload cover image to S3 with processing
    */
   async uploadCover(

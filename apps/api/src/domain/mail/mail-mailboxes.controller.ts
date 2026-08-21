@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,9 +7,18 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import {
   AuthenticatedUser,
@@ -59,6 +69,39 @@ export class MailMailboxesController {
     @Body() dto: UpdateMailMailboxDto,
   ) {
     return this.mailboxes.update(user.id, appId, mailboxId, dto);
+  }
+
+  @Post(':mailboxId/avatar')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Upload mailbox avatar (JPEG/PNG/WebP/GIF, max 5MB; re-encoded to WebP)',
+  })
+  uploadAvatar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('mailboxId') mailboxId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded.');
+    }
+    return this.mailboxes.uploadAvatar(user.id, appId, mailboxId, file);
+  }
+
+  @Delete(':mailboxId/avatar')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({ summary: 'Remove mailbox avatar' })
+  removeAvatar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('mailboxId') mailboxId: string,
+  ) {
+    return this.mailboxes.removeAvatar(user.id, appId, mailboxId);
   }
 
   @Post(':mailboxId/password')

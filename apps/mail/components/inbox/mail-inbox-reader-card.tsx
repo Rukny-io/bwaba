@@ -11,11 +11,14 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { cn } from "@heroui/react";
 import type { InboxMessageRow } from "@/components/inbox/mail-inbox-list-card";
+import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 
 type Props = {
   message: InboxMessageRow | null;
   mailboxAddress: string | null;
+  mailboxAvatarUrl?: string | null;
   index: number;
   total: number;
   replyBody: string;
@@ -54,9 +57,13 @@ function formatFull(iso: string) {
   }
 }
 
+const glassBtn =
+  "inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.06] hover:text-[var(--foreground)] dark:hover:bg-white/10";
+
 export function MailInboxReaderCard({
   message,
   mailboxAddress,
+  mailboxAvatarUrl = null,
   index,
   total,
   replyBody,
@@ -106,27 +113,89 @@ export function MailInboxReaderCard({
   const replyToLabel = isOutbound
     ? message.to || message.from
     : message.from;
+  // Header shows the mailbox identity when you sent it (with your photo).
+  const displayName = isOutbound
+    ? message.from || mailboxAddress || "Me"
+    : message.from;
+  const headerAvatarUrl = isOutbound ? mailboxAvatarUrl : null;
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[1.25rem] bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] animate-[inbox-fade_220ms_ease-out] sm:rounded-[1.5rem] dark:bg-[var(--surface)]">
-      <div className="flex shrink-0 items-start gap-2.5 border-b border-[var(--separator)] px-2.5 py-3 sm:items-center sm:px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--foreground)] transition-colors hover:bg-[var(--brand-blue-soft)] lg:hidden"
-          aria-label="Back"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
+    <section
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-[inbox-fade_220ms_ease-out]",
+        "max-md:rounded-none max-md:bg-transparent max-md:shadow-none",
+        "md:rounded-[1.25rem] md:bg-white md:shadow-[0_1px_0_rgba(15,23,42,0.03)] lg:rounded-[1.5rem] dark:md:bg-[var(--surface)]",
+      )}
+    >
+      {/* Mobile: liquid-glass toolbar */}
+      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-2 pt-1 md:hidden">
+        <div className="mail-inbox-toolbar-glass inline-flex min-w-0 max-w-[70%] items-center gap-0.5 p-1">
+          <button
+            type="button"
+            onClick={onBack}
+            className={glassBtn}
+            aria-label="Back"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+          <span
+            className="mx-0.5 h-5 w-px shrink-0 bg-black/10 dark:bg-white/15"
+            aria-hidden
+          />
+          <span className="flex min-w-0 items-center gap-2 px-1.5 py-1">
+            <MailPersonAvatar
+              name={displayName}
+              email={isOutbound ? replyToAddress : message.fromEmail}
+              avatarUrl={headerAvatarUrl}
+              className="size-7"
+              textClassName="text-[10px]"
+            />
+            <span className="min-w-0 truncate text-xs font-semibold text-[var(--foreground)]">
+              {displayName}
+            </span>
+          </span>
+        </div>
 
-        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-sm font-semibold text-[var(--secondary-foreground)] sm:mt-0">
-          {initials(isOutbound ? replyToLabel : message.from)}
-        </span>
+        <div className="mail-inbox-toolbar-glass inline-flex shrink-0 items-center gap-0.5 p-1">
+          <button
+            type="button"
+            onClick={onToggleStar}
+            className={glassBtn}
+            aria-label="Star"
+          >
+            <Star
+              className={
+                message.starred
+                  ? "size-4 fill-[var(--warning)] text-[var(--warning)]"
+                  : "size-4"
+              }
+            />
+          </button>
+          <button
+            type="button"
+            onClick={onTrash}
+            className={glassBtn}
+            aria-label="Delete"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Tablet / desktop header */}
+      <div className="hidden shrink-0 items-center gap-2.5 border-b border-[var(--separator)] px-4 py-3 md:flex">
+        <MailPersonAvatar
+          name={displayName}
+          email={isOutbound ? replyToAddress : message.fromEmail}
+          avatarUrl={headerAvatarUrl}
+          className="size-10"
+          textClassName="text-sm"
+        />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-              {isOutbound ? replyToLabel : message.from}
+              {displayName}
             </p>
             <span className="rounded-full bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
               {message.folder ?? "INBOX"}
@@ -155,7 +224,12 @@ export function MailInboxReaderCard({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 md:pt-4">
+        <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
+          {isOutbound
+            ? `to ${message.to || replyToAddress}`
+            : message.fromEmail}
+        </p>
         <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
           <h1 className="text-[1.3rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.4rem]">
             {message.subject}
@@ -170,12 +244,12 @@ export function MailInboxReaderCard({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-[var(--separator)] px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-3 sm:pb-3">
-        <div className="rounded-[1.35rem] bg-[var(--surface-secondary)] p-3.5 sm:rounded-[1.5rem] sm:p-4">
+      <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3 md:pb-3 md:pt-2.5">
+        <div className="rounded-[1.35rem] bg-white/90 p-3.5 backdrop-blur-sm sm:rounded-[1.5rem] sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <span className="text-xs text-[var(--muted-foreground)]">To</span>
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] dark:bg-[var(--surface)]">
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] md:bg-white dark:md:bg-[var(--surface)]">
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
                   {initials(replyToLabel)}
                 </span>
@@ -216,7 +290,7 @@ export function MailInboxReaderCard({
           <button
             type="button"
             onClick={onReply}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
           >
             <CornerUpLeft className="size-3.5" />
             Reply
@@ -226,7 +300,7 @@ export function MailInboxReaderCard({
               type="button"
               onClick={onPrev}
               disabled={!onPrev}
-              className="inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-30 sm:size-8"
+              className="inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 sm:size-8 dark:hover:bg-white/10"
               aria-label="Previous"
             >
               <ChevronLeft className="size-4" />
@@ -238,7 +312,7 @@ export function MailInboxReaderCard({
               type="button"
               onClick={onNext}
               disabled={!onNext}
-              className="inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-30 sm:size-8"
+              className="inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 sm:size-8 dark:hover:bg-white/10"
               aria-label="Next"
             >
               <ChevronRight className="size-4" />
@@ -247,7 +321,7 @@ export function MailInboxReaderCard({
           <button
             type="button"
             onClick={onForward}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
           >
             Forward
             <CornerUpRight className="size-3.5" />

@@ -2336,6 +2336,7 @@ enum FileCategory {
   BANNER
   LOGO
   SUPPORT_ATTACHMENT
+  MAIL_MAILBOX_AVATAR
 }
 
 enum WaitlistStatus {
@@ -3339,6 +3340,8 @@ model MailMailbox {
   /// Domain at creation time (usually MailApp.primaryDomain)
   domain       String
   displayName  String?
+  /// S3 object key for mailbox profile photo (served via /api/media/…)
+  avatarKey    String?
   /// bcrypt hash — required for new mailboxes; optional for legacy rows
   passwordHash String?
   /// Optional mailbox-level TOTP 2FA

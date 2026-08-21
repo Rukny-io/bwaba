@@ -7,6 +7,7 @@ import { MailAppStatus, MailMailboxStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
   ChangeMailMailboxPasswordDto,
@@ -22,6 +23,7 @@ export class MailMailboxesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptions: MailSubscriptionsService,
+    private readonly storage: StorageService,
   ) {}
 
   private normalizeLocalPart(raw: string) {
@@ -46,11 +48,19 @@ export class MailMailboxesService {
     return randomBytes(20).toString('hex');
   }
 
+  private mediaUrl(key: string | null | undefined) {
+    if (!key) return null;
+    const cleaned = key.replace(/^\/+/, '');
+    if (!cleaned || cleaned.includes('..')) return null;
+    return `/api/media/${cleaned}`;
+  }
+
   private toView(row: {
     id: string;
     localPart: string;
     domain: string;
     displayName: string | null;
+    avatarKey?: string | null;
     passwordHash: string | null;
     totpEnabled: boolean;
     status: MailMailboxStatus;
@@ -65,6 +75,7 @@ export class MailMailboxesService {
       domain: row.domain,
       address: `${row.localPart}@${row.domain}`,
       displayName: row.displayName,
+      avatarUrl: this.mediaUrl(row.avatarKey),
       hasPassword: Boolean(row.passwordHash),
       totpEnabled: row.totpEnabled,
       status: row.status,
@@ -252,11 +263,49 @@ export class MailMailboxesService {
     return { mailbox: this.toView(updated) };
   }
 
+  async uploadAvatar(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded.');
+    }
+    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const key = await this.storage.uploadMailMailboxAvatar(
+      userId,
+      appId,
+      existing.id,
+      file,
+    );
+    const updated = await this.prisma.mailMailbox.update({
+      where: { id: existing.id },
+      data: { avatarKey: key },
+      include: { mailApp: { select: { appId: true } } },
+    });
+    return { mailbox: this.toView(updated) };
+  }
+
+  async removeAvatar(userId: string, appId: string, mailboxId: string) {
+    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    await this.storage.deleteMailMailboxAvatar(userId, existing.id);
+    const updated = await this.prisma.mailMailbox.update({
+      where: { id: existing.id },
+      data: { avatarKey: null },
+      include: { mailApp: { select: { appId: true } } },
+    });
+    return { mailbox: this.toView(updated) };
+  }
+
   async remove(userId: string, appId: string, mailboxId: string) {
     const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    await this.storage
+      .deleteMailMailboxAvatar(userId, existing.id)
+      .catch(() => undefined);
     await this.prisma.mailMailbox.update({
       where: { id: existing.id },
-      data: { status: MailMailboxStatus.DELETED },
+      data: { status: MailMailboxStatus.DELETED, avatarKey: null },
     });
     return { ok: true };
   }

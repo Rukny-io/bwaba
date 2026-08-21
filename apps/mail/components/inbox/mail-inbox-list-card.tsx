@@ -3,6 +3,7 @@
 import { Download, Inbox, RefreshCw } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
+import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import type { MailMessageFolderApi } from "@/lib/mail-messages-client";
 
 export type InboxMessageRow = {
@@ -66,14 +67,6 @@ function formatWhen(iso: string) {
   } catch {
     return "";
   }
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 const FOLDER_LABELS: Record<InboxFolderId, string> = {
@@ -200,6 +193,11 @@ export function MailInboxListCard({
                 folder,
                 mailboxAddress,
               );
+              const mine = mailboxAddress?.toLowerCase();
+              const outbound =
+                folder === "sent" ||
+                (Boolean(mine) &&
+                  message.fromEmail.toLowerCase() === mine);
               return (
                 <li key={message.id}>
                   <button
@@ -218,16 +216,17 @@ export function MailInboxListCard({
                         aria-hidden
                       />
                     ) : null}
-                    <span
+                    <MailPersonAvatar
+                      name={primary}
+                      email={outbound ? message.to : message.fromEmail}
+                      avatarUrl={null}
                       className={cn(
-                        "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                        "size-10",
                         active
                           ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                          : "bg-[var(--surface-secondary)] text-[var(--foreground)] group-hover:bg-white dark:group-hover:bg-[var(--surface-tertiary)]",
+                          : "",
                       )}
-                    >
-                      {initials(primary)}
-                    </span>
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span

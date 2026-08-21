@@ -7,6 +7,7 @@ export type MailMailboxView = {
   domain: string;
   address: string;
   displayName: string | null;
+  avatarUrl: string | null;
   hasPassword: boolean;
   totpEnabled: boolean;
   status: "ACTIVE" | "DISABLED" | "DELETED";
@@ -106,4 +107,37 @@ export async function deleteMailMailbox(appId: string, mailboxId: string): Promi
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not delete mailbox."));
   }
+}
+
+export async function uploadMailMailboxAvatar(
+  appId: string,
+  mailboxId: string,
+  file: File,
+): Promise<MailMailboxView> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/avatar`,
+    { method: "POST", body },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not upload photo."));
+  }
+  return data.mailbox;
+}
+
+export async function removeMailMailboxAvatar(
+  appId: string,
+  mailboxId: string,
+): Promise<MailMailboxView> {
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/avatar`,
+    { method: "DELETE" },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not remove photo."));
+  }
+  return data.mailbox;
 }

@@ -15,6 +15,7 @@ import {
   type InboxMessageRow,
 } from "@/components/inbox/mail-inbox-list-card";
 import { MailInboxReaderCard } from "@/components/inbox/mail-inbox-reader-card";
+import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import {
   MailComposeModal,
   type ComposeDraft,
@@ -602,7 +603,14 @@ export function MailInboxShell() {
   }
 
   return (
-    <div className="relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
+    <div
+      className={cn(
+        "relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden dark:bg-[var(--background)]",
+        mobileShowReader && selectedMessage
+          ? "max-md:bg-[#eef0f3] bg-white"
+          : "bg-white",
+      )}
+    >
       <header
         className={cn(
           "relative z-20 flex shrink-0 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5",
@@ -702,8 +710,14 @@ export function MailInboxShell() {
           >
             <Settings className="size-4" />
           </Link>
-          <span className="ml-0.5 hidden size-9 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-xs font-semibold text-[var(--secondary-foreground)] sm:flex">
-            RM
+          <span className="ml-0.5 hidden sm:flex">
+            <MailPersonAvatar
+              name={selected?.displayName || selected?.localPart || "RM"}
+              email={selected?.address}
+              avatarUrl={selected?.avatarUrl}
+              className="size-9"
+              textClassName="text-xs"
+            />
           </span>
         </div>
       </header>
@@ -789,7 +803,15 @@ export function MailInboxShell() {
             </div>
           </div>
 
-          <div className="mx-3 mb-3 flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden rounded-[1.5rem] bg-[#eef0f3] p-2 sm:rounded-[1.75rem] md:mx-0 md:mb-0 lg:gap-2.5 lg:rounded-[2rem] lg:p-2.5 dark:bg-[var(--surface-secondary)]">
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden dark:bg-[var(--surface-secondary)]",
+              mobileShowReader && selectedMessage
+                ? "max-md:mx-0 max-md:mb-0 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:pt-[max(0.75rem,env(safe-area-inset-top))]"
+                : "mx-3 mb-3 rounded-[1.5rem] bg-[#eef0f3] p-2 sm:rounded-[1.75rem]",
+              "md:mx-0 md:mb-0 md:rounded-[1.75rem] md:bg-[#eef0f3] md:p-2 lg:gap-2.5 lg:rounded-[2rem] lg:p-2.5",
+            )}
+          >
             <div
               className={cn(
                 "h-full min-w-0",
@@ -825,6 +847,7 @@ export function MailInboxShell() {
               <MailInboxReaderCard
                 message={selectedMessage}
                 mailboxAddress={selected?.address ?? null}
+                mailboxAvatarUrl={selected?.avatarUrl ?? null}
                 index={selectedIndex}
                 total={visibleMessages.length}
                 replyBody={replyBody}

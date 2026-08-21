@@ -195,7 +195,11 @@ export async function importInboundMailMessages(
   take = 30,
 ): Promise<{
   bucket: string;
-  results: Array<{ key: string; handled: string }>;
+  stored: number;
+  unmatched: number;
+  missing: number;
+  errors: number;
+  total: number;
 }> {
   const params = new URLSearchParams({ take: String(take) });
   const response = await sessionFetch(
@@ -204,13 +208,34 @@ export async function importInboundMailMessages(
   );
   const data = await readJson<{
     bucket?: string;
+    stored?: number;
+    unmatched?: number;
+    missing?: number;
+    errors?: number;
+    total?: number;
     results?: Array<{ key: string; handled: string }>;
   }>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not import inbound mail."));
   }
+  // Backward compatible with older API that returned per-key results.
+  if (Array.isArray(data.results)) {
+    return {
+      bucket: data.bucket ?? "",
+      stored: data.results.filter((r) => r.handled === "stored_inbound").length,
+      unmatched: data.results.filter((r) => r.handled === "no_matching_mailbox")
+        .length,
+      missing: data.results.filter((r) => r.handled === "s3_not_found").length,
+      errors: data.results.filter((r) => r.handled === "error").length,
+      total: data.results.length,
+    };
+  }
   return {
     bucket: data.bucket ?? "",
-    results: data.results ?? [],
+    stored: data.stored ?? 0,
+    unmatched: data.unmatched ?? 0,
+    missing: data.missing ?? 0,
+    errors: data.errors ?? 0,
+    total: data.total ?? 0,
   };
 }

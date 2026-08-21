@@ -324,9 +324,7 @@ export function MailInboxShell() {
         if (typeof window !== "undefined") sessionStorage.setItem(key, "1");
         const result = await importInboundMailMessages(appId, 40);
         if (cancelled) return;
-        const stored = result.results.filter(
-          (r) => r.handled === "stored_inbound",
-        ).length;
+        const stored = result.stored;
         if (stored > 0) {
           await loadMessages(appId, selectedMailboxId, "inbox", {
             quiet: true,
@@ -463,15 +461,9 @@ export function MailInboxShell() {
     setImporting(true);
     try {
       const result = await importInboundMailMessages(appId, 40);
-      const stored = result.results.filter(
-        (r) => r.handled === "stored_inbound",
-      ).length;
-      const unmatched = result.results.filter(
-        (r) => r.handled === "no_matching_mailbox",
-      ).length;
-      const failed = result.results.filter(
-        (r) => r.handled === "error" || r.handled === "s3_not_found",
-      ).length;
+      const stored = result.stored;
+      const unmatched = result.unmatched;
+      const failed = result.errors + result.missing;
       await Promise.all([
         loadMessages(appId, selectedMailboxId, folder, { quiet: true }),
         loadCounts(appId, selectedMailboxId),

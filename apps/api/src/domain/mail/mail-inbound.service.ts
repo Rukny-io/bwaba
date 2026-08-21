@@ -17,7 +17,7 @@ import {
   MailMessageStatus,
 } from '@prisma/client';
 import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
-import { randomUUID } from 'crypto';
+import { randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { MailRealtimeService } from './mail-realtime.service';
 
@@ -60,8 +60,13 @@ export class MailInboundService {
 
   assertWebhookToken(token: string | undefined) {
     const expected = this.config.get<string>('MAIL_SES_WEBHOOK_TOKEN')?.trim();
-    if (!expected) return;
-    if (!token || token !== expected) {
+    if (!expected) {
+      this.logger.error(
+        'MAIL_SES_WEBHOOK_TOKEN is not set — refusing mail webhook (fail-closed).',
+      );
+      throw new UnauthorizedException('Mail webhook is not configured.');
+    }
+    if (!token || !safeEqualToken(token, expected)) {
       throw new UnauthorizedException('Invalid mail webhook token.');
     }
   }
@@ -355,7 +360,17 @@ export class MailInboundService {
         results.push({ key: trimmed, handled: 'error' });
       }
     }
-    return { bucket, results };
+    // Do not return raw S3 object keys to clients — only aggregate status.
+    const summary = {
+      bucket,
+      stored: results.filter((r) => r.handled === 'stored_inbound').length,
+      unmatched: results.filter((r) => r.handled === 'no_matching_mailbox')
+        .length,
+      missing: results.filter((r) => r.handled === 's3_not_found').length,
+      errors: results.filter((r) => r.handled === 'error').length,
+      total: results.length,
+    };
+    return summary;
   }
 
   async importRecentRaw(limit = 30) {
@@ -537,30 +552,17 @@ export class MailInboundService {
       }
     }
 
-    // Fallback: match local-part on any active mailbox for known domains in candidates
-    for (const address of addresses) {
-      const normalized = address.trim().toLowerCase();
-      const at = normalized.lastIndexOf('@');
-      if (at <= 0) continue;
-      let localPart = normalized.slice(0, at);
-      const plus = localPart.indexOf('+');
-      if (plus > 0) localPart = localPart.slice(0, plus);
-      const mailbox = await this.prisma.mailMailbox.findFirst({
-        where: {
-          localPart,
-          status: MailMailboxStatus.ACTIVE,
-        },
-        include: {
-          mailApp: { select: { userId: true, status: true, appId: true } },
-        },
-      });
-      if (mailbox && mailbox.mailApp.status === 'ACTIVE') {
-        this.logger.warn(
-          `Mailbox matched by localPart only: ${localPart}@${mailbox.domain} (wanted ${normalized})`,
-        );
-        return mailbox;
-      }
-    }
     return null;
+  }
+}
+
+function safeEqualToken(provided: string, expected: string): boolean {
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
   }
 }

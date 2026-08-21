@@ -14,6 +14,7 @@ export const LOCAL_SERVICE_URLS = {
   business: 'http://localhost:3003',
   developer: 'http://localhost:3004',
   forms: 'http://localhost:3007',
+  mail: 'http://localhost:3009',
   publicSite: 'http://localhost:3006',
 } as const;
 
@@ -105,6 +106,13 @@ export function resolveFormsUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.forms;
   return trimTrailingSlash(
     process.env.NEXT_PUBLIC_FORMS_URL || LOCAL_SERVICE_URLS.forms,
+  );
+}
+
+export function resolveMailUrl(options?: ResolveUrlOptions): string {
+  if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.mail;
+  return trimTrailingSlash(
+    process.env.NEXT_PUBLIC_MAIL_URL || LOCAL_SERVICE_URLS.mail,
   );
 }
 

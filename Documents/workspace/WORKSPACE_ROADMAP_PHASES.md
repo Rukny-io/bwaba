@@ -1,7 +1,7 @@
 # Rukny Workspace — Implementation Roadmap (Phases)
 
 > **Last updated:** 2026-06-21  
-> **AWS Region (fixed):** `us-east-1` (N. Virginia)  
+> **AWS Region (fixed for Mail/SES):** `eu-north-1` (Stockholm)  
 > **Product:** Multi-tenant business email for **every** Rukny subscriber — not Rukny’s domain only  
 > **App:** `workspace.rukny.io` · **API:** `apps/api/src/workspace/`  
 > **Related:** [WORKSPACE_MVP_SCOPE.md](./WORKSPACE_MVP_SCOPE.md) · [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md) · [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md)
@@ -62,8 +62,8 @@ Unlock real-world email sending before building product code. SES new accounts s
 
 ### What you do (no application code)
 
-1. Activate AWS billing — **Region fixed to `us-east-1`** (do not split resources across Regions).
-2. Open **Amazon SES** in **us-east-1** (N. Virginia).
+1. Activate AWS billing — **Mail SES region fixed to `eu-north-1`** (do not split Mail identities/inbound across Regions).
+2. Open **Amazon SES** in **eu-north-1** (Stockholm). Production access is already granted there.
 3. Create a **verified identity** for `rukny.io` (or `mail.rukny.io`) with Easy DKIM — add DNS records at your registrar.
 4. Submit **Request production access** with a detailed use case (see [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md) §4).
 5. While waiting: test in Sandbox with your personal verified email and SES simulators (`success@simulator.amazonses.com`, etc.).
@@ -88,7 +88,7 @@ Unlock real-world email sending before building product code. SES new accounts s
 | Risk | Mitigation |
 |------|------------|
 | Request rejected | Resubmit with SPF/DKIM/DMARC details, lower volume ask (500/day) |
-| Wrong Region | All Workspace AWS resources must stay in **`us-east-1`** — SES identities are per-Region |
+| Wrong Region | All Mail SES identities, inbound MX, S3/SNS/Lambda for mail must stay in **`eu-north-1`** |
 | Delay blocks MVP | Start this **before** backend development |
 
 ### Out of scope
@@ -135,7 +135,7 @@ INBOUND:
 ### Environment variables (API)
 
 ```env
-AWS_REGION=us-east-1
+MAIL_AWS_REGION=eu-north-1
 WORKSPACE_SES_CONFIGURATION_SET=rukny-workspace
 WORKSPACE_S3_BUCKET_RAW=rukny-workspace-emails-raw
 WORKSPACE_S3_BUCKET_ATTACHMENTS=rukny-workspace-attachments

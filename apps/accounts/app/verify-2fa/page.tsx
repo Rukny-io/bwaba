@@ -2,9 +2,10 @@
 
 import React, { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { KeyRound, MessageCircle, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { AuthLoadingFallback } from "@/components/auth/auth-loading"
-import { AuthSplitPage } from "@/components/auth/auth-split-page"
+import { AuthVerifyPage } from "@/components/auth/auth-verify-page"
 import { TotpForm } from "@/components/auth/totp-form"
 import { verify2FALogin, sendWhatsappOtp } from "@/lib/api"
 import { getRedirectUrlByRole } from "@/lib/redirect"
@@ -80,17 +81,27 @@ function Verify2FAContent() {
     return method === "authenticator" ? t("desc_auth") : t("desc_backup")
   }
 
+  const icon =
+    method === "whatsapp" ? (
+      <MessageCircle className="size-6" strokeWidth={1.75} aria-hidden />
+    ) : method === "backup-code" ? (
+      <KeyRound className="size-6" strokeWidth={1.75} aria-hidden />
+    ) : (
+      <ShieldCheck className="size-6" strokeWidth={1.75} aria-hidden />
+    )
+
   if (!sessionId) return null
 
   return (
-    <AuthSplitPage
+    <AuthVerifyPage
       badge={t("login_badge")}
       title={getTitle()}
       description={getDescription()}
+      icon={icon}
     >
       {whatsappError ? (
         <p
-          className="mb-4 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
+          className="mb-5 rounded-xl bg-destructive/8 px-3 py-2.5 text-center text-xs text-destructive"
           role="alert"
         >
           {whatsappError}
@@ -104,7 +115,7 @@ function Verify2FAContent() {
         onResendWhatsapp={() => handleSendWhatsappOtp(sessionId)}
         showHeader={false}
       />
-    </AuthSplitPage>
+    </AuthVerifyPage>
   )
 }
 

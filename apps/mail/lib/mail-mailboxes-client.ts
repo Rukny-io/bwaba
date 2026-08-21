@@ -1,0 +1,111 @@
+export type MailMailboxView = {
+  id: string;
+  appId: string;
+  localPart: string;
+  domain: string;
+  address: string;
+  displayName: string | null;
+  hasPassword: boolean;
+  totpEnabled: boolean;
+  status: "ACTIVE" | "DISABLED" | "DELETED";
+  createdAt: string;
+  updatedAt: string;
+};
+
+async function readJson<T>(response: Response): Promise<T & { message?: string | string[]; error?: string }> {
+  return (await response.json().catch(() => ({}))) as T & {
+    message?: string | string[];
+    error?: string;
+  };
+}
+
+function errorMessage(data: { message?: string | string[]; error?: string }, fallback: string) {
+  const raw = data.message ?? data.error;
+  if (Array.isArray(raw)) return raw[0] || fallback;
+  return raw || fallback;
+}
+
+export async function listMailMailboxes(appId: string): Promise<MailMailboxView[]> {
+  const response = await fetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
+    { credentials: "include" },
+  );
+  const data = await readJson<{ mailboxes?: MailMailboxView[] }>(response);
+  if (!response.ok) {
+    throw new Error(errorMessage(data, "Could not load mailboxes."));
+  }
+  return data.mailboxes ?? [];
+}
+
+export async function createMailMailbox(
+  appId: string,
+  input: { localPart: string; password: string; enable2fa?: boolean; displayName?: string },
+): Promise<MailMailboxView> {
+  const response = await fetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not create mailbox."));
+  }
+  return data.mailbox;
+}
+
+export async function changeMailMailboxPassword(
+  appId: string,
+  mailboxId: string,
+  password: string,
+): Promise<MailMailboxView> {
+  const response = await fetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/password`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not change password."));
+  }
+  return data.mailbox;
+}
+
+export async function setMailMailbox2fa(
+  appId: string,
+  mailboxId: string,
+  enabled: boolean,
+): Promise<MailMailboxView> {
+  const response = await fetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/2fa`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not update 2FA."));
+  }
+  return data.mailbox;
+}
+
+export async function deleteMailMailbox(appId: string, mailboxId: string): Promise<void> {
+  const response = await fetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}`,
+    { method: "DELETE", credentials: "include" },
+  );
+  const data = await readJson(response);
+  if (!response.ok) {
+    throw new Error(errorMessage(data, "Could not delete mailbox."));
+  }
+}

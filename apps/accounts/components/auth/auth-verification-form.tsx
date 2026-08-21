@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Key, Loader2, Mail } from "lucide-react"
+import { Key, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { OtpCodeInput } from "@/components/manage/otp-code-input"
 import { Button } from "@/components/ui/button"
@@ -60,7 +60,7 @@ export function AuthVerificationForm({
         : t("enter_backup_code")
 
   return (
-    <form onSubmit={handleSubmit} className={cn("w-full space-y-4", className)}>
+    <form onSubmit={handleSubmit} className={cn("w-full space-y-5", className)}>
       {isOtpMode ? (
         <OtpCodeInput
           value={code}
@@ -73,7 +73,7 @@ export function AuthVerificationForm({
           aria-invalid={!!error}
         />
       ) : (
-        <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm transition-all focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/15 sm:h-11 sm:rounded-full">
+        <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background px-3.5 transition-all focus-within:border-foreground/25 focus-within:ring-2 focus-within:ring-foreground/8 sm:h-12">
           <Key className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <input
             type="text"
@@ -94,7 +94,10 @@ export function AuthVerificationForm({
       )}
 
       {error ? (
-        <p className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive" role="alert">
+        <p
+          className="rounded-xl bg-destructive/8 px-3 py-2.5 text-center text-xs leading-relaxed text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -103,7 +106,7 @@ export function AuthVerificationForm({
         type="submit"
         size="lg"
         disabled={!isValid || isLoading}
-        className="h-12 w-full rounded-full text-sm font-semibold sm:h-11"
+        className="h-12 w-full rounded-full text-sm font-semibold"
       >
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
@@ -121,7 +124,7 @@ export function AuthVerificationForm({
             type="button"
             onClick={onResendWhatsapp}
             disabled={isSendingWhatsapp}
-            className="cursor-pointer text-sm font-medium text-foreground underline underline-offset-3 transition-colors hover:text-primary disabled:opacity-50"
+            className="cursor-pointer text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
           >
             {isSendingWhatsapp ? t("whatsapp_resending") : t("whatsapp_didnt_receive")}
           </button>

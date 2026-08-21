@@ -81,6 +81,7 @@ services:
       HQ_FRONTEND_URL: http://localhost:3002
       AUTH_FRONTEND_URL: http://localhost:3005
       AUTH_BASE_URL: http://localhost:3001
+      MAIL_FRONTEND_URL: http://localhost:3009
       COOKIE_DOMAIN: ""
       COOKIE_SECURE: "false"
       COOKIE_HTTPONLY: "true"
@@ -313,6 +314,44 @@ services:
       NEXT_PUBLIC_FORMS_URL: http://localhost:3007
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       API_BACKEND_URL: http://api:3001
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    networks:
+      - rukny_dev_network
+
+  mail:
+    build:
+      context: .
+      dockerfile: apps/mail/Dockerfile
+      args:
+        API_BACKEND_URL: http://api:3001
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        NEXT_PUBLIC_ACCOUNTS_URL: http://localhost:3005
+        NEXT_PUBLIC_MAIL_URL: http://localhost:3009
+        NEXT_PUBLIC_ROOT_DOMAIN: localhost
+        JWT_SECRET: ${JWT_SECRET}
+    restart: always
+    env_file:
+      - ./.env.dev
+    ports:
+      - "127.0.0.1:3009:3009"
+    depends_on:
+      - api
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 3009
+      HOSTNAME: 0.0.0.0
+      API_BACKEND_URL: http://api:3001
+      API_URL: http://api:3001
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_ACCOUNTS_URL: http://localhost:3005
+      NEXT_PUBLIC_MAIL_URL: http://localhost:3009
+      NEXT_PUBLIC_ROOT_DOMAIN: localhost
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}

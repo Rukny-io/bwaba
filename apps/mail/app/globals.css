@@ -1,26 +1,182 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "../packages/styles/index.css";
+@custom-variant dark (&:is(.dark *));
+@source "./**/*.{js,ts,jsx,tsx}";
+@source "../components/**/*.{js,ts,jsx,tsx}";
+@source "../lib/**/*.{js,ts,jsx,tsx}";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  --brand-blue: #3b82f6;
+  --brand-blue-soft: #dbeafe;
+  --brand-slate: #e2e8f0;
+
+  --background: rgb(245, 245, 245);
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --muted-foreground: #64748b;
+  --border: var(--brand-slate);
+  --separator: #eef2f6;
+
+  --primary: var(--brand-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--brand-blue-soft);
+  --secondary-foreground: #1e40af;
+
+  --accent: var(--brand-blue);
+  --accent-foreground: #ffffff;
+
+  --surface: #ffffff;
+  --surface-foreground: #0f172a;
+  --surface-secondary: #f1f5f9;
+  --surface-secondary-foreground: #0f172a;
+  --surface-tertiary: var(--brand-blue-soft);
+  --surface-tertiary-foreground: #1e40af;
+
+  --overlay: #ffffff;
+  --overlay-foreground: #0f172a;
+
+  --field-background: #ffffff;
+  --field-foreground: #0f172a;
+  --field-placeholder: var(--muted);
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+  --success: #10b981;
+  --success-foreground: #064e3b;
+  --warning: #f59e0b;
+  --warning-foreground: #78350f;
+
+  --default: #f1f5f9;
+  --default-foreground: #0f172a;
+  --focus: var(--brand-blue);
+  --scrollbar: #cbd5e1;
+  --segment: #ffffff;
+  --segment-foreground: #0f172a;
+
+  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.03);
+  --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+  --surface-shadow: var(--card-shadow);
+  --overlay-shadow: var(--card-shadow-hover);
+
+  --radius: 1rem;
+  --field-radius: 1rem;
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 3);
+  --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
+  --link: var(--primary);
+}
+
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
   }
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-blue: #60a5fa;
+  --brand-blue-soft: #1e3a5f;
+  --brand-slate: #2d3748;
+
+  --background: #0b0e13;
+  --foreground: #f1f5f9;
+  --muted: #94a3b8;
+  --muted-foreground: #94a3b8;
+  --border: #2a3140;
+  --separator: #252b38;
+
+  --primary: var(--brand-blue);
+  --primary-foreground: #ffffff;
+  --secondary: #1a2030;
+  --secondary-foreground: #e2e8f0;
+
+  --accent: var(--brand-blue);
+  --accent-foreground: #e2e8f0;
+
+  --surface: #12161e;
+  --surface-foreground: #f1f5f9;
+  --surface-secondary: #1a2030;
+  --surface-secondary-foreground: #e2e8f0;
+  --surface-tertiary: #222a3a;
+  --surface-tertiary-foreground: #e2e8f0;
+
+  --overlay: #161b26;
+  --overlay-foreground: #f1f5f9;
+
+  --field-background: #161b26;
+  --field-foreground: #f1f5f9;
+  --field-placeholder: var(--muted);
+
+  --danger: #f87171;
+  --danger-foreground: #0f172a;
+  --success: #34d399;
+  --success-foreground: #064e3b;
+  --warning: #fbbf24;
+  --warning-foreground: #78350f;
+
+  --default: #1a2030;
+  --default-foreground: #f1f5f9;
+  --focus: var(--brand-blue);
+  --scrollbar: #3d4658;
+  --segment: #1a2030;
+  --segment-foreground: #f1f5f9;
+
+  --card-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  --card-shadow-hover:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 12px 40px rgba(0, 0, 0, 0.45);
+  --surface-shadow: var(--card-shadow);
+  --overlay-shadow: var(--card-shadow-hover);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.dashboard-page {
+  width: 100%;
+  padding-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .dashboard-page {
+    padding-top: 1.25rem;
+  }
+}
+
+.dashboard-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .dashboard-section-stack {
+    gap: 2rem;
+  }
+}
+
+.dashboard-card {
+  border: none;
+  border-radius: 2rem;
+  background: var(--surface);
+  box-shadow: none;
+  transition: background-color 0.2s ease;
 }

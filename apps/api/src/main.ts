@@ -62,6 +62,30 @@ async function bootstrap() {
 
   // Increase body size limit for file uploads (with type-specific limits)
   // Form submit routes are capped at 5MB via verify (see forms.constants.ts)
+  // SNS (SES inbound) posts JSON as text/plain — parse into req.body
+  app.use(
+    bodyParser.text({
+      type: ['text/plain'],
+      limit: '5mb',
+      verify: (req, _res, buf) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
+  app.use((req, _res, next) => {
+    if (
+      typeof req.body === 'string' &&
+      req.body.length > 0 &&
+      /\/mail\/webhooks\/ses/i.test(req.originalUrl || req.url || '')
+    ) {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch {
+        /* leave as string; controller safeJson fallback */
+      }
+    }
+    next();
+  });
   app.use(
     bodyParser.json({
       limit: '25mb',
@@ -196,6 +220,8 @@ async function bootstrap() {
     'http://127.0.0.1:3006',
     'http://localhost:3007',
     'http://127.0.0.1:3007',
+    'http://localhost:3009',
+    'http://127.0.0.1:3009',
     'https://localhost:3004',
     'https://127.0.0.1:3004',
     // Production domains
@@ -206,6 +232,8 @@ async function bootstrap() {
     'https://business.rukny.io',
     'https://developers.rukny.io',
     'https://forms.rukny.io',
+    'https://hq.rukny.io',
+    'https://mail.rukny.io',
     'https://rukny.store',
     'https://www.rukny.store',
     // Environment variable override
@@ -216,6 +244,9 @@ async function bootstrap() {
     process.env.BUSINESS_FRONTEND_URL,
     process.env.DEVELOPERS_FRONTEND_URL,
     process.env.FORMS_FRONTEND_URL,
+    process.env.HQ_FRONTEND_URL,
+    process.env.MAIL_FRONTEND_URL,
+    process.env.NEXT_PUBLIC_MAIL_URL,
     process.env.FORM_PUBLIC_BASE_URL,
   ].filter(Boolean); // Remove undefined values
 

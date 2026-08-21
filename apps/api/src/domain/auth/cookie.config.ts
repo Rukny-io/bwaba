@@ -407,12 +407,15 @@ export function validateCsrfToken(
         `https://developers.rukny.io`,
         `https://hq.rukny.io`,
         `https://admin.rukny.io`,
+        `https://mail.rukny.io`,
         process.env.FRONTEND_URL,
         process.env.AUTH_FRONTEND_URL,
         process.env.DEVELOPERS_FRONTEND_URL,
         process.env.BUSINESS_FRONTEND_URL,
         process.env.FORMS_FRONTEND_URL,
         process.env.HQ_FRONTEND_URL,
+        process.env.MAIL_FRONTEND_URL,
+        process.env.NEXT_PUBLIC_MAIL_URL,
       ]
         .filter(Boolean)
         .map((value) => value!.replace(/\/+$/, ''));

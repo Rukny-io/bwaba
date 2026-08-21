@@ -41,7 +41,17 @@ export function setCsrfToken(token: string): void {
 export function clearCsrfToken(): void {
   csrfTokenCache = null;
   if (typeof window === 'undefined') return;
+  const domain =
+    typeof process !== 'undefined'
+      ? process.env.NEXT_PUBLIC_COOKIE_DOMAIN?.trim() ||
+        (window.location.hostname.endsWith('rukny.io') ? '.rukny.io' : '')
+      : window.location.hostname.endsWith('rukny.io')
+        ? '.rukny.io'
+        : '';
   for (const name of CSRF_COOKIE_NAMES) {
     document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+    if (domain && !name.startsWith('__Host-')) {
+      document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax; Domain=${domain}`;
+    }
   }
 }

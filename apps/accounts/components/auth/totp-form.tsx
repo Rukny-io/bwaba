@@ -42,7 +42,9 @@ export function TotpForm({
   return (
     <div className={cn("w-full", className)}>
       {showBack ? (
-        <AuthCardBackLink onClick={onBack} label={t("back")} />
+        <div className="mb-5 flex justify-center">
+          <AuthCardBackLink onClick={onBack} label={t("back")} />
+        </div>
       ) : null}
 
       {showHeader ? (

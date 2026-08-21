@@ -2,10 +2,11 @@
 
 import React, { Suspense, useCallback, useEffect, useState } from "react"
 import { useParams } from "next/navigation"
+import { KeyRound, Mail, MessageCircle, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { AuthLoadingFallback } from "@/components/auth/auth-loading"
-import { AuthSplitPage } from "@/components/auth/auth-split-page"
 import { AuthVerificationForm } from "@/components/auth/auth-verification-form"
+import { AuthVerifyPage } from "@/components/auth/auth-verify-page"
 import { ChooseMethodBackLink } from "@/components/auth/choose-method-back-link"
 import { EmailVerificationAction } from "@/components/auth/email-verification-action"
 import {
@@ -13,11 +14,23 @@ import {
   type VerificationMethod,
 } from "@/components/auth/method-chooser"
 import { useChooseMethodSession } from "@/hooks/use-choose-method-session"
-import {
-  parseVerificationMethod,
-} from "@/lib/auth/choose-method"
+import { parseVerificationMethod } from "@/lib/auth/choose-method"
 import { resendMagicLink, sendWhatsappOtp, verify2FALogin } from "@/lib/api"
 import { getRedirectUrlByRole } from "@/lib/redirect"
+
+function MethodIcon({ method }: { method: VerificationMethod }) {
+  const className = "size-6"
+  switch (method) {
+    case "whatsapp":
+      return <MessageCircle className={className} strokeWidth={1.75} aria-hidden />
+    case "backup-code":
+      return <KeyRound className={className} strokeWidth={1.75} aria-hidden />
+    case "email":
+      return <Mail className={className} strokeWidth={1.75} aria-hidden />
+    default:
+      return <ShieldCheck className={className} strokeWidth={1.75} aria-hidden />
+  }
+}
 
 function ChooseMethodVerifyContent() {
   const params = useParams<{ method: string }>()
@@ -119,17 +132,20 @@ function ChooseMethodVerifyContent() {
   const methodMeta = getVerificationMethodMeta(method, t)
 
   return (
-    <AuthSplitPage
+    <AuthVerifyPage
       badge={t("choose_method_title")}
       title={methodMeta.title}
       description={methodMeta.description}
+      icon={<MethodIcon method={method} />}
     >
-      <div className="space-y-5">
-        <ChooseMethodBackLink />
+      <div className="space-y-6">
+        <div className="flex justify-center">
+          <ChooseMethodBackLink />
+        </div>
 
         {whatsappError ? (
           <p
-            className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
+            className="rounded-xl bg-destructive/8 px-3 py-2.5 text-center text-xs text-destructive"
             role="alert"
           >
             {whatsappError}
@@ -154,7 +170,7 @@ function ChooseMethodVerifyContent() {
           />
         )}
       </div>
-    </AuthSplitPage>
+    </AuthVerifyPage>
   )
 }
 

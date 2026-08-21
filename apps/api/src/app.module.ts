@@ -77,6 +77,7 @@ import { DevModule } from './dev/dev.module';
 
 // Domain - Developer Portal & WhatsApp Provider
 import { DeveloperModule } from './domain/developer/developer.module';
+import { MailModule } from './domain/mail/mail.module';
 import { WhatsAppProviderModule } from './domain/whatsapp-provider/whatsapp-provider.module';
 import { BusinessHubModule } from './domain/business-hub/business-hub.module';
 
@@ -164,6 +165,9 @@ import { SharedModule } from './shared/modules/shared.module';
 
     // Domain - Developer Portal
     DeveloperModule,
+
+    // Domain - Rukny Mail billing
+    MailModule,
 
     // Domain - WhatsApp Tech Provider
     WhatsAppProviderModule,

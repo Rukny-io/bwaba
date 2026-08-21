@@ -103,6 +103,11 @@ model User {
   emailChangeRequests    EmailChangeRequest[]
   subscription           Subscription?
 
+  // Rukny Mail
+  mailSubscription          MailSubscription?
+  mailApps                  MailApp[]
+  mailMessages              MailMessage[]
+
   // Developer Portal relations
   developerApps             DeveloperApp[]
   developerApiKeys          DeveloperApiKey[]
@@ -2353,6 +2358,7 @@ enum OtpType {
   LOGIN
   VERIFICATION
   APP_VERIFICATION
+  MAIL_APP_VERIFICATION
 }
 
 /// 📨 قناة إرسال الرسائل
@@ -3274,4 +3280,203 @@ model SupportTicketAttachment {
   @@index([ticketId])
   @@index([messageId])
   @@map("support_ticket_attachments")
+}
+
+// ============================================
+// 📧 Rukny Mail — apps + subscriptions (account-owned, not Developer)
+// ============================================
+
+enum MailAppStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MailAppType {
+  BUSINESS
+  CONSUMER
+}
+
+/// Mail workspace/app owned by a user account (independent of DeveloperApp)
+model MailApp {
+  id          String        @id @default(uuid())
+  /// Public 16-digit id used by the Mail product UI
+  appId       String        @unique
+  userId      String
+  /// Stable per-user URL slot: /u0, /u1, … (never reused)
+  slotIndex   Int
+  name        String
+  contactEmail String?
+  appType     MailAppType   @default(BUSINESS)
+  description String?
+  status      MailAppStatus @default(ACTIVE)
+  /// Optional primary domain label cached for list UI
+  primaryDomain String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailboxes MailMailbox[]
+
+  @@unique([userId, slotIndex])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("mail_apps")
+}
+
+enum MailMailboxStatus {
+  ACTIVE
+  DISABLED
+  DELETED
+}
+
+/// Email address / mailbox under a Mail app domain
+model MailMailbox {
+  id           String            @id @default(uuid())
+  mailAppId    String
+  /// Local part before @ (e.g. info)
+  localPart    String
+  /// Domain at creation time (usually MailApp.primaryDomain)
+  domain       String
+  displayName  String?
+  /// bcrypt hash — required for new mailboxes; optional for legacy rows
+  passwordHash String?
+  /// Optional mailbox-level TOTP 2FA
+  totpEnabled  Boolean           @default(false)
+  totpSecret   String?
+  status       MailMailboxStatus @default(ACTIVE)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  messages MailMessage[]
+
+  @@unique([domain, localPart])
+  @@index([mailAppId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("mail_mailboxes")
+}
+
+enum MailMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MailMessageFolder {
+  INBOX
+  SENT
+  DRAFTS
+  TRASH
+  SPAM
+  ARCHIVE
+}
+
+enum MailMessageStatus {
+  QUEUED
+  SENT
+  FAILED
+  RECEIVED
+}
+
+/// Stored mail message (outbound via SES; inbound later via receipt rules)
+model MailMessage {
+  id           String               @id @default(uuid())
+  mailboxId    String
+  userId       String
+  /// Groups conversation replies
+  threadId     String
+  /// RFC Message-ID header
+  messageId    String?              @unique
+  inReplyTo    String?
+
+  direction    MailMessageDirection
+  folder       MailMessageFolder    @default(INBOX)
+  status       MailMessageStatus    @default(RECEIVED)
+
+  fromAddress  String
+  fromName     String?
+  toAddresses  String[]             @default([])
+  ccAddresses  String[]             @default([])
+  bccAddresses String[]             @default([])
+  replyTo      String?
+
+  subject      String               @default("")
+  bodyText     String?              @db.Text
+  bodyHtml     String?              @db.Text
+  snippet      String?
+
+  isRead       Boolean              @default(false)
+  isStarred    Boolean              @default(false)
+
+  sesMessageId String?
+  errorMessage String?
+  /// Raw MIME object key after inbound S3 delivery (future)
+  rawS3Key     String?
+
+  sentAt       DateTime?
+  receivedAt   DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxId, folder, createdAt])
+  @@index([mailboxId, folder, isRead])
+  @@index([threadId])
+  @@index([userId])
+  @@index([sesMessageId])
+  @@map("mail_messages")
+}
+
+enum MailPlan {
+  STARTER
+  STANDARD
+  PREMIUM
+}
+
+model MailSubscription {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  plan               MailPlan
+  status             SubscriptionStatus @default(ACTIVE)
+  billingCycle       BillingCycle       @default(MONTHLY)
+  /// Billed mailbox seats (monthly total = plan price × mailboxCount)
+  mailboxCount       Int                @default(1)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments MailSubscriptionPayment[]
+
+  @@index([plan])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("mail_subscriptions")
+}
+
+model MailSubscriptionPayment {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  amount         Int /// IQD
+  billingCycle   BillingCycle
+  mailboxCount   Int           @default(1)
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  receiptUrl     String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  subscription MailSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("mail_subscription_payments")
 }

@@ -1,0 +1,33 @@
+"use client";
+
+import Link from "next/link";
+import { cn } from "@heroui/react";
+
+export function AuthShell({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col bg-[var(--background)] font-sans text-[var(--foreground)]">
+      <header className="px-4 pt-4 md:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 py-3.5 md:px-4">
+          <Link
+            href="/login"
+            className="text-base font-semibold tracking-tight text-[var(--foreground)] transition-opacity hover:opacity-80 md:text-lg"
+          >
+            Rukny Mail
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex flex-1 items-center justify-center px-4 py-12">
+        <div className={cn("flex w-full max-w-[420px] flex-col items-center", className)}>
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

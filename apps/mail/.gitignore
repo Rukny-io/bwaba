@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local mail domain bindings (dev persistence)
+/.data/
+
 # production
 /build
 

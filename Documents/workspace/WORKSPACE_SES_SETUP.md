@@ -4,7 +4,7 @@
 > **الأولوية:** 🔴 **ابدأ اليوم** — المراجعة قد تستغرق أياماً إلى أسابيع  
 > **مرتبط بـ:** [WORKSPACE_MVP_SCOPE.md](./WORKSPACE_MVP_SCOPE.md) · [aws_workspace_strategy.md](./aws_workspace_strategy.md)
 
-> **Chosen AWS Region:** `us-east-1` (N. Virginia) — **all SES, S3, Lambda, and SNS resources must live in this Region.**
+> **Chosen AWS Region:** `eu-north-1` (Stockholm) — **all Mail SES, S3 inbound, Lambda, and SNS resources must live in this Region.**
 
 ---
 
@@ -23,8 +23,8 @@
 ## 2) checklist قبل الطلب
 
 - [ ] حساب AWS نشط مع billing مفعّل
-- [x] اختيار Region ثابت → **`us-east-1`** (مُثبت — لا تغيّره لاحقاً)
-- [ ] التحقق من أن SES مفعّل في `us-east-1`: [AWS SES regions](https://docs.aws.amazon.com/general/latest/gr/ses.html)
+- [x] اختيار Region ثابت → **`eu-north-1`** (Stockholm — مُثبت)
+- [x] Production access في Stockholm (50,000/يوم، 14/ثانية — راجع SES Get set up)
 - [ ] موقع rukny.io يعمل ويعرض سياسة خصوصية
 - [ ] صفحة «عدم طلب بريد غير مرغوب» / unsubscribe policy (حتى لو بسيطة)
 
@@ -36,7 +36,7 @@
 
 ```
 AWS Console → Amazon SES → Get started
-Region: us-east-1 (N. Virginia) ← ثابت للمشروع
+Region: eu-north-1 (Stockholm) ← ثابت للبريد
 ```
 
 ### 3.2 توثيق هوية إرسال (للاختبار)
@@ -119,7 +119,7 @@ Contact: [your-email]@rukny.io
 ### 5.1 تحقق الحالة
 
 ```bash
-aws sesv2 get-account --region us-east-1
+aws sesv2 get-account --region eu-north-1
 # ProductionAccessEnabled: true
 ```
 
@@ -145,7 +145,8 @@ SES → Configuration sets → Create
 
 ```env
 # apps/api/.env
-AWS_REGION=us-east-1
+# Mail SES only — do not reuse a global API region if other AWS services stay elsewhere
+MAIL_AWS_REGION=eu-north-1
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 WORKSPACE_SES_CONFIGURATION_SET=rukny-workspace
@@ -207,8 +208,8 @@ CloudWatch Alarm → SNS → فريق الدعم
 |-------|--------|---------|
 | طلب Production Access | ⏳ لم يُقدَّم | — |
 | SES Domain rukny.io | ⏳ | — |
-| Inbound rule set | ⏳ | — |
-| SNS webhooks | ⏳ | — |
+| Inbound rule set | 🔧 API webhook ready — create SES rule + S3/SNS in AWS | 2026-08-21 |
+| SNS webhooks | ✅ `POST /api/v1/mail/webhooks/ses` | 2026-08-21 |
 
 > **حدّث هذا الجدول يدوياً عند كل خطوة.**
 

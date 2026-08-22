@@ -103,7 +103,7 @@ export function MailSidebar({
   userName?: string | null;
 }) {
   const pathname = usePathname();
-  const { primary, secondary, slot } = mailNavForPathname(pathname);
+  const { primary, secondary, footer, slot } = mailNavForPathname(pathname);
   const settingsHref = slot !== null ? `/u${slot}/settings` : "/settings";
 
   return (
@@ -137,6 +137,9 @@ export function MailSidebar({
       </div>
 
       <div className="flex flex-col items-center gap-2">
+        {footer.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
         <Dropdown>
           <Dropdown.Trigger
             aria-label="Profile"

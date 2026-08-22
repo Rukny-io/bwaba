@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AtSign,
+  CreditCard,
   Forward,
   Globe,
   Inbox,
@@ -29,16 +30,23 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
 
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
   { href: "/domain", icon: Globe, label: "Domain settings", exact: true },
-  { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
+];
+
+/** Built, but hidden from the sidebar until IMAP/SMTP is ready to publish. */
+export const MAIL_UNPUBLISHED_NAV: MailNavItem[] = [
+  { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
 ];
 
 export const MAIL_HEADER_NAV: { href: string; label: string; exact?: boolean }[] = [
   { href: "/app", label: "App", exact: true },
-  { href: "/pricing", label: "Pricing", exact: true },
   { href: "/settings", label: "Settings", exact: true },
   { href: "/apps", label: "Apps", exact: true },
   { href: "/tutorials", label: "Tutorials", exact: true },
+];
+
+export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [
+  { href: "/pricing", icon: CreditCard, label: "Pricing", exact: true },
 ];
 
 export function isNavItemActive(

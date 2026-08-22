@@ -1,1 +1,5 @@
-export { default } from "@/components/app/empty-page";
+import { MailDevicesPage } from "@/components/app/mail-devices-page";
+
+export default function ConnectAppsDevicesPage() {
+  return <MailDevicesPage />;
+}

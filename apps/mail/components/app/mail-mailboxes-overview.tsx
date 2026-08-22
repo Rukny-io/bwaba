@@ -398,7 +398,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         void onRemoveAvatar(box.id);
         break;
       case "app-passwords":
-        setError("App passwords are coming soon.");
+        router.push(href("/devices"));
         break;
       case "settings":
         router.push(href("/settings"));

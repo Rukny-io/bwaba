@@ -352,13 +352,6 @@ export function MailSettingsPage() {
               <Button size="sm" variant="ghost" onPress={() => router.push(href("/app"))}>
                 Mailboxes
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onPress={() => router.push(href("/devices"))}
-              >
-                Connect devices
-              </Button>
               <Button size="sm" variant="ghost" onPress={() => router.push("/apps")}>
                 Switch app
               </Button>
@@ -384,7 +377,6 @@ export function MailSettingsPage() {
               size="sm"
               selectedKeys={new Set([selectedTheme])}
               onSelectionChange={(keys) => {
-                if (keys === "all") return;
                 const next = [...keys][0];
                 if (next == null) return;
                 setTheme(String(next));

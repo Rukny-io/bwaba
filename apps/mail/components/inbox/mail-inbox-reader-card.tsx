@@ -248,22 +248,22 @@ export function MailInboxReaderCard({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-4 pt-3 sm:px-6 md:pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 md:pt-4">
         <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
           {isOutbound
             ? `to ${message.to || replyToAddress}`
             : message.fromEmail}
         </p>
-        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
-          <h1 className="text-[1.15rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.4rem]">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
+          <h1 className="text-[1.25rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.4rem]">
             {message.subject}
           </h1>
-          <time className="text-[11px] tabular-nums text-[var(--muted-foreground)] sm:text-xs">
+          <time className="text-xs tabular-nums text-[var(--muted-foreground)]">
             {formatFull(message.receivedAt)}
           </time>
         </div>
 
-        <div className="mt-4 max-w-none max-md:-mx-3 md:mt-6">
+        <div className="mt-5 md:mt-6">
           <MailHtmlBody html={message.bodyHtml} text={message.body || message.preview} />
         </div>
       </div>

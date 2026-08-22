@@ -75,7 +75,7 @@ export function MailHtmlBody({ html, text }: Props) {
   return (
     <div
       ref={hostRef}
-      className="overflow-hidden bg-white max-md:rounded-none md:rounded-2xl"
+      className="overflow-hidden rounded-2xl bg-white"
     >
       <iframe
         ref={iframeRef}

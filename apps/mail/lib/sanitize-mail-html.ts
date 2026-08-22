@@ -116,46 +116,8 @@ const MAIL_CLIENT_BASE_CSS = `
     margin: 0;
     padding: 0;
     background: #ffffff;
-    color: #111827;
-    font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
-    word-break: break-word;
   }
   img { max-width: 100%; height: auto; }
-  table { max-width: 100%; border-collapse: collapse; }
-  a { color: #2563eb; }
-`;
-
-/** Applied last so typical 600px marketing tables can still shrink on phones. */
-const MAIL_CLIENT_OVERRIDE_CSS = `
-  html {
-    overflow-x: hidden !important;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    color-scheme: light;
-  }
-  html, body {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-  }
-  body { padding: 0 !important; }
-  *, *::before, *::after { box-sizing: border-box; }
-  img, picture, video {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  pre, code, a {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-  @media screen and (max-width: 680px) {
-    table { max-width: 100% !important; }
-    td, th { height: auto !important; }
-  }
 `;
 
 /** Isolated HTML document so message CSS cannot leak into the Mail app chrome. */
@@ -165,26 +127,19 @@ export function buildSandboxedMailDocument(rawHtml: string): string {
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=800">
 <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
 <base target="_blank">
 <style>${MAIL_CLIENT_BASE_CSS}</style>
 ${styles.trim() ? `<style>${styles}</style>` : ""}
-<style>${MAIL_CLIENT_OVERRIDE_CSS}</style>
 </head>
 <body>${body}</body>
 </html>`;
 }
 
-function cssPx(value: string): number | null {
-  if (!value || value.includes("%") || value.includes("em")) return null;
-  const n = Number.parseFloat(value);
-  return Number.isFinite(n) ? n : null;
-}
-
 /**
- * Loosen fixed-width email tables for the current pane, then scale if the
- * layout is still wider than the iframe (common 600px templates on phones).
+ * Keep the sender layout intact. If it is wider than the pane, scale the
+ * whole document down (typical 600px templates on a phone).
  */
 export function adaptSandboxedMailToWidth(
   doc: Document,
@@ -196,46 +151,24 @@ export function adaptSandboxedMailToWidth(
     return { height: 120 };
   }
 
-  body.style.transform = "";
+  body.style.transform = "none";
   body.style.width = "";
-  html.style.overflowX = "hidden";
+  html.style.overflow = "visible";
 
-  for (const img of body.querySelectorAll("img")) {
-    img.style.maxWidth = "100%";
-    img.style.height = "auto";
-  }
+  const contentWidth = Math.max(body.scrollWidth, html.scrollWidth, 1);
+  const contentHeight = Math.max(body.scrollHeight, html.scrollHeight, 120);
 
-  for (const el of body.querySelectorAll<HTMLElement>("table, td, th, div, center")) {
-    const widthAttr = el.getAttribute("width");
-    if (widthAttr && !widthAttr.includes("%")) {
-      const n = Number.parseInt(widthAttr, 10);
-      if (Number.isFinite(n) && n > frameWidth) {
-        el.setAttribute("width", "100%");
-      }
-    }
-    const minPx = cssPx(el.style.minWidth);
-    if (minPx != null && minPx > frameWidth) {
-      el.style.minWidth = "0px";
-    }
-    const widthPx = cssPx(el.style.width);
-    if (widthPx != null && widthPx > frameWidth) {
-      el.style.width = "100%";
-      el.style.maxWidth = "100%";
-    }
-  }
-
-  const contentWidth = Math.max(body.scrollWidth, html.scrollWidth);
-  let height = Math.max(body.scrollHeight, html.scrollHeight, 120);
-
-  if (contentWidth > frameWidth + 2) {
+  if (contentWidth > frameWidth + 1) {
     const scale = frameWidth / contentWidth;
     body.style.transformOrigin = "top left";
     body.style.transform = `scale(${scale})`;
     body.style.width = `${contentWidth}px`;
-    height = Math.ceil(height * scale);
+    html.style.overflow = "hidden";
+    return { height: Math.ceil(contentHeight * scale) };
   }
 
-  return { height };
+  html.style.overflow = "hidden";
+  return { height: contentHeight };
 }
 
 export function looksLikeHtml(value: string | null | undefined): boolean {

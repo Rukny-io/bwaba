@@ -117,7 +117,7 @@ export function DashboardNav() {
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-start bg-transparent px-3 pt-3 pb-2 sm:flex sm:px-5 sm:pt-4">
       <nav
-        aria-label="اختصارات سريعة"
+        aria-label="Quick shortcuts"
         className={cn(
           'pointer-events-auto inline-flex w-auto max-w-full items-center gap-0.5 p-1 sm:gap-1 sm:p-1.5',
           dashboardTopTabsGlassClass,

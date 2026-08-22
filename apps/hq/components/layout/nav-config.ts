@@ -108,48 +108,48 @@ export type HeaderMenu = {
 
 export const headerHomeLink = {
   href: APP_BASE,
-  label: 'لوحة التحكم',
+  label: 'Dashboard',
 } as const;
 
 export const headerMenus: HeaderMenu[] = [
   {
     id: 'users',
-    label: 'المستخدم',
+    label: 'Users',
     items: [
-      { href: `${APP_BASE}/users`, icon: Users, label: 'كل المستخدمين', exact: true },
+      { href: `${APP_BASE}/users`, icon: Users, label: 'All users', exact: true },
       {
         href: `${APP_BASE}/users?emailVerified=false`,
         icon: CircleDot,
-        label: 'غير الموثّقين',
+        label: 'Unverified',
         exact: true,
       },
       {
         href: `${APP_BASE}/users?isRuknyVerified=true`,
         icon: BadgeCheck,
-        label: 'موثّقو ركني',
+        label: 'Rukny verified',
         exact: true,
       },
       {
         href: `${APP_BASE}/users?isDeactivated=true`,
         icon: UserX,
-        label: 'الحسابات المعطّلة',
+        label: 'Deactivated accounts',
         exact: true,
       },
     ],
   },
   {
     id: 'support',
-    label: 'الدعم',
+    label: 'Support',
     items: [
-      { href: `${APP_BASE}/support-tickets`, icon: LifeBuoy, label: 'التذاكر' },
+      { href: `${APP_BASE}/support-tickets`, icon: LifeBuoy, label: 'Tickets' },
       {
         href: `${APP_BASE}/support-tickets?status=OPEN`,
         icon: CircleDot,
-        label: 'تذاكر مفتوحة',
+        label: 'Open tickets',
         exact: true,
       },
-      { href: `${APP_BASE}/forms`, icon: FileText, label: 'النماذج' },
-      { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'الخلفيات' },
+      { href: `${APP_BASE}/forms`, icon: FileText, label: 'Forms' },
+      { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'Wallpapers' },
     ],
   },
   {
@@ -179,33 +179,33 @@ export const headerMenus: HeaderMenu[] = [
   },
   {
     id: 'billing',
-    label: 'الفواتير والاشتراكات',
+    label: 'Billing',
     items: [
-      { href: `${APP_BASE}/orders`, icon: ShoppingCart, label: 'الطلبات' },
-      { href: `${APP_BASE}/stores`, icon: Store, label: 'المتاجر' },
+      { href: `${APP_BASE}/orders`, icon: ShoppingCart, label: 'Orders' },
+      { href: `${APP_BASE}/stores`, icon: Store, label: 'Stores' },
       {
         href: `${APP_BASE}/stores/categories`,
         icon: FolderTree,
-        label: 'التصنيفات',
+        label: 'Categories',
         exact: true,
       },
-      { href: `${APP_BASE}/products`, icon: Package, label: 'المنتجات' },
+      { href: `${APP_BASE}/products`, icon: Package, label: 'Products' },
     ],
   },
   {
     id: 'team',
-    label: 'الفريق',
+    label: 'Team',
     items: [
       {
         href: `${APP_BASE}/users?role=ADMIN`,
         icon: UserCog,
-        label: 'المشرفون',
+        label: 'Admins',
         exact: true,
       },
       {
         href: `${APP_BASE}/users?role=PREMIUM`,
         icon: Crown,
-        label: 'الأعضاء المميزون',
+        label: 'Premium members',
         exact: true,
       },
     ],

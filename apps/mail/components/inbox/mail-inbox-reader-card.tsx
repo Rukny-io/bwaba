@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -80,6 +81,26 @@ export function MailInboxReaderCard({
   onPrev,
   onNext,
 }: Props) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const replyFieldRef = useRef<HTMLTextAreaElement>(null);
+  const wasSendingRef = useRef(false);
+  const messageId = message?.id ?? null;
+
+  useEffect(() => {
+    setReplyOpen(false);
+  }, [messageId]);
+
+  useEffect(() => {
+    if (replyOpen) replyFieldRef.current?.focus();
+  }, [replyOpen]);
+
+  useEffect(() => {
+    if (wasSendingRef.current && !replySending && !replyBody.trim()) {
+      setReplyOpen(false);
+    }
+    wasSendingRef.current = replySending;
+  }, [replySending, replyBody]);
+
   if (!message) {
     return (
       <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/70 lg:flex dark:bg-[var(--surface)]/70">
@@ -248,51 +269,61 @@ export function MailInboxReaderCard({
       </div>
 
       <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3 md:pb-3 md:pt-2.5">
-        <div className="rounded-2xl bg-white/90 p-3.5 backdrop-blur-sm sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
-          <div className="mb-2.5 flex items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span className="text-xs text-[var(--muted-foreground)]">To</span>
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] md:bg-white dark:md:bg-[var(--surface)]">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
-                  {initials(replyToLabel)}
+        {replyOpen ? (
+          <div className="mb-2.5 rounded-2xl bg-white/90 p-3.5 backdrop-blur-sm sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="text-xs text-[var(--muted-foreground)]">To</span>
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] py-1 pl-1 pr-2.5 text-xs font-medium text-[var(--foreground)] md:bg-white dark:md:bg-[var(--surface)]">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-blue-soft)] text-[9px] font-bold text-[var(--secondary-foreground)]">
+                    {initials(replyToLabel)}
+                  </span>
+                  <span className="truncate">{replyToAddress}</span>
                 </span>
-                <span className="truncate">{replyToAddress}</span>
-              </span>
+              </div>
+              <button
+                type="button"
+                onClick={onReply}
+                className="shrink-0 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+              >
+                Full compose
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onReply}
-              className="shrink-0 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-            >
-              Full compose
-            </button>
+
+            <textarea
+              ref={replyFieldRef}
+              rows={3}
+              value={replyBody}
+              onChange={(e) => onReplyBodyChange(e.target.value)}
+              placeholder="Write a reply…"
+              className="w-full resize-none bg-transparent text-sm leading-relaxed text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+            />
+
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReplyOpen(false)}
+                className="inline-flex h-10 items-center rounded-full px-4 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] sm:h-9 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSendReply}
+                disabled={replySending || !replyBody.trim()}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] transition-[opacity,transform] hover:opacity-95 active:scale-[0.98] disabled:opacity-50 sm:h-9 sm:px-4"
+              >
+                {replySending ? "Sending…" : "Send"}
+                <Send className="size-3.5" />
+              </button>
+            </div>
           </div>
+        ) : null}
 
-          <textarea
-            rows={2}
-            value={replyBody}
-            onChange={(e) => onReplyBodyChange(e.target.value)}
-            placeholder="Write a reply…"
-            className="w-full resize-none bg-transparent text-sm leading-relaxed text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
-          />
-
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onSendReply}
-              disabled={replySending || !replyBody.trim()}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] transition-[opacity,transform] hover:opacity-95 active:scale-[0.98] disabled:opacity-50 sm:h-9 sm:px-4"
-            >
-              {replySending ? "Sending…" : "Send"}
-              <Send className="size-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-2.5 flex items-center justify-between px-1 pt-0.5 text-xs font-medium text-[var(--muted-foreground)]">
+        <div className="flex items-center justify-between px-1 pt-0.5 text-xs font-medium text-[var(--muted-foreground)]">
           <button
             type="button"
-            onClick={onReply}
+            onClick={() => setReplyOpen(true)}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
           >
             <CornerUpLeft className="size-3.5" />

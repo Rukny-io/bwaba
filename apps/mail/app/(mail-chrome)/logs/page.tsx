@@ -1,1 +1,5 @@
-export { default } from "@/components/app/empty-page";
+import { MailEmailLogsPage } from "@/components/app/mail-email-logs-page";
+
+export default function EmailLogsPage() {
+  return <MailEmailLogsPage />;
+}

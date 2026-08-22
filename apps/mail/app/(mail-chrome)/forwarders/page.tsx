@@ -1,1 +1,5 @@
-export { default } from "@/components/app/empty-page";
+import { MailForwardersPage } from "@/components/app/mail-forwarders-page";
+
+export default function ForwardersPage() {
+  return <MailForwardersPage />;
+}

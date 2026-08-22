@@ -10,8 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider locale="en-US">
       <RouterProvider navigate={router.push}>
-        <ThemeSync />
-        {children}
+        <ThemeSync>{children}</ThemeSync>
       </RouterProvider>
     </I18nProvider>
   );

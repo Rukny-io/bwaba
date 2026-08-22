@@ -6,6 +6,7 @@ export function applyHqTheme(theme: HqTheme) {
   const root = document.documentElement;
   root.classList.remove('dark', 'light');
   root.classList.add(theme);
+  root.setAttribute('data-theme', theme);
   root.style.colorScheme = theme;
   localStorage.setItem(HQ_THEME_STORAGE_KEY, theme);
 }

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Dropdown } from '@heroui/react';
 import {
   homeNavItem,
@@ -15,7 +15,7 @@ import {
 } from '@/components/layout/nav-config';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { logoutWithNotification } from '@/lib/auth-notify';
-import { applyHqTheme, readHqTheme, type HqTheme } from '@/lib/hq-theme';
+import { HqThemeToggle } from '@/components/layout/hq-theme-toggle';
 import { cn } from '@/lib/utils';
 
 function Tooltip({ label }: { label: string }) {
@@ -98,17 +98,6 @@ interface HqSidebarProps {
 
 export function HqSidebar({ avatarUrl, userName }: HqSidebarProps) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<HqTheme>('light');
-
-  useEffect(() => {
-    setTheme(readHqTheme());
-  }, []);
-
-  function handleThemeToggle() {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    applyHqTheme(next);
-    setTheme(next);
-  }
 
   return (
     <aside className="fixed top-0 left-4 z-40 hidden h-full w-14 flex-col items-center py-5 sm:flex">
@@ -139,6 +128,10 @@ export function HqSidebar({ avatarUrl, userName }: HqSidebarProps) {
       </div>
 
       <div className="flex flex-col items-center gap-2">
+        <div className="group relative">
+          <HqThemeToggle className="size-10 rounded-2xl text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]" />
+          <Tooltip label="Theme" />
+        </div>
         <Dropdown>
           <Dropdown.Trigger
             aria-label="Profile"
@@ -156,22 +149,9 @@ export function HqSidebar({ avatarUrl, userName }: HqSidebarProps) {
           >
             <Dropdown.Menu
               onAction={(key) => {
-                if (key === 'theme') handleThemeToggle();
                 if (key === 'logout') void logoutWithNotification();
               }}
             >
-              <Dropdown.Item
-                id="theme"
-                textValue={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                className="gap-2"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="size-4 shrink-0" />
-                ) : (
-                  <Moon className="size-4 shrink-0" />
-                )}
-                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              </Dropdown.Item>
               <Dropdown.Item
                 id="logout"
                 textValue="Sign out"

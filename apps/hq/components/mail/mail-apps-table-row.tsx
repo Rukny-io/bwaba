@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail } from 'lucide-react';
 import { Button, Chip, Table, Tooltip } from '@heroui/react';
@@ -22,12 +23,13 @@ const cellTruncate = 'max-w-0 overflow-hidden';
 
 export function MailAppsTableRow({ app }: { app: AdminMailApp }) {
   const router = useRouter();
+  const detailHref = `/app/mail/${app.appId}`;
 
   return (
     <Table.Row
       id={app.appId}
       textValue={app.name}
-      className="group transition-colors hover:bg-[var(--surface-secondary)]/50"
+      className="group cursor-pointer transition-colors hover:bg-[var(--surface-secondary)]/50"
     >
       <Table.Cell className={cn(cellTruncate, 'pe-2')}>
         <div className="flex min-w-0 items-center gap-2.5">
@@ -35,9 +37,13 @@ export function MailAppsTableRow({ app }: { app: AdminMailApp }) {
             <Mail className="size-3.5" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium leading-snug text-[var(--foreground)]">
+            <Link
+              href={detailHref}
+              className="block truncate text-sm font-medium leading-snug text-[var(--foreground)] transition-colors hover:text-[var(--primary)]"
+              title={`Open details for ${app.name}`}
+            >
               {app.name}
-            </p>
+            </Link>
             <p
               className="truncate font-mono text-[11px] leading-snug text-[var(--muted-foreground)]"
               dir="ltr"
@@ -93,12 +99,17 @@ export function MailAppsTableRow({ app }: { app: AdminMailApp }) {
               {formatMailDate(app.createdAt)}
             </time>
           </TableHint>
+        </div>
+      </Table.Cell>
+
+      <Table.Cell className="whitespace-nowrap">
+        <div className="flex items-center justify-end gap-1">
           <Tooltip delay={350}>
             <Button
               size="sm"
               variant="tertiary"
-              className="h-7 shrink-0 rounded-lg px-2 opacity-80 transition-opacity group-hover:opacity-100"
-              onPress={() => router.push(`/app/mail/${app.appId}`)}
+              className="h-7 shrink-0 rounded-lg px-2"
+              onPress={() => router.push(detailHref)}
             >
               Details
             </Button>
@@ -111,8 +122,8 @@ export function MailAppsTableRow({ app }: { app: AdminMailApp }) {
             <Button
               size="sm"
               variant="tertiary"
-              className="h-7 shrink-0 rounded-lg px-2 opacity-80 transition-opacity group-hover:opacity-100"
-              onPress={() => router.push(`/app/mail/${app.appId}?tab=analytics`)}
+              className="h-7 shrink-0 rounded-lg px-2"
+              onPress={() => router.push(`${detailHref}?tab=analytics`)}
             >
               Analytics
             </Button>

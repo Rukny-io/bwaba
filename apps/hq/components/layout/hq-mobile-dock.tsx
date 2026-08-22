@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, MoreHorizontal, X, type LucideIcon } from 'lucide-react';
+import { LogOut, MoreHorizontal, Moon, Sun, X, type LucideIcon } from 'lucide-react';
 import {
   mobileDockItems,
   mobileDrawerItems,
@@ -15,6 +15,7 @@ import {
   MobileDockItem,
 } from '@/components/layout/mobile-dock-primitives';
 import { logoutWithNotification } from '@/lib/auth-notify';
+import { useHqTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 
 function drawerRowClass(active: boolean) {
@@ -54,7 +55,9 @@ function DrawerIcon({
 export function HqMobileDock() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { theme, toggleTheme } = useHqTheme();
   const handleClose = useCallback(() => setOpen(false), []);
+  const isDark = theme === 'dark';
 
   async function handleLogout() {
     setOpen(false);
@@ -107,6 +110,17 @@ export function HqMobileDock() {
             </div>
 
             <div className="mt-0.5 border-t border-[var(--border)]/50 px-1.5 pb-0.5 pt-1.5">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={toggleTheme}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+              >
+                <DrawerIcon icon={isDark ? Sun : Moon} />
+                <span className="text-[13px] font-medium">
+                  {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+                </span>
+              </button>
               <button
                 type="button"
                 role="menuitem"

@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Alert,
+  Button,
+  Chip,
+  Skeleton,
+} from "@heroui/react";
 import { formatMailIqD } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
@@ -21,7 +27,8 @@ const FEATURE_LABELS: Array<{
   { key: "linkAndFileTracking", label: "Link and file tracking" },
 ];
 
-export function MailBillingSettings() {
+export function MailPlanSettingsSection() {
+  const router = useRouter();
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
   const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
     null,
@@ -41,6 +48,7 @@ export function MailBillingSettings() {
         setAppName(current.app?.name ?? null);
         setSubscription(current.subscription);
         setPendingRequest(current.pendingRequest);
+        setError("");
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Could not load subscription.");
@@ -58,111 +66,118 @@ export function MailBillingSettings() {
   const active = subscription?.status === "ACTIVE" ? subscription : null;
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Preferences and billing for this Mail app only.
-        </p>
-      </header>
-
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-[var(--foreground)]">Subscription</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {appName
-                ? `Plan, seats, and storage apply only to ${appName}.`
-                : "Plan, seats, and storage apply only to the Mail app you have open."}{" "}
-              Card payment is coming soon.
-            </p>
-          </div>
-          <Link
-            href="/pricing"
-            className="inline-flex h-9 items-center rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)]"
-          >
-            {active ? "Change plan" : "Request a plan"}
-          </Link>
+    <div className="flex min-w-0 flex-col gap-5 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-[var(--foreground)]">Plan</h2>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            {appName
+              ? `Seats and storage apply only to ${appName}.`
+              : "Seats and storage apply only to the Mail app you have open."}{" "}
+            Card payment is coming soon.
+          </p>
         </div>
-
-        {loading ? (
-          <p className="mt-4 text-sm text-[var(--muted-foreground)]">Loading…</p>
-        ) : error ? (
-          <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>
-        ) : needsApp ? (
-          <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-            Open a Mail app to see its subscription.{" "}
-            <Link href="/apps" className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline">
-              Go to apps
-            </Link>
-          </p>
-        ) : active ? (
-          <>
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Plan</dt>
-                <dd className="font-medium text-[var(--foreground)]">{active.planName}</dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Monthly total</dt>
-                <dd className="font-medium text-[var(--foreground)]">
-                  {formatMailIqD(active.monthlyTotal)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Mailbox seats</dt>
-                <dd className="font-medium text-[var(--foreground)]">{active.mailboxCount}</dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Renews</dt>
-                <dd className="font-medium text-[var(--foreground)]">
-                  {active.renewsAt
-                    ? new Date(active.renewsAt).toLocaleDateString("en-GB")
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Storage / mailbox</dt>
-                <dd className="font-medium text-[var(--foreground)]">
-                  {active.limits.storageGbPerMailbox} GB
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Forwarding · Aliases</dt>
-                <dd className="font-medium text-[var(--foreground)]">
-                  {active.limits.forwardingRules} · {active.limits.emailAliases}
-                </dd>
-              </div>
-            </dl>
-            <ul className="mt-4 grid gap-1.5 text-sm sm:grid-cols-2">
-              {FEATURE_LABELS.map((feature) => (
-                <li key={feature.key} className="text-[var(--muted-foreground)]">
-                  <span className="font-medium text-[var(--foreground)]">
-                    {active.features?.[feature.key] ? "On" : "Off"}
-                  </span>
-                  {" · "}
-                  {feature.label}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-            No active plan on this app. Request Starter, Standard, or Premium from
-            Pricing so an admin can activate seats, storage, and features.
-          </p>
+        {loading ? null : (
+          <Chip
+            color={active ? "success" : pendingRequest ? "warning" : "default"}
+            size="sm"
+            variant="soft"
+          >
+            {active ? active.planName : pendingRequest ? "Pending" : "No plan"}
+          </Chip>
         )}
-
-        {pendingRequest ? (
-          <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-            Request pending · ticket {pendingRequest.ticketNumber}
-            {pendingRequest.plan ? ` · ${pendingRequest.plan}` : ""} ·{" "}
-            {pendingRequest.mailboxCount} seats.
-          </p>
-        ) : null}
       </div>
-    </section>
+
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-40 rounded-lg" />
+          <Skeleton className="h-4 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
+      ) : error ? (
+        <Alert status="danger">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>Plan</Alert.Title>
+            <Alert.Description>{error}</Alert.Description>
+          </Alert.Content>
+        </Alert>
+      ) : needsApp ? (
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Open a Mail app to see its subscription.
+        </p>
+      ) : active ? (
+        <>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Monthly total</dt>
+              <dd className="font-medium text-[var(--foreground)]">
+                {formatMailIqD(active.monthlyTotal)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Mailbox seats</dt>
+              <dd className="font-medium text-[var(--foreground)]">{active.mailboxCount}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Renews</dt>
+              <dd className="font-medium text-[var(--foreground)]">
+                {active.renewsAt
+                  ? new Date(active.renewsAt).toLocaleDateString("en-GB")
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Storage / mailbox</dt>
+              <dd className="font-medium text-[var(--foreground)]">
+                {active.limits.storageGbPerMailbox} GB
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Forwarding</dt>
+              <dd className="font-medium text-[var(--foreground)]">
+                {active.limits.forwardingRules} rules
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Aliases</dt>
+              <dd className="font-medium text-[var(--foreground)]">
+                {active.limits.emailAliases}
+              </dd>
+            </div>
+          </dl>
+          <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
+            {FEATURE_LABELS.map((feature) => (
+              <li key={feature.key} className="text-[var(--muted-foreground)]">
+                <span className="font-medium text-[var(--foreground)]">
+                  {active.features?.[feature.key] ? "On" : "Off"}
+                </span>
+                {" · "}
+                {feature.label}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="text-sm text-[var(--muted-foreground)]">
+          No active plan on this app. Request Starter, Standard, or Premium from Pricing
+          so an admin can activate seats, storage, and features.
+        </p>
+      )}
+
+      {pendingRequest ? (
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Request pending · ticket {pendingRequest.ticketNumber}
+          {pendingRequest.plan ? ` · ${pendingRequest.plan}` : ""} ·{" "}
+          {pendingRequest.mailboxCount} seats.
+        </p>
+      ) : null}
+
+      <div className="flex justify-end">
+        <Button size="sm" onPress={() => router.push("/pricing")}>
+          {active ? "Change plan" : "Request a plan"}
+        </Button>
+      </div>
+    </div>
   );
 }

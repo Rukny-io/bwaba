@@ -16,6 +16,7 @@
     "@aws-sdk/client-sesv2": "^3.1113.0",
     "@heroui/react": "file:./packages/react",
     "@heroui/styles": "file:./packages/styles",
+    "@internationalized/date": "^3.12.3",
     "@rukny/auth": "file:../../packages/auth",
     "@rukny/thmanyah-font": "file:../../packages/Thmanyah-Font-Family",
     "ioredis": "^5.9.0",

@@ -11,6 +11,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import {
+  MailAppStatus,
   MailMailboxStatus,
   MailMessageDirection,
   MailMessageFolder,
@@ -20,6 +21,8 @@ import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { MailRealtimeService } from './mail-realtime.service';
+import { MailAutoReplyService } from './mail-auto-reply.service';
+import { MailForwarderService } from './mail-forwarder.service';
 import {
   incrementMailboxStorage,
   utf8StorageBytes,
@@ -60,6 +63,8 @@ export class MailInboundService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly realtime: MailRealtimeService,
+    private readonly autoReply: MailAutoReplyService,
+    private readonly forwarder: MailForwarderService,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -518,8 +523,59 @@ export class MailInboundService {
           messageId: created.id,
           direction: 'INBOUND',
         });
+        void this.autoReply
+          .maybeReply({
+            mailboxId: mailbox.id,
+            fromAddress,
+            inboundMessageId: messageId,
+            autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
+            precedence: this.headerString(input.parsed, 'precedence'),
+            listId: this.headerString(input.parsed, 'list-id'),
+            autoResponseSuppress: this.headerString(
+              input.parsed,
+              'x-auto-response-suppress',
+            ),
+          })
+          .catch((error) => {
+            this.logger.warn(
+              `Auto-reply failed mailbox=${mailbox.id}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
+        void this.forwarder
+          .maybeForward({
+            mailboxId: mailbox.id,
+            fromAddress,
+            inboundRecordId: created.id,
+            inboundMessageId: messageId,
+            subject: created.subject,
+            bodyText,
+            bodyHtml,
+            autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
+            precedence: this.headerString(input.parsed, 'precedence'),
+            listId: this.headerString(input.parsed, 'list-id'),
+          })
+          .catch((error) => {
+            this.logger.warn(
+              `Forward failed mailbox=${mailbox.id}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
         return created;
       });
+  }
+
+  private headerString(parsed: ParsedMail, headerName: string): string {
+    const value = parsed.headers?.get(headerName);
+    if (value == null || value === '') return '';
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return value.map(String).join(' ');
+    if (typeof value === 'object' && value && 'text' in value) {
+      return String((value as { text?: string }).text || '');
+    }
+    return String(value);
   }
 
   private headerAddresses(parsed: ParsedMail, headerName: string): string[] {
@@ -535,21 +591,29 @@ export class MailInboundService {
       .filter(Boolean);
   }
 
+  private parseRecipient(
+    address: string,
+  ): { localPart: string; domain: string } | null {
+    const normalized = address.trim().toLowerCase();
+    const at = normalized.lastIndexOf('@');
+    if (at <= 0) return null;
+    let localPart = normalized.slice(0, at);
+    const domain = normalized.slice(at + 1);
+    const plus = localPart.indexOf('+');
+    if (plus > 0) localPart = localPart.slice(0, plus);
+    if (!localPart || !domain) return null;
+    return { localPart, domain };
+  }
+
   private async resolveMailbox(addresses: string[]) {
     for (const address of addresses) {
-      const normalized = address.trim().toLowerCase();
-      const at = normalized.lastIndexOf('@');
-      if (at <= 0) continue;
-      let localPart = normalized.slice(0, at);
-      const domain = normalized.slice(at + 1);
-      // help+tag@domain → help
-      const plus = localPart.indexOf('+');
-      if (plus > 0) localPart = localPart.slice(0, plus);
+      const parsed = this.parseRecipient(address);
+      if (!parsed) continue;
 
       const mailbox = await this.prisma.mailMailbox.findFirst({
         where: {
-          localPart,
-          domain,
+          localPart: parsed.localPart,
+          domain: parsed.domain,
           status: MailMailboxStatus.ACTIVE,
         },
         include: {
@@ -558,6 +622,79 @@ export class MailInboundService {
       });
       if (mailbox && mailbox.mailApp.status === 'ACTIVE') {
         return mailbox;
+      }
+    }
+
+    for (const address of addresses) {
+      const parsed = this.parseRecipient(address);
+      if (!parsed) continue;
+      const viaAlias = await this.resolveAlias(parsed);
+      if (viaAlias) return viaAlias;
+    }
+
+    return this.resolveCatchAll(addresses);
+  }
+
+  private async resolveAlias(parsed: { localPart: string; domain: string }) {
+    const row = await this.prisma.mailAlias.findFirst({
+      where: {
+        localPart: parsed.localPart,
+        domain: parsed.domain,
+        enabled: true,
+        mailbox: { status: MailMailboxStatus.ACTIVE },
+        mailApp: { status: MailAppStatus.ACTIVE },
+      },
+      include: {
+        mailbox: {
+          include: {
+            mailApp: { select: { userId: true, status: true, appId: true } },
+          },
+        },
+      },
+    });
+    if (row?.mailbox && row.mailbox.mailApp.status === MailAppStatus.ACTIVE) {
+      return row.mailbox;
+    }
+    return null;
+  }
+
+  private async resolveCatchAll(addresses: string[]) {
+    const domains = new Set<string>();
+    for (const address of addresses) {
+      const at = address.trim().toLowerCase().lastIndexOf('@');
+      if (at > 0) domains.add(address.slice(at + 1));
+    }
+
+    for (const domain of domains) {
+      const row = await this.prisma.mailCatchAll.findFirst({
+        where: {
+          enabled: true,
+          mailApp: {
+            status: MailAppStatus.ACTIVE,
+            OR: [
+              { primaryDomain: domain },
+              {
+                mailboxes: {
+                  some: {
+                    domain,
+                    status: { not: MailMailboxStatus.DELETED },
+                  },
+                },
+              },
+            ],
+          },
+          mailbox: { status: MailMailboxStatus.ACTIVE },
+        },
+        include: {
+          mailbox: {
+            include: {
+              mailApp: { select: { userId: true, status: true, appId: true } },
+            },
+          },
+        },
+      });
+      if (row?.mailbox && row.mailbox.mailApp.status === MailAppStatus.ACTIVE) {
+        return row.mailbox;
       }
     }
 

@@ -1,1 +1,5 @@
-export { default } from "@/components/app/empty-page";
+import { MailAutoReplyPage } from "@/components/app/mail-auto-reply-page";
+
+export default function AutomaticReplyPage() {
+  return <MailAutoReplyPage />;
+}

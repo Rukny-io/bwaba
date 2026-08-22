@@ -177,6 +177,14 @@ export class MailMailboxesService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const enable2fa = Boolean(dto.enable2fa);
 
+    const aliasTaken = await this.prisma.mailAlias.findFirst({
+      where: { domain, localPart },
+      select: { id: true },
+    });
+    if (aliasTaken) {
+      throw new BadRequestException(`${localPart}@${domain} already exists.`);
+    }
+
     try {
       const created = await this.prisma.mailMailbox.create({
         data: {
@@ -229,6 +237,26 @@ export class MailMailboxesService {
       data,
       include: { mailApp: { select: { appId: true } } },
     });
+
+    if (dto.status === 'DISABLED') {
+      await this.prisma.mailCatchAll.updateMany({
+        where: { mailboxId: existing.id, enabled: true },
+        data: { enabled: false },
+      });
+      await this.prisma.mailAutoReply.updateMany({
+        where: { mailboxId: existing.id, enabled: true },
+        data: { enabled: false },
+      });
+      await this.prisma.mailAlias.updateMany({
+        where: { mailboxId: existing.id, enabled: true },
+        data: { enabled: false },
+      });
+      await this.prisma.mailForwarder.updateMany({
+        where: { mailboxId: existing.id, enabled: true },
+        data: { enabled: false },
+      });
+    }
+
     return { mailbox: this.toView(updated) };
   }
 
@@ -309,6 +337,18 @@ export class MailMailboxesService {
     await this.storage
       .deleteMailMailboxAvatar(userId, existing.id)
       .catch(() => undefined);
+    await this.prisma.mailCatchAll.deleteMany({
+      where: { mailboxId: existing.id },
+    });
+    await this.prisma.mailAutoReply.deleteMany({
+      where: { mailboxId: existing.id },
+    });
+    await this.prisma.mailAlias.deleteMany({
+      where: { mailboxId: existing.id },
+    });
+    await this.prisma.mailForwarder.deleteMany({
+      where: { mailboxId: existing.id },
+    });
     await this.prisma.mailMailbox.update({
       where: { id: existing.id },
       data: { status: MailMailboxStatus.DELETED, avatarKey: null },

@@ -28,3 +28,21 @@ export async function incrementMailboxStorage(
     data: { storageUsedBytes: { increment: BigInt(Math.floor(bytes)) } },
   });
 }
+
+export async function decrementMailboxStorage(
+  prisma: PrismaService,
+  mailboxId: string,
+  bytes: number,
+) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return;
+  const box = await prisma.mailMailbox.findUnique({
+    where: { id: mailboxId },
+    select: { storageUsedBytes: true },
+  });
+  if (!box) return;
+  const next = box.storageUsedBytes - BigInt(Math.floor(bytes));
+  await prisma.mailMailbox.update({
+    where: { id: mailboxId },
+    data: { storageUsedBytes: next < BigInt(0) ? BigInt(0) : next },
+  });
+}

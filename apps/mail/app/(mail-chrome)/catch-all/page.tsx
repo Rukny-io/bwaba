@@ -1,1 +1,5 @@
-export { default } from "@/components/app/empty-page";
+import { MailCatchAllPage } from "@/components/app/mail-catch-all-page";
+
+export default function CatchAllEmailPage() {
+  return <MailCatchAllPage />;
+}

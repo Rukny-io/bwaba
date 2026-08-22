@@ -11,6 +11,15 @@ import { MailAppsService } from './mail-apps.service';
 import { MailMailboxesController } from './mail-mailboxes.controller';
 import { MailMailboxesService } from './mail-mailboxes.service';
 import { MailMessagesController } from './mail-messages.controller';
+import { MailLogsController } from './mail-logs.controller';
+import { MailCatchAllController } from './mail-catch-all.controller';
+import { MailCatchAllService } from './mail-catch-all.service';
+import { MailAutoReplyController } from './mail-auto-reply.controller';
+import { MailAutoReplyService } from './mail-auto-reply.service';
+import { MailAliasController } from './mail-alias.controller';
+import { MailAliasService } from './mail-alias.service';
+import { MailForwarderController } from './mail-forwarder.controller';
+import { MailForwarderService } from './mail-forwarder.service';
 import { MailMessagesService } from './mail-messages.service';
 import { MailSesService } from './mail-ses.service';
 import { MailInboundService } from './mail-inbound.service';
@@ -32,6 +41,11 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailAppsController,
     MailMailboxesController,
     MailMessagesController,
+    MailLogsController,
+    MailCatchAllController,
+    MailAutoReplyController,
+    MailAliasController,
+    MailForwarderController,
     MailSesWebhookController,
   ],
   providers: [
@@ -39,6 +53,10 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailAppsService,
     MailMailboxesService,
     MailMessagesService,
+    MailCatchAllService,
+    MailAutoReplyService,
+    MailAliasService,
+    MailForwarderService,
     MailSesService,
     MailInboundService,
     MailRealtimeService,
@@ -48,6 +66,10 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailAppsService,
     MailMailboxesService,
     MailMessagesService,
+    MailCatchAllService,
+    MailAutoReplyService,
+    MailAliasService,
+    MailForwarderService,
     MailSesService,
     MailInboundService,
     MailRealtimeService,

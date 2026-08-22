@@ -444,13 +444,13 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         setCreateOpen(true);
       }}
       className={cn(
-        "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl px-3.5 text-[13px] font-semibold sm:h-9 sm:w-auto",
+        "inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1 self-start rounded-lg px-2.5 text-[12px] font-semibold",
         canCreate
           ? "bg-[var(--foreground)] text-[var(--background)]"
           : "cursor-not-allowed bg-[var(--surface-secondary)] text-[var(--muted-foreground)] opacity-70",
       )}
     >
-      <Plus className="size-3.5" aria-hidden />
+      <Plus className="size-3" aria-hidden />
       Create mailbox
     </button>
   );
@@ -600,7 +600,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
 
       {/* Hostinger-style manage mailboxes card on desktop; stacked cards on phone */}
       <section className="min-w-0 md:overflow-hidden md:rounded-2xl md:bg-[var(--surface)]" aria-label="Manage mailboxes">
-        <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:rounded-none md:bg-transparent md:p-0 md:px-6 md:py-4">
+        <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:flex-row md:items-center md:justify-between md:rounded-none md:bg-transparent md:p-0 md:px-6 md:py-4">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-[var(--foreground)]">
               Manage mailboxes

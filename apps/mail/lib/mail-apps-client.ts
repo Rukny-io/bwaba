@@ -108,7 +108,12 @@ export async function getMailApp(appId: string): Promise<MailApp> {
 
 export async function updateMailApp(
   appId: string,
-  input: { name?: string; description?: string; primaryDomain?: string | null },
+  input: {
+    name?: string;
+    description?: string;
+    contactEmail?: string;
+    primaryDomain?: string | null;
+  },
 ): Promise<MailApp> {
   const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
     method: "PATCH",
@@ -120,4 +125,14 @@ export async function updateMailApp(
     throw new Error(errorMessage(data, "Could not update this Mail app."));
   }
   return data.app;
+}
+
+export async function archiveMailApp(appId: string): Promise<void> {
+  const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
+    method: "DELETE",
+  });
+  const data = await readJson(response);
+  if (!response.ok) {
+    throw new Error(errorMessage(data, "Could not archive this Mail app."));
+  }
 }

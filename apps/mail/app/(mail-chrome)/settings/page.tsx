@@ -1,5 +1,5 @@
-import { MailBillingSettings } from "@/components/billing/mail-billing-settings";
+import { MailSettingsPage } from "@/components/app/mail-settings-page";
 
 export default function SettingsPage() {
-  return <MailBillingSettings />;
+  return <MailSettingsPage />;
 }

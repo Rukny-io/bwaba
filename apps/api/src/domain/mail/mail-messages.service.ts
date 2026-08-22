@@ -204,6 +204,129 @@ export class MailMessagesService {
     };
   }
 
+  private toLogView(row: {
+    id: string;
+    mailboxId: string;
+    direction: MailMessageDirection;
+    folder: MailMessageFolder;
+    status: MailMessageStatus;
+    fromAddress: string;
+    toAddresses: string[];
+    subject: string;
+    sesMessageId: string | null;
+    errorMessage: string | null;
+    sentAt: Date | null;
+    receivedAt: Date | null;
+    createdAt: Date;
+    mailbox: { localPart: string; domain: string };
+  }) {
+    return {
+      id: row.id,
+      mailboxId: row.mailboxId,
+      mailboxAddress: `${row.mailbox.localPart}@${row.mailbox.domain}`,
+      direction: row.direction,
+      folder: row.folder,
+      status: row.status,
+      fromAddress: row.fromAddress,
+      toAddresses: row.toAddresses,
+      subject: row.subject,
+      sesMessageId: row.sesMessageId,
+      errorMessage: row.errorMessage,
+      sentAt: row.sentAt?.toISOString() ?? null,
+      receivedAt: row.receivedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async listLogs(
+    userId: string,
+    appId: string,
+    opts: {
+      mailboxId?: string;
+      direction?: MailMessageDirection;
+      status?: MailMessageStatus;
+      q?: string;
+      days?: number;
+      take?: number;
+      cursor?: string;
+    } = {},
+  ) {
+    const app = await this.assertOwnedApp(userId, appId);
+    const days = opts.days === 1 || opts.days === 30 ? opts.days : 7;
+    const parsedTake = Number(opts.take);
+    const take = Number.isFinite(parsedTake)
+      ? Math.min(Math.max(parsedTake, 1), 100)
+      : 50;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const needle = opts.q?.trim().slice(0, 200) || '';
+
+    const where: Prisma.MailMessageWhereInput = {
+      userId,
+      folder: { not: MailMessageFolder.DRAFTS },
+      createdAt: { gte: since },
+      mailbox: {
+        mailAppId: app.id,
+        status: { not: MailMailboxStatus.DELETED },
+        ...(opts.mailboxId ? { id: opts.mailboxId } : {}),
+      },
+      ...(opts.direction ? { direction: opts.direction } : {}),
+      ...(opts.status ? { status: opts.status } : {}),
+    };
+
+    if (needle) {
+      const emailNeedle = needle.toLowerCase();
+      where.AND = [
+        {
+          OR: [
+            { fromAddress: { contains: needle, mode: 'insensitive' } },
+            { subject: { contains: needle, mode: 'insensitive' } },
+            {
+              mailbox: {
+                localPart: { contains: needle, mode: 'insensitive' },
+              },
+            },
+            {
+              mailbox: { domain: { contains: needle, mode: 'insensitive' } },
+            },
+            { toAddresses: { has: emailNeedle } },
+          ],
+        },
+      ];
+    }
+
+    const rows = await this.prisma.mailMessage.findMany({
+      where,
+      select: {
+        id: true,
+        mailboxId: true,
+        direction: true,
+        folder: true,
+        status: true,
+        fromAddress: true,
+        toAddresses: true,
+        subject: true,
+        sesMessageId: true,
+        errorMessage: true,
+        sentAt: true,
+        receivedAt: true,
+        createdAt: true,
+        mailbox: { select: { localPart: true, domain: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: take + 1,
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    });
+
+    const hasMore = rows.length > take;
+    const page = hasMore ? rows.slice(0, take) : rows;
+
+    return {
+      logs: page.map((row) => this.toLogView(row)),
+      nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+      days,
+    };
+  }
+
   async getOne(userId: string, appId: string, messageId: string) {
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },

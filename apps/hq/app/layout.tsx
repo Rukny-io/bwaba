@@ -30,7 +30,7 @@ export default async function RootLayout({
       <body className={`${thmanyahSans.className} min-h-full flex flex-col font-sans`}>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('rukny-hq-theme');var theme=t==='dark'?'dark':'light';var r=document.documentElement;r.classList.remove('dark','light');r.classList.add(theme);r.style.colorScheme=theme;}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('rukny-hq-theme');var theme=t==='dark'?'dark':'light';var r=document.documentElement;r.classList.remove('dark','light');r.classList.add(theme);r.setAttribute('data-theme',theme);r.style.colorScheme=theme;}catch(e){}})();`,
           }}
         />
         <Providers>{children}</Providers>

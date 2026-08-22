@@ -8,14 +8,15 @@ import { ClientPagination } from '@/components/shared/client-pagination';
 import { cn } from '@/lib/utils';
 
 const COLUMNS = [
-  { id: 'app', label: 'App', isRowHeader: true, className: 'w-[18%]' },
-  { id: 'owner', label: 'Owner', className: 'w-[18%]' },
+  { id: 'app', label: 'App', isRowHeader: true, className: 'w-[16%]' },
+  { id: 'owner', label: 'Owner', className: 'w-[16%]' },
   { id: 'domain', label: 'Domain', className: 'w-[12%]' },
   { id: 'domainStatus', label: 'Verification', className: 'w-[10%]' },
   { id: 'plan', label: 'Plan', className: 'w-[8%]' },
   { id: 'boxes', label: 'Boxes', className: 'w-[6%]' },
-  { id: 'storage', label: 'Storage', className: 'w-[14%]' },
-  { id: 'status', label: 'Status', className: 'w-[14%]' },
+  { id: 'storage', label: 'Storage', className: 'w-[10%]' },
+  { id: 'status', label: 'Status', className: 'w-[10%]' },
+  { id: 'actions', label: '', className: 'w-[12%]' },
 ] as const;
 
 interface MailAppsTableProps {

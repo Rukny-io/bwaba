@@ -3329,6 +3329,10 @@ model MailApp {
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   mailboxes    MailMailbox[]
   subscription MailSubscription?
+  catchAll     MailCatchAll?
+  autoReplies  MailAutoReply[]
+  aliases      MailAlias[]
+  forwarders   MailForwarder[]
 
   @@unique([userId, slotIndex])
   @@index([userId])
@@ -3368,12 +3372,110 @@ model MailMailbox {
 
   mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
   messages MailMessage[]
+  catchAlls MailCatchAll[]
+  autoReply MailAutoReply?
+  aliases MailAlias[]
+  forwarders MailForwarder[]
 
   @@unique([domain, localPart])
   @@index([mailAppId])
   @@index([status])
   @@index([createdAt])
   @@map("mail_mailboxes")
+}
+
+/// Unmatched *@domain mail delivered to one mailbox on this app
+model MailCatchAll {
+  id        String   @id @default(uuid())
+  mailAppId String   @unique
+  mailboxId String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mailApp MailApp     @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxId])
+  @@map("mail_catch_alls")
+}
+
+/// Vacation / automatic reply for one mailbox
+model MailAutoReply {
+  id        String    @id @default(uuid())
+  mailAppId String
+  mailboxId String    @unique
+  enabled   Boolean   @default(false)
+  subject   String    @default("")
+  bodyText  String    @default("") @db.Text
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  mailApp  MailApp                 @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox  MailMailbox             @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  receipts MailAutoReplyReceipt[]
+
+  @@index([mailAppId])
+  @@index([enabled])
+  @@map("mail_auto_replies")
+}
+
+/// Dedupes vacation replies per sender (24h cooldown)
+model MailAutoReplyReceipt {
+  id          String   @id @default(uuid())
+  autoReplyId String
+  toAddress   String
+  sentAt      DateTime @default(now())
+
+  autoReply MailAutoReply @relation(fields: [autoReplyId], references: [id], onDelete: Cascade)
+
+  @@unique([autoReplyId, toAddress])
+  @@index([sentAt])
+  @@map("mail_auto_reply_receipts")
+}
+
+/// Extra address on the app domain that delivers into one mailbox
+model MailAlias {
+  id        String   @id @default(uuid())
+  mailAppId String
+  mailboxId String
+  localPart String
+  domain    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mailApp MailApp     @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@unique([domain, localPart])
+  @@index([mailAppId])
+  @@index([mailboxId])
+  @@index([enabled])
+  @@map("mail_aliases")
+}
+
+/// Forward inbound mailbox mail to an external address
+model MailForwarder {
+  id        String   @id @default(uuid())
+  mailAppId String
+  mailboxId String
+  toAddress String
+  keepCopy  Boolean  @default(true)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mailApp MailApp     @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@unique([mailboxId, toAddress])
+  @@index([mailAppId])
+  @@index([mailboxId])
+  @@index([enabled])
+  @@map("mail_forwarders")
 }
 
 enum MailMessageDirection {

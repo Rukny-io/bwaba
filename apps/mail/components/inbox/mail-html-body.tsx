@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  adaptSandboxedMailToWidth,
   buildSandboxedMailDocument,
   looksLikeHtml,
 } from "@/lib/sanitize-mail-html";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function MailHtmlBody({ html, text }: Props) {
+  const hostRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(240);
 
@@ -21,14 +23,14 @@ export function MailHtmlBody({ html, text }: Props) {
     return null;
   }, [html]);
 
-  const resize = useCallback(() => {
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) return;
-    const next = Math.max(
-      doc.documentElement.scrollHeight,
-      doc.body?.scrollHeight ?? 0,
-      120,
+  const fit = useCallback(() => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    if (!iframe || !doc?.body) return;
+    const frameWidth = Math.round(
+      hostRef.current?.clientWidth || iframe.clientWidth,
     );
+    const { height: next } = adaptSandboxedMailToWidth(doc, frameWidth);
     setHeight(Math.min(next + 8, 8000));
   }, []);
 
@@ -39,33 +41,50 @@ export function MailHtmlBody({ html, text }: Props) {
     if (!doc) return;
     const images = [...doc.images];
     for (const img of images) {
-      img.addEventListener("load", resize);
+      img.addEventListener("load", fit);
     }
     return () => {
       for (const img of images) {
-        img.removeEventListener("load", resize);
+        img.removeEventListener("load", fit);
       }
     };
-  }, [srcDoc, resize]);
+  }, [srcDoc, fit]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let lastWidth = host.clientWidth;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (Math.abs(width - lastWidth) < 1) return;
+      lastWidth = width;
+      window.requestAnimationFrame(fit);
+    });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [srcDoc, fit]);
 
   if (!srcDoc) {
     return (
-      <div className="whitespace-pre-wrap text-[15px] leading-[1.7] text-[var(--foreground)]/90">
+      <div className="whitespace-pre-wrap break-words px-0.5 text-[15px] leading-[1.7] text-[var(--foreground)]/90">
         {text?.trim() || "(Empty message)"}
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white">
+    <div
+      ref={hostRef}
+      className="overflow-hidden bg-white max-md:rounded-none md:rounded-2xl"
+    >
       <iframe
         ref={iframeRef}
         title="Email body"
         sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         srcDoc={srcDoc}
-        onLoad={resize}
+        onLoad={fit}
         className="block w-full border-0 bg-white"
-        style={{ height }}
+        style={{ height, overflow: "hidden" }}
         referrerPolicy="no-referrer"
       />
     </div>

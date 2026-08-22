@@ -24,6 +24,7 @@ export function FilterDropdown({
   onChange,
   disabled,
   className,
+  size = 'md',
 }: {
   label: string;
   value: string;
@@ -31,6 +32,7 @@ export function FilterDropdown({
   onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  size?: 'sm' | 'md';
 }) {
   const selectedKey = toFilterKey(value);
   const selectedLabel =
@@ -48,6 +50,8 @@ export function FilterDropdown({
     onChange(fromFilterKey(next));
   }
 
+  const compact = size === 'sm';
+
   return (
     <Dropdown>
       <Button
@@ -55,15 +59,28 @@ export function FilterDropdown({
         aria-label={label}
         isDisabled={disabled}
         className={cn(
-          'h-10 min-w-[10rem] justify-between gap-2 rounded-xl border-[var(--border)] bg-[var(--field-background)] px-3 text-start',
-          value && 'border-[var(--primary)]/40',
+          compact
+            ? 'h-8 min-w-[7rem] justify-between gap-1.5 rounded-lg border-0 bg-[var(--surface-secondary)] px-2.5 text-start'
+            : 'h-10 min-w-[10rem] justify-between gap-2 rounded-xl border-[var(--border)] bg-[var(--field-background)] px-3 text-start',
+          value && !compact && 'border-[var(--primary)]/40',
+          value && compact && 'bg-[color-mix(in_srgb,var(--foreground)_8%,var(--surface-secondary))]',
           className,
         )}
       >
-        <span className="min-w-0 truncate text-sm font-medium text-[var(--foreground)]">
+        <span
+          className={cn(
+            'min-w-0 truncate font-medium text-[var(--foreground)]',
+            compact ? 'text-xs' : 'text-sm',
+          )}
+        >
           {selectedLabel}
         </span>
-        <ChevronDown className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+        <ChevronDown
+          className={cn(
+            'shrink-0 text-[var(--muted-foreground)]',
+            compact ? 'size-3.5' : 'size-4',
+          )}
+        />
       </Button>
       <Dropdown.Popover placement="bottom start" className="min-w-[12rem]">
         <Dropdown.Menu

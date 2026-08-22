@@ -1,16 +1,22 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
   BillingCycle,
+  MailAppStatus,
+  MailMailboxStatus,
   MailPlan,
   PaymentStatus,
+  SupportTicketCategory,
+  SupportTicketStatus,
   SubscriptionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
+import { SupportTicketsService } from '../support-tickets/support-tickets.service';
 import {
   MAIL_PLAN_DEFINITIONS,
   MAIL_PLAN_LIMITS,
@@ -18,20 +24,59 @@ import {
   addOneMonth,
   mailMonthlyTotal,
 } from './mail-plan-limits.config';
+import { isMailAppPublicId } from './mail-app-id.util';
+import { storageQuotaBytesForPlan } from './mail-storage.util';
+
+const OPEN_TICKET_STATUSES: SupportTicketStatus[] = [
+  SupportTicketStatus.OPEN,
+  SupportTicketStatus.IN_PROGRESS,
+  SupportTicketStatus.WAITING_ON_USER,
+];
+
+type MailAppRow = {
+  id: string;
+  appId: string;
+  userId: string;
+  name: string;
+  primaryDomain: string | null;
+};
+
+type SubscriptionWithApp = {
+  id: string;
+  mailAppId: string;
+  userId: string;
+  plan: MailPlan;
+  status: SubscriptionStatus;
+  billingCycle: BillingCycle;
+  mailboxCount: number;
+  currentPeriodStart: Date | null;
+  currentPeriodEnd: Date | null;
+  cancelledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  payments?: unknown[];
+  mailApp?: {
+    appId: string;
+    name: string;
+    primaryDomain: string | null;
+  };
+};
 
 @Injectable()
 export class MailSubscriptionsService {
-  private readonly CACHE_PREFIX = 'mail-sub:';
+  private readonly CACHE_PREFIX = 'mail-sub:app:';
   private readonly CACHE_TTL = 300;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly supportTickets: SupportTicketsService,
   ) {}
 
   getPlansOverview() {
     return {
       currency: 'IQD',
+      cardPayments: { available: false, status: 'coming_soon' as const },
       plans: MAIL_PLAN_ORDER.map((id) => {
         const plan = MAIL_PLAN_DEFINITIONS[id];
         return {
@@ -57,13 +102,220 @@ export class MailSubscriptionsService {
     };
   }
 
-  async getSubscription(userId: string) {
+  async getOwnedAppSubscription(userId: string, publicAppId: string) {
+    const app = await this.requireOwnedApp(userId, publicAppId);
+    const { subscription } = await this.getSubscriptionForApp(app.id);
+    const pendingRequest = await this.findPendingRequest(userId, app.appId);
+    return {
+      app: this.toAppView(app),
+      subscription,
+      pendingRequest,
+      cardPayments: { available: false, status: 'coming_soon' as const },
+    };
+  }
+
+  async getActiveLimitsForApp(mailAppUuid: string) {
+    const cached = await this.redis
+      .get(`${this.CACHE_PREFIX}${mailAppUuid}`)
+      .catch(() => null);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as ReturnType<
+          MailSubscriptionsService['limitsPayload']
+        >;
+      } catch {
+        /* fall through */
+      }
+    }
+
+    const { subscription } = await this.getSubscriptionForApp(mailAppUuid);
+    if (!subscription || subscription.status !== 'ACTIVE') {
+      return null;
+    }
+
+    const payload = this.limitsPayload(subscription);
+    await this.redis
+      .set(
+        `${this.CACHE_PREFIX}${mailAppUuid}`,
+        JSON.stringify(payload),
+        this.CACHE_TTL,
+      )
+      .catch(() => {});
+    return payload;
+  }
+
+  async requestPlan(
+    userId: string,
+    publicAppId: string,
+    plan: MailPlan,
+    mailboxCount: number,
+  ) {
+    const app = await this.requireOwnedApp(userId, publicAppId);
+    const seats = this.normalizeSeats(mailboxCount);
+    const existing = await this.findPendingRequest(userId, app.appId);
+    if (existing) {
+      return {
+        alreadyPending: true,
+        ticket: existing,
+      };
+    }
+
+    const monthlyTotal = mailMonthlyTotal(plan, seats);
+    const planName = MAIL_PLAN_DEFINITIONS[plan].name;
+    const subject = `طلب اشتراك Mail: ${planName} · ${seats} مقاعد`;
+    const description = [
+      'طلب تفعيل اشتراك لتطبيق البريد هذا فقط (ليس لكل التطبيقات).',
+      '',
+      `التطبيق: ${app.name}`,
+      `معرّف التطبيق: ${app.appId}`,
+      `الباقة: ${planName}`,
+      `عدد المقاعد: ${seats}`,
+      `المجموع الشهري: ${monthlyTotal.toLocaleString('en-IQ')} IQD`,
+      '',
+      'الدفع بالبطاقة قيد التطوير. يرجى التفعيل من المسؤول.',
+      '',
+      'Mail plan request for this app only (not shared across the user’s other apps).',
+      `App: ${app.name} (${app.appId})`,
+      `Plan: ${planName} · seats: ${seats} · ${monthlyTotal.toLocaleString('en-IQ')} IQD/mo`,
+      'Card payment is coming soon. Please activate from HQ.',
+    ].join('\n');
+
+    const ticket = await this.supportTickets.createTicket(userId, {
+      subject,
+      description,
+      category: SupportTicketCategory.BILLING,
+      context: {
+        kind: 'mail_subscription',
+        product: 'mail',
+        locale: 'ar',
+        mailAppId: app.appId,
+        mailAppName: app.name,
+        mailPlan: plan,
+        mailboxCount: seats,
+        monthlyTotal,
+      },
+    });
+
+    return {
+      alreadyPending: false,
+      ticket: {
+        ticketId: ticket.id,
+        ticketNumber: ticket.number,
+        plan,
+        mailboxCount: seats,
+        monthlyTotal,
+        createdAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  async adminActivateForApp(
+    adminId: string,
+    publicAppId: string,
+    plan: MailPlan,
+    mailboxCount: number,
+    billingCycle: BillingCycle = BillingCycle.MONTHLY,
+    ticketId?: string,
+  ) {
+    const app = await this.requireAppByPublicId(publicAppId);
+    const seats = this.normalizeSeats(mailboxCount);
+
+    const usedSeats = await this.prisma.mailMailbox.count({
+      where: {
+        mailAppId: app.id,
+        status: MailMailboxStatus.ACTIVE,
+      },
+    });
+    if (seats < usedSeats) {
+      throw new BadRequestException(
+        `This Mail app already has ${usedSeats} active mailbox${usedSeats === 1 ? '' : 'es'}. Seats cannot be lower.`,
+      );
+    }
+
+    if (ticketId) {
+      await this.assertMailPlanTicket(ticketId, app);
+    }
+
+    const result = await this.upsertForApp(app, plan, seats, billingCycle, {
+      source: 'admin_activation',
+      adminId,
+      ticketId: ticketId ?? null,
+    });
+
+    if (ticketId) {
+      const ticket = await this.prisma.supportTicket.findUnique({
+        where: { id: ticketId },
+        select: { status: true },
+      });
+      if (
+        ticket &&
+        ticket.status !== SupportTicketStatus.RESOLVED &&
+        ticket.status !== SupportTicketStatus.CLOSED
+      ) {
+        const planName = MAIL_PLAN_DEFINITIONS[plan].name;
+        const limits = MAIL_PLAN_LIMITS[plan];
+        await this.supportTickets.resolveWithStaffReply(
+          adminId,
+          ticketId,
+          [
+            `تم تفعيل اشتراك البريد لتطبيق «${app.name}» فقط.`,
+            '',
+            `الباقة: ${planName}`,
+            `المقاعد: ${seats}`,
+            `التخزين: ${limits.storageGbPerMailbox} غيغابايت لكل صندوق`,
+            `التحويل: ${limits.forwardingRules} · الأسماء المستعارة: ${limits.emailAliases}`,
+            `المجموع الشهري: ${mailMonthlyTotal(plan, seats).toLocaleString('en-IQ')} IQD`,
+            '',
+            `Mail plan activated for app “${app.name}” only (not shared with other apps).`,
+            `${planName} · ${seats} seat${seats === 1 ? '' : 's'} · ${limits.storageGbPerMailbox} GB storage per mailbox.`,
+          ].join('\n'),
+        );
+      }
+    }
+
+    return result;
+  }
+
+  async adminListUserApps(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const apps = await this.prisma.mailApp.findMany({
+      where: { userId, status: MailAppStatus.ACTIVE },
+      include: { subscription: true },
+      orderBy: { slotIndex: 'asc' },
+    });
+
+    return {
+      apps: apps.map((app) => ({
+        ...this.toAppView(app),
+        subscription: app.subscription
+          ? this.toView({
+              ...app.subscription,
+              mailApp: {
+                appId: app.appId,
+                name: app.name,
+                primaryDomain: app.primaryDomain,
+              },
+            })
+          : null,
+      })),
+    };
+  }
+
+  private async getSubscriptionForApp(mailAppUuid: string) {
     const subscription = await this.prisma.mailSubscription.findUnique({
-      where: { userId },
+      where: { mailAppId: mailAppUuid },
       include: {
         payments: {
           orderBy: { createdAt: 'desc' },
           take: 10,
+        },
+        mailApp: {
+          select: { appId: true, name: true, primaryDomain: true },
         },
       },
     });
@@ -78,83 +330,46 @@ export class MailSubscriptionsService {
       subscription.currentPeriodEnd.getTime() < Date.now()
     ) {
       const expired = await this.prisma.mailSubscription.update({
-        where: { userId },
+        where: { id: subscription.id },
         data: { status: SubscriptionStatus.EXPIRED },
         include: {
           payments: {
             orderBy: { createdAt: 'desc' },
             take: 10,
           },
+          mailApp: {
+            select: { appId: true, name: true, primaryDomain: true },
+          },
         },
       });
-      await this.invalidateCache(userId);
+      await this.invalidateCache(mailAppUuid);
       return { subscription: this.toView(expired) };
     }
 
     return { subscription: this.toView(subscription) };
   }
 
-  async getActiveLimits(userId: string) {
-    const cached = await this.redis
-      .get(`${this.CACHE_PREFIX}${userId}`)
-      .catch(() => null);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch {
-        /* fall through */
-      }
-    }
-
-    const { subscription } = await this.getSubscription(userId);
-    if (!subscription || subscription.status !== 'ACTIVE') {
-      return null;
-    }
-
-    const payload = {
-      planId: subscription.planId,
-      plan: subscription.plan,
-      mailboxCount: subscription.mailboxCount,
-      limits: subscription.limits,
-    };
-    await this.redis
-      .set(
-        `${this.CACHE_PREFIX}${userId}`,
-        JSON.stringify(payload),
-        this.CACHE_TTL,
-      )
-      .catch(() => {});
-    return payload;
-  }
-
-  /**
-   * Activate or change plan. Payment gateway comes later —
-   * records a COMPLETED payment row for audit (manual/phase activation).
-   */
-  async upsertSubscription(
-    userId: string,
+  private async upsertForApp(
+    app: MailAppRow,
     plan: MailPlan,
-    mailboxCount = 1,
-    billingCycle: BillingCycle = BillingCycle.MONTHLY,
+    seats: number,
+    billingCycle: BillingCycle,
+    paymentMeta: Record<string, unknown>,
   ) {
-    const seats = Math.max(1, Math.floor(mailboxCount));
-    if (seats > 500) {
-      throw new BadRequestException('Mailbox count must be between 1 and 500.');
-    }
-
     const now = new Date();
     const periodEnd = addOneMonth(now);
     const amount = mailMonthlyTotal(plan, seats);
 
     const subscription = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.mailSubscription.findUnique({
-        where: { userId },
+        where: { mailAppId: app.id },
       });
 
       const saved = existing
         ? await tx.mailSubscription.update({
-            where: { userId },
+            where: { mailAppId: app.id },
             data: {
+              userId: app.userId,
               plan,
               status: SubscriptionStatus.ACTIVE,
               billingCycle,
@@ -166,7 +381,8 @@ export class MailSubscriptionsService {
           })
         : await tx.mailSubscription.create({
             data: {
-              userId,
+              mailAppId: app.id,
+              userId: app.userId,
               plan,
               status: SubscriptionStatus.ACTIVE,
               billingCycle,
@@ -185,9 +401,9 @@ export class MailSubscriptionsService {
           status: PaymentStatus.COMPLETED,
           paidAt: now,
           metadata: {
-            source: 'manual_activation',
+            ...paymentMeta,
             plan,
-            note: 'Payment gateway not wired yet',
+            note: 'Card payment gateway not wired yet',
           },
         },
       });
@@ -199,75 +415,157 @@ export class MailSubscriptionsService {
             orderBy: { createdAt: 'desc' },
             take: 10,
           },
+          mailApp: {
+            select: { appId: true, name: true, primaryDomain: true },
+          },
         },
       });
     });
 
-    await this.invalidateCache(userId);
+    await this.invalidateCache(app.id);
     return { subscription: this.toView(subscription) };
   }
 
-  async cancelSubscription(userId: string) {
-    const existing = await this.prisma.mailSubscription.findUnique({
-      where: { userId },
+  private async assertMailPlanTicket(ticketId: string, app: MailAppRow) {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
     });
-    if (!existing) {
-      throw new NotFoundException('No Mail subscription found.');
+    if (!ticket) {
+      throw new NotFoundException('Support ticket not found.');
     }
-
-    const subscription = await this.prisma.mailSubscription.update({
-      where: { userId },
-      data: {
-        status: SubscriptionStatus.CANCELLED,
-        cancelledAt: new Date(),
-      },
-      include: {
-        payments: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-      },
-    });
-
-    await this.invalidateCache(userId);
-    return { subscription: this.toView(subscription) };
+    if (ticket.userId !== app.userId) {
+      throw new ForbiddenException(
+        'This ticket does not belong to the Mail app owner.',
+      );
+    }
+    if (ticket.category !== SupportTicketCategory.BILLING) {
+      throw new BadRequestException('Ticket is not a billing request.');
+    }
+    const context = this.asRecord(ticket.context);
+    if (context.kind !== 'mail_subscription') {
+      throw new BadRequestException('Ticket is not a Mail plan request.');
+    }
+    if (context.mailAppId && context.mailAppId !== app.appId) {
+      throw new BadRequestException(
+        'Ticket is for a different Mail app.',
+      );
+    }
   }
 
-  async adminSetPlan(
-    userId: string,
-    plan: MailPlan,
-    mailboxCount = 1,
-    billingCycle: BillingCycle = BillingCycle.MONTHLY,
-  ) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
+  private async findPendingRequest(userId: string, publicAppId: string) {
+    const tickets = await this.prisma.supportTicket.findMany({
+      where: {
+        userId,
+        category: SupportTicketCategory.BILLING,
+        status: { in: OPEN_TICKET_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
     });
-    if (!user) throw new NotFoundException('User not found.');
-    return this.upsertSubscription(userId, plan, mailboxCount, billingCycle);
+
+    for (const ticket of tickets) {
+      const context = this.asRecord(ticket.context);
+      if (
+        context.kind === 'mail_subscription' &&
+        context.mailAppId === publicAppId
+      ) {
+        const plan =
+          typeof context.mailPlan === 'string' ? context.mailPlan : null;
+        const mailboxCount =
+          typeof context.mailboxCount === 'number' ? context.mailboxCount : 1;
+        return {
+          ticketId: ticket.id,
+          ticketNumber: ticket.number,
+          plan,
+          mailboxCount,
+          monthlyTotal:
+            typeof context.monthlyTotal === 'number'
+              ? context.monthlyTotal
+              : null,
+          createdAt: ticket.createdAt.toISOString(),
+        };
+      }
+    }
+    return null;
   }
 
-  private toView(
-    subscription: {
-      id: string;
-      userId: string;
-      plan: MailPlan;
-      status: SubscriptionStatus;
-      billingCycle: BillingCycle;
-      mailboxCount: number;
-      currentPeriodStart: Date | null;
-      currentPeriodEnd: Date | null;
-      cancelledAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-      payments?: unknown[];
-    },
-  ) {
+  private async requireOwnedApp(userId: string, publicAppId: string) {
+    const app = await this.requireAppByPublicId(publicAppId);
+    if (app.userId !== userId) {
+      throw new NotFoundException('Mail app not found.');
+    }
+    return app;
+  }
+
+  private async requireAppByPublicId(publicAppId: string): Promise<MailAppRow> {
+    if (!isMailAppPublicId(publicAppId)) {
+      throw new BadRequestException('Invalid Mail app id.');
+    }
+    const app = await this.prisma.mailApp.findFirst({
+      where: { appId: publicAppId, status: MailAppStatus.ACTIVE },
+      select: {
+        id: true,
+        appId: true,
+        userId: true,
+        name: true,
+        primaryDomain: true,
+      },
+    });
+    if (!app) {
+      throw new NotFoundException('Mail app not found.');
+    }
+    return app;
+  }
+
+  private normalizeSeats(mailboxCount: number) {
+    const seats = Math.max(1, Math.floor(mailboxCount));
+    if (seats > 500) {
+      throw new BadRequestException('Mailbox count must be between 1 and 500.');
+    }
+    return seats;
+  }
+
+  private limitsPayload(subscription: {
+    plan: MailPlan;
+    planId: string;
+    mailboxCount: number;
+    limits: (typeof MAIL_PLAN_LIMITS)[MailPlan];
+    storageQuotaBytesPerMailbox: number;
+  }) {
+    return {
+      planId: subscription.planId,
+      plan: subscription.plan,
+      mailboxCount: subscription.mailboxCount,
+      limits: subscription.limits,
+      storageQuotaBytesPerMailbox: subscription.storageQuotaBytesPerMailbox,
+    };
+  }
+
+  private toAppView(app: MailAppRow) {
+    return {
+      appId: app.appId,
+      name: app.name,
+      primaryDomain: app.primaryDomain,
+    };
+  }
+
+  private toView(subscription: SubscriptionWithApp) {
     const def = MAIL_PLAN_DEFINITIONS[subscription.plan];
     const limits = MAIL_PLAN_LIMITS[subscription.plan];
+    const storageQuotaBytesPerMailbox = storageQuotaBytesForPlan(
+      subscription.plan,
+    );
     return {
       id: subscription.id,
+      mailAppId: subscription.mailApp?.appId ?? null,
       userId: subscription.userId,
+      app: subscription.mailApp
+        ? {
+            appId: subscription.mailApp.appId,
+            name: subscription.mailApp.name,
+            primaryDomain: subscription.mailApp.primaryDomain,
+          }
+        : null,
       plan: subscription.plan,
       planId: subscription.plan.toLowerCase() as
         | 'starter'
@@ -289,11 +587,27 @@ export class MailSubscriptionsService {
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
       limits,
+      storageQuotaBytesPerMailbox,
+      features: {
+        agenticMail: limits.agenticMail,
+        aiToolsUnlimited: limits.aiToolsUnlimited,
+        openTracking: limits.openTracking,
+        smartAiReplies: limits.smartAiReplies,
+        automaticReplies: limits.automaticReplies,
+        linkAndFileTracking: limits.linkAndFileTracking,
+      },
       payments: subscription.payments ?? [],
     };
   }
 
-  private async invalidateCache(userId: string) {
-    await this.redis.del(`${this.CACHE_PREFIX}${userId}`).catch(() => {});
+  private asRecord(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+    return value as Record<string, unknown>;
+  }
+
+  private async invalidateCache(mailAppUuid: string) {
+    await this.redis.del(`${this.CACHE_PREFIX}${mailAppUuid}`).catch(() => {});
   }
 }

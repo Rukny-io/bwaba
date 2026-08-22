@@ -20,6 +20,10 @@ import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { MailRealtimeService } from './mail-realtime.service';
+import {
+  incrementMailboxStorage,
+  utf8StorageBytes,
+} from './mail-storage.util';
 
 type SesReceiptAction = {
   type?: string;
@@ -500,7 +504,12 @@ export class MailInboundService {
           receivedAt: input.parsed.date || new Date(),
         },
       })
-      .then((created) => {
+      .then(async (created) => {
+        await incrementMailboxStorage(
+          this.prisma,
+          mailbox.id,
+          utf8StorageBytes(bodyText, bodyHtml),
+        );
         this.realtime.publish({
           type: 'mail.changed',
           appId: mailbox.mailApp.appId,

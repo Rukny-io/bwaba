@@ -14,7 +14,7 @@ export function VerificationAlert({
   return (
     <Link
       href="/app/users"
-      className="dashboard-card flex items-center gap-3 rounded-2xl border-[var(--warning)]/30 bg-[var(--warning)]/10 p-4 transition-opacity hover:opacity-90 sm:rounded-3xl sm:p-5"
+      className="dashboard-card flex items-center gap-3 rounded-2xl border-[var(--warning)]/30 bg-[var(--warning)]/10 p-4 transition-opacity hover:opacity-90 sm:p-5"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--warning)]/20 text-[var(--warning)]">
         <AlertCircle className="size-5" />

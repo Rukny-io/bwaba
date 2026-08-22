@@ -8,6 +8,13 @@ import {
   FileText,
   ImageIcon,
   LifeBuoy,
+  Mail,
+  FolderTree,
+  BadgeCheck,
+  UserX,
+  UserCog,
+  Crown,
+  CircleDot,
 } from 'lucide-react';
 
 export const APP_BASE = '/app';
@@ -21,15 +28,31 @@ export type NavItem = {
   exact?: boolean;
 };
 
-export const primaryNavItems: NavItem[] = [
-  { href: APP_BASE, icon: LayoutGrid, label: 'Home', exact: true },
+export const homeNavItem: NavItem = {
+  href: APP_BASE,
+  icon: LayoutGrid,
+  label: 'Home',
+  exact: true,
+};
+
+export const middleNavItems: NavItem[] = [
   { href: `${APP_BASE}/users`, icon: Users, label: 'Users' },
   { href: `${APP_BASE}/stores`, icon: Store, label: 'Stores' },
   { href: `${APP_BASE}/products`, icon: Package, label: 'Products' },
   { href: `${APP_BASE}/orders`, icon: ShoppingCart, label: 'Orders' },
+];
+
+export const bottomNavItems: NavItem[] = [
   { href: `${APP_BASE}/forms`, icon: FileText, label: 'Forms' },
   { href: `${APP_BASE}/support-tickets`, icon: LifeBuoy, label: 'Support' },
+  { href: `${APP_BASE}/mail`, icon: Mail, label: 'Mail', mobileLabel: 'البريد' },
   { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'Wallpapers' },
+];
+
+export const primaryNavItems: NavItem[] = [
+  homeNavItem,
+  ...middleNavItems,
+  ...bottomNavItems,
 ];
 
 /** Primary shortcuts in the bottom mobile dock. */
@@ -45,7 +68,8 @@ export const mobileDrawerItems: NavItem[] = [
   { ...primaryNavItems[2]!, mobileLabel: 'المتاجر' },
   { ...primaryNavItems[3]!, mobileLabel: 'المنتجات' },
   { ...primaryNavItems[4]!, mobileLabel: 'الطلبات' },
-  { ...primaryNavItems[7]!, mobileLabel: 'الخلفيات' },
+  { ...primaryNavItems[7]!, mobileLabel: 'البريد' },
+  { ...primaryNavItems[8]!, mobileLabel: 'الخلفيات' },
 ];
 
 export function isNavItemActive(
@@ -69,48 +93,121 @@ export function isNavItemActive(
   return path === href || path.startsWith(`${href}/`);
 }
 
-export function resolvePageLabel(pathname: string): string {
-  const path =
-    pathname.endsWith('/') && pathname.length > 1
-      ? pathname.slice(0, -1)
-      : pathname;
+export type HeaderMenuItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
 
-  if (/^\/app\/users\/[^/]+$/.test(path)) {
-    return 'User details';
-  }
+export type HeaderMenu = {
+  id: string;
+  label: string;
+  items: HeaderMenuItem[];
+};
 
-  if (/^\/app\/forms\/[^/]+$/.test(path)) {
-    return 'Form details';
-  }
+export const headerHomeLink = {
+  href: APP_BASE,
+  label: 'لوحة التحكم',
+} as const;
 
-  if (path === '/app/stores/categories') {
-    return 'Store categories';
-  }
-
-  if (/^\/app\/stores\/[^/]+$/.test(path)) {
-    return 'Store details';
-  }
-
-  if (/^\/app\/support-tickets\/[^/]+$/.test(path)) {
-    return 'Ticket details';
-  }
-
-  const item = primaryNavItems.find((nav) =>
-    isNavItemActive(pathname, nav.href, nav.exact),
-  );
-  if (item) return item.label;
-
-  const segments = pathname.split('/').filter(Boolean);
-  const last = segments[segments.length - 1];
-  const labels: Record<string, string> = {
-    users: 'Users',
-    stores: 'Stores',
-    products: 'Products',
-    orders: 'Orders',
-    forms: 'Forms',
-    'support-tickets': 'Support',
-    wallpapers: 'Wallpapers',
-    categories: 'Categories',
-  };
-  return labels[last] ?? 'Dashboard';
-}
+export const headerMenus: HeaderMenu[] = [
+  {
+    id: 'users',
+    label: 'المستخدم',
+    items: [
+      { href: `${APP_BASE}/users`, icon: Users, label: 'كل المستخدمين', exact: true },
+      {
+        href: `${APP_BASE}/users?emailVerified=false`,
+        icon: CircleDot,
+        label: 'غير الموثّقين',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/users?isRuknyVerified=true`,
+        icon: BadgeCheck,
+        label: 'موثّقو ركني',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/users?isDeactivated=true`,
+        icon: UserX,
+        label: 'الحسابات المعطّلة',
+        exact: true,
+      },
+    ],
+  },
+  {
+    id: 'support',
+    label: 'الدعم',
+    items: [
+      { href: `${APP_BASE}/support-tickets`, icon: LifeBuoy, label: 'التذاكر' },
+      {
+        href: `${APP_BASE}/support-tickets?status=OPEN`,
+        icon: CircleDot,
+        label: 'تذاكر مفتوحة',
+        exact: true,
+      },
+      { href: `${APP_BASE}/forms`, icon: FileText, label: 'النماذج' },
+      { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'الخلفيات' },
+    ],
+  },
+  {
+    id: 'mail',
+    label: 'Mail',
+    items: [
+      { href: `${APP_BASE}/mail`, icon: Mail, label: 'All apps' },
+      {
+        href: `${APP_BASE}/mail?tab=domains`,
+        icon: CircleDot,
+        label: 'Unverified domains',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/mail?tab=delivery`,
+        icon: CircleDot,
+        label: 'Failed delivery',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/mail?tab=alerts`,
+        icon: CircleDot,
+        label: 'Quota alerts',
+        exact: true,
+      },
+    ],
+  },
+  {
+    id: 'billing',
+    label: 'الفواتير والاشتراكات',
+    items: [
+      { href: `${APP_BASE}/orders`, icon: ShoppingCart, label: 'الطلبات' },
+      { href: `${APP_BASE}/stores`, icon: Store, label: 'المتاجر' },
+      {
+        href: `${APP_BASE}/stores/categories`,
+        icon: FolderTree,
+        label: 'التصنيفات',
+        exact: true,
+      },
+      { href: `${APP_BASE}/products`, icon: Package, label: 'المنتجات' },
+    ],
+  },
+  {
+    id: 'team',
+    label: 'الفريق',
+    items: [
+      {
+        href: `${APP_BASE}/users?role=ADMIN`,
+        icon: UserCog,
+        label: 'المشرفون',
+        exact: true,
+      },
+      {
+        href: `${APP_BASE}/users?role=PREMIUM`,
+        icon: Crown,
+        label: 'الأعضاء المميزون',
+        exact: true,
+      },
+    ],
+  },
+];

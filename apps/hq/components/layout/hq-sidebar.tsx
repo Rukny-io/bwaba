@@ -4,24 +4,28 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
+import { Dropdown } from '@heroui/react';
 import {
-  primaryNavItems,
+  homeNavItem,
+  middleNavItems,
+  bottomNavItems,
   isNavItemActive,
   type NavItem,
 } from '@/components/layout/nav-config';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { logoutWithNotification } from '@/lib/auth-notify';
+import { applyHqTheme, readHqTheme, type HqTheme } from '@/lib/hq-theme';
+import { cn } from '@/lib/utils';
 
 function Tooltip({ label }: { label: string }) {
   return (
     <span
       className="
-      pointer-events-none absolute right-0 top-1/2 translate-x-[calc(100%+10px)] -translate-y-1/2
+      pointer-events-none absolute top-1/2 z-50 -translate-y-1/2
       whitespace-nowrap rounded-xl bg-[var(--foreground)] px-2.5 py-1.5 text-xs font-medium text-[var(--background)]
-      opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100
-      after:absolute after:left-[-5px] after:top-1/2 after:-translate-y-1/2
-      after:border-4 after:border-transparent after:border-r-[var(--foreground)]
+      opacity-0 transition-opacity duration-150 group-hover:opacity-100
+      left-full ml-2.5 after:absolute after:left-[-5px] after:top-1/2 after:-translate-y-1/2 after:border-4 after:border-transparent after:border-r-[var(--foreground)]
     "
     >
       {label}
@@ -30,11 +34,15 @@ function Tooltip({ label }: { label: string }) {
 }
 
 function getNavClasses(isActive: boolean) {
-  return `relative group flex size-10 items-center justify-center rounded-2xl transition-all duration-200 ${
+  return `relative group flex size-10 items-center justify-center transition-all duration-200 ${
     isActive
-      ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-      : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]'
+      ? 'rounded-full bg-[var(--foreground)] text-[var(--background)]'
+      : 'rounded-2xl text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]'
   }`;
+}
+
+function NavSpacer() {
+  return <div className="h-3 shrink-0" aria-hidden />;
 }
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -42,8 +50,8 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const isActive = isNavItemActive(pathname, href, exact);
 
   return (
-    <Link href={href} className={getNavClasses(isActive)}>
-      <Icon size={18} strokeWidth={1.7} />
+    <Link href={href} className={getNavClasses(isActive)} aria-label={label}>
+      <Icon size={19} strokeWidth={isActive ? 2 : 1.7} />
       <Tooltip label={label} />
     </Link>
   );
@@ -77,7 +85,7 @@ function SidebarAvatar({
   }
 
   return (
-    <div className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-sm font-semibold text-[var(--primary-foreground)]">
+    <div className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--accent)] to-[var(--foreground)] text-sm font-semibold text-[var(--background)]">
       {initials}
     </div>
   );
@@ -90,6 +98,17 @@ interface HqSidebarProps {
 
 export function HqSidebar({ avatarUrl, userName }: HqSidebarProps) {
   const pathname = usePathname();
+  const [theme, setTheme] = useState<HqTheme>('light');
+
+  useEffect(() => {
+    setTheme(readHqTheme());
+  }, []);
+
+  function handleThemeToggle() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    applyHqTheme(next);
+    setTheme(next);
+  }
 
   return (
     <aside className="fixed top-0 left-4 z-40 hidden h-full w-14 flex-col items-center py-5 sm:flex">
@@ -103,30 +122,68 @@ export function HqSidebar({ avatarUrl, userName }: HqSidebarProps) {
         />
       </div>
 
-      <div className="flex flex-1 items-center justify-center">
-        <div className="dashboard-card flex flex-col items-center rounded-[28px] px-2 py-4">
-          <nav className="flex flex-col items-center gap-1">
-            {primaryNavItems.map((item) => (
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-3">
+          <nav className="flex flex-col items-center gap-1.5" aria-label="Primary">
+            <NavLink item={homeNavItem} pathname={pathname} />
+            <NavSpacer />
+            {middleNavItems.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} />
+            ))}
+            <NavSpacer />
+            {bottomNavItems.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
             ))}
           </nav>
-
-          <div className="my-3 h-px w-5 bg-[var(--border)]" />
-
-          <button
-            type="button"
-            onClick={() => void logoutWithNotification()}
-            className="relative group flex size-10 items-center justify-center rounded-2xl text-[var(--muted-foreground)] transition-all hover:bg-[var(--danger)]/10 hover:text-[var(--danger)]"
-            aria-label="Sign out"
-          >
-            <LogOut size={18} strokeWidth={1.7} />
-            <Tooltip label="Sign out" />
-          </button>
         </div>
       </div>
 
-      <div className="mt-4 size-10 overflow-hidden rounded-2xl border border-[var(--border)]">
-        <SidebarAvatar avatarUrl={avatarUrl} userName={userName} />
+      <div className="flex flex-col items-center gap-2">
+        <Dropdown>
+          <Dropdown.Trigger
+            aria-label="Profile"
+            className={cn(
+              'group relative size-10 shrink-0 overflow-hidden rounded-full border-0 bg-transparent p-0 outline-none',
+              'transition-opacity hover:opacity-90',
+            )}
+          >
+            <SidebarAvatar avatarUrl={avatarUrl} userName={userName} />
+          </Dropdown.Trigger>
+          <Dropdown.Popover
+            placement="right bottom"
+            offset={14}
+            className="min-w-[13rem]"
+          >
+            <Dropdown.Menu
+              onAction={(key) => {
+                if (key === 'theme') handleThemeToggle();
+                if (key === 'logout') void logoutWithNotification();
+              }}
+            >
+              <Dropdown.Item
+                id="theme"
+                textValue={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                className="gap-2"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="size-4 shrink-0" />
+                ) : (
+                  <Moon className="size-4 shrink-0" />
+                )}
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </Dropdown.Item>
+              <Dropdown.Item
+                id="logout"
+                textValue="Sign out"
+                variant="danger"
+                className="gap-2"
+              >
+                <LogOut className="size-4 shrink-0" />
+                Sign out
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
       </div>
     </aside>
   );

@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@heroui/react";
+import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import { isNavItemActive, mailNavForPathname } from "@/lib/mail-nav-scoped";
 
 export function MailMobileDock() {
   const pathname = usePathname();
   const { primary } = mailNavForPathname(pathname);
+  const { pendingHref, setPendingHref } = useMailNavPending();
 
   return (
     <div
@@ -28,11 +30,16 @@ export function MailMobileDock() {
         <div className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 shadow-[var(--card-shadow)] backdrop-blur-2xl">
           {primary.map((item) => {
             const Icon = item.icon;
-            const active = isNavItemActive(pathname, item.href, item.exact);
+            const routeActive = isNavItemActive(pathname, item.href, item.exact);
+            const active = routeActive || pendingHref === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
+                onClick={() => {
+                  if (!routeActive) setPendingHref(item.href);
+                }}
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
                 className="flex shrink-0"

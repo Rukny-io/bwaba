@@ -19,8 +19,10 @@ import {
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
+import { formatMailStorageAmount } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
+  type MailPendingPlanRequest,
   type MailSubscriptionView,
 } from "@/lib/mail-subscription-client";
 
@@ -39,6 +41,122 @@ function planDisplayName(subscription: MailSubscriptionView | null) {
   return `${base} Business Email`;
 }
 
+function MailboxUsageMeter({
+  usedBytes,
+  quotaBytes,
+}: {
+  usedBytes: number;
+  quotaBytes: number;
+}) {
+  const pct =
+    quotaBytes > 0 ? Math.min(100, Math.max(0, (usedBytes / quotaBytes) * 100)) : 0;
+  return (
+    <div className="min-w-0">
+      <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
+        <div
+          className="h-full rounded-full bg-[var(--primary)]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="truncate text-xs text-[var(--muted-foreground)]">
+        <span className="font-medium text-[var(--foreground)]">
+          {quotaBytes > 0 ? `${pct.toFixed(0)}% Used` : "No plan"}
+        </span>
+        {" · "}
+        {formatMailStorageAmount(usedBytes)} /{" "}
+        {quotaBytes > 0 ? formatMailStorageAmount(quotaBytes) : "—"}
+      </p>
+    </div>
+  );
+}
+
+function MailboxStatusDot({ status }: { status: MailMailboxView["status"] }) {
+  const isActive = status === "ACTIVE";
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--foreground)]">
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          isActive ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]",
+        )}
+        aria-hidden
+      />
+      {isActive ? "Active" : status === "DISABLED" ? "Disabled" : status}
+    </span>
+  );
+}
+
+function MailboxActionMenu({
+  box,
+  deletingId,
+  onAction,
+}: {
+  box: MailMailboxView;
+  deletingId: string | null;
+  onAction: (box: MailMailboxView, key: React.Key) => void;
+}) {
+  return (
+    <Dropdown>
+      <Dropdown.Trigger
+        aria-label={`Actions for ${box.address}`}
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted-foreground)] outline-none hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)]"
+      >
+        <MoreVertical className="size-4" />
+      </Dropdown.Trigger>
+      <Dropdown.Popover
+        placement="bottom end"
+        className="min-w-[12.5rem] overflow-hidden rounded-2xl"
+      >
+        <Dropdown.Menu onAction={(key) => onAction(box, key)}>
+          <Dropdown.Item id="photo" textValue="Change photo">
+            Change photo
+          </Dropdown.Item>
+          {box.avatarUrl ? (
+            <Dropdown.Item id="remove-photo" textValue="Remove photo">
+              Remove photo
+            </Dropdown.Item>
+          ) : null}
+          <Dropdown.Item id="password" textValue="Change Password">
+            Change Password
+          </Dropdown.Item>
+          <Dropdown.Item id="app-passwords" textValue="App passwords">
+            App passwords
+          </Dropdown.Item>
+          <Dropdown.Item id="settings" textValue="Settings">
+            Settings
+          </Dropdown.Item>
+          <Dropdown.Item id="forwarders" textValue="Create Forwarders">
+            Create Forwarders
+          </Dropdown.Item>
+          <Dropdown.Item id="alias" textValue="Create Alias">
+            Create Alias
+          </Dropdown.Item>
+          <Dropdown.Item id="auto-reply" textValue="Create Automatic Reply">
+            Create Automatic Reply
+          </Dropdown.Item>
+          <Dropdown.Item id="catch-all" textValue="Create Catch-All">
+            Create Catch-All
+          </Dropdown.Item>
+          <Dropdown.Item
+            id="2fa"
+            textValue={box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
+          >
+            {box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
+          </Dropdown.Item>
+          <Dropdown.Item
+            id="delete"
+            textValue="Delete"
+            variant="danger"
+            isDisabled={deletingId === box.id}
+          >
+            {deletingId === box.id ? "Deleting…" : "Delete"}
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
+  );
+}
+
 export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -47,6 +165,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
 
   const [appId, setAppId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
+  const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
+    null,
+  );
   const [loadingSub, setLoadingSub] = useState(true);
   const [limitsOpen, setLimitsOpen] = useState(false);
 
@@ -78,13 +199,25 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   }, []);
 
   useEffect(() => {
+    if (!appId) {
+      setLoadingSub(false);
+      setSubscription(null);
+      setPendingRequest(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
-        const current = await fetchMailSubscription();
-        if (!cancelled) setSubscription(current?.status === "ACTIVE" ? current : null);
+        const current = await fetchMailSubscription(appId);
+        if (!cancelled) {
+          setSubscription(current.subscription?.status === "ACTIVE" ? current.subscription : null);
+          setPendingRequest(current.pendingRequest);
+        }
       } catch {
-        if (!cancelled) setSubscription(null);
+        if (!cancelled) {
+          setSubscription(null);
+          setPendingRequest(null);
+        }
       } finally {
         if (!cancelled) setLoadingSub(false);
       }
@@ -92,7 +225,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [appId]);
 
   useEffect(() => {
     if (!appId) {
@@ -121,7 +254,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const seatLimit = subscription?.mailboxCount ?? 0;
   const activeCount = mailboxes.filter((m) => m.status === "ACTIVE").length;
   const seatsLeft = Math.max(0, seatLimit - activeCount);
-  const storageGb = limits?.storageGbPerMailbox ?? 0;
+  const storageQuotaBytes = subscription?.storageQuotaBytesPerMailbox ?? 0;
   const canCreate = Boolean(appId && subscription && activeCount < seatLimit);
 
   async function onCreate(e: React.FormEvent) {
@@ -293,8 +426,37 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     }
   }
 
+  const createButton = (
+    <button
+      type="button"
+      disabled={!canCreate}
+      title={
+        !subscription
+          ? pendingRequest
+            ? "Plan request pending — wait for admin activation"
+            : "Request a plan for this app first"
+          : !canCreate
+            ? "Mailbox limit reached — upgrade or add seats"
+            : undefined
+      }
+      onClick={() => {
+        setError("");
+        setCreateOpen(true);
+      }}
+      className={cn(
+        "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl px-3.5 text-[13px] font-semibold sm:h-9 sm:w-auto",
+        canCreate
+          ? "bg-[var(--foreground)] text-[var(--background)]"
+          : "cursor-not-allowed bg-[var(--surface-secondary)] text-[var(--muted-foreground)] opacity-70",
+      )}
+    >
+      <Plus className="size-3.5" aria-hidden />
+      Create mailbox
+    </button>
+  );
+
   return (
-    <section className="dashboard-page mx-auto flex w-full max-w-[890px] flex-col gap-6">
+    <section className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-4 sm:gap-6">
       <input
         ref={avatarInputRef}
         type="file"
@@ -302,21 +464,21 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         className="hidden"
         onChange={(e) => void onAvatarFileChange(e)}
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           Mailboxes
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             href="/apps"
-            className="inline-flex h-9 items-center rounded-full px-3 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)]"
+            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full px-3 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)] sm:h-9 sm:flex-none"
           >
             Switch app
           </Link>
           <button
             type="button"
             onClick={() => router.push(href("/inbox"))}
-            className="inline-flex h-9 items-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)]"
+            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none"
           >
             Open Mail
           </button>
@@ -326,10 +488,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
       <div
         role="region"
         aria-label="Email plan"
-        className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--card-shadow)]"
-        style={{ padding: "16px 24px" }}
+        className="min-w-0 rounded-2xl bg-[var(--surface)] p-4 sm:p-6"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
               {setup.domain}
@@ -341,7 +502,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   {loadingSub ? "…" : formatDate(subscription?.renewsAt)}
                 </span>
               </p>
-              <p className="text-[var(--muted-foreground)]">
+              <p className="break-words text-[var(--muted-foreground)]">
                 Email plan:{" "}
                 <span className="text-[var(--foreground)]">
                   {loadingSub ? "…" : planDisplayName(subscription)}
@@ -350,11 +511,11 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:shrink-0">
             <button
               type="button"
               onClick={() => setLimitsOpen((open) => !open)}
-              className="inline-flex items-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+              className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:flex-none"
               aria-expanded={limitsOpen}
             >
               View limits
@@ -365,7 +526,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             </button>
             <Link
               href="/pricing"
-              className="inline-flex h-9 items-center rounded-lg bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)]"
+              className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none sm:rounded-lg"
             >
               Upgrade
             </Link>
@@ -373,12 +534,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         </div>
 
         {limitsOpen ? (
-          <div className="mt-4 border-t border-[var(--separator)] pt-4">
+          <div className="mt-4 pt-4">
             {!limits ? (
               <p className="text-sm text-[var(--muted-foreground)]">
                 {loadingSub
                   ? "Loading plan limits…"
-                  : "Activate a plan to see mailbox limits."}
+                  : pendingRequest
+                    ? `Plan request pending (${pendingRequest.ticketNumber}). An admin will activate this app.`
+                    : "Request a plan for this app to see mailbox limits."}
               </p>
             ) : (
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -406,6 +569,19 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                     {limits.emailAliases}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-[var(--muted-foreground)]">Automatic replies</dt>
+                  <dd className="font-medium text-[var(--foreground)]">
+                    {limits.automaticReplies ? "On" : "Off"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--muted-foreground)]">Open / link tracking</dt>
+                  <dd className="font-medium text-[var(--foreground)]">
+                    {limits.openTracking ? "Open" : "—"}
+                    {limits.linkAndFileTracking ? " · links & files" : ""}
+                  </dd>
+                </div>
               </dl>
             )}
             <p className="mt-3 text-xs text-[var(--muted-foreground)]">
@@ -422,17 +598,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         ) : null}
       </div>
 
-      {/* Hostinger-style manage mailboxes card */}
-      <section
-        className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--card-shadow)]"
-        aria-label="Manage mailboxes"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--separator)] px-5 py-4 sm:px-6">
-          <div>
+      {/* Hostinger-style manage mailboxes card on desktop; stacked cards on phone */}
+      <section className="min-w-0 md:overflow-hidden md:rounded-2xl md:bg-[var(--surface)]" aria-label="Manage mailboxes">
+        <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:rounded-none md:bg-transparent md:p-0 md:px-6 md:py-4">
+          <div className="min-w-0">
             <h2 className="text-base font-semibold text-[var(--foreground)]">
               Manage mailboxes
             </h2>
-            <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">
+            <p className="mt-0.5 break-words text-sm text-[var(--muted-foreground)]">
               Mailboxes left:{" "}
               <span className="font-medium text-[var(--foreground)]">
                 {loadingSub || loadingBoxes
@@ -448,34 +621,11 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
               </Link>
             </p>
           </div>
-          <button
-            type="button"
-            disabled={!canCreate}
-            title={
-              !subscription
-                ? "Activate a plan first"
-                : !canCreate
-                  ? "Mailbox limit reached — upgrade or add seats"
-                  : undefined
-            }
-            onClick={() => {
-              setError("");
-              setCreateOpen(true);
-            }}
-            className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold",
-              canCreate
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "cursor-not-allowed border border-[var(--border)] text-[var(--muted-foreground)] opacity-70",
-            )}
-          >
-            <Plus className="size-3.5" aria-hidden />
-            Create mailbox
-          </button>
+          {createButton}
         </div>
 
         {error ? (
-          <p className="border-b border-[var(--separator)] px-5 py-3 text-sm text-[var(--danger)] sm:px-6" role="alert">
+          <p className="px-1 py-3 text-sm text-[var(--danger)] md:px-6" role="alert">
             {error}
           </p>
         ) : null}
@@ -483,16 +633,16 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         {createOpen ? (
           <form
             onSubmit={(e) => void onCreate(e)}
-            className="border-b border-[var(--separator)] px-5 py-4 sm:px-6"
+            className="mt-3 min-w-0 rounded-2xl bg-[var(--surface)] p-4 md:mt-0 md:rounded-none md:px-6 md:py-4"
           >
             <p className="text-sm font-medium text-[var(--foreground)]">New mailbox</p>
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            <p className="mt-1 break-all text-xs text-[var(--muted-foreground)]">
               Address will be{" "}
               <span className="font-medium text-[var(--foreground)]">
                 {localPart.trim() || "name"}@{setup.domain}
               </span>
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 value={localPart}
                 onChange={(e) => setLocalPart(e.target.value.toLowerCase())}
@@ -500,9 +650,11 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                 autoComplete="off"
                 required
                 pattern="[a-z0-9]([a-z0-9._-]*[a-z0-9])?"
-                className="min-w-[10rem] flex-1 rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                className="min-w-0 w-full flex-1 rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               />
-              <span className="text-sm text-[var(--muted-foreground)]">@{setup.domain}</span>
+              <span className="truncate text-sm text-[var(--muted-foreground)]">
+                @{setup.domain}
+              </span>
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <TextField isRequired className="gap-1.5">
@@ -550,7 +702,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
               <button
                 type="submit"
                 disabled={creating || !localPart.trim() || password.length < 8}
-                className="inline-flex h-9 items-center rounded-lg bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] disabled:opacity-50"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] disabled:opacity-50 sm:h-9 sm:flex-none sm:rounded-lg"
               >
                 {creating ? "Creating…" : "Create"}
               </button>
@@ -563,7 +715,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   setPasswordConfirm("");
                   setEnable2fa(false);
                 }}
-                className="inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-medium text-[var(--muted-foreground)] hover:bg-[rgba(15,23,42,0.06)]"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl px-4 text-[13px] font-medium text-[var(--muted-foreground)] hover:bg-[rgba(15,23,42,0.06)] sm:h-9 sm:flex-none sm:rounded-lg"
               >
                 Cancel
               </button>
@@ -572,41 +724,98 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         ) : null}
 
         {loadingBoxes ? (
-          <div className="px-5 py-12 text-center text-sm text-[var(--muted-foreground)] sm:px-6">
+          <div className="px-1 py-12 text-center text-sm text-[var(--muted-foreground)] md:px-6">
             Loading mailboxes…
           </div>
         ) : mailboxes.length === 0 ? (
-          <div className="px-5 py-12 text-center sm:px-6">
+          <div className="mt-3 rounded-2xl bg-[var(--surface)] px-5 py-12 text-center md:mt-0 md:rounded-none md:px-6">
             <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
               <Inbox className="size-5" aria-hidden />
             </div>
             <p className="mt-3 text-sm font-medium text-[var(--foreground)]">No mailboxes yet</p>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            <p className="mt-1 break-words text-sm text-[var(--muted-foreground)]">
               Create your first address on{" "}
               <span className="font-medium text-[var(--foreground)]">{setup.domain}</span>.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--separator)] text-[12px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-                  <th className="px-5 py-3 font-medium sm:px-6">Mailbox</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Usage</th>
-                  <th className="px-5 py-3 text-right font-medium sm:px-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {mailboxes.map((box) => {
-                  const isActive = box.status === "ACTIVE";
-                  return (
-                    <tr
-                      key={box.id}
-                      className="border-b border-[var(--separator)] last:border-b-0"
+          <>
+            <ul className="mt-3 flex flex-col gap-3 md:hidden">
+              {mailboxes.map((box) => (
+                <li
+                  key={box.id}
+                  className="min-w-0 rounded-2xl bg-[var(--surface)] p-4"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => pickAvatar(box.id)}
+                      disabled={avatarUploadingId === box.id}
+                      className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      aria-label={`Change photo for ${box.address}`}
+                      title="Change photo"
                     >
+                      <MailPersonAvatar
+                        name={box.displayName || box.localPart}
+                        email={box.address}
+                        avatarUrl={box.avatarUrl}
+                        className="size-11"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Camera className="size-3.5 text-white" />
+                      </span>
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[var(--foreground)]">
+                        {box.address}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                        {box.hasPassword ? "Password set" : "No password"}
+                        {box.totpEnabled ? " · 2FA on" : ""}
+                        {avatarUploadingId === box.id ? " · Uploading…" : ""}
+                      </p>
+                    </div>
+                    <MailboxActionMenu
+                      box={box}
+                      deletingId={deletingId}
+                      onAction={onMailboxAction}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <MailboxStatusDot status={box.status} />
+                  </div>
+                  <div className="mt-3">
+                    <MailboxUsageMeter
+                      usedBytes={box.storageUsedBytes ?? 0}
+                      quotaBytes={storageQuotaBytes}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push(href("/inbox"))}
+                    className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[13px] font-semibold text-[var(--foreground)]"
+                  >
+                    Webmail
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="text-[12px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    <th className="px-5 py-3 font-medium sm:px-6">Mailbox</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Usage</th>
+                    <th className="px-5 py-3 text-right font-medium sm:px-6">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mailboxes.map((box) => (
+                    <tr key={box.id}>
                       <td className="px-5 py-4 align-middle sm:px-6">
                         <div className="flex items-center gap-3">
                           <button
@@ -638,30 +847,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                         </div>
                       </td>
                       <td className="px-4 py-4 align-middle">
-                        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--foreground)]">
-                          <span
-                            className={cn(
-                              "size-2 rounded-full",
-                              isActive ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]",
-                            )}
-                            aria-hidden
-                          />
-                          {isActive ? "Active" : box.status === "DISABLED" ? "Disabled" : box.status}
-                        </span>
+                        <MailboxStatusDot status={box.status} />
                       </td>
                       <td className="px-4 py-4 align-middle">
                         <div className="min-w-[140px] max-w-[200px]">
-                          <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
-                            <div
-                              className="h-full rounded-full bg-[var(--primary)]"
-                              style={{ width: "0%" }}
-                            />
-                          </div>
-                          <p className="text-xs text-[var(--muted-foreground)]">
-                            <span className="font-medium text-[var(--foreground)]">0% Used</span>
-                            {" · "}
-                            0 MB / {storageGb.toFixed(0)}.00 GB
-                          </p>
+                          <MailboxUsageMeter
+                            usedBytes={box.storageUsedBytes ?? 0}
+                            quotaBytes={storageQuotaBytes}
+                          />
                         </div>
                       </td>
                       <td className="px-5 py-4 align-middle sm:px-6">
@@ -669,76 +862,23 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                           <button
                             type="button"
                             onClick={() => router.push(href("/inbox"))}
-                            className="inline-flex h-8 items-center rounded-lg border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--foreground)] hover:bg-[rgba(15,23,42,0.04)]"
+                            className="inline-flex h-8 items-center rounded-lg bg-[var(--surface-secondary)] px-3 text-[12px] font-semibold text-[var(--foreground)] hover:bg-[rgba(15,23,42,0.08)]"
                           >
                             Webmail
                           </button>
-                          <Dropdown>
-                            <Dropdown.Trigger
-                              aria-label={`Actions for ${box.address}`}
-                              className="inline-flex size-8 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] outline-none hover:bg-[rgba(15,23,42,0.04)] hover:text-[var(--foreground)]"
-                            >
-                              <MoreVertical className="size-4" />
-                            </Dropdown.Trigger>
-                            <Dropdown.Popover
-                              placement="bottom end"
-                              className="min-w-[12.5rem] overflow-hidden rounded-2xl"
-                            >
-                              <Dropdown.Menu onAction={(key) => onMailboxAction(box, key)}>
-                                <Dropdown.Item id="photo" textValue="Change photo">
-                                  Change photo
-                                </Dropdown.Item>
-                                {box.avatarUrl ? (
-                                  <Dropdown.Item id="remove-photo" textValue="Remove photo">
-                                    Remove photo
-                                  </Dropdown.Item>
-                                ) : null}
-                                <Dropdown.Item id="password" textValue="Change Password">
-                                  Change Password
-                                </Dropdown.Item>
-                                <Dropdown.Item id="app-passwords" textValue="App passwords">
-                                  App passwords
-                                </Dropdown.Item>
-                                <Dropdown.Item id="settings" textValue="Settings">
-                                  Settings
-                                </Dropdown.Item>
-                                <Dropdown.Item id="forwarders" textValue="Create Forwarders">
-                                  Create Forwarders
-                                </Dropdown.Item>
-                                <Dropdown.Item id="alias" textValue="Create Alias">
-                                  Create Alias
-                                </Dropdown.Item>
-                                <Dropdown.Item id="auto-reply" textValue="Create Automatic Reply">
-                                  Create Automatic Reply
-                                </Dropdown.Item>
-                                <Dropdown.Item id="catch-all" textValue="Create Catch-All">
-                                  Create Catch-All
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  id="2fa"
-                                  textValue={box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
-                                >
-                                  {box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  id="delete"
-                                  textValue="Delete"
-                                  variant="danger"
-                                  isDisabled={deletingId === box.id}
-                                >
-                                  {deletingId === box.id ? "Deleting…" : "Delete"}
-                                </Dropdown.Item>
-                              </Dropdown.Menu>
-                            </Dropdown.Popover>
-                          </Dropdown>
+                          <MailboxActionMenu
+                            box={box}
+                            deletingId={deletingId}
+                            onAction={onMailboxAction}
+                          />
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 
@@ -746,7 +886,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <form
             onSubmit={(e) => void onChangePassword(e)}
-            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow-hover)]"
+            className="w-full max-w-md rounded-2xl bg-[var(--surface)] p-5"
           >
             <h3 className="text-base font-semibold text-[var(--foreground)]">
               Change Password

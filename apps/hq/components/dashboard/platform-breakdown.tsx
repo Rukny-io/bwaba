@@ -11,7 +11,7 @@ function MiniStat({
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl bg-[var(--surface-secondary)] px-3 py-3">
+    <div className="rounded-2xl bg-[var(--surface-secondary)] px-3 py-3">
       <p className="text-[11px] text-[var(--muted-foreground)]">{label}</p>
       <p className="mt-1 text-lg font-bold tabular-nums text-[var(--foreground)]" dir="ltr">
         {value}
@@ -32,13 +32,14 @@ export function PlatformBreakdown({
 }) {
   const pendingOrders = orders.byStatus.pending ?? 0;
   const delivered = orders.byStatus.delivered ?? 0;
+  const mail = platform.mail ?? { total: 0, active: 0 };
 
   return (
-    <section className="dashboard-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+    <section className="dashboard-card rounded-2xl p-4 sm:p-6">
       <h2 className="mb-4 text-base font-semibold text-[var(--foreground)]">
         Platform overview
       </h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <MiniStat
           label="Stores"
           value={formatNumber(platform.stores.total)}
@@ -48,6 +49,11 @@ export function PlatformBreakdown({
           label="Forms"
           value={formatNumber(platform.forms.total)}
           sub={`${formatNumber(platform.forms.active)} published`}
+        />
+        <MiniStat
+          label="Mail"
+          value={formatNumber(mail.total)}
+          sub={`${formatNumber(mail.active)} active`}
         />
         <MiniStat
           label="Events"

@@ -14,8 +14,8 @@ import {
   ensureSesDomainIdentity,
   formatSesError,
 } from "@/lib/ses-admin";
-import { apiFetchJson } from "@/lib/server-api";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
 import {
   mailSetupCacheKey,
@@ -81,9 +81,9 @@ export async function POST(request: Request) {
     });
     await redisDel(mailSetupCacheKey(session.appId));
     await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
-    await apiFetchJson(`/mail/apps/${encodeURIComponent(session.appId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ primaryDomain: setup.domain }),
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: setup.domain,
+      domainStatus: setup.status,
     });
 
     return NextResponse.json(
@@ -123,9 +123,9 @@ export async function DELETE(request: Request) {
       mailSesStatusKey(domain),
       `${mailAppOwnerKey(session.appId)}:${session.userId}`,
     );
-    await apiFetchJson(`/mail/apps/${encodeURIComponent(session.appId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ primaryDomain: null }),
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: null,
+      domainStatus: "NONE",
     });
 
     const response = NextResponse.json(

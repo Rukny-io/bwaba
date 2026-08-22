@@ -16,6 +16,11 @@ import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SendMailMessageDto } from './dto/mail-message.dto';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
+import { MailSubscriptionsService } from './mail-subscriptions.service';
+import {
+  incrementMailboxStorage,
+  utf8StorageBytes,
+} from './mail-storage.util';
 
 @Injectable()
 export class MailMessagesService {
@@ -23,6 +28,7 @@ export class MailMessagesService {
     private readonly prisma: PrismaService,
     private readonly ses: MailSesService,
     private readonly realtime: MailRealtimeService,
+    private readonly subscriptions: MailSubscriptionsService,
   ) {}
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
@@ -335,6 +341,23 @@ export class MailMessagesService {
       dto.mailboxId,
     );
 
+    const limits = await this.subscriptions.getActiveLimitsForApp(
+      mailbox.mailAppId,
+    );
+    if (!limits) {
+      throw new BadRequestException(
+        'This Mail app needs an active plan before you can send mail.',
+      );
+    }
+
+    const incomingBytes = utf8StorageBytes(bodyText, bodyHtml);
+    const usedBytes = Number(mailbox.storageUsedBytes ?? 0);
+    if (usedBytes + incomingBytes > limits.storageQuotaBytesPerMailbox) {
+      throw new BadRequestException(
+        'Mailbox storage quota reached for this app’s plan. Request more storage or delete mail.',
+      );
+    }
+
     const fromAddress = `${mailbox.localPart}@${mailbox.domain}`;
     let threadId: string = randomUUID();
     let inReplyTo: string | null = null;
@@ -386,6 +409,12 @@ export class MailMessagesService {
         isRead: true,
       },
     });
+
+    await incrementMailboxStorage(
+      this.prisma,
+      mailbox.id,
+      utf8StorageBytes(plainText, outboundHtml),
+    );
 
     try {
       const { sesMessageId } = await this.ses.sendEmail({

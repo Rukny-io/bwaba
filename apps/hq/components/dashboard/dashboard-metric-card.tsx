@@ -21,7 +21,7 @@ export function DashboardMetricCard({
   trendPositive = true,
 }: DashboardMetricCardProps) {
   return (
-    <article className="dashboard-card flex min-h-[7.25rem] flex-col gap-2 rounded-2xl p-3 sm:min-h-0 sm:gap-4 sm:rounded-3xl sm:p-5">
+    <article className="dashboard-card flex min-h-[7.25rem] flex-col gap-2 rounded-2xl p-3 sm:min-h-0 sm:gap-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] sm:size-10 sm:rounded-xl">
           <Icon className="size-[18px] sm:size-5" strokeWidth={1.6} />

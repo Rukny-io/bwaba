@@ -103,8 +103,8 @@ model User {
   emailChangeRequests    EmailChangeRequest[]
   subscription           Subscription?
 
-  // Rukny Mail
-  mailSubscription          MailSubscription?
+  // Rukny Mail — one subscription per Mail app (not per user)
+  mailSubscriptions         MailSubscription[]
   mailApps                  MailApp[]
   mailMessages              MailMessage[]
 
@@ -3297,6 +3297,15 @@ enum MailAppType {
   CONSUMER
 }
 
+/// Cached domain verification for HQ filters (DKIM tokens stay in Mail Redis)
+enum MailDomainStatus {
+  NONE
+  PENDING_DNS
+  VERIFYING
+  ACTIVE
+  FAILED
+}
+
 /// Mail workspace/app owned by a user account (independent of DeveloperApp)
 model MailApp {
   id          String        @id @default(uuid())
@@ -3312,15 +3321,19 @@ model MailApp {
   status      MailAppStatus @default(ACTIVE)
   /// Optional primary domain label cached for list UI
   primaryDomain String?
+  domainStatus    MailDomainStatus @default(NONE)
+  domainCheckedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mailboxes MailMailbox[]
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailboxes    MailMailbox[]
+  subscription MailSubscription?
 
   @@unique([userId, slotIndex])
   @@index([userId])
   @@index([status])
+  @@index([domainStatus])
   @@index([createdAt])
   @@map("mail_apps")
 }
@@ -3347,6 +3360,8 @@ model MailMailbox {
   /// Optional mailbox-level TOTP 2FA
   totpEnabled  Boolean           @default(false)
   totpSecret   String?
+  /// UTF-8 body bytes stored in this mailbox (send + inbound)
+  storageUsedBytes BigInt        @default(0)
   status       MailMailboxStatus @default(ACTIVE)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -3441,11 +3456,14 @@ enum MailPlan {
 
 model MailSubscription {
   id                 String             @id @default(uuid())
-  userId             String             @unique
+  /// Owning Mail app — unique so each app has its own plan/seats/storage
+  mailAppId          String             @unique
+  /// Owner snapshot (not unique: one user can have many Mail apps)
+  userId             String
   plan               MailPlan
   status             SubscriptionStatus @default(ACTIVE)
   billingCycle       BillingCycle       @default(MONTHLY)
-  /// Billed mailbox seats (monthly total = plan price × mailboxCount)
+  /// Billed mailbox seats for this app (monthly total = plan price × mailboxCount)
   mailboxCount       Int                @default(1)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
@@ -3453,9 +3471,11 @@ model MailSubscription {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
+  mailApp  MailApp                   @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
   user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments MailSubscriptionPayment[]
 
+  @@index([userId])
   @@index([plan])
   @@index([status])
   @@index([currentPeriodEnd])

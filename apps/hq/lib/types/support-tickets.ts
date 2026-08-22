@@ -62,6 +62,44 @@ export interface AdminSupportTicketDetail extends SupportTicketSummary {
   attachments?: SupportTicketAttachment[];
 }
 
+export type MailPlanCode = 'STARTER' | 'STANDARD' | 'PREMIUM';
+
+export type MailPlanRequestContext = {
+  kind: 'mail_subscription';
+  mailAppId: string;
+  mailAppName?: string;
+  mailPlan: MailPlanCode;
+  mailboxCount: number;
+  monthlyTotal?: number;
+};
+
+export function parseMailPlanRequestContext(
+  context: Record<string, unknown> | null | undefined,
+): MailPlanRequestContext | null {
+  if (!context || context.kind !== 'mail_subscription') return null;
+  const mailAppId = typeof context.mailAppId === 'string' ? context.mailAppId : '';
+  if (!mailAppId) return null;
+  const rawPlan = String(context.mailPlan || '').toUpperCase();
+  const mailPlan: MailPlanCode =
+    rawPlan === 'STANDARD' || rawPlan === 'PREMIUM' || rawPlan === 'STARTER'
+      ? rawPlan
+      : 'STARTER';
+  const mailboxCount =
+    typeof context.mailboxCount === 'number' && context.mailboxCount >= 1
+      ? Math.floor(context.mailboxCount)
+      : 1;
+  return {
+    kind: 'mail_subscription',
+    mailAppId,
+    mailAppName:
+      typeof context.mailAppName === 'string' ? context.mailAppName : undefined,
+    mailPlan,
+    mailboxCount,
+    monthlyTotal:
+      typeof context.monthlyTotal === 'number' ? context.monthlyTotal : undefined,
+  };
+}
+
 export interface SupportTicketsListQuery {
   page?: number;
   limit?: number;

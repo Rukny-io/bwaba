@@ -20,7 +20,7 @@ export type MailNavItem = {
 
 export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/inbox", icon: Inbox, label: "Inbox", exact: true },
-  { href: "/mailboxes", icon: LayoutGrid, label: "Mailboxes", exact: true },
+  { href: "/app", icon: LayoutGrid, label: "Mailboxes", exact: true },
   { href: "/forwarders", icon: Forward, label: "Forwarders", exact: true },
   { href: "/aliases", icon: AtSign, label: "Email Alias", exact: true },
   { href: "/catch-all", icon: Mails, label: "Catch-all email", exact: true },

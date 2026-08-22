@@ -66,7 +66,7 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <div className="w-full rounded-[1.75rem] bg-[var(--surface)] p-6 sm:p-8">
+      <div className="w-full rounded-2xl bg-[var(--surface)] p-6 sm:p-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
             Welcome to Mail

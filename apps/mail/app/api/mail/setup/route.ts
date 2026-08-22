@@ -15,8 +15,8 @@ import {
   redisSetJson,
 } from "@/lib/redis";
 import { getSesDomainStatusCached } from "@/lib/ses-admin";
-import { apiFetchJson } from "@/lib/server-api";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
@@ -93,9 +93,9 @@ export async function GET() {
     if (!status.found || status.tokens.length === 0) {
       await deleteMailDomainBinding(session.appId);
       await redisDel(cacheKey);
-      await apiFetchJson(`/mail/apps/${encodeURIComponent(session.appId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ primaryDomain: null }),
+      await syncMailAppDomainToNest(session.appId, {
+        primaryDomain: null,
+        domainStatus: "NONE",
       });
       return NextResponse.json({ setup: null });
     }
@@ -118,14 +118,10 @@ export async function GET() {
 
     await redisSetJson(cacheKey, setup, SETUP_CACHE_TTL_SECONDS);
 
-    if (setup.status === "ACTIVE") {
-      if (binding.status !== "ACTIVE" || binding.domain !== setup.domain) {
-        await apiFetchJson(`/mail/apps/${encodeURIComponent(session.appId)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ primaryDomain: setup.domain }),
-        });
-      }
-    }
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: setup.domain,
+      domainStatus: setup.status,
+    });
 
     return withReadyCookies(
       NextResponse.json({ setup }),

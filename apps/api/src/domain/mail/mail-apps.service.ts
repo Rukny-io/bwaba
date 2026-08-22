@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MailAppStatus, MailAppType, Prisma } from '@prisma/client';
+import { MailAppStatus, MailAppType, MailDomainStatus, Prisma } from '@prisma/client';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -21,8 +21,8 @@ import {
   UpdateMailAppDto,
   VerifyMailAppOtpDto,
 } from './dto/mail-app.dto';
+import { MAIL_APP_ID_PATTERN } from './mail-app-id.util';
 
-const MAIL_APP_ID_PATTERN = /^\d{16}$/;
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_COOLDOWN_SECONDS = 60;
@@ -82,20 +82,27 @@ export class MailAppsService {
     }
   }
 
-  private toView(app: {
-    id: string;
-    appId: string;
-    userId: string;
-    slotIndex: number;
-    name: string;
-    contactEmail: string | null;
-    appType: MailAppType;
-    description: string | null;
-    status: MailAppStatus;
-    primaryDomain: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
+  private toView(
+    app: {
+      id: string;
+      appId: string;
+      userId: string;
+      slotIndex: number;
+      name: string;
+      contactEmail: string | null;
+      appType: MailAppType;
+      description: string | null;
+      status: MailAppStatus;
+      primaryDomain: string | null;
+      domainStatus?: MailDomainStatus;
+      domainCheckedAt?: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    subscription?: { plan: string; status: string; mailboxCount: number } | null,
+  ) {
+    const active =
+      subscription && subscription.status === 'ACTIVE' ? subscription : null;
     return {
       id: app.id,
       appId: app.appId,
@@ -106,8 +113,17 @@ export class MailAppsService {
       description: app.description,
       status: app.status,
       primaryDomain: app.primaryDomain,
+      domainStatus: app.domainStatus ?? MailDomainStatus.NONE,
+      domainCheckedAt: app.domainCheckedAt?.toISOString() ?? null,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
+      subscription: active
+        ? {
+            plan: active.plan,
+            status: active.status,
+            mailboxCount: active.mailboxCount,
+          }
+        : null,
     };
   }
 
@@ -228,9 +244,12 @@ export class MailAppsService {
   async listApps(userId: string) {
     const apps = await this.prisma.mailApp.findMany({
       where: { userId, status: MailAppStatus.ACTIVE },
+      include: { subscription: true },
       orderBy: { slotIndex: 'asc' },
     });
-    return { apps: apps.map((app) => this.toView(app)) };
+    return {
+      apps: apps.map((app) => this.toView(app, app.subscription)),
+    };
   }
 
   async getApp(userId: string, appId: string) {
@@ -239,9 +258,10 @@ export class MailAppsService {
     }
     const app = await this.prisma.mailApp.findFirst({
       where: { userId, appId, status: MailAppStatus.ACTIVE },
+      include: { subscription: true },
     });
     if (!app) throw new NotFoundException('Mail app not found.');
-    return { app: this.toView(app) };
+    return { app: this.toView(app, app.subscription) };
   }
 
   private async allocateSlotIndex(userId: string): Promise<number> {
@@ -315,6 +335,29 @@ export class MailAppsService {
 
   async updateApp(userId: string, appId: string, dto: UpdateMailAppDto) {
     await this.getApp(userId, appId);
+
+    const primaryDomain =
+      dto.primaryDomain === undefined
+        ? undefined
+        : dto.primaryDomain
+          ? dto.primaryDomain.trim().toLowerCase()
+          : null;
+
+    let domainStatus = dto.domainStatus;
+    if (primaryDomain === null) {
+      domainStatus = MailDomainStatus.NONE;
+    }
+
+    let domainCheckedAt: Date | null | undefined;
+    if (dto.domainCheckedAt === null) {
+      domainCheckedAt = null;
+    } else if (dto.domainCheckedAt) {
+      const parsed = new Date(dto.domainCheckedAt);
+      domainCheckedAt = Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    } else if (domainStatus !== undefined || primaryDomain !== undefined) {
+      domainCheckedAt = new Date();
+    }
+
     const app = await this.prisma.mailApp.update({
       where: { appId },
       data: {
@@ -325,13 +368,9 @@ export class MailAppsService {
         ...(dto.contactEmail !== undefined
           ? { contactEmail: dto.contactEmail.trim() }
           : {}),
-        ...(dto.primaryDomain !== undefined
-          ? {
-              primaryDomain: dto.primaryDomain
-                ? dto.primaryDomain.trim().toLowerCase()
-                : null,
-            }
-          : {}),
+        ...(primaryDomain !== undefined ? { primaryDomain } : {}),
+        ...(domainStatus !== undefined ? { domainStatus } : {}),
+        ...(domainCheckedAt !== undefined ? { domainCheckedAt } : {}),
       },
     });
     return { app: this.toView(app) };

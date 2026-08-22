@@ -16,6 +16,7 @@ export type InboxMessageRow = {
   subject: string;
   preview: string;
   body: string;
+  bodyHtml?: string | null;
   receivedAt: string;
   unread: boolean;
   starred: boolean;
@@ -112,7 +113,7 @@ export function MailInboxListCard({
   const folderLabel = FOLDER_LABELS[folder] ?? folder;
 
   return (
-    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-[1.25rem] bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:rounded-[1.5rem] dark:bg-[var(--surface)]">
+    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] dark:bg-[var(--surface)]">
       <div className="shrink-0 border-b border-[var(--separator)] px-4 pb-3 pt-3.5 sm:px-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

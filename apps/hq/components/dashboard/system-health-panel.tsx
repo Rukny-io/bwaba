@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 export function SystemHealthPanel({ health }: { health: SystemHealth | null }) {
   if (!health) {
     return (
-      <section className="dashboard-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+      <section className="dashboard-card rounded-2xl p-4 sm:p-6">
         <h2 className="mb-4 text-base font-semibold">System health</h2>
         <p className="text-sm text-[var(--muted-foreground)]">
           Could not load system health data.
@@ -34,7 +34,7 @@ export function SystemHealthPanel({ health }: { health: SystemHealth | null }) {
     STATUS_COLORS[health.status] ?? STATUS_COLORS.degraded;
 
   return (
-    <section className="dashboard-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+    <section className="dashboard-card rounded-2xl p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-[var(--foreground)]">
           System health

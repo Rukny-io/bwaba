@@ -10,6 +10,7 @@ export type MailMailboxView = {
   avatarUrl: string | null;
   hasPassword: boolean;
   totpEnabled: boolean;
+  storageUsedBytes: number;
   status: "ACTIVE" | "DISABLED" | "DELETED";
   createdAt: string;
   updatedAt: string;

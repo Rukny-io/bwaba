@@ -63,11 +63,16 @@ export class MailMailboxesService {
     avatarKey?: string | null;
     passwordHash: string | null;
     totpEnabled: boolean;
+    storageUsedBytes?: bigint | number;
     status: MailMailboxStatus;
     createdAt: Date;
     updatedAt: Date;
     mailApp: { appId: string };
   }) {
+    const used =
+      typeof row.storageUsedBytes === 'bigint'
+        ? Number(row.storageUsedBytes)
+        : Number(row.storageUsedBytes ?? 0);
     return {
       id: row.id,
       appId: row.mailApp.appId,
@@ -78,6 +83,7 @@ export class MailMailboxesService {
       avatarUrl: this.mediaUrl(row.avatarKey),
       hasPassword: Boolean(row.passwordHash),
       totpEnabled: row.totpEnabled,
+      storageUsedBytes: Number.isFinite(used) ? used : 0,
       status: row.status,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -145,22 +151,22 @@ export class MailMailboxesService {
 
     this.assertPassword(dto.password);
 
-    const limits = await this.subscriptions.getActiveLimits(userId);
+    const limits = await this.subscriptions.getActiveLimitsForApp(app.id);
     if (!limits || typeof limits.mailboxCount !== 'number') {
       throw new BadRequestException(
-        'An active Mail subscription is required to create mailboxes.',
+        'This Mail app needs an active plan before you can create mailboxes. Request a plan from Pricing.',
       );
     }
 
     const usedSeats = await this.prisma.mailMailbox.count({
       where: {
+        mailAppId: app.id,
         status: MailMailboxStatus.ACTIVE,
-        mailApp: { userId, status: MailAppStatus.ACTIVE },
       },
     });
     if (usedSeats >= limits.mailboxCount) {
       throw new BadRequestException(
-        `Mailbox limit reached (${limits.mailboxCount}). Upgrade your plan or add seats.`,
+        `Mailbox limit reached for this app (${limits.mailboxCount}). Request more seats.`,
       );
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { cn } from "@heroui/react";
 import {
@@ -10,9 +10,10 @@ import {
   type MailPlanId,
 } from "@/lib/mail-plans";
 import {
-  activateMailSubscription,
   fetchMailPlans,
   fetchMailSubscription,
+  requestMailPlan,
+  type MailPendingPlanRequest,
   type MailSubscriptionView,
 } from "@/lib/mail-subscription-client";
 
@@ -26,9 +27,13 @@ type PlanCard = {
 };
 
 export function MailPricingPage() {
-  const router = useRouter();
   const [plans, setPlans] = useState<PlanCard[]>([]);
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
+  const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
+    null,
+  );
+  const [appName, setAppName] = useState<string | null>(null);
+  const [needsApp, setNeedsApp] = useState(false);
   const [mailboxCount, setMailboxCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busyPlan, setBusyPlan] = useState<MailPlanId | null>(null);
@@ -44,8 +49,15 @@ export function MailPricingPage() {
         ]);
         if (cancelled) return;
         setPlans(plansData.plans);
-        setSubscription(current);
-        if (current?.mailboxCount) setMailboxCount(current.mailboxCount);
+        setNeedsApp(current.needsApp);
+        setAppName(current.app?.name ?? null);
+        setSubscription(current.subscription);
+        setPendingRequest(current.pendingRequest);
+        if (current.subscription?.mailboxCount) {
+          setMailboxCount(current.subscription.mailboxCount);
+        } else if (current.pendingRequest?.mailboxCount) {
+          setMailboxCount(current.pendingRequest.mailboxCount);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Could not load pricing.");
@@ -60,16 +72,16 @@ export function MailPricingPage() {
   }, []);
 
   const seats = useMemo(() => Math.max(1, Math.floor(mailboxCount) || 1), [mailboxCount]);
+  const active = subscription?.status === "ACTIVE" ? subscription : null;
 
   async function choosePlan(planId: MailPlanId) {
     setError("");
     setBusyPlan(planId);
     try {
-      const next = await activateMailSubscription(planId, seats);
-      setSubscription(next);
-      router.refresh();
+      const result = await requestMailPlan(planId, seats);
+      setPendingRequest(result.ticket);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not activate this plan.");
+      setError(err instanceof Error ? err.message : "Could not submit this plan request.");
     } finally {
       setBusyPlan(null);
     }
@@ -89,31 +101,58 @@ export function MailPricingPage() {
           Mail plans
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-          Prices are in Iraqi dinar (IQD), billed monthly per mailbox on your account.
-          Extra mailboxes cost the same as your plan price each.
+          Each Mail app has its own subscription — seats, storage, and features are not
+          shared with your other apps. Prices are in Iraqi dinar (IQD), billed monthly
+          per mailbox. Card payment is coming soon; request a plan and an admin will
+          activate it for this app.
         </p>
       </header>
 
-      {subscription && subscription.status === "ACTIVE" ? (
+      {needsApp ? (
+        <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
+          Open a Mail app first, then return here to request a plan for that app only.{" "}
+          <Link
+            href="/apps"
+            className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+          >
+            Go to apps
+          </Link>
+        </div>
+      ) : active ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
           <p className="text-sm font-semibold text-[var(--foreground)]">
-            Current plan: {subscription.planName}
+            Current plan for {appName || "this app"}: {active.planName}
           </p>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            {subscription.mailboxCount} mailbox
-            {subscription.mailboxCount === 1 ? "" : "es"} ·{" "}
-            {formatMailIqD(subscription.monthlyTotal)}/mo
-            {subscription.renewsAt
-              ? ` · renews ${new Date(subscription.renewsAt).toLocaleDateString("en-GB")}`
+            {active.mailboxCount} mailbox
+            {active.mailboxCount === 1 ? "" : "es"} ·{" "}
+            {active.limits.storageGbPerMailbox} GB storage each ·{" "}
+            {formatMailIqD(active.monthlyTotal)}/mo
+            {active.renewsAt
+              ? ` · renews ${new Date(active.renewsAt).toLocaleDateString("en-GB")}`
               : null}
           </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
-          No active Mail subscription yet. Choose a plan to unlock mailbox limits and
-          features.
+          No active plan on {appName || "this Mail app"} yet. Request Starter, Standard,
+          or Premium — an admin will activate seats, storage, and features for this app
+          only.
         </div>
       )}
+
+      {pendingRequest ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-sm">
+          <p className="font-semibold text-[var(--foreground)]">Request pending</p>
+          <p className="mt-1 text-[var(--muted-foreground)]">
+            Ticket {pendingRequest.ticketNumber}
+            {pendingRequest.plan ? ` · ${pendingRequest.plan}` : ""} ·{" "}
+            {pendingRequest.mailboxCount} seat
+            {pendingRequest.mailboxCount === 1 ? "" : "s"}. An admin will activate this
+            app’s plan.
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
@@ -123,12 +162,13 @@ export function MailPricingPage() {
             min={1}
             max={500}
             value={seats}
+            disabled={needsApp || Boolean(pendingRequest)}
             onChange={(event) => setMailboxCount(Number(event.target.value) || 1)}
-            className="h-10 w-28 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+            className="h-10 w-28 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-[var(--foreground)] outline-none focus:border-[var(--primary)] disabled:opacity-60"
           />
         </label>
         <p className="pb-2 text-sm text-[var(--muted-foreground)]">
-          Billed seats × plan price = monthly total
+          Seats × plan price = monthly total for this app
         </p>
       </div>
 
@@ -141,9 +181,10 @@ export function MailPricingPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => {
           const total = mailPlanMonthlyTotal(plan.id, seats);
-          const isCurrent =
-            subscription?.status === "ACTIVE" && subscription.planId === plan.id;
+          const isCurrent = Boolean(active && active.planId === plan.id);
           const busy = busyPlan === plan.id;
+          const requestDisabled =
+            needsApp || Boolean(pendingRequest) || Boolean(busyPlan);
 
           return (
             <article
@@ -193,8 +234,8 @@ export function MailPricingPage() {
 
               <button
                 type="button"
-                disabled={busy || Boolean(busyPlan)}
-                onClick={() => choosePlan(plan.id)}
+                disabled={requestDisabled}
+                onClick={() => void choosePlan(plan.id)}
                 className={cn(
                   "mt-6 inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors disabled:opacity-60",
                   isCurrent
@@ -202,7 +243,20 @@ export function MailPricingPage() {
                     : "bg-[var(--foreground)] text-[var(--background)] hover:opacity-90",
                 )}
               >
-                {busy ? "Saving…" : isCurrent ? "Update seats" : `Choose ${plan.name}`}
+                {busy
+                  ? "Sending…"
+                  : pendingRequest
+                    ? "Request pending"
+                    : isCurrent
+                      ? "Request seat change"
+                      : `Request ${plan.name}`}
+              </button>
+              <button
+                type="button"
+                disabled
+                className="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-4 text-xs font-medium text-[var(--muted-foreground)]"
+              >
+                Pay by card — coming soon
               </button>
             </article>
           );

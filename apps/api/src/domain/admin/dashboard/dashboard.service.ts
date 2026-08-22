@@ -15,7 +15,7 @@ export class DashboardService {
   ) {}
 
   async getStats() {
-    return this.cache.wrap('admin:platform-stats', 120, async () => {
+    return this.cache.wrap('admin:platform-stats:v2', 120, async () => {
       const now = new Date();
       const todayStart = new Date(
         now.getFullYear(),
@@ -39,7 +39,9 @@ export class DashboardService {
           (SELECT COUNT(*)::int FROM forms WHERE status = 'PUBLISHED') AS active_forms,
           (SELECT COUNT(*)::int FROM events) AS total_events,
           (SELECT COUNT(*)::int FROM events WHERE status IN ('SCHEDULED', 'ONGOING')) AS active_events,
-          (SELECT COUNT(*)::int FROM orders) AS total_orders
+          (SELECT COUNT(*)::int FROM orders) AS total_orders,
+          (SELECT COUNT(*)::int FROM mail_apps) AS total_mail_apps,
+          (SELECT COUNT(*)::int FROM mail_apps WHERE status = 'ACTIVE') AS active_mail_apps
       `,
         todayStart,
         weekStart,
@@ -58,6 +60,7 @@ export class DashboardService {
         forms: { total: r.total_forms, active: r.active_forms },
         events: { total: r.total_events, active: r.active_events },
         orders: { total: r.total_orders },
+        mail: { total: r.total_mail_apps, active: r.active_mail_apps },
       };
     });
   }

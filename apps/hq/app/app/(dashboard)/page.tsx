@@ -19,6 +19,7 @@ import {
   Calendar,
   ShoppingCart,
   Banknote,
+  Mail,
 } from 'lucide-react';
 
 export default async function DashboardHomePage() {
@@ -29,6 +30,7 @@ export default async function DashboardHomePage() {
 
   const greeting = admin.name ?? admin.username ?? admin.email;
   const { platform, users, orders, verification, health, commerce } = data;
+  const mail = platform.mail ?? { total: 0, active: 0 };
 
   const activeRate =
     users.total > 0
@@ -48,7 +50,7 @@ export default async function DashboardHomePage() {
 
       <VerificationAlert stats={verification} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <DashboardMetricCard
           icon={Users}
           label="Total users"
@@ -83,12 +85,19 @@ export default async function DashboardHomePage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <DashboardMetricCard
           icon={FileText}
           label="Published forms"
           value={formatNumber(platform.forms.active)}
           comparisonPrimary={`of ${formatNumber(platform.forms.total)} forms`}
+        />
+        <DashboardMetricCard
+          icon={Mail}
+          label="Mail apps"
+          value={formatNumber(mail.active)}
+          comparisonPrimary={`of ${formatNumber(mail.total)} apps`}
+          comparisonSecondary="ACTIVE status"
         />
         <DashboardMetricCard
           icon={Calendar}

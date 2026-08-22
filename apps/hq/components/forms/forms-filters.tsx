@@ -64,7 +64,7 @@ export function FormsFilters({
   }
 
   return (
-    <div className="space-y-3 sm:rounded-2xl sm:border sm:border-[var(--border)] sm:bg-[var(--surface)] sm:p-4 md:rounded-3xl">
+    <div className="space-y-3 sm:dashboard-card sm:rounded-2xl sm:p-4 md:rounded-3xl">
       <div className="flex flex-col gap-3">
         <SearchField
           fullWidth
@@ -75,7 +75,7 @@ export function FormsFilters({
           onSubmit={onSearchCommit}
           className="min-w-0"
         >
-          <SearchField.Group className="h-10 rounded-xl border-0 bg-[var(--surface-secondary)] sm:border sm:border-[var(--border)] sm:bg-[var(--field-background)]">
+          <SearchField.Group className="h-10 rounded-xl border-0 bg-[var(--surface-secondary)]">
             <SearchField.SearchIcon className="text-[var(--muted-foreground)]" />
             <SearchField.Input
               placeholder="Search by title or slug…"

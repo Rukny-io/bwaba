@@ -132,3 +132,17 @@ export function mailPlanMonthlyTotal(planId: MailPlanId, mailboxCount: number): 
 export function formatMailIqD(amount: number): string {
   return `${amount.toLocaleString("en-IQ")} ${MAIL_CURRENCY_LABEL}`;
 }
+
+export function formatMailStorage(bytes: number, quotaBytes: number): string {
+  const used = formatMailStorageAmount(bytes);
+  const quota = formatMailStorageAmount(quotaBytes);
+  return `${used} / ${quota}`;
+}
+
+export function formatMailStorageAmount(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}

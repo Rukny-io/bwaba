@@ -14,6 +14,7 @@ import {
 import { cn } from "@heroui/react";
 import type { InboxMessageRow } from "@/components/inbox/mail-inbox-list-card";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
+import { MailHtmlBody } from "@/components/inbox/mail-html-body";
 
 type Props = {
   message: InboxMessageRow | null;
@@ -81,9 +82,9 @@ export function MailInboxReaderCard({
 }: Props) {
   if (!message) {
     return (
-      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[1.25rem] bg-white/70 sm:rounded-[1.5rem] lg:flex dark:bg-[var(--surface)]/70">
+      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/70 lg:flex dark:bg-[var(--surface)]/70">
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-3xl bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]">
             <MailOpen className="size-6" strokeWidth={1.75} />
           </div>
           <p className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
@@ -126,7 +127,7 @@ export function MailInboxReaderCard({
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-[inbox-fade_220ms_ease-out]",
         "max-md:rounded-none max-md:bg-transparent max-md:shadow-none",
-        "md:rounded-[1.25rem] md:bg-white md:shadow-[0_1px_0_rgba(15,23,42,0.03)] lg:rounded-[1.5rem] dark:md:bg-[var(--surface)]",
+        "md:rounded-2xl md:bg-white md:shadow-[0_1px_0_rgba(15,23,42,0.03)] dark:md:bg-[var(--surface)]",
       )}
     >
       {/* Mobile: liquid-glass toolbar */}
@@ -241,13 +242,13 @@ export function MailInboxReaderCard({
           </time>
         </div>
 
-        <div className="mt-6 max-w-none whitespace-pre-wrap text-[15px] leading-[1.7] text-[var(--foreground)]/90">
-          {message.body || message.preview || "(Empty message)"}
+        <div className="mt-6 max-w-none">
+          <MailHtmlBody html={message.bodyHtml} text={message.body || message.preview} />
         </div>
       </div>
 
       <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3 md:pb-3 md:pt-2.5">
-        <div className="rounded-[1.35rem] bg-white/90 p-3.5 backdrop-blur-sm sm:rounded-[1.5rem] sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
+        <div className="rounded-2xl bg-white/90 p-3.5 backdrop-blur-sm sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <span className="text-xs text-[var(--muted-foreground)]">To</span>

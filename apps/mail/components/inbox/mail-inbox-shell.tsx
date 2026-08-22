@@ -72,6 +72,7 @@ function toRow(msg: MailMessageView): InboxMessageRow {
     subject: msg.subject || "(no subject)",
     preview: msg.preview || body.slice(0, 140),
     body,
+    bodyHtml: msg.bodyHtml,
     receivedAt: when,
     unread: msg.unread,
     starred: msg.starred,
@@ -809,8 +810,8 @@ export function MailInboxShell() {
               "flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden dark:bg-[var(--surface-secondary)]",
               mobileShowReader && selectedMessage
                 ? "max-md:mx-0 max-md:mb-0 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:pt-[max(0.75rem,env(safe-area-inset-top))]"
-                : "mx-3 mb-3 rounded-[1.5rem] bg-[#eef0f3] p-2 sm:rounded-[1.75rem]",
-              "md:mx-0 md:mb-0 md:rounded-[1.75rem] md:bg-[#eef0f3] md:p-2 lg:gap-2.5 lg:rounded-[2rem] lg:p-2.5",
+                : "mx-3 mb-3 rounded-2xl bg-[#eef0f3] p-2",
+              "md:mx-0 md:mb-0 md:rounded-2xl md:bg-[#eef0f3] md:p-2 lg:gap-2.5 lg:p-2.5",
             )}
           >
             <div
@@ -915,7 +916,7 @@ export function MailInboxShell() {
 
       {mailboxes.length === 0 ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--background)]/95 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
             <p className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
               Create a mailbox first
             </p>

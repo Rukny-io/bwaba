@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Post,
@@ -19,8 +18,8 @@ import {
 } from '../../core/common/decorators/auth/current-user.decorator';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
-  AdminSetMailPlanDto,
-  UpsertMailSubscriptionDto,
+  AdminActivateMailSubscriptionDto,
+  RequestMailSubscriptionDto,
 } from './dto/mail-subscription.dto';
 
 @ApiTags('Mail - Subscription')
@@ -37,53 +36,65 @@ export class MailSubscriptionsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('subscription')
-  @ApiOperation({ summary: 'Current Mail subscription for the signed-in user' })
-  getSubscription(@CurrentUser() user: AuthenticatedUser) {
-    return this.mailSubscriptions.getSubscription(user.id);
+  @Get('apps/:appId/subscription')
+  @ApiOperation({
+    summary: 'Mail subscription for this app only (not shared across apps)',
+  })
+  getSubscription(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ) {
+    return this.mailSubscriptions.getOwnedAppSubscription(user.id, appId);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post('subscription')
+  @Post('apps/:appId/subscription/request')
   @ApiOperation({
     summary:
-      'Activate or change Mail plan (manual activation until payment gateway)',
+      'Open a billing support ticket so an admin can activate this app’s plan',
   })
-  upsertSubscription(
+  requestPlan(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpsertMailSubscriptionDto,
+    @Param('appId') appId: string,
+    @Body() dto: RequestMailSubscriptionDto,
   ) {
-    return this.mailSubscriptions.upsertSubscription(
+    return this.mailSubscriptions.requestPlan(
       user.id,
+      appId,
       dto.plan,
-      dto.mailboxCount ?? 1,
-      dto.billingCycle,
+      dto.mailboxCount,
     );
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Delete('subscription')
-  @ApiOperation({ summary: 'Cancel Mail subscription' })
-  cancelSubscription(@CurrentUser() user: AuthenticatedUser) {
-    return this.mailSubscriptions.cancelSubscription(user.id);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @Post('subscription/admin/:userId')
-  @ApiOperation({ summary: 'Admin: set Mail plan for a user' })
-  adminSetPlan(
-    @Param('userId') userId: string,
-    @Body() dto: AdminSetMailPlanDto,
+  @Get('admin/users/:userId/apps')
+  @ApiOperation({ summary: 'Admin: list Mail apps and per-app subscriptions' })
+  adminListUserApps(@Param('userId') userId: string) {
+    return this.mailSubscriptions.adminListUserApps(userId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post('admin/apps/:appId/subscription')
+  @ApiOperation({
+    summary: 'Admin: activate Mail plan + seats + storage for one app',
+  })
+  adminActivate(
+    @CurrentUser() admin: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Body() dto: AdminActivateMailSubscriptionDto,
   ) {
-    return this.mailSubscriptions.adminSetPlan(
-      userId,
+    return this.mailSubscriptions.adminActivateForApp(
+      admin.id,
+      appId,
       dto.plan,
-      dto.mailboxCount ?? 1,
+      dto.mailboxCount,
       dto.billingCycle,
+      dto.ticketId,
     );
   }
 }

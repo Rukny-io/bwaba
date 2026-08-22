@@ -24,8 +24,8 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
         </h1>
         <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
           {isEmpty
-            ? "Each Mail app is managed independently — domain, mailboxes, and integrations in one workspace."
-            : "Choose a Mail app to continue or register a new one."}
+            ? "Each Mail app is independent — domain, mailboxes, and its own plan (seats + storage)."
+            : "Each app has its own subscription. Choose one to continue or register a new one."}
         </p>
       </header>
 

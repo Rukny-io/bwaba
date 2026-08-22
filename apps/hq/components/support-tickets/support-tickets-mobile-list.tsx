@@ -65,11 +65,10 @@ export function SupportTicketsMobileList({
       <ul className="space-y-2">
         {tickets.map((ticket) => (
           <li key={ticket.id}>
-            <Link
-              href={`/app/support-tickets/${ticket.id}`}
-              className="block rounded-2xl bg-[var(--surface-secondary)]/55 p-3 transition-colors active:bg-[var(--surface-secondary)]"
-            >
-              <SupportTicketsTableTicketCell ticket={ticket} />
+            <div className="rounded-2xl bg-[var(--surface-secondary)]/55 p-3">
+              <Link href={`/app/support-tickets/${ticket.id}`} className="block">
+                <SupportTicketsTableTicketCell ticket={ticket} linkToDetail={false} />
+              </Link>
 
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <Chip color={ticketStatusChipColor(ticket.status)} size="sm" variant="soft">
@@ -92,7 +91,7 @@ export function SupportTicketsMobileList({
                   {formatTicketDate(ticket.updatedAt)}
                 </time>
               </div>
-            </Link>
+            </div>
           </li>
         ))}
       </ul>

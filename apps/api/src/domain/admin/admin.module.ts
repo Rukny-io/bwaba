@@ -15,6 +15,8 @@ import { PublicWallpapersController } from './wallpapers/public-wallpapers.contr
 import { WallpapersService } from './wallpapers/wallpapers.service';
 import { AdminFormsController } from './forms/forms.controller';
 import { AdminFormsService } from './forms/forms.service';
+import { AdminMailController } from './mail/admin-mail.controller';
+import { AdminMailService } from './mail/admin-mail.service';
 import { AnalyticsController } from './analytics/analytics.controller';
 import { AnalyticsService } from './analytics/analytics.service';
 import { AuthModule } from '../auth/auth.module';
@@ -23,6 +25,7 @@ import { EmailModule } from '../../integrations/email/email.module';
 import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
 import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/whatsapp-business.module';
 import { SecurityModule } from '../../infrastructure/security/security.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -32,6 +35,7 @@ import { SecurityModule } from '../../infrastructure/security/security.module';
     WhatsappModule,
     WhatsAppBusinessModule,
     SecurityModule,
+    MailModule,
   ],
   controllers: [
     DashboardController,
@@ -43,6 +47,7 @@ import { SecurityModule } from '../../infrastructure/security/security.module';
     WallpapersController,
     PublicWallpapersController,
     AdminFormsController,
+    AdminMailController,
     AnalyticsController,
   ],
   providers: [
@@ -53,6 +58,7 @@ import { SecurityModule } from '../../infrastructure/security/security.module';
     OrdersService,
     WallpapersService,
     AdminFormsService,
+    AdminMailService,
     AnalyticsService,
   ],
 })

@@ -3,6 +3,7 @@ import { getDashboardUser } from '@/lib/dal';
 import { HqSidebar } from '@/components/layout/hq-sidebar';
 import { HqShell } from '@/components/layout/hq-shell';
 import { HqMobileDock } from '@/components/layout/hq-mobile-dock';
+import { DashboardNav } from '@/components/app/dashboard-nav';
 
 export default async function DashboardLayout({
   children,
@@ -10,19 +11,18 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   const user = await getDashboardUser();
+  const displayName = user.name ?? user.username ?? user.email;
 
   return (
-    <div className="flex h-dvh bg-[var(--background)]">
-      <HqSidebar
-        avatarUrl={user.avatar}
-        userName={user.name ?? user.username ?? user.email}
-      />
+    <div className="flex h-dvh flex-col bg-[var(--background)]">
+      <div className="flex min-h-0 flex-1">
+        <HqSidebar avatarUrl={user.avatar} userName={displayName} />
 
-      <div className="flex min-w-0 flex-1 flex-col sm:m-2 sm:ml-[82px] sm:gap-2">
-        <HqShell userName={user.name ?? user.username}>
-          {children}
-        </HqShell>
-        <HqMobileDock />
+        <div className="relative flex min-w-0 flex-1 flex-col sm:ml-[82px]">
+          <DashboardNav />
+          <HqShell>{children}</HqShell>
+          <HqMobileDock />
+        </div>
       </div>
     </div>
   );

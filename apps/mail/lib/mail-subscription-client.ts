@@ -1,4 +1,5 @@
 import { sessionFetch } from "@/lib/api-client";
+import { isValidMailAppId, readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
   isMailPlanId,
   toApiMailPlan,
@@ -8,6 +9,7 @@ import {
 
 export type MailSubscriptionView = {
   id: string;
+  mailAppId: string | null;
   planId: MailPlanId;
   plan: string;
   planName: string;
@@ -18,6 +20,31 @@ export type MailSubscriptionView = {
   renewsAt: string | null;
   currentPeriodEnd: string | null;
   limits: MailPlanLimits;
+  storageQuotaBytesPerMailbox: number;
+  features: {
+    agenticMail: boolean;
+    aiToolsUnlimited: boolean;
+    openTracking: boolean;
+    smartAiReplies: boolean;
+    automaticReplies: boolean;
+    linkAndFileTracking: boolean;
+  };
+};
+
+export type MailPendingPlanRequest = {
+  ticketId: string;
+  ticketNumber: string;
+  plan: string | null;
+  mailboxCount: number;
+  monthlyTotal: number | null;
+  createdAt: string;
+};
+
+export type MailAppSubscriptionSnapshot = {
+  app: { appId: string; name: string; primaryDomain: string | null } | null;
+  subscription: MailSubscriptionView | null;
+  pendingRequest: MailPendingPlanRequest | null;
+  needsApp: boolean;
 };
 
 type PlansResponse = {
@@ -48,6 +75,29 @@ function errorMessage(data: { message?: string | string[]; error?: string }, fal
   return raw || fallback;
 }
 
+function emptyFeatures(): MailSubscriptionView["features"] {
+  return {
+    agenticMail: false,
+    aiToolsUnlimited: false,
+    openTracking: false,
+    smartAiReplies: false,
+    automaticReplies: false,
+    linkAndFileTracking: false,
+  };
+}
+
+function normalizeSubscription(sub: MailSubscriptionView): MailSubscriptionView {
+  return {
+    ...sub,
+    planId: isMailPlanId(sub.planId)
+      ? sub.planId
+      : ((sub.plan || "").toLowerCase() as MailPlanId),
+    renewsAt: sub.renewsAt ?? sub.currentPeriodEnd,
+    storageQuotaBytesPerMailbox: Number(sub.storageQuotaBytesPerMailbox) || 0,
+    features: sub.features ?? emptyFeatures(),
+  };
+}
+
 export async function fetchMailPlans() {
   const response = await sessionFetch("/api/v1/mail/plans");
   const data = await readJson<PlansResponse>(response);
@@ -69,56 +119,66 @@ export async function fetchMailPlans() {
   };
 }
 
-export async function fetchMailSubscription(): Promise<MailSubscriptionView | null> {
-  const response = await sessionFetch("/api/v1/mail/subscription");
-  const data = await readJson<{ subscription?: MailSubscriptionView | null }>(response);
+export async function fetchMailSubscription(
+  appId = readMailAppIdFromDocument(),
+): Promise<MailAppSubscriptionSnapshot> {
+  if (!isValidMailAppId(appId)) {
+    return {
+      app: null,
+      subscription: null,
+      pendingRequest: null,
+      needsApp: true,
+    };
+  }
+
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/subscription`,
+  );
+  const data = await readJson<{
+    app?: MailAppSubscriptionSnapshot["app"];
+    subscription?: MailSubscriptionView | null;
+    pendingRequest?: MailPendingPlanRequest | null;
+  }>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load subscription."));
   }
   const sub = data.subscription ?? null;
-  if (!sub) return null;
   return {
-    ...sub,
-    planId: isMailPlanId(sub.planId)
-      ? sub.planId
-      : ((sub.plan || "").toLowerCase() as MailPlanId),
-    renewsAt: sub.renewsAt ?? sub.currentPeriodEnd,
+    app: data.app ?? null,
+    subscription: sub ? normalizeSubscription(sub) : null,
+    pendingRequest: data.pendingRequest ?? null,
+    needsApp: false,
   };
 }
 
-export async function activateMailSubscription(
+export async function requestMailPlan(
   planId: MailPlanId,
   mailboxCount: number,
-): Promise<MailSubscriptionView> {
-  const response = await sessionFetch("/api/v1/mail/subscription", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      plan: toApiMailPlan(planId),
-      mailboxCount,
-      billingCycle: "MONTHLY",
-    }),
-  });
-  const data = await readJson<{ subscription?: MailSubscriptionView }>(response);
-  if (!response.ok || !data.subscription) {
-    throw new Error(errorMessage(data, "Could not activate this plan."));
+  appId = readMailAppIdFromDocument(),
+): Promise<{ alreadyPending: boolean; ticket: MailPendingPlanRequest }> {
+  if (!isValidMailAppId(appId)) {
+    throw new Error("Open a Mail app first, then request a plan for that app.");
   }
-  const sub = data.subscription;
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/subscription/request`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plan: toApiMailPlan(planId),
+        mailboxCount,
+      }),
+    },
+  );
+  const data = await readJson<{
+    alreadyPending?: boolean;
+    ticket?: MailPendingPlanRequest;
+  }>(response);
+  if (!response.ok || !data.ticket) {
+    throw new Error(errorMessage(data, "Could not submit this plan request."));
+  }
   return {
-    ...sub,
-    planId: isMailPlanId(sub.planId)
-      ? sub.planId
-      : ((sub.plan || "").toLowerCase() as MailPlanId),
-    renewsAt: sub.renewsAt ?? sub.currentPeriodEnd,
+    alreadyPending: Boolean(data.alreadyPending),
+    ticket: data.ticket,
   };
-}
-
-export async function cancelMailSubscription(): Promise<void> {
-  const response = await sessionFetch("/api/v1/mail/subscription", {
-    method: "DELETE",
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw new Error(errorMessage(data, "Could not cancel subscription."));
-  }
 }

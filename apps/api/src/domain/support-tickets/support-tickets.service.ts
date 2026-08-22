@@ -54,6 +54,13 @@ const ALLOWED_CONTEXT_KEYS = new Set([
   'twoFactorEnabled',
   'userAgent',
   'referrer',
+  'kind',
+  'product',
+  'mailAppId',
+  'mailAppName',
+  'mailPlan',
+  'mailboxCount',
+  'monthlyTotal',
 ]);
 
 const USER_REPLYABLE_STATUSES: SupportTicketStatus[] = [
@@ -999,6 +1006,97 @@ export class SupportTicketsService extends OwnableService {
       status: SupportTicketStatus.WAITING_ON_USER,
       assignedTo: ticket.assignedTo ?? adminId,
       updatedAt: new Date(),
+    });
+
+    return messageDto;
+  }
+
+  /**
+   * Staff reply that closes the ticket as resolved (e.g. Mail plan activated).
+   */
+  async resolveWithStaffReply(
+    adminId: string,
+    ticketId: string,
+    body: string,
+  ) {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+      include: { user: { select: { email: true } } },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Support ticket not found');
+    }
+
+    if (
+      ticket.status === SupportTicketStatus.CLOSED ||
+      ticket.status === SupportTicketStatus.RESOLVED
+    ) {
+      throw new BadRequestException('Cannot reply to a closed ticket');
+    }
+
+    const sanitized = this.sanitizeText(body);
+    const now = new Date();
+
+    const message = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.supportTicketMessage.create({
+        data: {
+          id: randomUUID(),
+          ticketId,
+          authorId: adminId,
+          body: sanitized,
+          isStaff: true,
+        },
+      });
+
+      await tx.supportTicket.update({
+        where: { id: ticketId },
+        data: {
+          status: SupportTicketStatus.RESOLVED,
+          assignedTo: ticket.assignedTo ?? adminId,
+          closedAt: now,
+          updatedAt: now,
+        },
+      });
+
+      return created;
+    });
+
+    const locale = pickLocale(ticket.context);
+    const statusCopy = getStatusNotificationCopy(
+      SupportTicketStatus.RESOLVED,
+      locale,
+    );
+
+    await this.deliverUserTicketUpdate({
+      userId: ticket.userId,
+      userEmail: ticket.user.email,
+      ticketId: ticket.id,
+      ticketNumber: ticket.number,
+      ticketSubject: ticket.subject,
+      type: NotificationType.SUPPORT_TICKET_STATUS_CHANGED,
+      title: statusCopy.title,
+      message: `${statusCopy.message} (${ticket.number})`,
+      emailSubject: `${statusCopy.emailHeadline} — ${ticket.number}`,
+      emailHeadline: statusCopy.emailHeadline,
+      emailBody: statusCopy.emailBody,
+      ctaLabel: locale === 'en' ? 'View ticket' : 'عرض التذكرة',
+      data: {
+        ticketId: ticket.id,
+        ticketNumber: ticket.number,
+        status: SupportTicketStatus.RESOLVED,
+        updatedBy: adminId,
+      },
+    });
+
+    const messageDto = this.toMessageDto(message);
+    this.supportTicketsGateway.emitPublicMessage(ticketId, messageDto);
+    this.supportTicketsGateway.emitTicketUpdated(ticketId, ticket.userId, {
+      ticketId,
+      status: SupportTicketStatus.RESOLVED,
+      assignedTo: ticket.assignedTo ?? adminId,
+      updatedAt: now,
+      closedAt: now,
     });
 
     return messageDto;

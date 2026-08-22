@@ -56,6 +56,7 @@ export async function getHqDashboardData(): Promise<HqDashboardData> {
       forms: { total: 0, active: 0 },
       events: { total: 0, active: 0 },
       orders: { total: 0 },
+      mail: { total: 0, active: 0 },
     },
     users: users ?? {
       total: 0,

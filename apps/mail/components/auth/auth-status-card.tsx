@@ -70,7 +70,7 @@ export function AuthErrorCard({
           Sign-in incomplete
         </span>
 
-        <div className="mb-5 flex size-[3.75rem] items-center justify-center rounded-[1.125rem] border border-[var(--border)]/60 bg-gradient-to-b from-[var(--surface)] to-[var(--surface-secondary)]/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="mb-5 flex size-[3.75rem] items-center justify-center rounded-2xl border border-[var(--border)]/60 bg-gradient-to-b from-[var(--surface)] to-[var(--surface-secondary)]/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <Link2Off
             className="size-6 text-[var(--muted-foreground)]"
             strokeWidth={1.5}

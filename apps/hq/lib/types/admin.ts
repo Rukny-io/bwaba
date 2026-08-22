@@ -9,6 +9,7 @@ export interface PlatformStats {
   forms: { total: number; active: number };
   events: { total: number; active: number };
   orders: { total: number };
+  mail: { total: number; active: number };
 }
 
 export interface UsersStats {

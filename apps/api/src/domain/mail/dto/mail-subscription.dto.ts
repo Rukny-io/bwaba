@@ -1,35 +1,33 @@
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { BillingCycle, MailPlan } from '@prisma/client';
 import { Type } from 'class-transformer';
 
-export class UpsertMailSubscriptionDto {
+export class RequestMailSubscriptionDto {
   @IsEnum(MailPlan)
   plan: MailPlan;
 
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(500)
-  mailboxCount?: number;
-
-  @IsOptional()
-  @IsEnum(BillingCycle)
-  billingCycle?: BillingCycle;
+  mailboxCount: number;
 }
 
-export class AdminSetMailPlanDto {
+export class AdminActivateMailSubscriptionDto {
   @IsEnum(MailPlan)
   plan: MailPlan;
 
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(500)
-  mailboxCount?: number;
+  mailboxCount: number;
 
   @IsOptional()
   @IsEnum(BillingCycle)
   billingCycle?: BillingCycle;
+
+  @IsOptional()
+  @IsUUID()
+  ticketId?: string;
 }

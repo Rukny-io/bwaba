@@ -50,6 +50,7 @@ import type {
 import { getCsrfToken, ApiException } from '@/lib/api-client';
 import { supportTicketsQueryToApiParams } from '@/lib/support-tickets-query';
 import { storesQueryToApiParams } from '@/lib/stores-query';
+import { mailQueryToApiParams } from '@/lib/mail-query';
 import type {
   AdminStoreCategory,
   AdminStoreDetail,
@@ -58,6 +59,19 @@ import type {
   StoresListResponse,
   StoresStats,
 } from '@/lib/types/stores';
+import type {
+  AdminMailAppDetail,
+  AdminMailMailbox,
+  MailAlertsResponse,
+  MailAnalyticsResponse,
+  MailAppsExportResponse,
+  MailAppsListQuery,
+  MailAppsListResponse,
+  MailDeliveryListResponse,
+  MailDomainRefreshResponse,
+  MailDomainsResponse,
+  MailStats,
+} from '@/lib/types/mail';
 
 export const hqApi = {
   getStats: () => api.get<PlatformStats>('/admin/stats').then((r) => r.data),
@@ -364,4 +378,84 @@ export const hqApi = {
     }
     return data;
   },
+
+  activateMailAppSubscription: (
+    appId: string,
+    body: {
+      plan: string;
+      mailboxCount: number;
+      ticketId?: string;
+      billingCycle?: string;
+    },
+  ) =>
+    api
+      .post(`/mail/admin/apps/${encodeURIComponent(appId)}/subscription`, body)
+      .then((r) => r.data),
+
+  getMailStats: () => api.get<MailStats>('/admin/mail/stats').then((r) => r.data),
+
+  getMailAnalytics: (params?: { days?: number }) =>
+    api
+      .get<MailAnalyticsResponse>('/admin/mail/analytics', params)
+      .then((r) => r.data),
+
+  getMailAppAnalytics: (appId: string, params?: { days?: number }) =>
+    api
+      .get<MailAnalyticsResponse>(
+        `/admin/mail/apps/${encodeURIComponent(appId)}/analytics`,
+        params,
+      )
+      .then((r) => r.data),
+
+  getMailAlerts: () =>
+    api.get<MailAlertsResponse>('/admin/mail/alerts').then((r) => r.data),
+
+  getMailApps: (query: MailAppsListQuery = {}) =>
+    api
+      .get<MailAppsListResponse>('/admin/mail/apps', mailQueryToApiParams(query))
+      .then((r) => r.data),
+
+  exportMailApps: (query: Omit<MailAppsListQuery, 'page' | 'limit' | 'tab'> = {}) =>
+    api
+      .get<MailAppsExportResponse>('/admin/mail/export', mailQueryToApiParams(query))
+      .then((r) => r.data),
+
+  getMailApp: (appId: string) =>
+    api
+      .get<AdminMailAppDetail>(`/admin/mail/apps/${encodeURIComponent(appId)}`)
+      .then((r) => r.data),
+
+  getMailAppMailboxes: (appId: string) =>
+    api
+      .get<{ mailboxes: AdminMailMailbox[] }>(
+        `/admin/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
+      )
+      .then((r) => r.data),
+
+  updateMailMailboxStatus: (mailboxId: string, status: 'ACTIVE' | 'DISABLED') =>
+    api
+      .patch(`/admin/mail/mailboxes/${encodeURIComponent(mailboxId)}/status`, {
+        status,
+      })
+      .then((r) => r.data),
+
+  getMailDelivery: (params?: {
+    page?: number;
+    limit?: number;
+    appId?: string;
+    days?: number;
+  }) =>
+    api
+      .get<MailDeliveryListResponse>('/admin/mail/delivery', params)
+      .then((r) => r.data),
+
+  getMailDomains: () =>
+    api.get<MailDomainsResponse>('/admin/mail/domains').then((r) => r.data),
+
+  refreshMailAppDomain: (appId: string) =>
+    api
+      .post<MailDomainRefreshResponse>(
+        `/admin/mail/apps/${encodeURIComponent(appId)}/domain/refresh`,
+      )
+      .then((r) => r.data),
 };

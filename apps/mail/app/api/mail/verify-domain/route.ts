@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { findMailAppIdByDomain, upsertMailDomainBinding } from "@/lib/mail-domain-bindings";
 import { createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
-import { apiFetchJson } from "@/lib/server-api";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
@@ -75,11 +75,12 @@ export async function POST(request: Request) {
       await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
     }
 
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: normalized,
+      domainStatus: status,
+    });
+
     if (result.verified) {
-      await apiFetchJson(`/mail/apps/${encodeURIComponent(session.appId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ primaryDomain: normalized }),
-      });
       response.cookies.set(MAIL_READY_COOKIE, "1", {
         path: "/",
         maxAge: 31536000,

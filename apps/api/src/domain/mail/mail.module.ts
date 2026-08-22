@@ -16,6 +16,7 @@ import { MailSesService } from './mail-ses.service';
 import { MailInboundService } from './mail-inbound.service';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesWebhookController } from './mail-ses-webhook.controller';
+import { SupportTicketsModule } from '../support-tickets/support-tickets.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MailSesWebhookController } from './mail-ses-webhook.controller';
     ConfigModule,
     WhatsAppBusinessModule,
     StorageModule,
+    SupportTicketsModule,
   ],
   controllers: [
     MailSubscriptionsController,

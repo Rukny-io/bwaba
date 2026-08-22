@@ -1,13 +1,16 @@
 import {
   IsEmail,
   IsEnum,
+  IsISO8601,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MailDomainStatus } from '@prisma/client';
 
 export class CreateMailAppDto {
   @ApiProperty({ description: 'اسم تطبيق البريد', example: 'Acme Mail' })
@@ -53,9 +56,19 @@ export class UpdateMailAppDto {
   description?: string;
 
   @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsString()
   @MaxLength(253)
   primaryDomain?: string | null;
+
+  @IsOptional()
+  @IsEnum(MailDomainStatus)
+  domainStatus?: MailDomainStatus;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsISO8601()
+  domainCheckedAt?: string | null;
 
   @IsOptional()
   @IsEmail()

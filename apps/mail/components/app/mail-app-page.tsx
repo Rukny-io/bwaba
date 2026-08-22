@@ -12,6 +12,13 @@ import {
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { restoreDomainSetupRequest } from "@/lib/verify-domain-client";
 import type { MailDomainSetup } from "@/lib/mail-domain";
+import { MAIL_READY_COOKIE } from "@/lib/ses";
+
+function hasReadyCookie() {
+  return document.cookie
+    .split(";")
+    .some((part) => part.trim() === `${MAIL_READY_COOKIE}=1`);
+}
 
 export function MailAppPage() {
   const router = useRouter();
@@ -21,17 +28,17 @@ export function MailAppPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const appId = readMailAppIdFromDocument();
+    if (!appId) {
+      window.location.assign("/apps?error=app_required");
+      return;
+    }
+
+    setWizardDismissed(isMailWizardDismissed(appId));
+    setSetup(readMailDomainSetup(appId));
+    setHydrated(true);
 
     (async () => {
-      const appId = readMailAppIdFromDocument();
-      if (!appId) {
-        window.location.assign("/apps?error=app_required");
-        return;
-      }
-
-      setWizardDismissed(isMailWizardDismissed(appId));
-
-      // Server (Redis-backed) is source of truth — localStorage only mirrors after success.
       try {
         const restored = await restoreDomainSetupRequest();
         if (cancelled) return;
@@ -39,20 +46,16 @@ export function MailAppPage() {
         if (restored) {
           writeMailDomainSetup(restored, appId);
           setSetup(restored);
-          setHydrated(true);
-          if (restored.status === "ACTIVE") router.refresh();
+          if (restored.status === "ACTIVE" && !hasReadyCookie()) {
+            router.refresh();
+          }
           return;
         }
 
         writeMailDomainSetup(null, appId);
         setSetup(null);
       } catch {
-        // Offline/API failure: last known server-synced copy only.
-        if (!cancelled) {
-          setSetup(readMailDomainSetup(appId));
-        }
-      } finally {
-        if (!cancelled) setHydrated(true);
+        // Keep the local snapshot already shown.
       }
     })();
 
@@ -62,7 +65,7 @@ export function MailAppPage() {
   }, [router]);
 
   if (!hydrated) {
-    return <div className="min-h-dvh bg-[var(--background)]" />;
+    return <div className="min-h-[40vh] bg-[var(--background)]" />;
   }
 
   // ACTIVE = fully verified. Dismissed = user skipped DNS wait (propagation can take hours).

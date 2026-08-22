@@ -23,14 +23,16 @@ export function MailDomainSettingsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const appId = readMailAppIdFromDocument();
+    if (!appId) {
+      window.location.assign("/apps?error=app_required");
+      return;
+    }
+
+    setSetup(readMailDomainSetup(appId));
+    setHydrated(true);
 
     (async () => {
-      const appId = readMailAppIdFromDocument();
-      if (!appId) {
-        window.location.assign("/apps?error=app_required");
-        return;
-      }
-
       try {
         const restored = await restoreDomainSetupRequest();
         if (cancelled) return;
@@ -43,11 +45,7 @@ export function MailDomainSettingsPage() {
           setSetup(null);
         }
       } catch {
-        if (!cancelled) {
-          setSetup(readMailDomainSetup(appId));
-        }
-      } finally {
-        if (!cancelled) setHydrated(true);
+        // Keep the local snapshot already shown.
       }
     })();
 

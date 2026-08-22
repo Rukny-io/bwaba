@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { resolveAvatarUrl } from "@/lib/media-url";
 
@@ -20,7 +21,7 @@ const FORWARD_HEADERS = [
   "x-real-ip",
 ] as const;
 
-export async function getCurrentMailUser(): Promise<MailSessionUser | null> {
+async function fetchCurrentMailUser(): Promise<MailSessionUser | null> {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
     .getAll()
@@ -80,3 +81,5 @@ export async function getCurrentMailUser(): Promise<MailSessionUser | null> {
     return null;
   }
 }
+
+export const getCurrentMailUser = cache(fetchCurrentMailUser);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings, User } from "lucide-react";
 import { cn, Dropdown } from "@heroui/react";
+import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import {
   isNavItemActive,
   mailNavForPathname,
@@ -29,7 +30,7 @@ function Tooltip({ label }: { label: string }) {
 }
 
 function getNavClasses(isActive: boolean) {
-  return `relative group flex size-10 items-center justify-center transition-all duration-200 ${
+  return `relative group flex size-10 items-center justify-center transition-colors duration-150 ${
     isActive
       ? "rounded-full bg-[var(--foreground)] text-[var(--background)]"
       : "rounded-2xl text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
@@ -38,10 +39,22 @@ function getNavClasses(isActive: boolean) {
 
 function NavLink({ item, pathname }: { item: MailNavItem; pathname: string }) {
   const { href, icon: Icon, label, exact } = item;
-  const isActive = isNavItemActive(pathname, href, exact);
+  const { pendingHref, setPendingHref } = useMailNavPending();
+  const routeActive = isNavItemActive(pathname, href, exact);
+  const isActive = routeActive || pendingHref === href;
 
   return (
-    <Link href={href} className={getNavClasses(isActive)} aria-label={label}>
+    <Link
+      href={href}
+      prefetch
+      onClick={() => {
+        if (!routeActive) setPendingHref(href);
+      }}
+      className={getNavClasses(isActive)}
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
+      aria-busy={pendingHref === href || undefined}
+    >
       <Icon size={19} strokeWidth={isActive ? 2 : 1.7} aria-hidden />
       <Tooltip label={label} />
     </Link>
@@ -106,7 +119,7 @@ export function MailSidebar({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-3">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-[var(--surface)] px-2 py-3">
           <nav className="flex flex-col items-center gap-1.5" aria-label="Primary">
             {primary.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
@@ -115,7 +128,7 @@ export function MailSidebar({
         </div>
       </div>
 
-      <div className="mb-3 flex flex-col items-center gap-1.5 rounded-3xl bg-[var(--surface)] px-2 py-3">
+      <div className="mb-3 flex flex-col items-center gap-1.5 rounded-2xl bg-[var(--surface)] px-2 py-3">
         <nav className="flex flex-col items-center gap-1.5" aria-label="Email tools">
           {secondary.map((item) => (
             <NavLink key={item.href} item={item} pathname={pathname} />

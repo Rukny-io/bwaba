@@ -6,6 +6,7 @@ import {
 } from "@/lib/mail-domain-bindings";
 import { isValidMailAppId, MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
 import { apiFetchJson, requireMailSession } from "@/lib/server-api";
+import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { warmMailAppOwnerCache } from "@/lib/require-mail-app";
 import {
   buildSlotMap,
@@ -78,9 +79,9 @@ export async function GET(request: Request, ctx: RouteCtx) {
 
   const cleared = await dedupeDomainBindings();
   for (const clearedId of cleared) {
-    await apiFetchJson(`/mail/apps/${encodeURIComponent(clearedId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ primaryDomain: null }),
+    await syncMailAppDomainToNest(clearedId, {
+      primaryDomain: null,
+      domainStatus: "NONE",
     });
   }
 
@@ -88,15 +89,15 @@ export async function GET(request: Request, ctx: RouteCtx) {
   const domainReady = binding?.status === "ACTIVE";
 
   const listedDomain = appResult.data.app.primaryDomain;
-  if (binding?.domain && listedDomain !== binding.domain) {
-    await apiFetchJson(`/mail/apps/${encodeURIComponent(appId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ primaryDomain: binding.domain }),
+  if (binding?.domain) {
+    await syncMailAppDomainToNest(appId, {
+      primaryDomain: binding.domain,
+      domainStatus: binding.status,
     });
-  } else if (!binding && listedDomain) {
-    await apiFetchJson(`/mail/apps/${encodeURIComponent(appId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ primaryDomain: null }),
+  } else if (listedDomain) {
+    await syncMailAppDomainToNest(appId, {
+      primaryDomain: null,
+      domainStatus: "NONE",
     });
   }
 

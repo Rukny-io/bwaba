@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  GetEmailIdentityCommand,
   SESv2Client,
   SendEmailCommand,
   type SendEmailCommandInput,
@@ -29,6 +30,47 @@ export class MailSesService {
   private client: SESv2Client | null = null;
 
   constructor(private readonly config: ConfigService) {}
+
+  isConfigured(): boolean {
+    const accessKeyId = this.config.get<string>('AWS_ACCESS_KEY_ID')?.trim();
+    const secretAccessKey = this.config
+      .get<string>('AWS_SECRET_ACCESS_KEY')
+      ?.trim();
+    return Boolean(accessKeyId && secretAccessKey);
+  }
+
+  async getEmailIdentity(domain: string): Promise<{
+    found: boolean;
+    sending: boolean;
+    dkim: string;
+    tokens: string[];
+  }> {
+    try {
+      const identity = await this.getClient().send(
+        new GetEmailIdentityCommand({ EmailIdentity: domain }),
+      );
+      return {
+        found: true,
+        sending: Boolean(identity.VerifiedForSendingStatus),
+        dkim: identity.DkimAttributes?.Status ?? 'NOT_STARTED',
+        tokens: identity.DkimAttributes?.Tokens ?? [],
+      };
+    } catch (error) {
+      const name =
+        typeof error === 'object' && error && 'name' in error
+          ? String(error.name)
+          : '';
+      if (name.includes('NotFound')) {
+        return {
+          found: false,
+          sending: false,
+          dkim: 'NOT_STARTED',
+          tokens: [],
+        };
+      }
+      throw error;
+    }
+  }
 
   private getClient(): SESv2Client {
     if (this.client) return this.client;

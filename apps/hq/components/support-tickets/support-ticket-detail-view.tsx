@@ -134,8 +134,8 @@ export function SupportTicketDetailView({
     setActiveTab(parseTabParam(searchParams.get('tab')));
   }, [searchParams]);
 
-  const loadTicket = useCallback(async () => {
-    setLoading(true);
+  const loadTicket = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [data, adminsRes] = await Promise.all([
         hqApi.getSupportTicket(ticketId),
@@ -155,9 +155,9 @@ export function SupportTicketDetailView({
       appToast.error(
         error instanceof ApiException ? error.message : 'Could not load ticket',
       );
-      router.replace('/app/support-tickets');
+      if (!opts?.silent) router.replace('/app/support-tickets');
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [ticketId, router]);
 
@@ -385,6 +385,7 @@ export function SupportTicketDetailView({
             canStartWork={Boolean(canStartWork)}
             busy={busy}
             onStartWork={() => void handleStartWork()}
+            onMailPlanActivated={() => loadTicket({ silent: true })}
           />
         ) : null}
 

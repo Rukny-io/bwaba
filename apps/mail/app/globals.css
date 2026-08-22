@@ -175,7 +175,7 @@ body {
 
 .dashboard-card {
   border: none;
-  border-radius: 2rem;
+  border-radius: 1rem;
   background: var(--surface);
   box-shadow: none;
   transition: background-color 0.2s ease;

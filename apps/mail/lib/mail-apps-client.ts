@@ -14,8 +14,15 @@ export type MailApp = {
   description: string | null;
   status: MailAppStatus;
   primaryDomain: string | null;
+  domainStatus?: "NONE" | "PENDING_DNS" | "VERIFYING" | "ACTIVE" | "FAILED";
+  domainCheckedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  subscription: {
+    plan: string;
+    status: string;
+    mailboxCount: number;
+  } | null;
 };
 
 async function readJson<T>(response: Response): Promise<T & { message?: string | string[] }> {

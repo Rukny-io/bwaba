@@ -96,7 +96,7 @@ export function MailComposeModal({
       <form
         aria-labelledby={titleId}
         onSubmit={handleSubmit}
-        className="relative z-10 flex max-h-[min(92dvh,720px)] w-full max-w-xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-xl dark:bg-[var(--surface)]"
+        className="relative z-10 flex max-h-[min(92dvh,720px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-[var(--surface)]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">

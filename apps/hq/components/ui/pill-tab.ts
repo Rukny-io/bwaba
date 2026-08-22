@@ -29,4 +29,4 @@ export function workspaceTabClassName(active: boolean, className?: string) {
 }
 
 export const detailPanelClassName =
-  'rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:rounded-3xl sm:p-5';
+  'rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5';

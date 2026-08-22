@@ -4,6 +4,7 @@ import type { MailSubscriptionView } from "@/lib/mail-subscription-client";
 export type EffectiveMailLimits = MailPlanLimits & {
   planId: string;
   mailboxCount: number;
+  storageQuotaBytesPerMailbox: number;
 };
 
 export function limitsFromSubscription(
@@ -14,6 +15,7 @@ export function limitsFromSubscription(
     ...subscription.limits,
     planId: subscription.planId,
     mailboxCount: subscription.mailboxCount,
+    storageQuotaBytesPerMailbox: subscription.storageQuotaBytesPerMailbox,
   };
 }
 

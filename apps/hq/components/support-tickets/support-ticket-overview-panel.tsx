@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 import { Button } from '@heroui/react';
-import type { AdminSupportTicketDetail } from '@/lib/types/support-tickets';
+import {
+  parseMailPlanRequestContext,
+  type AdminSupportTicketDetail,
+} from '@/lib/types/support-tickets';
 import {
   formatTicketCategory,
   formatTicketDateTime,
@@ -11,6 +14,7 @@ import {
   formatTicketStatus,
 } from '@/lib/support-tickets-format';
 import { detailPanelClassName } from '@/components/ui/pill-tab';
+import { SupportTicketMailPlanPanel } from '@/components/support-tickets/support-ticket-mail-plan-panel';
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -32,6 +36,7 @@ interface SupportTicketOverviewPanelProps {
   canStartWork: boolean;
   busy: boolean;
   onStartWork: () => void;
+  onMailPlanActivated?: () => Promise<void> | void;
 }
 
 export function SupportTicketOverviewPanel({
@@ -40,11 +45,22 @@ export function SupportTicketOverviewPanel({
   canStartWork,
   busy,
   onStartWork,
+  onMailPlanActivated,
 }: SupportTicketOverviewPanelProps) {
   const isAssignedToMe = ticket.assignedTo === currentAdminId;
+  const mailPlanRequest = parseMailPlanRequestContext(ticket.context);
+  const showRawContext =
+    ticket.context &&
+    Object.keys(ticket.context).length > 0 &&
+    !mailPlanRequest;
 
   return (
     <div className="space-y-4">
+      <SupportTicketMailPlanPanel
+        ticket={ticket}
+        busy={busy}
+        onActivated={onMailPlanActivated ?? (() => undefined)}
+      />
       <section className={detailPanelClassName}>
         <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
           Ticket description
@@ -54,7 +70,7 @@ export function SupportTicketOverviewPanel({
         </p>
       </section>
 
-      {ticket.context && Object.keys(ticket.context).length > 0 ? (
+      {showRawContext ? (
         <section className={detailPanelClassName}>
           <h2 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
             Context

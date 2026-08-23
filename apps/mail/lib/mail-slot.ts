@@ -27,13 +27,24 @@ export function mailSlotPath(slotIndex: number, path = "/app"): string {
   return `${mailSlotBase(slotIndex)}${normalized === "/" ? "/app" : normalized}`;
 }
 
+export function isMailMarketingPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === "/getting-started" ||
+    pathname.startsWith("/getting-started/") ||
+    pathname === "/faqs" ||
+    pathname.startsWith("/faqs/")
+  );
+}
+
 export function withMailSlot(pathname: string, slotIndex: number | null | undefined): string {
   if (slotIndex === null || slotIndex === undefined || !Number.isInteger(slotIndex)) {
     return pathname;
   }
   if (MAIL_SLOT_PATH_RE.test(pathname)) return pathname;
-  // Picker / billing stay global (not under /uN).
+  // Picker / billing / marketing stay global (not under /uN).
   if (
+    isMailMarketingPath(pathname) ||
     pathname === "/apps" ||
     pathname.startsWith("/apps/") ||
     pathname === "/pricing" ||

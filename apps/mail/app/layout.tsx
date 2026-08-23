@@ -5,7 +5,8 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Rukny Mail",
-  description: "Agentic mail for Rukny",
+  description:
+    "Business email on your domain — mailboxes, DNS authentication, and Amazon SES delivery.",
   icons: {
     icon: "/rukny-logo.svg",
     apple: "/rukny-logo.svg",

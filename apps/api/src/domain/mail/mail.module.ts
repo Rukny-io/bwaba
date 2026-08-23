@@ -26,6 +26,7 @@ import { MailSesService } from './mail-ses.service';
 import { MailInboundService } from './mail-inbound.service';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesWebhookController } from './mail-ses-webhook.controller';
+import { MailPublicController } from './mail-public.controller';
 import { SupportTicketsModule } from '../support-tickets/support-tickets.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailAliasController,
     MailForwarderController,
     MailSesWebhookController,
+    MailPublicController,
   ],
   providers: [
     MailSubscriptionsService,

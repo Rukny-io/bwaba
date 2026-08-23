@@ -150,6 +150,58 @@ body {
   font-family: var(--font-sans);
 }
 
+.mail-marketing {
+  --background: #ffffff;
+  --foreground: #132327;
+  --muted: rgba(19, 35, 39, 0.55);
+  --muted-foreground: rgba(19, 35, 39, 0.55);
+  --border: #e8ecf0;
+  --primary: #062c30;
+  --primary-foreground: #ffffff;
+  --brand-blue: #062c30;
+  --brand-blue-soft: #eef2f2;
+  --secondary: #eef2f2;
+  --secondary-foreground: #062c30;
+  --surface: #ffffff;
+  --surface-secondary: #f6f7f8;
+  --success: #062c30;
+  color: #132327;
+}
+
+.mail-marketing-radial {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: radial-gradient(125% 125% at 50% 10%, #fff 40%, rgba(2, 121, 126, 0.14) 100%);
+}
+
+.mail-hero-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mail-hero-enter {
+    animation: mailHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .mail-hero-enter-delayed {
+    animation: mailHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+}
+
+@keyframes mailHeroEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .dashboard-page {
   width: 100%;
   padding-top: 0.75rem;
@@ -254,4 +306,68 @@ body {
     rgba(255, 255, 255, 0.02) 40%,
     transparent 100%
   );
+}
+
+@keyframes mail-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.mail-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: mail-marquee 32s linear infinite;
+}
+
+@keyframes mail-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.mail-caret {
+  animation: mail-caret 1s step-end infinite;
+}
+
+@keyframes mail-auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mail-auth-in {
+  animation: mail-auth-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes mail-send-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mail-send-rise {
+  animation: mail-send-rise 0.45s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mail-marquee-track,
+  .mail-caret,
+  .mail-auth-in,
+  .mail-send-rise {
+    animation: none;
+  }
 }

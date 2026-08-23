@@ -9,6 +9,7 @@ import { isValidMailAppId, MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
 import { checkMailAuth } from "@/lib/middleware-auth";
 import { MAIL_READY_COOKIE } from "@/lib/ses";
 import {
+  isMailMarketingPath,
   mailSlotPath,
   parseMailSlot,
   stripMailSlotPrefix,
@@ -170,6 +171,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Marketing pages are public for signed-out and signed-in visitors.
+  if (isMailMarketingPath(pathname)) {
+    return NextResponse.next();
+  }
+
   if (matchesPrefix(pathname, PUBLIC_PREFIXES)) {
     const auth = await checkMailAuth(request);
     const isAuthPage = matchesPrefix(pathname, AUTH_PAGES);
@@ -283,17 +289,6 @@ export async function proxy(request: NextRequest) {
       return response;
     }
     return redirectToApps(request, "app_required");
-  }
-
-  if (pathname === "/") {
-    if (auth.user && hasAppCookie) {
-      const map = await loadUserSlotMap(request, auth.user.id);
-      const slot = map?.apps[cookieAppId];
-      if (typeof slot === "number") {
-        return redirectPath(request, mailSlotPath(slot, "/app"));
-      }
-    }
-    return redirectToApps(request);
   }
 
   if (!hasAppCookie && !isAppsArea && !isBillingArea) {

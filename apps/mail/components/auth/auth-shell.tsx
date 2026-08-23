@@ -28,7 +28,7 @@ export function AuthShell({ children, className = "" }: AuthShellProps) {
       <header className="relative z-10 px-4 pt-4 md:px-6">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3.5 md:px-6">
           <Link
-            href="/login"
+            href="/"
             className="text-base font-semibold tracking-tight text-[var(--foreground)] transition-opacity hover:opacity-80 md:text-lg"
           >
             Rukny — Mail

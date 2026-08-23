@@ -646,4 +646,21 @@ export class MailMessagesService {
       throw error;
     }
   }
+
+  private sentCountCache: { at: number; value: number } | null = null;
+
+  async countPlatformEmailsSent(): Promise<number> {
+    const now = Date.now();
+    if (this.sentCountCache && now - this.sentCountCache.at < 30_000) {
+      return this.sentCountCache.value;
+    }
+    const value = await this.prisma.mailMessage.count({
+      where: {
+        direction: MailMessageDirection.OUTBOUND,
+        status: MailMessageStatus.SENT,
+      },
+    });
+    this.sentCountCache = { at: now, value };
+    return value;
+  }
 }

@@ -68,8 +68,7 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_FORMS_URL || "http://localhost:3007",
     NEXT_PUBLIC_MAIL_URL:
       process.env.NEXT_PUBLIC_MAIL_URL || "http://localhost:3009",
-    NEXT_PUBLIC_HQ_URL:
-      process.env.NEXT_PUBLIC_HQ_URL || "http://localhost:3002",
+    NEXT_PUBLIC_HQ_URL: process.env.NEXT_PUBLIC_HQ_URL || "",
     NEXT_PUBLIC_ACCOUNTS_URL:
       process.env.NEXT_PUBLIC_ACCOUNTS_URL || "http://localhost:3005",
     NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED:

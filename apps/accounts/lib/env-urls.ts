@@ -2,6 +2,7 @@ export {
   isAllowedRedirectHost,
   isLoopbackHost,
   LOCAL_SERVICE_URLS,
+  PRODUCTION_SERVICE_URLS,
   resolveAccountsUrl,
   resolveApiBaseUrl,
   resolveAppUrl,

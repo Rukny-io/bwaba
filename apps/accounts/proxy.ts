@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import {
   isAllowedRedirectHost,
   resolveAccountsUrl,
-  resolveHqUrl,
 } from "@/lib/env-urls";
 
 // المسارات العامة (لا تحتاج حماية)
@@ -207,10 +206,7 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-function getRedirectByRole(role: string, hostname?: string): string {
-  if (role === "ADMIN") {
-    return resolveHqUrl({ hostname });
-  }
+function getRedirectByRole(_role: string, hostname?: string): string {
   return `${resolveAccountsUrl({ hostname }).replace(/\/$/, "")}/continue`;
 }
 

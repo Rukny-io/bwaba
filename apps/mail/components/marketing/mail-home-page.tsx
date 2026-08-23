@@ -157,9 +157,6 @@ export function MailHomePage({
                   </li>
                 );
               })}
-              <li className="col-span-full bg-white">
-                <MailEmailsSentSection emailsSent={emailsSent} />
-              </li>
             </ul>
           </div>
         </section>

@@ -4,13 +4,13 @@ const accountsBase =
 const formsBase =
   process.env.NEXT_PUBLIC_FORMS_URL || 'https://forms.rukny.io';
 
-const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://app.rukny.io';
+const mailBase = process.env.NEXT_PUBLIC_MAIL_URL || 'https://mail.rukny.io';
 
 export const siteUrls = {
   home: 'https://rukny.io',
   accounts: accountsBase,
   forms: formsBase,
-  app: appBase,
+  mail: mailBase,
   privacy: `${accountsBase}/privacy`,
   terms: `${accountsBase}/terms`,
   login: `${accountsBase}/login`,

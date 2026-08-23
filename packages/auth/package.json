@@ -37,7 +37,8 @@
     "./client/oauth-exchange": "./src/client/oauth-exchange.ts",
     "./client/csrf-cookie": "./src/client/csrf-cookie.ts",
     "./client/env-urls": "./src/client/env-urls.ts",
-    "./edge/check-edge-auth": "./src/edge/check-edge-auth.ts"
+    "./edge/check-edge-auth": "./src/edge/check-edge-auth.ts",
+    "./edge/preview-access": "./src/edge/preview-access.ts"
   },
   "scripts": {
     "build": "tsup src/index.ts src/middleware/index.ts src/types/index.ts src/config/index.ts src/utils/index.ts --format cjs,esm --dts --out-dir dist --clean",

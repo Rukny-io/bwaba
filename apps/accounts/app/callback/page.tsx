@@ -7,7 +7,7 @@ import { AuthSplitPage } from "@/components/auth/auth-split-page"
 import { AuthStatus } from "@/components/auth/auth-status"
 import { exchangeCodeOnce, issueOAuthCode, saveProfileOAuthHint } from "@/lib/api"
 import { getSafeRedirectUrl, getRedirectUrlByRole } from "@/lib/redirect"
-import { resolveApiBaseUrl, resolveAppUrl } from "@/lib/env-urls"
+import { resolveApiBaseUrl } from "@/lib/env-urls"
 import {
   clearOAuthParamsFromUrl,
   clearStashedOAuthParams,
@@ -46,9 +46,7 @@ function CallbackContent() {
 
     const doExchange = async () => {
       const accountsOrigin = window.location.origin
-      const appUrl = resolveAppUrl().replace(/\/$/, "")
-      const defaultAppTarget = `${appUrl}/app/links`
-      let resolvedTarget = defaultAppTarget
+      let resolvedTarget = getRedirectUrlByRole()
 
       try {
         const urlNext = searchParams.get("next") || hashNext
@@ -84,23 +82,14 @@ function CallbackContent() {
 
         localStorage.removeItem("auth_next")
 
-        if (!nextTarget) {
-          resolvedTarget = getRedirectUrlByRole(result.user?.role)
-        } else {
-          try {
-            resolvedTarget = nextTarget.startsWith("http")
-              ? nextTarget
-              : new URL(nextTarget, accountsOrigin).toString()
-          } catch {
-            resolvedTarget = getRedirectUrlByRole(result.user?.role)
-          }
-        }
+        resolvedTarget = getSafeRedirectUrl(nextTarget, result.user?.role)
 
         let targetOrigin = accountsOrigin
         try {
           targetOrigin = new URL(resolvedTarget).origin
         } catch {
-          targetOrigin = new URL(appUrl).origin
+          resolvedTarget = getRedirectUrlByRole(result.user?.role)
+          targetOrigin = new URL(resolvedTarget).origin
         }
 
         if (targetOrigin !== accountsOrigin) {

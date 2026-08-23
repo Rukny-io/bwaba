@@ -8,7 +8,7 @@ import { AuthLoadingFallback } from "@/components/auth/auth-loading"
 import { AuthVerifyPage } from "@/components/auth/auth-verify-page"
 import { TotpForm } from "@/components/auth/totp-form"
 import { verify2FALogin, sendWhatsappOtp } from "@/lib/api"
-import { getRedirectUrlByRole } from "@/lib/redirect"
+import { consumeStoredNext } from "@/lib/redirect"
 
 function Verify2FAContent() {
   const router = useRouter()
@@ -66,7 +66,7 @@ function Verify2FAContent() {
     sessionStorage.removeItem("auth_email")
     sessionStorage.removeItem("auth_2fa_method")
 
-    window.location.href = getRedirectUrlByRole(result.user?.role)
+    window.location.href = consumeStoredNext(result.user?.role)
   }
 
   const getTitle = () => {

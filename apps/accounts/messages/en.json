@@ -11,6 +11,17 @@
     "skip_to_content": "Skip to content",
     "unexpected_error": "An unexpected error occurred"
   },
+  "Continue": {
+    "badge": "Welcome",
+    "title": "Where do you want to go?",
+    "subtitle": "Choose a Rukny product to continue. You can switch anytime from your account.",
+    "forms_title": "Forms",
+    "forms_desc": "Build forms and collect responses",
+    "mail_title": "Mail",
+    "mail_desc": "Business email and calendar",
+    "account_title": "Account",
+    "account_desc": "Profile, security, and billing"
+  },
   "Auth": {
     "auth_brand": "Rukny",
     "login_badge": "Sign in",

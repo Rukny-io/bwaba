@@ -1,44 +1,33 @@
 import {
   isAllowedRedirectHost,
-  resolveAppUrl,
-  resolveBusinessUrl,
-  resolveDeveloperUrl,
+  resolveAccountsUrl,
   resolveHqUrl,
 } from '@/lib/env-urls';
 
 export type UserRole = "ADMIN" | "PREMIUM" | "BASIC" | "GUEST" | "STORE_OWNER" | "DEVELOPER"
 
-/**
- * إرجاع الرابط المناسب بناءً على الصلاحية
- */
-export function getRedirectUrlByRole(role?: string, hostname?: string | null): string {
-  const opts = { hostname };
-  const appUrl = resolveAppUrl(opts);
-  const businessUrl = resolveBusinessUrl(opts);
-  const developersUrl = resolveDeveloperUrl(opts);
-  const adminUrl = resolveHqUrl(opts);
-
-  if (!role) return `${appUrl.replace(/\/$/, '')}/app/links`;
-
-  const upperRole = role.toUpperCase();
-
-  if (upperRole === "STORE_OWNER" || upperRole === "PREMIUM") {
-    return businessUrl;
-  }
-
-  if (upperRole === "DEVELOPER") {
-    return `${developersUrl.replace(/\/$/, "")}/apps`;
-  }
-
-  if (upperRole === "ADMIN") {
-    return adminUrl;
-  }
-
-  return `${appUrl.replace(/\/$/, '')}/app/links`;
+function accountsContinueUrl(hostname?: string | null): string {
+  return `${resolveAccountsUrl({ hostname }).replace(/\/$/, '')}/continue`;
 }
 
 /**
- * التحقق من أمان رابط الوجهة (Open Redirect Protection)
+ * Default destination after sign-in.
+ * Admins go to HQ; everyone else chooses Forms, Mail, or Account.
+ */
+export function getRedirectUrlByRole(role?: string, hostname?: string | null): string {
+  if (role && role.toUpperCase() === "ADMIN") {
+    return resolveHqUrl({ hostname });
+  }
+  return accountsContinueUrl(hostname);
+}
+
+function toAbsoluteAccountsPath(path: string, hostname?: string | null): string {
+  const origin = resolveAccountsUrl({ hostname }).replace(/\/$/, '');
+  return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+/**
+ * Open-redirect protection. Relative paths stay on accounts.
  */
 export function getSafeRedirectUrl(
   nextUrl: string | null | undefined,
@@ -49,7 +38,9 @@ export function getSafeRedirectUrl(
   if (!nextUrl) return fallbackUrl;
 
   try {
-    if (nextUrl.startsWith('/')) return nextUrl;
+    if (nextUrl.startsWith('/') && !nextUrl.startsWith('//')) {
+      return toAbsoluteAccountsPath(nextUrl, hostname);
+    }
 
     const url = new URL(nextUrl);
     if (isAllowedRedirectHost(url.hostname)) {
@@ -60,4 +51,14 @@ export function getSafeRedirectUrl(
   }
 
   return fallbackUrl;
+}
+
+/** Use stored `auth_next` when present, then clear it. */
+export function consumeStoredNext(role?: string): string {
+  let stored: string | null = null;
+  if (typeof window !== 'undefined') {
+    stored = localStorage.getItem('auth_next');
+    localStorage.removeItem('auth_next');
+  }
+  return getSafeRedirectUrl(stored, role);
 }

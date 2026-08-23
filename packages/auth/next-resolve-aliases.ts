@@ -8,6 +8,7 @@ export function authResolveAliases(): Record<string, string> {
     '@rukny/auth/client/csrf-cookie': `${relSrc}/client/csrf-cookie.ts`,
     '@rukny/auth/client/env-urls': `${relSrc}/client/env-urls.ts`,
     '@rukny/auth/edge/check-edge-auth': `${relSrc}/edge/check-edge-auth.ts`,
+    '@rukny/auth/edge/preview-access': `${relSrc}/edge/preview-access.ts`,
     '@rukny/auth/server': `${relSrc}/server/index.ts`,
   };
 }

@@ -3,10 +3,6 @@ import type { NextRequest } from "next/server";
 import {
   isAllowedRedirectHost,
   resolveAccountsUrl,
-  resolveAppUrl,
-  resolveBusinessUrl,
-  resolveDeveloperUrl,
-  resolveFormsUrl,
   resolveHqUrl,
 } from "@/lib/env-urls";
 
@@ -22,7 +18,7 @@ const PUBLIC_PATHS = [
 ];
 
 // المسارات المحمية (تحتاج جلسة)
-const PROTECTED_PATHS = ["/onboarding", "/manage"];
+const PROTECTED_PATHS = ["/onboarding", "/manage", "/continue"];
 
 function getAccessToken(request: NextRequest): string | undefined {
   return (
@@ -145,9 +141,7 @@ export async function proxy(request: NextRequest) {
             }
           }
           const role = (decoded.role as string) || "USER";
-          return NextResponse.redirect(
-            getRedirectByRole(role, request.nextUrl.hostname),
-          );
+          return redirectLoggedInUser(request, role);
         }
       } catch {
         // التوكن فاسد → سيتم حذفه أدناه
@@ -196,9 +190,7 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    return NextResponse.redirect(
-      getRedirectByRole(role, request.nextUrl.hostname),
-    );
+    return redirectLoggedInUser(request, role);
   }
 
   const isProtected = PROTECTED_PATHS.some((p) =>
@@ -216,25 +208,30 @@ export async function proxy(request: NextRequest) {
 }
 
 function getRedirectByRole(role: string, hostname?: string): string {
-  const opts = { hostname };
-  const appUrl = resolveAppUrl(opts);
-  const businessUrl = resolveBusinessUrl(opts);
-  const developersUrl = resolveDeveloperUrl(opts);
-  const formsUrl = resolveFormsUrl(opts);
-  const hqUrl = resolveHqUrl(opts);
-
-  switch (role) {
-    case "ADMIN":
-      return hqUrl;
-    case "DEVELOPER":
-      return developersUrl;
-    case "BUSINESS":
-      return businessUrl;
-    case "FORMS":
-      return formsUrl;
-    default:
-      return appUrl;
+  if (role === "ADMIN") {
+    return resolveHqUrl({ hostname });
   }
+  return `${resolveAccountsUrl({ hostname }).replace(/\/$/, "")}/continue`;
+}
+
+function redirectLoggedInUser(request: NextRequest, role: string): NextResponse {
+  const nextParam = request.nextUrl.searchParams.get("next");
+  if (nextParam) {
+    try {
+      if (nextParam.startsWith("/") && !nextParam.startsWith("//")) {
+        return NextResponse.redirect(new URL(nextParam, request.url));
+      }
+      const nextUrl = new URL(nextParam);
+      if (isAllowedRedirectHost(nextUrl.hostname)) {
+        return NextResponse.redirect(nextUrl.toString());
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return NextResponse.redirect(
+    getRedirectByRole(role, request.nextUrl.hostname),
+  );
 }
 
 export const config = {

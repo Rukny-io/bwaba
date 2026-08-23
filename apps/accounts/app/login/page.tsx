@@ -31,7 +31,7 @@ import {
   clearOAuthHash,
   readOAuthCallbackParams,
 } from "@/lib/oauth-callback"
-import { getRedirectUrlByRole } from "@/lib/redirect"
+import { getRedirectUrlByRole, getSafeRedirectUrl } from "@/lib/redirect"
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1"
@@ -155,25 +155,18 @@ function LoginPageContent() {
     }
 
     const accountsOrigin = window.location.origin
-    const appUrl = (
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    ).replace(/\/$/, "")
     const sessionNext = localStorage.getItem("auth_next")
     const nextTarget = nextParam || sessionNext
     localStorage.removeItem("auth_next")
 
-    let resolvedTarget = nextTarget
-      ? nextTarget.startsWith("http")
-        ? nextTarget
-        : new URL(nextTarget, accountsOrigin).toString()
-      : getRedirectUrlByRole(result.user?.role)
+    let resolvedTarget = getSafeRedirectUrl(nextTarget, result.user?.role)
 
     let targetOrigin = accountsOrigin
     try {
       targetOrigin = new URL(resolvedTarget).origin
     } catch {
-      targetOrigin = new URL(appUrl).origin
       resolvedTarget = getRedirectUrlByRole(result.user?.role)
+      targetOrigin = new URL(resolvedTarget).origin
     }
 
     if (targetOrigin !== accountsOrigin) {

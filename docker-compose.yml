@@ -186,7 +186,9 @@ services:
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
         - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+        - NEXT_PUBLIC_MAIL_URL=${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
+        - RUKNY_PREVIEW_ACCESS_KEY=${RUKNY_PREVIEW_ACCESS_KEY:-}
     container_name: rukny_app
     restart: always
     ports:
@@ -206,7 +208,9 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${NEXT_PUBLIC_PUBLIC_SITE_URL:-https://rukny.io}
       NEXT_PUBLIC_ACCOUNTS_URL: ${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
+      NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
+      RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     networks:
       - rukny_network
 
@@ -223,6 +227,7 @@ services:
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
         - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+        - NEXT_PUBLIC_MAIL_URL=${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
         - NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED=${NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED:-true}
         - NEXT_PUBLIC_OAUTH_LINKEDIN_ENABLED=${NEXT_PUBLIC_OAUTH_LINKEDIN_ENABLED:-true}
@@ -243,6 +248,7 @@ services:
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
       NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+      NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
     networks:
       - rukny_network
@@ -289,9 +295,11 @@ services:
         NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
         NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
         NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+        NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
         NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
         JWT_SECRET: ${JWT_SECRET}
+        RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     container_name: rukny_business
     restart: always
     ports:
@@ -311,11 +319,13 @@ services:
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
       NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+      NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     networks:
       - rukny_network
 
@@ -358,8 +368,10 @@ services:
         NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
         NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
         NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+        NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
         NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
+        RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     container_name: rukny_developers
     restart: always
     ports:
@@ -379,10 +391,12 @@ services:
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
       NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
+      NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
       NEXT_PUBLIC_DEV_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
       JWT_SECRET: ${JWT_SECRET}
+      RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     networks:
       - rukny_network
 

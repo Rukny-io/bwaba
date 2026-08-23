@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { LAST_APP_COOKIE } from '@/lib/app-routes';
 import { isValidAppId } from '@/lib/api/types';
+import { applyPreviewAccessGate } from '@rukny/auth/edge/preview-access';
 import { resolveClientNext } from '@/lib/auth-redirect';
 import { checkDeveloperAuth } from '@/lib/middleware-auth';
 
@@ -37,11 +38,20 @@ function rememberLastApp(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.')
-  ) {
+  if (pathname.startsWith('/_next') || pathname.includes('.')) {
+    return rememberLastApp(request, NextResponse.next());
+  }
+
+  if (pathname === '/unavailable' || pathname.startsWith('/unavailable/')) {
+    return rememberLastApp(request, NextResponse.next());
+  }
+
+  const previewGate = applyPreviewAccessGate(request);
+  if (previewGate) {
+    return rememberLastApp(request, previewGate);
+  }
+
+  if (pathname.startsWith('/api')) {
     return rememberLastApp(request, NextResponse.next());
   }
 

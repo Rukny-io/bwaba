@@ -4,7 +4,6 @@ import Link from 'next/link';
 import {
   ArrowUpRight,
   Bot,
-  Code2,
   ExternalLink,
   FileText,
   HelpCircle,
@@ -61,10 +60,8 @@ const Linkedin = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const MAIN_SITE = 'https://rukny.io';
-const DEVELOPERS_URL =
-  process.env.NEXT_PUBLIC_DEVELOPERS_URL || 'https://developers.rukny.io';
-const BUSINESS_URL =
-  process.env.NEXT_PUBLIC_BUSINESS_URL || 'https://business.rukny.io';
+const MAIL_URL =
+  process.env.NEXT_PUBLIC_MAIL_URL || 'https://mail.rukny.io';
 const PRIVACY_URL = `${ACCOUNTS_URL}/privacy`;
 const TERMS_URL = `${ACCOUNTS_URL}/terms`;
 
@@ -93,10 +90,10 @@ const COLUMNS: FooterColumn[] = [
   {
     title: 'الخدمات',
     links: [
-      { label: 'مطورين', href: DEVELOPERS_URL, icon: Code2, external: true },
+      { label: 'الحساب', href: ACCOUNTS_URL, icon: Users, external: true },
       { label: 'فريق العمل', href: `${MAIN_SITE}/team`, icon: Users, external: true },
       { label: 'ذكاء اصطناعي', href: `${MAIN_SITE}/products/ai`, icon: Bot, external: true },
-      { label: 'بريد الأعمال', href: BUSINESS_URL, icon: Mail, external: true },
+      { label: 'بريد ركني', href: MAIL_URL, icon: Mail, external: true },
     ],
   },
   {

@@ -225,14 +225,7 @@ function CompleteProfileContent() {
     if (validateStep1()) setStep(2)
   }
 
-  const resolveDestination = (type: AccountType) => {
-    const appBase = (process.env.NEXT_PUBLIC_APP_URL || "https://app.rukny.io").replace(/\/$/, "")
-    const redirectMap: Record<AccountType, string> = {
-      user: `${appBase}/app/links`,
-      store: process.env.NEXT_PUBLIC_BUSINESS_URL || "https://business.rukny.io",
-      developer: process.env.NEXT_PUBLIC_DEVELOPERS_URL || "https://developers.rukny.io",
-    }
-
+  const resolveDestination = (_type: AccountType) => {
     const urlNext = searchParams.get("next")
     const sessionNext = typeof window !== "undefined" ? localStorage.getItem("auth_next") : null
     const nextTarget = urlNext || sessionNext
@@ -241,7 +234,7 @@ function CompleteProfileContent() {
       localStorage.removeItem("auth_next")
     }
 
-    return getSafeRedirectUrl(nextTarget || redirectMap[type])
+    return getSafeRedirectUrl(nextTarget)
   }
 
   // Submit profile (called when moving from step 2 to step 3)

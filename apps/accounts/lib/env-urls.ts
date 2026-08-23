@@ -9,5 +9,6 @@ export {
   resolveDeveloperUrl,
   resolveFormsUrl,
   resolveHqUrl,
+  resolveMailUrl,
   shouldUseLocalServiceUrls,
 } from '@rukny/auth/client/env-urls';

@@ -16,7 +16,7 @@ import {
 import { useChooseMethodSession } from "@/hooks/use-choose-method-session"
 import { parseVerificationMethod } from "@/lib/auth/choose-method"
 import { resendMagicLink, sendWhatsappOtp, verify2FALogin } from "@/lib/api"
-import { getRedirectUrlByRole } from "@/lib/redirect"
+import { consumeStoredNext } from "@/lib/redirect"
 
 function MethodIcon({ method }: { method: VerificationMethod }) {
   const className = "size-6"
@@ -119,7 +119,7 @@ function ChooseMethodVerifyContent() {
 
     sessionStorage.removeItem("auth_email")
     sessionStorage.removeItem("auth_pending_2fa_session")
-    window.location.href = getRedirectUrlByRole(result.user?.role)
+    window.location.href = consumeStoredNext(result.user?.role)
   }
 
   const handleEmailSubmit = async () => {

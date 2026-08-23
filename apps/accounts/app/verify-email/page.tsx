@@ -16,7 +16,7 @@ import {
   sendEmailVerification,
   verifyEmailCode,
 } from "@/lib/api"
-import { getRedirectUrlByRole } from "@/lib/redirect"
+import { consumeStoredNext } from "@/lib/redirect"
 
 function VerifyEmailContent() {
   const router = useRouter()
@@ -56,7 +56,7 @@ function VerifyEmailContent() {
             window.location.replace("/complete-profile")
             return
           }
-          window.location.replace(getRedirectUrlByRole())
+          window.location.replace(consumeStoredNext())
           return
         }
 
@@ -131,7 +131,7 @@ function VerifyEmailContent() {
         window.location.replace("/complete-profile")
         return
       }
-      window.location.replace(getRedirectUrlByRole())
+      window.location.replace(consumeStoredNext())
     } catch (err: unknown) {
       const apiError = err as {
         status?: number

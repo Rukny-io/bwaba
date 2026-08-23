@@ -8,6 +8,7 @@ import {
 } from '@rukny/forms-shared/apply-security-headers';
 import { parseApiConnectOrigins } from '@rukny/forms-shared/security-headers';
 import { resolveApiBaseUrl } from '@rukny/auth/client/env-urls';
+import { applyPreviewAccessGate } from '@rukny/auth/edge/preview-access';
 import { checkBusinessAuth } from '@/lib/middleware-auth';
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -56,6 +57,15 @@ export async function proxy(request: NextRequest) {
 
   if (pathname.startsWith('/_next') || pathname.includes('.')) {
     return secure(NextResponse.next(), security);
+  }
+
+  if (pathname === '/unavailable' || pathname.startsWith('/unavailable/')) {
+    return secureNext(request, security);
+  }
+
+  const previewGate = applyPreviewAccessGate(request);
+  if (previewGate) {
+    return secure(previewGate, security);
   }
 
   if (pathname.startsWith('/api')) {

@@ -36,13 +36,13 @@ export function HomeAppSummary() {
             <a href={siteUrls.accounts} className="underline hover:opacity-80">
               accounts.rukny.io
             </a>
-            , manage their workspace at{' '}
-            <a href={siteUrls.app} className="underline hover:opacity-80">
-              app.rukny.io
-            </a>
-            , and publish forms at{' '}
+            , publish forms at{' '}
             <a href={siteUrls.forms} className="underline hover:opacity-80">
               forms.rukny.io
+            </a>
+            , and use mail at{' '}
+            <a href={siteUrls.mail} className="underline hover:opacity-80">
+              mail.rukny.io
             </a>
             .
           </p>

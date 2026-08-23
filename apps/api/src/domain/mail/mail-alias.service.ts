@@ -10,6 +10,7 @@ import {
   UpdateMailAliasDto,
 } from './dto/mail-alias.dto';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
+import { formatMailAliasLimit, isMailUnlimited } from './mail-plan-limits.config';
 
 @Injectable()
 export class MailAliasService {
@@ -95,16 +96,6 @@ export class MailAliasService {
       throw new BadRequestException('Enter an alias name.');
     }
 
-    const limit = await this.aliasLimit(app.id);
-    const used = await this.prisma.mailAlias.count({
-      where: { mailAppId: app.id },
-    });
-    if (used >= limit) {
-      throw new BadRequestException(
-        `Alias limit reached for this app (${limit}). Upgrade your plan for more aliases.`,
-      );
-    }
-
     const mailbox = await this.prisma.mailMailbox.findFirst({
       where: {
         id: dto.mailboxId,
@@ -114,6 +105,18 @@ export class MailAliasService {
     });
     if (!mailbox) {
       throw new BadRequestException('Mailbox not found or inactive.');
+    }
+
+    const limit = await this.aliasLimit(app.id);
+    if (!isMailUnlimited(limit)) {
+      const used = await this.prisma.mailAlias.count({
+        where: { mailAppId: app.id, mailboxId: dto.mailboxId },
+      });
+      if (used >= limit) {
+        throw new BadRequestException(
+          `Alias limit reached for this mailbox (${formatMailAliasLimit(limit)}). Upgrade your plan for more aliases.`,
+        );
+      }
     }
 
     if (mailbox.localPart === localPart && mailbox.domain === domain) {

@@ -5,6 +5,7 @@
 
 export const MAIL_CURRENCY = "IQD";
 export const MAIL_CURRENCY_LABEL = "IQD";
+export const MAIL_UNLIMITED = Number.MAX_SAFE_INTEGER;
 
 export type MailPlanId = "starter" | "standard" | "premium";
 
@@ -19,6 +20,7 @@ export type MailPlanLimits = {
   smartAiReplies: boolean;
   automaticReplies: boolean;
   linkAndFileTracking: boolean;
+  premiumDelivery: boolean;
 };
 
 export type MailPlanDefinition = {
@@ -26,83 +28,108 @@ export type MailPlanDefinition = {
   name: string;
   bestFor: string;
   priceMonthly: number;
+  priceExtraMailbox: number;
   limits: MailPlanLimits;
   benefits: string[];
   popular?: boolean;
 };
 
+const SHARED_BENEFITS = [
+  "AI email assistant",
+  "Webmail & Calendar",
+  "Anti-Spam protection",
+  "2FA protection",
+] as const;
+
+export function isMailUnlimited(value: number): boolean {
+  return !Number.isFinite(value) || value < 0 || value >= MAIL_UNLIMITED;
+}
+
+export function formatMailAliasLimit(value: number): string {
+  return isMailUnlimited(value) ? "Unlimited" : String(value);
+}
+
+export function mailPlanHighlights(plan: MailPlanDefinition): string[] {
+  const included = plan.limits.mailboxesIncluded;
+  const mailboxLine =
+    included === 1 ? "1 mailbox included" : `${included} mailboxes included`;
+  const aliasLine = isMailUnlimited(plan.limits.emailAliases)
+    ? "Unlimited aliases per mailbox"
+    : `${plan.limits.emailAliases} aliases per mailbox`;
+  return [
+    mailboxLine,
+    `${plan.limits.storageGbPerMailbox} GB for emails`,
+    aliasLine,
+    ...plan.benefits,
+  ];
+}
+
 export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
   starter: {
     id: "starter",
     name: "Starter",
-    bestFor: "solo entrepreneurs",
-    priceMonthly: 5_000,
+    bestFor: "one mailbox to get started",
+    priceMonthly: 3_000,
+    priceExtraMailbox: 3_000,
     popular: false,
     limits: {
       mailboxesIncluded: 1,
       storageGbPerMailbox: 5,
       forwardingRules: 5,
-      emailAliases: 5,
+      emailAliases: 10,
       agenticMail: true,
-      aiToolsUnlimited: false,
+      aiToolsUnlimited: true,
       openTracking: false,
-      smartAiReplies: false,
-      automaticReplies: false,
+      smartAiReplies: true,
+      automaticReplies: true,
       linkAndFileTracking: false,
+      premiumDelivery: false,
     },
-    benefits: ["Agentic Mail"],
+    benefits: [...SHARED_BENEFITS],
   },
   standard: {
     id: "standard",
     name: "Standard",
-    bestFor: "small businesses ready to scale",
-    priceMonthly: 7_000,
+    bestFor: "small teams sharing one domain",
+    priceMonthly: 6_000,
+    priceExtraMailbox: 2_000,
     popular: true,
     limits: {
-      mailboxesIncluded: 1,
+      mailboxesIncluded: 3,
       storageGbPerMailbox: 20,
       forwardingRules: 20,
-      emailAliases: 10,
+      emailAliases: 50,
       agenticMail: true,
       aiToolsUnlimited: true,
       openTracking: true,
       smartAiReplies: true,
       automaticReplies: true,
       linkAndFileTracking: false,
+      premiumDelivery: false,
     },
-    benefits: [
-      "Search, reply, summarize, and write — AI tools, unlimited",
-      "See who opened your emails",
-      "Smart AI-driven email replies",
-      "Automatic replies",
-      "Agentic Mail",
-    ],
+    benefits: [...SHARED_BENEFITS],
   },
   premium: {
     id: "premium",
     name: "Premium",
-    bestFor: "teams that scale",
+    bestFor: "teams that need more seats and delivery",
     priceMonthly: 10_000,
+    priceExtraMailbox: 2_000,
     popular: false,
     limits: {
-      mailboxesIncluded: 1,
-      storageGbPerMailbox: 50,
+      mailboxesIncluded: 5,
+      storageGbPerMailbox: 30,
       forwardingRules: 50,
-      emailAliases: 30,
+      emailAliases: MAIL_UNLIMITED,
       agenticMail: true,
       aiToolsUnlimited: true,
       openTracking: true,
       smartAiReplies: true,
       automaticReplies: true,
       linkAndFileTracking: true,
+      premiumDelivery: true,
     },
-    benefits: [
-      "Track link clicks and file opens",
-      "Search, reply, summarize, and write — AI tools, unlimited",
-      "See who opened your emails",
-      "Automatic replies",
-      "Agentic Mail",
-    ],
+    benefits: [...SHARED_BENEFITS, "Premium email delivery"],
   },
 };
 
@@ -126,7 +153,9 @@ export function listMailPlans(): MailPlanDefinition[] {
 
 export function mailPlanMonthlyTotal(planId: MailPlanId, mailboxCount: number): number {
   const seats = Math.max(1, Math.floor(mailboxCount));
-  return MAIL_PLANS[planId].priceMonthly * seats;
+  const plan = MAIL_PLANS[planId];
+  const extra = Math.max(0, seats - plan.limits.mailboxesIncluded);
+  return plan.priceMonthly + extra * plan.priceExtraMailbox;
 }
 
 export function formatMailIqD(amount: number): string {

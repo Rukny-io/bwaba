@@ -11,9 +11,9 @@ import { FilterDropdown } from '@/components/shared/filter-dropdown';
 import { detailPanelClassName } from '@/components/ui/pill-tab';
 
 const PLAN_OPTIONS: { value: MailPlanCode; label: string }[] = [
-  { value: 'STARTER', label: 'Starter · 5 GB' },
-  { value: 'STANDARD', label: 'Standard · 20 GB' },
-  { value: 'PREMIUM', label: 'Premium · 50 GB' },
+  { value: 'STARTER', label: 'Starter · 1 mailbox · 5 GB · 3,000 IQD' },
+  { value: 'STANDARD', label: 'Standard · 3 mailboxes · 20 GB · 6,000 IQD' },
+  { value: 'PREMIUM', label: 'Premium · 5 mailboxes · 30 GB · 10,000 IQD' },
 ];
 
 export function MailAppSubscriptionPanel({
@@ -89,7 +89,13 @@ export function MailAppSubscriptionPanel({
             label="Mail plan"
             value={plan}
             options={PLAN_OPTIONS}
-            onChange={(value) => setPlan(value as MailPlanCode)}
+            onChange={(value) => {
+              const next = value as MailPlanCode;
+              setPlan(next);
+              const included =
+                next === 'PREMIUM' ? 5 : next === 'STANDARD' ? 3 : 1;
+              setSeats((current) => Math.max(included, current));
+            }}
             disabled={saving}
           />
         </div>

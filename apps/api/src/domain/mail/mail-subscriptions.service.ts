@@ -22,7 +22,9 @@ import {
   MAIL_PLAN_LIMITS,
   MAIL_PLAN_ORDER,
   addOneMonth,
+  formatMailAliasLimit,
   mailMonthlyTotal,
+  mailPlanHighlights,
 } from './mail-plan-limits.config';
 import { isMailAppPublicId } from './mail-app-id.util';
 import { storageQuotaBytesForPlan } from './mail-storage.util';
@@ -85,18 +87,13 @@ export class MailSubscriptionsService {
           name: plan.name,
           bestFor: plan.bestFor,
           priceMonthly: plan.priceMonthly,
+          priceExtraMailbox: plan.priceExtraMailbox,
           priceLabel: `${plan.priceMonthly.toLocaleString('en-IQ')} IQD/mo`,
-          priceNote: 'Price per mailbox. 1-month term.',
+          priceNote: 'Monthly plan price for included mailboxes. 1-month term.',
           popular: plan.popular,
           limits: plan.limits,
           benefits: plan.benefits,
-          highlights: [
-            `${plan.limits.mailboxesIncluded} mailbox included`,
-            `${plan.limits.storageGbPerMailbox} GB storage per mailbox`,
-            `${plan.limits.forwardingRules} forwarding rules`,
-            `${plan.limits.emailAliases} email aliases`,
-            ...plan.benefits,
-          ],
+          highlights: mailPlanHighlights(plan),
         };
       }),
     };
@@ -262,12 +259,12 @@ export class MailSubscriptionsService {
             '',
             `الباقة: ${planName}`,
             `المقاعد: ${seats}`,
-            `التخزين: ${limits.storageGbPerMailbox} غيغابايت لكل صندوق`,
-            `التحويل: ${limits.forwardingRules} · الأسماء المستعارة: ${limits.emailAliases}`,
+            `التخزين: ${limits.storageGbPerMailbox} غيغابايت للبريد`,
+            `التحويل: ${limits.forwardingRules} · الأسماء المستعارة: ${formatMailAliasLimit(limits.emailAliases, 'ar')} لكل صندوق`,
             `المجموع الشهري: ${mailMonthlyTotal(plan, seats).toLocaleString('en-IQ')} IQD`,
             '',
             `Mail plan activated for app “${app.name}” only (not shared with other apps).`,
-            `${planName} · ${seats} seat${seats === 1 ? '' : 's'} · ${limits.storageGbPerMailbox} GB storage per mailbox.`,
+            `${planName} · ${seats} seat${seats === 1 ? '' : 's'} · ${limits.storageGbPerMailbox} GB for emails.`,
           ].join('\n'),
         );
       }
@@ -595,6 +592,7 @@ export class MailSubscriptionsService {
         smartAiReplies: limits.smartAiReplies,
         automaticReplies: limits.automaticReplies,
         linkAndFileTracking: limits.linkAndFileTracking,
+        premiumDelivery: limits.premiumDelivery,
       },
       payments: subscription.payments ?? [],
     };

@@ -8,7 +8,7 @@ import {
   Chip,
   Skeleton,
 } from "@heroui/react";
-import { formatMailIqD } from "@/lib/mail-plans";
+import { formatMailAliasLimit, formatMailIqD } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
   type MailPendingPlanRequest,
@@ -19,12 +19,13 @@ const FEATURE_LABELS: Array<{
   key: keyof NonNullable<MailSubscriptionView["features"]>;
   label: string;
 }> = [
-  { key: "agenticMail", label: "Agentic Mail" },
+  { key: "agenticMail", label: "AI email assistant" },
   { key: "aiToolsUnlimited", label: "Unlimited AI tools" },
   { key: "openTracking", label: "Open tracking" },
   { key: "smartAiReplies", label: "Smart AI replies" },
   { key: "automaticReplies", label: "Automatic replies" },
   { key: "linkAndFileTracking", label: "Link and file tracking" },
+  { key: "premiumDelivery", label: "Premium email delivery" },
 ];
 
 export function MailPlanSettingsSection() {
@@ -128,9 +129,9 @@ export function MailPlanSettingsSection() {
               </dd>
             </div>
             <div>
-              <dt className="text-[var(--muted-foreground)]">Storage / mailbox</dt>
+              <dt className="text-[var(--muted-foreground)]">Storage</dt>
               <dd className="font-medium text-[var(--foreground)]">
-                {active.limits.storageGbPerMailbox} GB
+                {active.limits.storageGbPerMailbox} GB for emails
               </dd>
             </div>
             <div>
@@ -140,9 +141,9 @@ export function MailPlanSettingsSection() {
               </dd>
             </div>
             <div>
-              <dt className="text-[var(--muted-foreground)]">Aliases</dt>
+              <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
               <dd className="font-medium text-[var(--foreground)]">
-                {active.limits.emailAliases}
+                {formatMailAliasLimit(active.limits.emailAliases)}
               </dd>
             </div>
           </dl>

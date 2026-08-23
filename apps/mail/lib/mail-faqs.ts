@@ -23,7 +23,8 @@ export const MAIL_FAQS: MailFaqItem[] = [
   {
     id: "plans",
     question: "How do plans work?",
-    answer: "IQD per mailbox, per month. Request in the console.",
+    answer:
+      "Three monthly plans in IQD: Starter 3,000, Standard 6,000, and Premium 10,000, with mailboxes included. Request a plan in the console.",
   },
   {
     id: "inbox",

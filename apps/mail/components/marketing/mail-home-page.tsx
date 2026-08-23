@@ -11,8 +11,12 @@ import {
   Zap,
 } from "lucide-react";
 import { MailMarketingShell } from "@/components/marketing/mail-marketing-shell";
-import { MailEmailsSentSection } from "@/components/marketing/mail-emails-sent-section";
-import { formatMailIqD, listMailPlans } from "@/lib/mail-plans";
+import { MailProductivitySection } from "@/components/marketing/mail-productivity-section";
+import {
+  formatMailIqD,
+  listMailPlans,
+  mailPlanHighlights,
+} from "@/lib/mail-plans";
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
 const BENEFITS = [
@@ -81,10 +85,9 @@ const CONNECT_STEPS = [
 
 export function MailHomePage({
   signedIn,
-  emailsSent,
 }: {
   signedIn: boolean;
-  emailsSent: number;
+  emailsSent?: number;
 }) {
   const primaryHref = signedIn ? "/apps" : "/login";
   const primaryLabel = signedIn ? "Open console" : "Get started";
@@ -160,6 +163,8 @@ export function MailHomePage({
             </ul>
           </div>
         </section>
+
+        <MailProductivitySection />
 
         <section id="connect" className={L.section}>
           <div className={L.container}>
@@ -247,13 +252,13 @@ export function MailHomePage({
                   <p className="mt-4 text-2xl font-bold tracking-tight text-[#132327]">
                     {formatMailIqD(plan.priceMonthly)}
                     <span className="text-sm font-medium text-[#132327]/45">
-                      /mailbox/mo
+                      /mo
                     </span>
                   </p>
                   <ul className="mt-4 flex flex-1 flex-col gap-2 text-sm text-[#132327]/55">
-                    <li>{plan.limits.storageGbPerMailbox} GB storage per mailbox</li>
-                    <li>{plan.limits.forwardingRules} forwarding rules</li>
-                    <li>{plan.limits.emailAliases} aliases</li>
+                    {mailPlanHighlights(plan).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
                   </ul>
                 </article>
               ))}

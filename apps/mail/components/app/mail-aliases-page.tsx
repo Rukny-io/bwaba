@@ -16,6 +16,7 @@ import {
   Switch,
   TextField,
 } from "@heroui/react";
+import { formatMailAliasLimit, isMailUnlimited } from "@/lib/mail-plans";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
@@ -147,9 +148,10 @@ export function MailAliasesPage() {
     [mailboxes],
   );
 
-  const used = aliases.length;
+  const usedOnMailbox = aliases.filter((row) => row.mailboxId === mailboxId).length;
   const needsPlan = limit <= 0;
-  const atLimit = !needsPlan && used >= limit;
+  const unlimited = isMailUnlimited(limit);
+  const atLimit = !needsPlan && !unlimited && usedOnMailbox >= limit;
   const canCreate = Boolean(domain && mailboxId && !atLimit && !needsPlan && !saving);
 
   async function onCreate() {
@@ -241,7 +243,11 @@ export function MailAliasesPage() {
             size="sm"
             variant="soft"
           >
-            {needsPlan ? "Plan required" : `${used} / ${limit}`}
+            {needsPlan
+              ? "Plan required"
+              : unlimited
+                ? `${usedOnMailbox} · Unlimited`
+                : `${usedOnMailbox} / ${limit} on this mailbox`}
           </Chip>
         )}
       </div>
@@ -298,7 +304,8 @@ export function MailAliasesPage() {
               <Alert.Content>
                 <Alert.Title>Alias limit reached</Alert.Title>
                 <Alert.Description>
-                  This plan includes {limit} aliases. Remove one or upgrade for more.
+                  This plan includes {formatMailAliasLimit(limit)} aliases per mailbox.
+                  Remove one from this mailbox or upgrade for more.
                 </Alert.Description>
               </Alert.Content>
               <Button size="sm" onPress={() => router.push("/pricing")}>

@@ -28,6 +28,7 @@ export type MailSubscriptionView = {
     smartAiReplies: boolean;
     automaticReplies: boolean;
     linkAndFileTracking: boolean;
+    premiumDelivery: boolean;
   };
 };
 
@@ -55,6 +56,7 @@ type PlansResponse = {
     name: string;
     bestFor: string;
     priceMonthly: number;
+    priceExtraMailbox?: number;
     popular: boolean;
     highlights: string[];
     limits: MailPlanLimits;
@@ -83,6 +85,7 @@ function emptyFeatures(): MailSubscriptionView["features"] {
     smartAiReplies: false,
     automaticReplies: false,
     linkAndFileTracking: false,
+    premiumDelivery: false,
   };
 }
 
@@ -111,6 +114,7 @@ export async function fetchMailPlans() {
       name: plan.name,
       bestFor: plan.bestFor,
       priceMonthly: plan.priceMonthly,
+      priceExtraMailbox: plan.priceExtraMailbox ?? 0,
       popular: Boolean(plan.popular),
       highlights: plan.highlights ?? [],
       limits: plan.limits,

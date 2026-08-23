@@ -22,7 +22,7 @@ import {
 } from "@/lib/mail-mailboxes-client";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import { MailMailbox2faSetupModal } from "@/components/app/mail-mailbox-2fa-setup-modal";
-import { formatMailStorageAmount } from "@/lib/mail-plans";
+import { formatMailAliasLimit, formatMailStorageAmount } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
   type MailPendingPlanRequest,
@@ -611,9 +611,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[var(--muted-foreground)]">Storage / mailbox</dt>
+                  <dt className="text-[var(--muted-foreground)]">Storage</dt>
                   <dd className="font-medium text-[var(--foreground)]">
-                    {limits.storageGbPerMailbox} GB
+                    {limits.storageGbPerMailbox} GB for emails
                   </dd>
                 </div>
                 <div>
@@ -623,9 +623,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[var(--muted-foreground)]">Email aliases</dt>
+                  <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
                   <dd className="font-medium text-[var(--foreground)]">
-                    {limits.emailAliases}
+                    {formatMailAliasLimit(limits.emailAliases)}
                   </dd>
                 </div>
                 <div>

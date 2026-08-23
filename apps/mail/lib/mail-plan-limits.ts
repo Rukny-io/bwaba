@@ -1,4 +1,4 @@
-import type { MailPlanLimits } from "@/lib/mail-plans";
+import { isMailUnlimited, type MailPlanLimits } from "@/lib/mail-plans";
 import type { MailSubscriptionView } from "@/lib/mail-subscription-client";
 
 export type EffectiveMailLimits = MailPlanLimits & {
@@ -40,6 +40,7 @@ export function canAddAlias(
   currentAliases: number,
 ): boolean {
   if (!limits) return false;
+  if (isMailUnlimited(limits.emailAliases)) return true;
   return currentAliases < limits.emailAliases;
 }
 
@@ -53,6 +54,7 @@ export function hasMailFeature(
     | "smartAiReplies"
     | "automaticReplies"
     | "linkAndFileTracking"
+    | "premiumDelivery"
   >,
 ): boolean {
   return Boolean(limits?.[feature]);

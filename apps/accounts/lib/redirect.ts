@@ -1,23 +1,25 @@
 import {
   isAllowedRedirectHost,
   resolveAccountsUrl,
-  resolveHqUrl,
 } from '@/lib/env-urls';
 
 export type UserRole = "ADMIN" | "PREMIUM" | "BASIC" | "GUEST" | "STORE_OWNER" | "DEVELOPER"
 
+function pageHostname(hostname?: string | null): string | null {
+  if (hostname) return hostname;
+  if (typeof window !== 'undefined') return window.location.hostname;
+  return null;
+}
+
 function accountsContinueUrl(hostname?: string | null): string {
-  return `${resolveAccountsUrl({ hostname }).replace(/\/$/, '')}/continue`;
+  return `${resolveAccountsUrl({ hostname: pageHostname(hostname) }).replace(/\/$/, '')}/continue`;
 }
 
 /**
- * Default destination after sign-in.
- * Admins go to HQ; everyone else chooses Forms, Mail, or Account.
+ * Default destination after sign-in: choose Forms, Mail, or Account.
+ * HQ / app / business / developers stay locked except via preview URL.
  */
-export function getRedirectUrlByRole(role?: string, hostname?: string | null): string {
-  if (role && role.toUpperCase() === "ADMIN") {
-    return resolveHqUrl({ hostname });
-  }
+export function getRedirectUrlByRole(_role?: string, hostname?: string | null): string {
   return accountsContinueUrl(hostname);
 }
 
@@ -34,12 +36,13 @@ export function getSafeRedirectUrl(
   role?: string,
   hostname?: string | null,
 ): string {
-  const fallbackUrl = getRedirectUrlByRole(role, hostname);
+  const host = pageHostname(hostname);
+  const fallbackUrl = getRedirectUrlByRole(role, host);
   if (!nextUrl) return fallbackUrl;
 
   try {
     if (nextUrl.startsWith('/') && !nextUrl.startsWith('//')) {
-      return toAbsoluteAccountsPath(nextUrl, hostname);
+      return toAbsoluteAccountsPath(nextUrl, host);
     }
 
     const url = new URL(nextUrl);
@@ -60,5 +63,5 @@ export function consumeStoredNext(role?: string): string {
     stored = localStorage.getItem('auth_next');
     localStorage.removeItem('auth_next');
   }
-  return getSafeRedirectUrl(stored, role);
+  return getSafeRedirectUrl(stored, role, pageHostname());
 }

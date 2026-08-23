@@ -228,6 +228,7 @@ services:
         - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         - NEXT_PUBLIC_MAIL_URL=${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
+        - NEXT_PUBLIC_HQ_URL=${NEXT_PUBLIC_HQ_URL:-https://hq.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
         - NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED=${NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED:-true}
         - NEXT_PUBLIC_OAUTH_LINKEDIN_ENABLED=${NEXT_PUBLIC_OAUTH_LINKEDIN_ENABLED:-true}
@@ -249,6 +250,7 @@ services:
       NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
       NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
+      NEXT_PUBLIC_HQ_URL: ${NEXT_PUBLIC_HQ_URL:-https://hq.rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
     networks:
       - rukny_network

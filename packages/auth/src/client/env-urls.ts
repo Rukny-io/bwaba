@@ -18,6 +18,19 @@ export const LOCAL_SERVICE_URLS = {
   publicSite: 'http://localhost:3006',
 } as const;
 
+export const PRODUCTION_SERVICE_URLS = {
+  accounts: 'https://accounts.rukny.io',
+  apiBase: 'https://api.rukny.io/api/v1',
+  apiOrigin: 'https://api.rukny.io',
+  app: 'https://app.rukny.io',
+  hq: 'https://hq.rukny.io',
+  business: 'https://business.rukny.io',
+  developer: 'https://developers.rukny.io',
+  forms: 'https://forms.rukny.io',
+  mail: 'https://mail.rukny.io',
+  publicSite: 'https://rukny.io',
+} as const;
+
 export type ResolveUrlOptions = {
   /** Request or window hostname; loopback forces local service URLs. */
   hostname?: string | null;
@@ -27,12 +40,22 @@ export function isLoopbackHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1';
 }
 
+function currentHostname(): string | null {
+  if (typeof window !== 'undefined') return window.location.hostname;
+  return null;
+}
+
 /** Allowed redirect hostnames across dev and staging. */
 export function isAllowedRedirectHost(hostname: string): boolean {
+  if (isLoopbackHost(hostname)) {
+    const here = currentHostname();
+    if (here) return isLoopbackHost(here);
+    return process.env.NODE_ENV !== 'production';
+  }
   return (
-    isLoopbackHost(hostname) ||
     hostname.endsWith('.rukny.io') ||
     hostname === 'rukny.io' ||
+    hostname.endsWith('.rukny.work') ||
     hostname === 'rukny.work'
   );
 }
@@ -57,7 +80,7 @@ function trimTrailingSlash(url: string): string {
 export function resolveAccountsUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.accounts;
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_ACCOUNTS_URL || LOCAL_SERVICE_URLS.accounts,
+    process.env.NEXT_PUBLIC_ACCOUNTS_URL || PRODUCTION_SERVICE_URLS.accounts,
   );
 }
 
@@ -66,14 +89,14 @@ export function resolveApiBaseUrl(options?: ResolveUrlOptions): string {
   return trimTrailingSlash(
     process.env.NEXT_PUBLIC_API_URL ||
       process.env.NEXT_PUBLIC_API_EXTERNAL_URL ||
-      LOCAL_SERVICE_URLS.apiBase,
+      PRODUCTION_SERVICE_URLS.apiBase,
   );
 }
 
 export function resolveAppUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.app;
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_APP_URL || LOCAL_SERVICE_URLS.app,
+    process.env.NEXT_PUBLIC_APP_URL || PRODUCTION_SERVICE_URLS.app,
   );
 }
 
@@ -82,14 +105,14 @@ export function resolveHqUrl(options?: ResolveUrlOptions): string {
   return trimTrailingSlash(
     process.env.NEXT_PUBLIC_HQ_URL ||
       process.env.NEXT_PUBLIC_ADMIN_URL ||
-      LOCAL_SERVICE_URLS.hq,
+      PRODUCTION_SERVICE_URLS.hq,
   );
 }
 
 export function resolveBusinessUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.business;
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_BUSINESS_URL || LOCAL_SERVICE_URLS.business,
+    process.env.NEXT_PUBLIC_BUSINESS_URL || PRODUCTION_SERVICE_URLS.business,
   );
 }
 
@@ -98,21 +121,21 @@ export function resolveDeveloperUrl(options?: ResolveUrlOptions): string {
   return trimTrailingSlash(
     process.env.NEXT_PUBLIC_DEVELOPERS_URL ||
       process.env.NEXT_PUBLIC_DEVELOPER_URL ||
-      LOCAL_SERVICE_URLS.developer,
+      PRODUCTION_SERVICE_URLS.developer,
   );
 }
 
 export function resolveFormsUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.forms;
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_FORMS_URL || LOCAL_SERVICE_URLS.forms,
+    process.env.NEXT_PUBLIC_FORMS_URL || PRODUCTION_SERVICE_URLS.forms,
   );
 }
 
 export function resolveMailUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.mail;
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_MAIL_URL || LOCAL_SERVICE_URLS.mail,
+    process.env.NEXT_PUBLIC_MAIL_URL || PRODUCTION_SERVICE_URLS.mail,
   );
 }
 

@@ -11,6 +11,7 @@ type Props = {
   appId: string;
   appHref: string;
   mailboxes: MailMailboxView[];
+  preferredMailboxId?: string | null;
   onUnlocked: (mailbox: MailMailboxView) => void;
 };
 
@@ -18,6 +19,7 @@ export function MailInboxLogin({
   appId,
   appHref,
   mailboxes,
+  preferredMailboxId,
   onUnlocked,
 }: Props) {
   const signInBoxes = useMemo(
@@ -28,9 +30,11 @@ export function MailInboxLogin({
     [mailboxes],
   );
 
-  const [address, setAddress] = useState(
-    () => (signInBoxes.length === 1 ? signInBoxes[0].address : ""),
-  );
+  const [address, setAddress] = useState(() => {
+    const preferred = signInBoxes.find((box) => box.id === preferredMailboxId);
+    if (preferred) return preferred.address;
+    return signInBoxes.length === 1 ? signInBoxes[0].address : "";
+  });
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
   const [needsTotp, setNeedsTotp] = useState(false);

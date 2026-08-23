@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PenSquare, Search, Settings, X } from "lucide-react";
-import { cn, Dropdown } from "@heroui/react";
+import { cn } from "@heroui/react";
 import {
   MailInboxSidebar,
   type InboxFolderId,
@@ -16,7 +16,6 @@ import {
 } from "@/components/inbox/mail-inbox-list-card";
 import { MailInboxReaderCard } from "@/components/inbox/mail-inbox-reader-card";
 import { MailInboxLogin } from "@/components/inbox/mail-inbox-login";
-import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import {
   MailComposeModal,
   type ComposeDraft,
@@ -26,10 +25,13 @@ import {
   listMailMailboxes,
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
+import { MailInboxMailboxSwitcher } from "@/components/inbox/mail-inbox-mailbox-switcher";
 import {
   getMailMailboxSession,
   lockMailMailbox,
+  selectMailMailbox,
 } from "@/lib/mail-mailbox-session-client";
+import { readMailboxQueryId, writeMailboxQueryId } from "@/lib/mail-inbox-url";
 import {
   getMailMessage,
   getMailMessageCounts,
@@ -139,6 +141,8 @@ export function MailInboxShell() {
   const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(
     null,
   );
+  const [switchingMailbox, setSwitchingMailbox] = useState(false);
+  const [loginPreferredId, setLoginPreferredId] = useState<string | null>(null);
   const [folder, setFolder] = useState<InboxFolderId>("inbox");
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null,
@@ -259,7 +263,30 @@ export function MailInboxShell() {
           unlocked = null;
         }
         if (cancelled) return;
+        const requestedId = readMailboxQueryId();
+        const active = boxes.filter((box) => box.status === "ACTIVE");
+        const wantId =
+          requestedId && active.some((box) => box.id === requestedId)
+            ? requestedId
+            : null;
+        if (wantId && wantId !== unlocked?.id) {
+          try {
+            const selectedBox = await selectMailMailbox(id, wantId);
+            unlocked = selectedBox;
+            setMailboxes((prev) =>
+              prev.some((box) => box.id === selectedBox.id)
+                ? prev.map((box) =>
+                    box.id === selectedBox.id ? selectedBox : box,
+                  )
+                : [...prev, selectedBox],
+            );
+          } catch {
+            setLoginPreferredId(wantId);
+          }
+        }
+        if (cancelled) return;
         setSelectedMailboxId(unlocked?.id ?? null);
+        if (unlocked) writeMailboxQueryId(unlocked.id);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -611,6 +638,36 @@ export function MailInboxShell() {
     setCounts(emptyCounts());
     setComposeOpen(false);
     setReplyBody("");
+    writeMailboxQueryId(null);
+  }
+
+  async function handleSwitchMailbox(mailboxId: string) {
+    if (!appId || mailboxId === selectedMailboxId || switchingMailbox) return;
+    setSwitchingMailbox(true);
+    try {
+      const mailbox = await selectMailMailbox(appId, mailboxId);
+      setMailboxes((prev) =>
+        prev.some((box) => box.id === mailbox.id)
+          ? prev.map((box) => (box.id === mailbox.id ? mailbox : box))
+          : [...prev, mailbox],
+      );
+      setSelectedMailboxId(mailbox.id);
+      setFolder("inbox");
+      setSelectedMessageId(null);
+      setMobileShowReader(false);
+      setSearch("");
+      setComposeOpen(false);
+      setReplyBody("");
+      setError("");
+      writeMailboxQueryId(mailbox.id);
+      showToast(`Viewing ${mailbox.address}`);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Could not switch mailbox.",
+      );
+    } finally {
+      setSwitchingMailbox(false);
+    }
   }
 
   function selectByOffset(delta: number) {
@@ -655,6 +712,7 @@ export function MailInboxShell() {
         appId={appId}
         appHref={appHref}
         mailboxes={mailboxes}
+        preferredMailboxId={loginPreferredId}
         onUnlocked={(mailbox) => {
           setMailboxes((prev) =>
             prev.some((box) => box.id === mailbox.id)
@@ -663,6 +721,7 @@ export function MailInboxShell() {
           );
           setSelectedMailboxId(mailbox.id);
           setError("");
+          writeMailboxQueryId(mailbox.id);
         }}
       />
     );
@@ -782,34 +841,13 @@ export function MailInboxShell() {
               searchOpen ? "max-md:pointer-events-none max-md:opacity-0" : "opacity-100",
             )}
           >
-            <Dropdown>
-              <Dropdown.Trigger
-                aria-label="Mailbox account"
-                className="rounded-full outline-none"
-              >
-                <MailPersonAvatar
-                  name={selected?.displayName || selected?.localPart || "RM"}
-                  email={selected?.address}
-                  avatarUrl={selected?.avatarUrl}
-                  className="size-9"
-                  textClassName="text-xs"
-                />
-              </Dropdown.Trigger>
-              <Dropdown.Popover
-                placement="bottom end"
-                className="min-w-[12.5rem] overflow-hidden rounded-2xl"
-              >
-                <Dropdown.Menu
-                  onAction={(key) => {
-                    if (String(key) === "lock") void handleLockMailbox();
-                  }}
-                >
-                  <Dropdown.Item id="lock" textValue="Sign out of mailbox">
-                    Sign out of mailbox
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
+            <MailInboxMailboxSwitcher
+              mailboxes={mailboxes}
+              selectedId={selectedMailboxId}
+              disabled={switchingMailbox}
+              onSelect={(id) => void handleSwitchMailbox(id)}
+              onLock={() => void handleLockMailbox()}
+            />
           </span>
         </div>
       </header>
@@ -826,6 +864,16 @@ export function MailInboxShell() {
             }}
             counts={counts}
             onCompose={onCompose}
+            mailboxSwitcher={
+              <MailInboxMailboxSwitcher
+                variant="sidebar"
+                mailboxes={mailboxes}
+                selectedId={selectedMailboxId}
+                disabled={switchingMailbox}
+                onSelect={(id) => void handleSwitchMailbox(id)}
+                onLock={() => void handleLockMailbox()}
+              />
+            }
           />
         </div>
 

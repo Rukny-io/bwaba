@@ -71,6 +71,22 @@ export async function unlockMailMailbox(
   return { needsTotp: false, mailbox: data.mailbox };
 }
 
+export async function selectMailMailbox(
+  appId: string,
+  mailboxId: string,
+): Promise<MailMailboxView> {
+  const response = await sessionFetch(sessionBase(appId), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mailboxId }),
+  });
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not open this mailbox."));
+  }
+  return data.mailbox;
+}
+
 export async function lockMailMailbox(appId: string): Promise<void> {
   const response = await sessionFetch(sessionBase(appId), { method: "DELETE" });
   const data = await readJson(response);

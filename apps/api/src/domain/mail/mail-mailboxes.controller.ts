@@ -120,6 +120,23 @@ export class MailMailboxesController {
     return this.mailboxes.create(user.id, appId, dto);
   }
 
+  @Post(':mailboxId/select')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Open this mailbox in webmail as the Mail app owner',
+  })
+  async select(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('mailboxId') mailboxId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.mailboxes.select(user.id, appId, mailboxId);
+    setMailboxSessionCookie(res, result.token);
+    return { mailbox: result.mailbox };
+  }
+
   @Patch(':mailboxId')
   @ApiOperation({ summary: 'Update mailbox display name or status' })
   update(

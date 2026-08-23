@@ -25,15 +25,25 @@ const FORWARD_REQUEST_HEADERS = [
 
 type RouteCtx = { params: Promise<{ appId: string }> };
 
-function backendUrl(appId: string, action: "session" | "unlock" | "lock") {
-  return `${API_BACKEND_URL.replace(/\/$/, "")}/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${action}`;
+function backendUrl(
+  appId: string,
+  action: "session" | "unlock" | "lock" | { select: string },
+) {
+  const base = `${API_BACKEND_URL.replace(/\/$/, "")}/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`;
+  if (typeof action === "object") {
+    return `${base}/${encodeURIComponent(action.select)}/select`;
+  }
+  return `${base}/${action}`;
 }
+
+const MAILBOX_ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 async function proxyMailboxSession(
   request: NextRequest,
   appId: string,
-  action: "session" | "unlock" | "lock",
+  action: "session" | "unlock" | "lock" | { select: string },
   method: string,
+  opts?: { skipBody?: boolean },
 ) {
   if (!isValidMailAppId(appId)) {
     return NextResponse.json({ message: "Invalid Mail app." }, { status: 400 });
@@ -44,13 +54,16 @@ async function proxyMailboxSession(
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
   }
+  if (opts?.skipBody) {
+    headers.delete("content-type");
+  }
 
   const init: RequestInit = {
     method,
     headers,
     cache: "no-store",
   };
-  if (method !== "GET" && method !== "HEAD") {
+  if (method !== "GET" && method !== "HEAD" && !opts?.skipBody) {
     init.body = await request.text();
   }
 
@@ -80,4 +93,21 @@ export async function POST(request: NextRequest, ctx: RouteCtx) {
 export async function DELETE(request: NextRequest, ctx: RouteCtx) {
   const { appId } = await ctx.params;
   return proxyMailboxSession(request, appId, "lock", "POST");
+}
+
+export async function PATCH(request: NextRequest, ctx: RouteCtx) {
+  const { appId } = await ctx.params;
+  let mailboxId = "";
+  try {
+    const body = (await request.json()) as { mailboxId?: unknown };
+    mailboxId = typeof body.mailboxId === "string" ? body.mailboxId.trim() : "";
+  } catch {
+    return NextResponse.json({ message: "Invalid request." }, { status: 400 });
+  }
+  if (!MAILBOX_ID_RE.test(mailboxId)) {
+    return NextResponse.json({ message: "Invalid mailbox." }, { status: 400 });
+  }
+  return proxyMailboxSession(request, appId, { select: mailboxId }, "POST", {
+    skipBody: true,
+  });
 }

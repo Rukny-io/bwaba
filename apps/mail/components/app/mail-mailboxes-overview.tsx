@@ -8,6 +8,7 @@ import { Checkbox, cn, Dropdown, Input, Label, TextField } from "@heroui/react";
 import type { MailDomainSetup } from "@/lib/mail-domain";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
+import { mailInboxHref } from "@/lib/mail-inbox-url";
 import {
   changeMailMailboxPassword,
   confirmMailMailbox2fa,
@@ -536,7 +537,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
           </Link>
           <button
             type="button"
-            onClick={() => router.push(href("/inbox"))}
+            onClick={() => router.push(mailInboxHref(slot))}
             className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none"
           >
             Open Mail
@@ -851,7 +852,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => router.push(href("/inbox"))}
+                    onClick={() => router.push(mailInboxHref(slot, box.id))}
                     className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[13px] font-semibold text-[var(--foreground)]"
                   >
                     Webmail
@@ -920,7 +921,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => router.push(href("/inbox"))}
+                            onClick={() => router.push(mailInboxHref(slot, box.id))}
                             className="inline-flex h-8 items-center rounded-lg bg-[var(--surface-secondary)] px-3 text-[12px] font-semibold text-[var(--foreground)] hover:bg-[rgba(15,23,42,0.08)]"
                           >
                             Webmail

@@ -471,6 +471,26 @@ export class MailMailboxesService {
     }
   }
 
+  /** App owner opens a mailbox in webmail without the mailbox password. */
+  async select(userId: string, appId: string, mailboxId: string) {
+    const mailbox = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    if (mailbox.status !== MailMailboxStatus.ACTIVE) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAILBOX_DISABLED',
+        message: 'This mailbox is disabled.',
+      });
+    }
+    const view = this.toView(mailbox);
+    const token = await this.mailboxSessions.create({
+      userId,
+      appId,
+      mailboxId: mailbox.id,
+      address: view.address,
+    });
+    return { mailbox: view, token };
+  }
+
   async uploadAvatar(
     userId: string,
     appId: string,

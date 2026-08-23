@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   AlertTriangle,
   Archive,
@@ -43,6 +44,7 @@ type Props = {
   onFolderChange: (id: InboxFolderId) => void;
   counts: Record<InboxFolderId, number>;
   onCompose: () => void;
+  mailboxSwitcher?: ReactNode;
 };
 
 export function MailInboxSidebar({
@@ -50,6 +52,7 @@ export function MailInboxSidebar({
   onFolderChange,
   counts,
   onCompose,
+  mailboxSwitcher,
 }: Props) {
   return (
     <aside className="flex h-full w-[200px] shrink-0 flex-col gap-4 md:w-[220px]">
@@ -104,6 +107,9 @@ export function MailInboxSidebar({
           );
         })}
       </nav>
+      {mailboxSwitcher ? (
+        <div className="mt-auto shrink-0 pt-2">{mailboxSwitcher}</div>
+      ) : null}
     </aside>
   );
 }

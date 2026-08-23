@@ -74,6 +74,9 @@ export const COOKIE_NAMES = {
     : usePrefixedCookieNames
       ? '__Secure-device_id'
       : 'device_id',
+  mailboxSession: usePrefixedCookieNames
+    ? '__Secure-mail_mailbox_session'
+    : 'mail_mailbox_session',
 } as const;
 
 /**
@@ -84,6 +87,7 @@ export const TOKEN_EXPIRY = {
   refreshToken: parseDurationToSeconds(process.env.REFRESH_TOKEN_EXPIRES_IN, 7 * 24 * 60 * 60),
   csrfToken: parseDurationToSeconds(process.env.ACCESS_TOKEN_EXPIRES_IN, 30 * 60),
   deviceId: 365 * 24 * 60 * 60, // 1 year
+  mailboxSession: 12 * 60 * 60, // 12 hours
 } as const;
 
 // ============================================================================
@@ -190,6 +194,14 @@ export function setDeviceIdCookie(res: Response, deviceId: string): void {
   });
 }
 
+export function setMailboxSessionCookie(res: Response, token: string): void {
+  res.cookie(COOKIE_NAMES.mailboxSession, token, {
+    ...baseCookieOptions,
+    httpOnly: true,
+    maxAge: TOKEN_EXPIRY.mailboxSession * 1000,
+  });
+}
+
 // ============================================================================
 // Cookie Clearers
 // ============================================================================
@@ -275,6 +287,31 @@ export function clearDeviceIdCookie(res: Response): void {
   });
 }
 
+export function clearMailboxSessionCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAMES.mailboxSession, {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+  if (!isProduction) return;
+  res.clearCookie('mail_mailbox_session', {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+  res.clearCookie('__Secure-mail_mailbox_session', {
+    ...baseCookieOptions,
+    httpOnly: true,
+  });
+}
+
+export function extractMailboxSessionToken(req: Request): string | undefined {
+  const cookies = parseCookieHeader(req.headers['cookie']);
+  return (
+    cookies[COOKIE_NAMES.mailboxSession] ||
+    cookies['mail_mailbox_session'] ||
+    cookies['__Secure-mail_mailbox_session']
+  );
+}
+
 /**
  * Clear all auth cookies
  */
@@ -283,6 +320,7 @@ export function clearAuthCookies(res: Response): void {
   clearRefreshTokenCookie(res);
   clearCsrfTokenCookie(res);
   clearDeviceIdCookie(res);
+  clearMailboxSessionCookie(res);
 }
 
 // ============================================================================

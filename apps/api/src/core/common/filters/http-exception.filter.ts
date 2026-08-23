@@ -167,6 +167,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       'FEATURE_TIER_REQUIRED',
       'INSUFFICIENT_PERMISSION',
       'PHONE_ALREADY_CLAIMED',
+      'MAILBOX_LOCKED',
+      'MAILBOX_LOGIN_FAILED',
     ]);
     if (code && passthroughCodes.has(code)) {
       return originalMessage;

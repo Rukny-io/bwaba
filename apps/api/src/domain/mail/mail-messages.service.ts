@@ -14,6 +14,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SendMailMessageDto } from './dto/mail-message.dto';
+import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
@@ -29,6 +30,7 @@ export class MailMessagesService {
     private readonly ses: MailSesService,
     private readonly realtime: MailRealtimeService,
     private readonly subscriptions: MailSubscriptionsService,
+    private readonly mailboxSessions: MailMailboxSessionService,
   ) {}
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
@@ -147,6 +149,23 @@ export class MailMessagesService {
     return { app, mailbox };
   }
 
+  private async requireUnlockedMailbox(
+    userId: string,
+    appId: string,
+    mailboxId: string | undefined,
+    sessionToken: string | undefined,
+  ) {
+    if (!mailboxId) {
+      throw new BadRequestException('mailboxId is required.');
+    }
+    await this.mailboxSessions.assertAsync(sessionToken, {
+      userId,
+      appId,
+      mailboxId,
+    });
+    return this.requireOwnedMailbox(userId, appId, mailboxId);
+  }
+
   async assertOwnedApp(userId: string, appId: string) {
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },
@@ -164,8 +183,15 @@ export class MailMessagesService {
       starred?: boolean;
       take?: number;
       cursor?: string;
+      sessionToken?: string;
     } = {},
   ) {
+    await this.requireUnlockedMailbox(
+      userId,
+      appId,
+      opts.mailboxId,
+      opts.sessionToken,
+    );
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },
     });
@@ -327,7 +353,12 @@ export class MailMessagesService {
     };
   }
 
-  async getOne(userId: string, appId: string, messageId: string) {
+  async getOne(
+    userId: string,
+    appId: string,
+    messageId: string,
+    sessionToken?: string,
+  ) {
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },
     });
@@ -343,6 +374,12 @@ export class MailMessagesService {
     });
     if (!row) throw new NotFoundException('Message not found.');
 
+    await this.mailboxSessions.assertAsync(sessionToken, {
+      userId,
+      appId,
+      mailboxId: row.mailboxId,
+    });
+
     if (!row.isRead) {
       await this.prisma.mailMessage.update({
         where: { id: row.id },
@@ -354,7 +391,13 @@ export class MailMessagesService {
     return this.toView(row);
   }
 
-  async counts(userId: string, appId: string, mailboxId?: string) {
+  async counts(
+    userId: string,
+    appId: string,
+    mailboxId: string | undefined,
+    sessionToken?: string,
+  ) {
+    await this.requireUnlockedMailbox(userId, appId, mailboxId, sessionToken);
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },
     });
@@ -409,6 +452,7 @@ export class MailMessagesService {
       isRead?: boolean;
       folder?: MailMessageFolder;
     },
+    sessionToken?: string,
   ) {
     const app = await this.prisma.mailApp.findFirst({
       where: { appId, userId, status: MailAppStatus.ACTIVE },
@@ -423,6 +467,12 @@ export class MailMessagesService {
       },
     });
     if (!row) throw new NotFoundException('Message not found.');
+
+    await this.mailboxSessions.assertAsync(sessionToken, {
+      userId,
+      appId,
+      mailboxId: row.mailboxId,
+    });
 
     if (
       dto.isStarred === undefined &&
@@ -444,7 +494,12 @@ export class MailMessagesService {
     return this.toView(updated);
   }
 
-  async send(userId: string, appId: string, dto: SendMailMessageDto) {
+  async send(
+    userId: string,
+    appId: string,
+    dto: SendMailMessageDto,
+    sessionToken?: string,
+  ) {
     const to = this.normalizeEmails(dto.to);
     const cc = this.normalizeEmails(dto.cc);
     const bcc = this.normalizeEmails(dto.bcc);
@@ -458,10 +513,11 @@ export class MailMessagesService {
       throw new BadRequestException('Message body is required.');
     }
 
-    const { mailbox } = await this.requireOwnedMailbox(
+    const { mailbox } = await this.requireUnlockedMailbox(
       userId,
       appId,
       dto.mailboxId,
+      sessionToken,
     );
 
     const limits = await this.subscriptions.getActiveLimitsForApp(

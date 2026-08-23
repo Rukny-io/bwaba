@@ -79,3 +79,33 @@ export class SetMailMailbox2faDto {
   @IsBoolean()
   enabled: boolean;
 }
+
+export class ConfirmMailMailbox2faDto {
+  @ApiProperty({ description: '6-digit authenticator code' })
+  @IsString()
+  @Matches(/^\d{6}$/)
+  code: string;
+}
+
+export class UnlockMailMailboxDto {
+  @ApiProperty({
+    description: 'Full mailbox address',
+    example: 'info@example.com',
+  })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(254)
+  address: string;
+
+  @ApiProperty({ description: 'Mailbox password' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  password: string;
+
+  @ApiPropertyOptional({ description: 'TOTP code when 2FA is enabled' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/)
+  totp?: string;
+}

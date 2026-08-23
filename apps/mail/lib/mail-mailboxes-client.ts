@@ -79,11 +79,16 @@ export async function changeMailMailboxPassword(
   return data.mailbox;
 }
 
+export type MailMailboxTotpSetup = {
+  qrCodeUrl: string;
+  manualEntryKey: string;
+};
+
 export async function setMailMailbox2fa(
   appId: string,
   mailboxId: string,
   enabled: boolean,
-): Promise<MailMailboxView> {
+): Promise<{ mailbox: MailMailboxView; setup?: MailMailboxTotpSetup }> {
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/2fa`,
     {
@@ -92,9 +97,32 @@ export async function setMailMailbox2fa(
       body: JSON.stringify({ enabled }),
     },
   );
-  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  const data = await readJson<{
+    mailbox?: MailMailboxView;
+    setup?: MailMailboxTotpSetup;
+  }>(response);
   if (!response.ok || !data.mailbox) {
     throw new Error(errorMessage(data, "Could not update 2FA."));
+  }
+  return { mailbox: data.mailbox, setup: data.setup };
+}
+
+export async function confirmMailMailbox2fa(
+  appId: string,
+  mailboxId: string,
+  code: string,
+): Promise<MailMailboxView> {
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes/${encodeURIComponent(mailboxId)}/2fa/confirm`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    },
+  );
+  const data = await readJson<{ mailbox?: MailMailboxView }>(response);
+  if (!response.ok || !data.mailbox) {
+    throw new Error(errorMessage(data, "Could not confirm 2FA."));
   }
   return data.mailbox;
 }

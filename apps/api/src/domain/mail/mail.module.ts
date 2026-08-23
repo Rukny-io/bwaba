@@ -21,6 +21,7 @@ import { MailAliasService } from './mail-alias.service';
 import { MailForwarderController } from './mail-forwarder.controller';
 import { MailForwarderService } from './mail-forwarder.service';
 import { MailMessagesService } from './mail-messages.service';
+import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailSesService } from './mail-ses.service';
 import { MailInboundService } from './mail-inbound.service';
 import { MailRealtimeService } from './mail-realtime.service';
@@ -52,6 +53,7 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailSubscriptionsService,
     MailAppsService,
     MailMailboxesService,
+    MailMailboxSessionService,
     MailMessagesService,
     MailCatchAllService,
     MailAutoReplyService,
@@ -65,6 +67,7 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailSubscriptionsService,
     MailAppsService,
     MailMailboxesService,
+    MailMailboxSessionService,
     MailMessagesService,
     MailCatchAllService,
     MailAutoReplyService,

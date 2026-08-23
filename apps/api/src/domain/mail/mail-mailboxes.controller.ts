@@ -4,9 +4,13 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
+  Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,16 +23,25 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import {
   AuthenticatedUser,
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
+import {
+  clearMailboxSessionCookie,
+  extractMailboxSessionToken,
+  setMailboxSessionCookie,
+} from '../auth/cookie.config';
 import { MailMailboxesService } from './mail-mailboxes.service';
+import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import {
   ChangeMailMailboxPasswordDto,
+  ConfirmMailMailbox2faDto,
   CreateMailMailboxDto,
   SetMailMailbox2faDto,
+  UnlockMailMailboxDto,
   UpdateMailMailboxDto,
 } from './dto/mail-mailbox.dto';
 
@@ -37,7 +50,54 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller({ path: 'mail/apps/:appId/mailboxes', version: '1' })
 export class MailMailboxesController {
-  constructor(private readonly mailboxes: MailMailboxesService) {}
+  constructor(
+    private readonly mailboxes: MailMailboxesService,
+    private readonly mailboxSessions: MailMailboxSessionService,
+  ) {}
+
+  @Get('session')
+  @ApiOperation({ summary: 'Current unlocked mailbox for this app' })
+  session(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Req() req: Request,
+  ) {
+    return this.mailboxes.session(
+      user.id,
+      appId,
+      extractMailboxSessionToken(req),
+    );
+  }
+
+  @Post('unlock')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 900000 } })
+  @ApiOperation({ summary: 'Unlock a mailbox with password and optional TOTP' })
+  async unlock(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Body() dto: UnlockMailMailboxDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.mailboxes.unlock(user.id, appId, dto);
+    if (result.needsTotp) {
+      return { needsTotp: true, address: result.address };
+    }
+    setMailboxSessionCookie(res, result.token);
+    return { needsTotp: false, mailbox: result.mailbox };
+  }
+
+  @Post('lock')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lock the current mailbox session' })
+  async lock(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.mailboxSessions.revoke(extractMailboxSessionToken(req));
+    clearMailboxSessionCookie(res);
+    return { ok: true };
+  }
 
   @Get()
   @ApiOperation({ summary: 'List mailboxes for a Mail app' })
@@ -115,8 +175,20 @@ export class MailMailboxesController {
     return this.mailboxes.changePassword(user.id, appId, mailboxId, dto);
   }
 
+  @Post(':mailboxId/2fa/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm mailbox TOTP setup with a 6-digit code' })
+  confirm2fa(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('mailboxId') mailboxId: string,
+    @Body() dto: ConfirmMailMailbox2faDto,
+  ) {
+    return this.mailboxes.confirm2fa(user.id, appId, mailboxId, dto);
+  }
+
   @Post(':mailboxId/2fa')
-  @ApiOperation({ summary: 'Enable or disable mailbox 2FA' })
+  @ApiOperation({ summary: 'Start mailbox 2FA setup or disable 2FA' })
   set2fa(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,

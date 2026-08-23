@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PenSquare, Search, Settings, X } from "lucide-react";
-import { cn } from "@heroui/react";
+import { cn, Dropdown } from "@heroui/react";
 import {
   MailInboxSidebar,
   type InboxFolderId,
@@ -15,6 +15,7 @@ import {
   type InboxMessageRow,
 } from "@/components/inbox/mail-inbox-list-card";
 import { MailInboxReaderCard } from "@/components/inbox/mail-inbox-reader-card";
+import { MailInboxLogin } from "@/components/inbox/mail-inbox-login";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import {
   MailComposeModal,
@@ -26,10 +27,15 @@ import {
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
 import {
+  getMailMailboxSession,
+  lockMailMailbox,
+} from "@/lib/mail-mailbox-session-client";
+import {
   getMailMessage,
   getMailMessageCounts,
   importInboundMailMessages,
   listMailMessages,
+  MailboxLockedError,
   sendMailMessage,
   updateMailMessage,
   type MailFolderCounts,
@@ -37,8 +43,6 @@ import {
   type MailMessageView,
 } from "@/lib/mail-messages-client";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
-
-const MAILBOX_STORAGE_KEY = "rukny_mail_selected_mailbox";
 
 const FOLDER_TO_API: Partial<Record<InboxFolderId, MailMessageFolderApi>> = {
   inbox: "INBOX",
@@ -214,8 +218,15 @@ export function MailInboxShell() {
         setError("");
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Could not load messages.",
+          err instanceof MailboxLockedError
+            ? ""
+            : err instanceof Error
+              ? err.message
+              : "Could not load messages.",
         );
+        if (err instanceof MailboxLockedError) {
+          setSelectedMailboxId(null);
+        }
         setMessages([]);
       } finally {
         if (!opts?.quiet) setMessagesLoading(false);
@@ -240,15 +251,15 @@ export function MailInboxShell() {
         const boxes = await listMailMailboxes(id);
         if (cancelled) return;
         setMailboxes(boxes);
-        const stored =
-          typeof window !== "undefined"
-            ? window.localStorage.getItem(MAILBOX_STORAGE_KEY)
-            : null;
-        const initial =
-          (stored && boxes.some((b) => b.id === stored) ? stored : null) ||
-          boxes[0]?.id ||
-          null;
-        setSelectedMailboxId(initial);
+        let unlocked: MailMailboxView | null = null;
+        try {
+          const session = await getMailMailboxSession(id);
+          unlocked = session.mailbox;
+        } catch {
+          unlocked = null;
+        }
+        if (cancelled) return;
+        setSelectedMailboxId(unlocked?.id ?? null);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -276,7 +287,7 @@ export function MailInboxShell() {
 
   // Instant updates via SSE (no polling interval).
   useEffect(() => {
-    if (!appId) return;
+    if (!appId || !selectedMailboxId) return;
     const url = `/api/v1/mail/apps/${encodeURIComponent(appId)}/messages/stream`;
     const source = new EventSource(url, { withCredentials: true });
 
@@ -432,6 +443,9 @@ export function MailInboxShell() {
       }
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed.");
+      if (err instanceof MailboxLockedError) {
+        setSelectedMailboxId(null);
+      }
     } finally {
       setSending(false);
     }
@@ -519,6 +533,10 @@ export function MailInboxShell() {
           m.id === message.id ? { ...m, starred: message.starred } : m,
         ),
       );
+      if (err instanceof MailboxLockedError) {
+        setSelectedMailboxId(null);
+        return;
+      }
       showToast(err instanceof Error ? err.message : "Could not update star.");
     }
   }
@@ -535,6 +553,10 @@ export function MailInboxShell() {
       await loadCounts(appId, selectedMailboxId);
       showToast("Moved to Trash");
     } catch (err) {
+      if (err instanceof MailboxLockedError) {
+        setSelectedMailboxId(null);
+        return;
+      }
       showToast(err instanceof Error ? err.message : "Could not move message.");
     }
   }
@@ -562,10 +584,33 @@ export function MailInboxShell() {
       showToast("Reply sent");
       await loadCounts(appId, selectedMailboxId);
     } catch (err) {
+      if (err instanceof MailboxLockedError) {
+        setSelectedMailboxId(null);
+        return;
+      }
       showToast(err instanceof Error ? err.message : "Reply failed.");
     } finally {
       setReplySending(false);
     }
+  }
+
+  async function handleLockMailbox() {
+    if (!appId) {
+      setSelectedMailboxId(null);
+      return;
+    }
+    try {
+      await lockMailMailbox(appId);
+    } catch {
+      /* still lock locally */
+    }
+    setSelectedMailboxId(null);
+    setSelectedMessageId(null);
+    setMobileShowReader(false);
+    setMessages([]);
+    setCounts(emptyCounts());
+    setComposeOpen(false);
+    setReplyBody("");
   }
 
   function selectByOffset(delta: number) {
@@ -601,6 +646,25 @@ export function MailInboxShell() {
           Go to mailboxes
         </Link>
       </div>
+    );
+  }
+
+  if (mailboxes.length > 0 && !selectedMailboxId && appId) {
+    return (
+      <MailInboxLogin
+        appId={appId}
+        appHref={appHref}
+        mailboxes={mailboxes}
+        onUnlocked={(mailbox) => {
+          setMailboxes((prev) =>
+            prev.some((box) => box.id === mailbox.id)
+              ? prev.map((box) => (box.id === mailbox.id ? mailbox : box))
+              : [...prev, mailbox],
+          );
+          setSelectedMailboxId(mailbox.id);
+          setError("");
+        }}
+      />
     );
   }
 
@@ -712,14 +776,40 @@ export function MailInboxShell() {
           >
             <Settings className="size-4" />
           </Link>
-          <span className="ml-0.5 hidden sm:flex">
-            <MailPersonAvatar
-              name={selected?.displayName || selected?.localPart || "RM"}
-              email={selected?.address}
-              avatarUrl={selected?.avatarUrl}
-              className="size-9"
-              textClassName="text-xs"
-            />
+          <span
+            className={cn(
+              "ml-0.5 flex",
+              searchOpen ? "max-md:pointer-events-none max-md:opacity-0" : "opacity-100",
+            )}
+          >
+            <Dropdown>
+              <Dropdown.Trigger
+                aria-label="Mailbox account"
+                className="rounded-full outline-none"
+              >
+                <MailPersonAvatar
+                  name={selected?.displayName || selected?.localPart || "RM"}
+                  email={selected?.address}
+                  avatarUrl={selected?.avatarUrl}
+                  className="size-9"
+                  textClassName="text-xs"
+                />
+              </Dropdown.Trigger>
+              <Dropdown.Popover
+                placement="bottom end"
+                className="min-w-[12.5rem] overflow-hidden rounded-2xl"
+              >
+                <Dropdown.Menu
+                  onAction={(key) => {
+                    if (String(key) === "lock") void handleLockMailbox();
+                  }}
+                >
+                  <Dropdown.Item id="lock" textValue="Sign out of mailbox">
+                    Sign out of mailbox
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
           </span>
         </div>
       </header>

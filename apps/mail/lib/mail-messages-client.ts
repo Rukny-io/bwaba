@@ -48,12 +48,21 @@ export type MailFolderCounts = {
   starred: number;
 };
 
+export class MailboxLockedError extends Error {
+  readonly code = "MAILBOX_LOCKED";
+  constructor(message = "Unlock this mailbox to continue.") {
+    super(message);
+    this.name = "MailboxLockedError";
+  }
+}
+
 async function readJson<T>(
   response: Response,
-): Promise<T & { message?: string | string[]; error?: string }> {
+): Promise<T & { message?: string | string[]; error?: string; code?: string }> {
   return (await response.json().catch(() => ({}))) as T & {
     message?: string | string[];
     error?: string;
+    code?: string;
   };
 }
 
@@ -64,6 +73,17 @@ function errorMessage(
   const raw = data.message ?? data.error;
   if (Array.isArray(raw)) return raw[0] || fallback;
   return raw || fallback;
+}
+
+function throwIfMailboxLocked(
+  response: Response,
+  data: { code?: string; message?: string | string[]; error?: string },
+) {
+  if (response.status === 403 && data.code === "MAILBOX_LOCKED") {
+    throw new MailboxLockedError(
+      errorMessage(data, "Unlock this mailbox to continue."),
+    );
+  }
 }
 
 function messagesBase(appId: string) {
@@ -94,6 +114,7 @@ export async function listMailMessages(
     messages?: MailMessageView[];
     nextCursor?: string | null;
   }>(response);
+  throwIfMailboxLocked(response, data);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load messages."));
   }
@@ -114,6 +135,7 @@ export async function getMailMessageCounts(
     `${messagesBase(appId)}/counts${qs ? `?${qs}` : ""}`,
   );
   const data = await readJson<Partial<MailFolderCounts>>(response);
+  throwIfMailboxLocked(response, data);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load folder counts."));
   }
@@ -136,6 +158,7 @@ export async function getMailMessage(
     `${messagesBase(appId)}/${encodeURIComponent(messageId)}`,
   );
   const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
   if (!response.ok || !data.id) {
     throw new Error(errorMessage(data, "Could not load message."));
   }
@@ -161,6 +184,7 @@ export async function sendMailMessage(
     body: JSON.stringify(input),
   });
   const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
   if (!response.ok || !data.id) {
     throw new Error(errorMessage(data, "Could not send message."));
   }
@@ -185,6 +209,7 @@ export async function updateMailMessage(
     },
   );
   const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
   if (!response.ok || !data.id) {
     throw new Error(errorMessage(data, "Could not update message."));
   }

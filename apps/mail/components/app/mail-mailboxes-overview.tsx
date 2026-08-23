@@ -10,15 +10,18 @@ import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
   changeMailMailboxPassword,
+  confirmMailMailbox2fa,
   createMailMailbox,
   deleteMailMailbox,
   listMailMailboxes,
   removeMailMailboxAvatar,
   setMailMailbox2fa,
   uploadMailMailboxAvatar,
+  type MailMailboxTotpSetup,
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
+import { MailMailbox2faSetupModal } from "@/components/app/mail-mailbox-2fa-setup-modal";
 import { formatMailStorageAmount } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
@@ -184,6 +187,13 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const [passwordModal, setPasswordModal] = useState<MailMailboxView | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [totpSetup, setTotpSetup] = useState<{
+    mailbox: MailMailboxView;
+    setup: MailMailboxTotpSetup;
+  } | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [savingTotp, setSavingTotp] = useState(false);
+  const [totpError, setTotpError] = useState("");
   const [avatarUploadingId, setAvatarUploadingId] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const avatarTargetIdRef = useRef<string | null>(null);
@@ -271,17 +281,33 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     setCreating(true);
     setError("");
     try {
-      await createMailMailbox(appId, {
+      const created = await createMailMailbox(appId, {
         localPart: localPart.trim(),
         password,
-        enable2fa,
       });
       setLocalPart("");
       setPassword("");
       setPasswordConfirm("");
+      const start2fa = enable2fa;
       setEnable2fa(false);
       setCreateOpen(false);
       await refreshMailboxes(appId);
+      if (start2fa) {
+        try {
+          const result = await setMailMailbox2fa(appId, created.id, true);
+          if (result.setup) {
+            setTotpCode("");
+            setTotpError("");
+            setTotpSetup({ mailbox: result.mailbox, setup: result.setup });
+          }
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Mailbox created, but 2FA setup failed.",
+          );
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create mailbox.");
     } finally {
@@ -314,10 +340,43 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     if (!appId) return;
     setError("");
     try {
-      await setMailMailbox2fa(appId, box.id, !box.totpEnabled);
+      if (box.totpEnabled) {
+        if (
+          !window.confirm(
+            `Turn off two-factor authentication for ${box.address}?`,
+          )
+        ) {
+          return;
+        }
+        await setMailMailbox2fa(appId, box.id, false);
+        await refreshMailboxes(appId);
+        return;
+      }
+      const result = await setMailMailbox2fa(appId, box.id, true);
+      if (result.setup) {
+        setTotpCode("");
+        setTotpError("");
+        setTotpSetup({ mailbox: result.mailbox, setup: result.setup });
+      }
       await refreshMailboxes(appId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update 2FA.");
+    }
+  }
+
+  async function onConfirm2fa() {
+    if (!appId || !totpSetup || totpCode.length !== 6 || savingTotp) return;
+    setSavingTotp(true);
+    setTotpError("");
+    try {
+      await confirmMailMailbox2fa(appId, totpSetup.mailbox.id, totpCode);
+      setTotpSetup(null);
+      setTotpCode("");
+      await refreshMailboxes(appId);
+    } catch (err) {
+      setTotpError(err instanceof Error ? err.message : "Could not confirm 2FA.");
+    } finally {
+      setSavingTotp(false);
     }
   }
 
@@ -927,6 +986,24 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             </div>
           </form>
         </div>
+      ) : null}
+
+      {totpSetup ? (
+        <MailMailbox2faSetupModal
+          address={totpSetup.mailbox.address}
+          qrCodeUrl={totpSetup.setup.qrCodeUrl}
+          manualEntryKey={totpSetup.setup.manualEntryKey}
+          code={totpCode}
+          busy={savingTotp}
+          error={totpError}
+          onCodeChange={setTotpCode}
+          onConfirm={() => void onConfirm2fa()}
+          onCancel={() => {
+            setTotpSetup(null);
+            setTotpCode("");
+            setTotpError("");
+          }}
+        />
       ) : null}
     </section>
   );

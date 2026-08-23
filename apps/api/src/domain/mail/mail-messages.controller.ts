@@ -7,17 +7,20 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Sse,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { MailMessageFolder } from '@prisma/client';
+import type { Request } from 'express';
 import { Observable } from 'rxjs';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import {
   AuthenticatedUser,
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
+import { extractMailboxSessionToken } from '../auth/cookie.config';
 import {
   SendMailMessageDto,
   UpdateMailMessageDto,
@@ -51,6 +54,7 @@ export class MailMessagesController {
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
+    @Req() req: Request,
     @Query('mailboxId') mailboxId?: string,
     @Query('folder') folder?: MailMessageFolder,
     @Query('starred') starred?: string,
@@ -63,6 +67,7 @@ export class MailMessagesController {
       starred: starred === '1' || starred === 'true',
       cursor,
       take: take ? Number(take) : undefined,
+      sessionToken: extractMailboxSessionToken(req),
     });
   }
 
@@ -72,9 +77,15 @@ export class MailMessagesController {
   counts(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
+    @Req() req: Request,
     @Query('mailboxId') mailboxId?: string,
   ) {
-    return this.messages.counts(user.id, appId, mailboxId);
+    return this.messages.counts(
+      user.id,
+      appId,
+      mailboxId,
+      extractMailboxSessionToken(req),
+    );
   }
 
   @Sse('stream')
@@ -124,9 +135,15 @@ export class MailMessagesController {
   send(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
+    @Req() req: Request,
     @Body() dto: SendMailMessageDto,
   ) {
-    return this.messages.send(user.id, appId, dto);
+    return this.messages.send(
+      user.id,
+      appId,
+      dto,
+      extractMailboxSessionToken(req),
+    );
   }
 
   @Get(':messageId')
@@ -135,8 +152,14 @@ export class MailMessagesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
     @Param('messageId') messageId: string,
+    @Req() req: Request,
   ) {
-    return this.messages.getOne(user.id, appId, messageId);
+    return this.messages.getOne(
+      user.id,
+      appId,
+      messageId,
+      extractMailboxSessionToken(req),
+    );
   }
 
   @Patch(':messageId')
@@ -145,8 +168,15 @@ export class MailMessagesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
     @Param('messageId') messageId: string,
+    @Req() req: Request,
     @Body() dto: UpdateMailMessageDto,
   ) {
-    return this.messages.update(user.id, appId, messageId, dto);
+    return this.messages.update(
+      user.id,
+      appId,
+      messageId,
+      dto,
+      extractMailboxSessionToken(req),
+    );
   }
 }

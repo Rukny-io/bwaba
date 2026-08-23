@@ -1,22 +1,41 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { MailAppStatus, MailMailboxStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { generateSecret, generateURI, verifySync } from 'otplib';
+import * as QRCode from 'qrcode';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
   ChangeMailMailboxPasswordDto,
+  ConfirmMailMailbox2faDto,
   CreateMailMailboxDto,
   SetMailMailbox2faDto,
+  UnlockMailMailboxDto,
   UpdateMailMailboxDto,
 } from './dto/mail-mailbox.dto';
 
 const BCRYPT_ROUNDS = 10;
+const TOTP_ISSUER = 'Rukny Mail';
+
+function throwMailboxLoginFailed(message: string): never {
+  throw new ForbiddenException({
+    statusCode: 403,
+    code: 'MAILBOX_LOGIN_FAILED',
+    message,
+  });
+}
+
+export type MailMailboxTotpSetup = {
+  qrCodeUrl: string;
+  manualEntryKey: string;
+};
 
 @Injectable()
 export class MailMailboxesService {
@@ -24,6 +43,7 @@ export class MailMailboxesService {
     private readonly prisma: PrismaService,
     private readonly subscriptions: MailSubscriptionsService,
     private readonly storage: StorageService,
+    private readonly mailboxSessions: MailMailboxSessionService,
   ) {}
 
   private normalizeLocalPart(raw: string) {
@@ -43,9 +63,31 @@ export class MailMailboxesService {
     }
   }
 
-  /** Base32-ish secret for future TOTP enrollment (not exposed in list). */
-  private generateTotpSecret() {
-    return randomBytes(20).toString('hex');
+  /** otplib base32 secret. Legacy hex secrets cannot be verified. */
+  private isUsableTotpSecret(secret: string | null | undefined) {
+    if (!secret) return false;
+    const compact = secret.replace(/\s/g, '').toUpperCase();
+    return /^[A-Z2-7]{16,}$/.test(compact);
+  }
+
+  private verifyTotp(secret: string, token: string) {
+    const cleanToken = token.replace(/\s/g, '');
+    const result = verifySync({
+      token: cleanToken,
+      secret,
+      epochTolerance: 30,
+    });
+    return result.valid;
+  }
+
+  private async totpSetupPayload(address: string, secret: string): Promise<MailMailboxTotpSetup> {
+    const otpauthUrl = generateURI({
+      issuer: TOTP_ISSUER,
+      label: address,
+      secret,
+    });
+    const qrCodeUrl = await QRCode.toDataURL(otpauthUrl);
+    return { qrCodeUrl, manualEntryKey: secret };
   }
 
   private mediaUrl(key: string | null | undefined) {
@@ -175,7 +217,6 @@ export class MailMailboxesService {
       localPart.charAt(0).toUpperCase() + localPart.slice(1);
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const enable2fa = Boolean(dto.enable2fa);
 
     const aliasTaken = await this.prisma.mailAlias.findFirst({
       where: { domain, localPart },
@@ -193,8 +234,8 @@ export class MailMailboxesService {
           domain,
           displayName,
           passwordHash,
-          totpEnabled: enable2fa,
-          totpSecret: enable2fa ? this.generateTotpSecret() : null,
+          totpEnabled: false,
+          totpSecret: null,
           status: MailMailboxStatus.ACTIVE,
         },
         include: { mailApp: { select: { appId: true } } },
@@ -255,6 +296,7 @@ export class MailMailboxesService {
         where: { mailboxId: existing.id, enabled: true },
         data: { enabled: false },
       });
+      await this.mailboxSessions.revokeMailbox(existing.id);
     }
 
     return { mailbox: this.toView(updated) };
@@ -274,6 +316,7 @@ export class MailMailboxesService {
       data: { passwordHash },
       include: { mailApp: { select: { appId: true } } },
     });
+    await this.mailboxSessions.revokeMailbox(existing.id);
     return { mailbox: this.toView(updated) };
   }
 
@@ -282,19 +325,150 @@ export class MailMailboxesService {
     appId: string,
     mailboxId: string,
     dto: SetMailMailbox2faDto,
-  ) {
+  ): Promise<{ mailbox: ReturnType<MailMailboxesService['toView']>; setup?: MailMailboxTotpSetup }> {
     const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const address = `${existing.localPart}@${existing.domain}`;
+
+    if (!dto.enabled) {
+      const updated = await this.prisma.mailMailbox.update({
+        where: { id: existing.id },
+        data: { totpEnabled: false, totpSecret: null },
+        include: { mailApp: { select: { appId: true } } },
+      });
+      await this.mailboxSessions.revokeMailbox(existing.id);
+      return { mailbox: this.toView(updated) };
+    }
+
+    if (existing.totpEnabled && this.isUsableTotpSecret(existing.totpSecret)) {
+      throw new BadRequestException('Two-factor authentication is already on.');
+    }
+
+    const secret =
+      this.isUsableTotpSecret(existing.totpSecret) && !existing.totpEnabled
+        ? existing.totpSecret!
+        : generateSecret();
+
     const updated = await this.prisma.mailMailbox.update({
       where: { id: existing.id },
-      data: {
-        totpEnabled: dto.enabled,
-        totpSecret: dto.enabled
-          ? existing.totpSecret || this.generateTotpSecret()
-          : null,
-      },
+      data: { totpEnabled: false, totpSecret: secret },
+      include: { mailApp: { select: { appId: true } } },
+    });
+
+    return {
+      mailbox: this.toView(updated),
+      setup: await this.totpSetupPayload(address, secret),
+    };
+  }
+
+  async confirm2fa(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    dto: ConfirmMailMailbox2faDto,
+  ) {
+    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    if (!existing.totpSecret || !this.isUsableTotpSecret(existing.totpSecret)) {
+      throw new BadRequestException('Start two-factor setup first.');
+    }
+    if (existing.totpEnabled) {
+      throw new BadRequestException('Two-factor authentication is already on.');
+    }
+    if (!this.verifyTotp(existing.totpSecret, dto.code)) {
+      throw new BadRequestException(
+        'That code is incorrect. Try a new code from the app.',
+      );
+    }
+    const updated = await this.prisma.mailMailbox.update({
+      where: { id: existing.id },
+      data: { totpEnabled: true },
       include: { mailApp: { select: { appId: true } } },
     });
     return { mailbox: this.toView(updated) };
+  }
+
+  async unlock(userId: string, appId: string, dto: UnlockMailMailboxDto) {
+    const app = await this.requireOwnedApp(userId, appId);
+    const address = dto.address.trim().toLowerCase();
+    const at = address.lastIndexOf('@');
+    if (at < 1) {
+      throwMailboxLoginFailed('Email or password is incorrect.');
+    }
+    const localPart = address.slice(0, at);
+    const domain = address.slice(at + 1);
+
+    const mailbox = await this.prisma.mailMailbox.findFirst({
+      where: {
+        mailAppId: app.id,
+        localPart,
+        domain,
+        status: MailMailboxStatus.ACTIVE,
+      },
+      include: { mailApp: { select: { appId: true } } },
+    });
+
+    if (!mailbox?.passwordHash) {
+      throwMailboxLoginFailed('Email or password is incorrect.');
+    }
+
+    const passwordOk = await bcrypt.compare(dto.password, mailbox.passwordHash);
+    if (!passwordOk) {
+      throwMailboxLoginFailed('Email or password is incorrect.');
+    }
+
+    const totpReady =
+      mailbox.totpEnabled && this.isUsableTotpSecret(mailbox.totpSecret);
+
+    if (totpReady && !dto.totp) {
+      return {
+        needsTotp: true as const,
+        address: `${mailbox.localPart}@${mailbox.domain}`,
+      };
+    }
+
+    if (totpReady && dto.totp && !this.verifyTotp(mailbox.totpSecret!, dto.totp)) {
+      throwMailboxLoginFailed(
+        'That code is incorrect. Try a new code from the app.',
+      );
+    }
+
+    const view = this.toView(mailbox);
+    const token = await this.mailboxSessions.create({
+      userId,
+      appId,
+      mailboxId: mailbox.id,
+      address: view.address,
+    });
+
+    return {
+      needsTotp: false as const,
+      mailbox: view,
+      token,
+    };
+  }
+
+  async session(userId: string, appId: string, token: string | undefined) {
+    await this.requireOwnedApp(userId, appId);
+    const session = await this.mailboxSessions.read(token);
+    if (
+      !session ||
+      session.userId !== userId ||
+      session.appId !== appId
+    ) {
+      return { mailbox: null };
+    }
+    try {
+      const mailbox = await this.requireOwnedMailbox(
+        userId,
+        appId,
+        session.mailboxId,
+      );
+      if (mailbox.status !== MailMailboxStatus.ACTIVE) {
+        return { mailbox: null };
+      }
+      return { mailbox: this.toView(mailbox) };
+    } catch {
+      return { mailbox: null };
+    }
   }
 
   async uploadAvatar(
@@ -353,6 +527,7 @@ export class MailMailboxesService {
       where: { id: existing.id },
       data: { status: MailMailboxStatus.DELETED, avatarKey: null },
     });
+    await this.mailboxSessions.revokeMailbox(existing.id);
     return { ok: true };
   }
 }

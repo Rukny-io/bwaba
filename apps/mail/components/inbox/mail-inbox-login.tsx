@@ -109,7 +109,7 @@ export function MailInboxLogin({
           <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted-foreground)]">
             {needsTotp
               ? `Enter the 6-digit code for ${address}.`
-              : "Use the mailbox address and password you created for this app."}
+              : "Use the mailbox address and password you created for this workspace."}
           </p>
 
           {signInBoxes.length === 0 ? (

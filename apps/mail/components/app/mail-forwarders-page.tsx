@@ -284,7 +284,7 @@ export function MailForwardersPage() {
               <Alert.Content>
                 <Alert.Title>Plan required</Alert.Title>
                 <Alert.Description>
-                  This Mail app needs an active plan before you can add forwarders.
+                  This workspace needs an active plan before you can add forwarders.
                 </Alert.Description>
               </Alert.Content>
               <Button size="sm" onPress={() => router.push("/pricing")}>

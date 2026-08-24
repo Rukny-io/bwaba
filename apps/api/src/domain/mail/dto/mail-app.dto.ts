@@ -26,9 +26,13 @@ export class CreateMailAppDto {
   @IsEmail()
   contactEmail: string;
 
-  @ApiProperty({ description: 'فئة التطبيق', enum: ['BUSINESS', 'CONSUMER'] })
+  @ApiPropertyOptional({
+    description: 'فئة المساحة (اختياري — الافتراضي BUSINESS)',
+    enum: ['BUSINESS', 'CONSUMER'],
+  })
+  @IsOptional()
   @IsEnum(['BUSINESS', 'CONSUMER'] as const)
-  appType: 'BUSINESS' | 'CONSUMER';
+  appType?: 'BUSINESS' | 'CONSUMER';
 
   @ApiProperty({ description: 'رمز التحقق من OTP' })
   @IsString()

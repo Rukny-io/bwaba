@@ -88,7 +88,7 @@ export async function upsertMailDomainBinding(
   );
   if (owner) {
     throw new Error(
-      `Domain ${domain} is already connected to another Mail app (${owner[0]}).`,
+      `Domain ${domain} is already connected to another workspace (${owner[0]}).`,
     );
   }
 

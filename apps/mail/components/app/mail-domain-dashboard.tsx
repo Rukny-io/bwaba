@@ -14,6 +14,8 @@ import {
 import { writeMailDomainSetup } from "@/lib/mail-domain-storage";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import { deleteDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
+import { fulfillPendingMailbox } from "@/lib/mail-pending-mailbox";
+import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 
 function Pill({
   children,
@@ -83,6 +85,16 @@ export function MailDomainDashboard({ setup: initial }: { setup: MailDomainSetup
       persist(
         applyDnsCheckResults(setup, result.results, result.verified, result.waiting),
       );
+      if (result.verified) {
+        const appId = readMailAppIdFromDocument();
+        if (appId) {
+          try {
+            await fulfillPendingMailbox(appId);
+          } catch {
+            // User can create the mailbox from Mailboxes after Starter is on.
+          }
+        }
+      }
     } catch {
       persist({
         ...setup,

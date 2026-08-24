@@ -39,9 +39,9 @@ export const MAIL_UNPUBLISHED_NAV: MailNavItem[] = [
 ];
 
 export const MAIL_HEADER_NAV: { href: string; label: string; exact?: boolean }[] = [
-  { href: "/app", label: "App", exact: true },
+  { href: "/inbox", label: "Inbox", exact: true },
   { href: "/settings", label: "Settings", exact: true },
-  { href: "/apps", label: "Apps", exact: true },
+  { href: "/apps", label: "Workspaces", exact: true },
   { href: "/tutorials", label: "Tutorials", exact: true },
 ];
 

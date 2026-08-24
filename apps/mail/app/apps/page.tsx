@@ -10,10 +10,10 @@ import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 
 function gateMessage(code: string | null): string | null {
   if (code === "app_required") {
-    return "Create or open a Mail app to access the rest of Rukny Mail.";
+    return "Create or open a workspace to use Rukny Mail.";
   }
-  if (code === "not_found") return "That Mail app was not found.";
-  if (code === "invalid") return "Invalid Mail app id.";
+  if (code === "not_found") return "That workspace was not found.";
+  if (code === "invalid") return "Invalid workspace id.";
   return null;
 }
 
@@ -34,7 +34,7 @@ function MailAppsContent() {
         if (!cancelled) setApps(rows);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Could not load Mail apps.");
+          setError(err instanceof Error ? err.message : "Could not load workspaces.");
         }
       } finally {
         if (!cancelled) setLoading(false);

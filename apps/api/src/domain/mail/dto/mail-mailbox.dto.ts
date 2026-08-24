@@ -42,11 +42,14 @@ export class CreateMailMailboxDto {
   @IsBoolean()
   enable2fa?: boolean;
 
-  @ApiPropertyOptional({ description: 'Display name', example: 'Info' })
-  @IsOptional()
+  @ApiProperty({
+    description: 'From display name (person or company, not Support/Admin)',
+    example: 'Rukny Studio',
+  })
   @IsString()
+  @MinLength(2)
   @MaxLength(80)
-  displayName?: string;
+  displayName: string;
 }
 
 export class UpdateMailMailboxDto {

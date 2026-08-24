@@ -20,6 +20,7 @@ import {
   UnlockMailMailboxDto,
   UpdateMailMailboxDto,
 } from './dto/mail-mailbox.dto';
+import { assertMailboxDisplayName } from './mail-display-name.util';
 
 const BCRYPT_ROUNDS = 10;
 const TOTP_ISSUER = 'Rukny Mail';
@@ -192,11 +193,12 @@ export class MailMailboxesService {
     }
 
     this.assertPassword(dto.password);
+    const displayName = assertMailboxDisplayName(dto.displayName);
 
     const limits = await this.subscriptions.getActiveLimitsForApp(app.id);
     if (!limits || typeof limits.mailboxCount !== 'number') {
       throw new BadRequestException(
-        'This Mail app needs an active plan before you can create mailboxes. Request a plan from Pricing.',
+        'This workspace needs an active plan before you can create mailboxes. Starter starts after DNS is verified.',
       );
     }
 
@@ -208,13 +210,9 @@ export class MailMailboxesService {
     });
     if (usedSeats >= limits.mailboxCount) {
       throw new BadRequestException(
-        `Mailbox limit reached for this app (${limits.mailboxCount}). Request more seats.`,
+        `Mailbox limit reached for this workspace (${limits.mailboxCount}). Request more seats.`,
       );
     }
-
-    const displayName =
-      dto.displayName?.trim() ||
-      localPart.charAt(0).toUpperCase() + localPart.slice(1);
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
@@ -264,7 +262,7 @@ export class MailMailboxesService {
 
     const data: Prisma.MailMailboxUpdateInput = {};
     if (dto.displayName !== undefined) {
-      data.displayName = dto.displayName?.trim() || null;
+      data.displayName = assertMailboxDisplayName(dto.displayName ?? '');
     }
     if (dto.status) {
       data.status =

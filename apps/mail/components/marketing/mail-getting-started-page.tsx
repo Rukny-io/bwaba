@@ -7,7 +7,7 @@ import { cn } from "@heroui/react";
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
 const STEPS = [
-  { id: 0, num: "01", title: "Sign in", line: "Rukny, then a Mail app." },
+  { id: 0, num: "01", title: "Sign in", line: "Rukny, then a workspace." },
   { id: 1, num: "02", title: "Own it", line: "Your domain. Your From." },
   { id: 2, num: "03", title: "Send", line: "Webmail, then deliver." },
 ] as const;
@@ -127,7 +127,7 @@ function SceneSignIn() {
           </span>
         </div>
         <p className="mt-6 text-2xl font-bold tracking-tight text-[#132327]">Mail</p>
-        <p className="mt-1 text-sm text-[#132327]/45">One app. Your domain.</p>
+        <p className="mt-1 text-sm text-[#132327]/45">One workspace. Your domain.</p>
         <div className="mt-6 space-y-2">
           <div className="flex items-center justify-between rounded-xl bg-white px-3 py-3">
             <span className="text-sm text-[#132327]">studio.iq</span>
@@ -136,7 +136,7 @@ function SceneSignIn() {
             </span>
           </div>
           <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-3 text-[#132327]/35">
-            <span className="text-sm">New Mail app</span>
+            <span className="text-sm">New workspace</span>
             <span className="text-[11px]">+</span>
           </div>
         </div>

@@ -252,7 +252,7 @@ export function MailEmailLogsPage() {
           Email Logs
         </h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Delivery events for this app’s mailboxes. Message contents stay in Inbox.
+          Delivery events for this workspace’s mailboxes. Message contents stay in Inbox.
         </p>
       </div>
 

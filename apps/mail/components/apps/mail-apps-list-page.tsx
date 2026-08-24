@@ -17,15 +17,15 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
     <div className="dashboard-section-stack" dir="ltr">
       <header className="space-y-2 text-center">
         <p className="text-xs font-medium tracking-wide text-[var(--primary)] uppercase">
-          Mail App Center
+          Mail workspaces
         </p>
         <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-          {isEmpty ? "Set up your Mail app" : "Select application"}
+          {isEmpty ? "Set up your mail" : "Your workspaces"}
         </h1>
         <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
           {isEmpty
-            ? "Each Mail app is independent — domain, mailboxes, and its own plan (seats + storage)."
-            : "Each app has its own subscription. Choose one to continue or register a new one."}
+            ? "One workspace per domain — mailboxes, DNS, and its own plan."
+            : "Each workspace has its own domain and plan. Open one or add another."}
         </p>
       </header>
 
@@ -35,15 +35,14 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
             <Layers className="size-7" />
           </span>
           <p className="max-w-sm text-sm leading-relaxed text-[var(--muted-foreground)]">
-            No Mail apps are registered yet. Start by defining the application and its
-            official contact details.
+            No workspace yet. Connect a domain you own and create your first mailbox.
           </p>
           <Link
             href="/apps/creation"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-6 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
           >
             <Plus className="size-4" />
-            Create application
+            Start mail
           </Link>
         </div>
       ) : (
@@ -65,7 +64,7 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
               <Plus className="size-5" />
             </span>
             <span className="text-sm font-semibold text-[var(--foreground)]">
-              New application
+              New workspace
             </span>
           </Link>
         </div>

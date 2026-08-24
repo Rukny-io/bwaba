@@ -42,14 +42,19 @@ export async function listMailMailboxes(appId: string): Promise<MailMailboxView[
 
 export async function createMailMailbox(
   appId: string,
-  input: { localPart: string; password: string; enable2fa?: boolean; displayName?: string },
+  input: { localPart: string; password: string; enable2fa?: boolean; displayName: string },
 ): Promise<MailMailboxView> {
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/mailboxes`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        localPart: input.localPart,
+        password: input.password,
+        displayName: input.displayName,
+        enable2fa: input.enable2fa,
+      }),
     },
   );
   const data = await readJson<{ mailbox?: MailMailboxView }>(response);

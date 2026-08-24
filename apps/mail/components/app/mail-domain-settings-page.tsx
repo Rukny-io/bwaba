@@ -63,7 +63,7 @@ export function MailDomainSettingsPage() {
       <section className="mx-auto flex w-full max-w-lg flex-col gap-3 py-10 text-center">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Domain settings</h1>
         <p className="text-sm text-[var(--muted-foreground)]">
-          No domain is linked to this app yet. Finish setup to publish DNS records.
+          No domain is linked to this workspace yet. Finish setup to publish DNS records.
         </p>
         <Link
           href={appHref}

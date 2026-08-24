@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const session = await requireMailAppSession({ fresh: true });
   if (!session) {
     return NextResponse.json(
-      { error: "Create and open a Mail app first." },
+      { error: "Create and open a workspace first." },
       { status: 403 },
     );
   }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "This domain is already connected to another Mail app. Use a different domain.",
+          "This domain is already connected to another workspace. Use a different domain.",
       },
       { status: 409 },
     );

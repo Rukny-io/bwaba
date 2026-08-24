@@ -245,7 +245,7 @@ export function MailInboxShell() {
       const id = readMailAppIdFromDocument();
       if (!id) {
         if (!cancelled) {
-          setError("Open a Mail app first.");
+          setError("Open a workspace first.");
           setLoading(false);
         }
         return;

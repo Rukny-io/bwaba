@@ -46,7 +46,7 @@ async function proxyMailboxSession(
   opts?: { skipBody?: boolean },
 ) {
   if (!isValidMailAppId(appId)) {
-    return NextResponse.json({ message: "Invalid Mail app." }, { status: 400 });
+    return NextResponse.json({ message: "Invalid workspace." }, { status: 400 });
   }
 
   const headers = new Headers();

@@ -11,7 +11,6 @@ interface MailAppCardProps {
 
 export function MailAppCard({ app, href, active }: MailAppCardProps) {
   const initials = app.name.trim().charAt(0).toUpperCase() || "M";
-  const typeLabel = app.appType === "BUSINESS" ? "Business" : "Consumer";
 
   return (
     // Hard navigation: avoid Next soft-nav caching an old redirect to /inbox.
@@ -42,9 +41,6 @@ export function MailAppCard({ app, href, active }: MailAppCardProps) {
           className="rounded-full bg-[color-mix(in_srgb,var(--primary)_15%,var(--background))] px-2.5 py-0.5 font-mono text-[10px] font-semibold text-[var(--primary)]"
         >
           /u{app.slotIndex}
-        </span>
-        <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">
-          {typeLabel}
         </span>
         <span
           dir="ltr"

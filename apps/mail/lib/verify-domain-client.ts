@@ -20,7 +20,7 @@ async function readApiJson<T extends { error?: string }>(
       response.status === 502 || response.status === 503 || response.status === 504
         ? "Mail service or SES is unavailable. Check mail container logs and AWS credentials."
         : response.status === 401 || response.status === 403
-          ? "Please login again, then open your Mail app."
+          ? "Please login again, then open your workspace."
           : `Unexpected server response (${response.status}).`;
     throw new Error(hint);
   }

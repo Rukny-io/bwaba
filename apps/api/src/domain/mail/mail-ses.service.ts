@@ -4,8 +4,8 @@ import {
   GetEmailIdentityCommand,
   SESv2Client,
   SendEmailCommand,
-  type SendEmailCommandInput,
 } from '@aws-sdk/client-sesv2';
+import { buildRawMimeMessage } from './mail-raw-mime.util';
 
 const DEFAULT_SES_REGION = 'eu-north-1';
 
@@ -98,46 +98,19 @@ export class MailSesService {
   }
 
   async sendEmail(input: MailSesSendInput): Promise<{ sesMessageId: string }> {
-    // messageIdHeader / inReplyTo reserved for Raw MIME send (threading headers).
-    void input.messageIdHeader;
-    void input.inReplyTo;
-
-    const fromDisplay = input.fromName?.trim()
-      ? `"${input.fromName.replace(/"/g, '')}" <${input.from}>`
-      : input.from;
-
-    const contentBody: NonNullable<
-      SendEmailCommandInput['Content']
-    >['Simple'] = {
-      Subject: { Data: input.subject, Charset: 'UTF-8' },
-      Body: {},
-    };
-
-    if (input.bodyText?.trim()) {
-      contentBody.Body!.Text = {
-        Data: input.bodyText,
-        Charset: 'UTF-8',
-      };
-    }
-    if (input.bodyHtml?.trim()) {
-      contentBody.Body!.Html = {
-        Data: input.bodyHtml,
-        Charset: 'UTF-8',
-      };
-    }
-    if (!contentBody.Body!.Text && !contentBody.Body!.Html) {
-      contentBody.Body!.Text = { Data: '', Charset: 'UTF-8' };
-    }
-
     const command = new SendEmailCommand({
-      FromEmailAddress: fromDisplay,
+      FromEmailAddress: input.from,
       Destination: {
         ToAddresses: input.to,
         CcAddresses: input.cc?.length ? input.cc : undefined,
         BccAddresses: input.bcc?.length ? input.bcc : undefined,
       },
       ReplyToAddresses: input.replyTo?.length ? input.replyTo : [input.from],
-      Content: { Simple: contentBody },
+      Content: {
+        Raw: {
+          Data: buildRawMimeMessage(input),
+        },
+      },
     });
 
     try {

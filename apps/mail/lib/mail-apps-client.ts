@@ -40,7 +40,7 @@ function errorMessage(data: { message?: string | string[] }, fallback: string) {
 export async function listMailApps(): Promise<MailApp[]> {
   const response = await sessionFetch("/api/v1/mail/apps");
   const data = await readJson<{ apps?: MailApp[] }>(response);
-  if (!response.ok) throw new Error(errorMessage(data, "Could not load Mail apps."));
+  if (!response.ok) throw new Error(errorMessage(data, "Could not load workspaces."));
   return data.apps ?? [];
 }
 
@@ -92,7 +92,7 @@ export async function createMailApp(input: {
   });
   const data = await readJson<{ app?: MailApp }>(response);
   if (!response.ok || !data.app) {
-    throw new Error(errorMessage(data, "Could not create this Mail app."));
+    throw new Error(errorMessage(data, "Could not create this workspace."));
   }
   return data.app;
 }
@@ -101,7 +101,7 @@ export async function getMailApp(appId: string): Promise<MailApp> {
   const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`);
   const data = await readJson<{ app?: MailApp }>(response);
   if (!response.ok || !data.app) {
-    throw new Error(errorMessage(data, "Mail app not found."));
+    throw new Error(errorMessage(data, "Workspace not found."));
   }
   return data.app;
 }
@@ -122,7 +122,7 @@ export async function updateMailApp(
   });
   const data = await readJson<{ app?: MailApp }>(response);
   if (!response.ok || !data.app) {
-    throw new Error(errorMessage(data, "Could not update this Mail app."));
+    throw new Error(errorMessage(data, "Could not update this workspace."));
   }
   return data.app;
 }
@@ -133,6 +133,6 @@ export async function archiveMailApp(appId: string): Promise<void> {
   });
   const data = await readJson(response);
   if (!response.ok) {
-    throw new Error(errorMessage(data, "Could not archive this Mail app."));
+    throw new Error(errorMessage(data, "Could not archive this workspace."));
   }
 }

@@ -179,6 +179,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const [loadingBoxes, setLoadingBoxes] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [localPart, setLocalPart] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [enable2fa, setEnable2fa] = useState(false);
@@ -279,14 +280,20 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
       setError("Passwords do not match.");
       return;
     }
+    if (displayName.trim().length < 2) {
+      setError("Enter a From name (your name or company).");
+      return;
+    }
     setCreating(true);
     setError("");
     try {
       const created = await createMailMailbox(appId, {
         localPart: localPart.trim(),
         password,
+        displayName: displayName.trim(),
       });
       setLocalPart("");
+      setDisplayName("");
       setPassword("");
       setPasswordConfirm("");
       const start2fa = enable2fa;
@@ -494,7 +501,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         !subscription
           ? pendingRequest
             ? "Plan request pending — wait for admin activation"
-            : "Request a plan for this app first"
+            : "Starter starts after domain DNS is verified"
           : !canCreate
             ? "Mailbox limit reached — upgrade or add seats"
             : undefined
@@ -600,8 +607,8 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                 {loadingSub
                   ? "Loading plan limits…"
                   : pendingRequest
-                    ? `Plan request pending (${pendingRequest.ticketNumber}). An admin will activate this app.`
-                    : "Request a plan for this app to see mailbox limits."}
+                    ? `Plan request pending (${pendingRequest.ticketNumber}). An admin will activate this workspace.`
+                    : "Starter starts after domain DNS is verified. Paid plans are requested from Pricing."}
               </p>
             ) : (
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -716,6 +723,20 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                 @{setup.domain}
               </span>
             </div>
+            <TextField isRequired className="mt-3 gap-1.5">
+              <Label className="text-xs font-medium text-[var(--muted-foreground)]">
+                From name
+              </Label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name or company"
+                autoComplete="name"
+              />
+            </TextField>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              Shown as the sender. Avoid Support or Admin — those names often land in spam.
+            </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <TextField isRequired className="gap-1.5">
                 <Label className="text-xs font-medium text-[var(--muted-foreground)]">
@@ -761,7 +782,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="submit"
-                disabled={creating || !localPart.trim() || password.length < 8}
+                disabled={creating || !localPart.trim() || displayName.trim().length < 2 || password.length < 8}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] disabled:opacity-50 sm:h-9 sm:flex-none sm:rounded-lg"
               >
                 {creating ? "Creating…" : "Create"}

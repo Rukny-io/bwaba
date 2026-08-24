@@ -78,7 +78,7 @@ function LoginContent() {
                 ? "Could not verify your session. Sign in again."
                 : sessionFlag === "logout"
                   ? "Signed out successfully."
-                  : "Create a Mail app, connect your domain, and start sending."}
+                  : "Create a workspace, connect your domain, and start sending."}
           </p>
         </div>
 

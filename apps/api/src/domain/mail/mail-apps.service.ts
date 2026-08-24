@@ -22,6 +22,7 @@ import {
   VerifyMailAppOtpDto,
 } from './dto/mail-app.dto';
 import { MAIL_APP_ID_PATTERN } from './mail-app-id.util';
+import { MailSubscriptionsService } from './mail-subscriptions.service';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
@@ -37,6 +38,7 @@ export class MailAppsService {
     private readonly prisma: PrismaService,
     private readonly whatsappBusiness: WhatsAppBusinessService,
     private readonly configService: ConfigService,
+    private readonly subscriptions: MailSubscriptionsService,
   ) {}
 
   private isDevOtpBypass(): boolean {
@@ -312,7 +314,7 @@ export class MailAppsService {
             slotIndex,
             name,
             contactEmail: dto.contactEmail.trim(),
-            appType: dto.appType,
+            appType: dto.appType ?? MailAppType.BUSINESS,
             description: dto.description?.trim() || null,
             status: MailAppStatus.ACTIVE,
           },
@@ -334,7 +336,7 @@ export class MailAppsService {
   }
 
   async updateApp(userId: string, appId: string, dto: UpdateMailAppDto) {
-    await this.getApp(userId, appId);
+    const { app: previous } = await this.getApp(userId, appId);
 
     const primaryDomain =
       dto.primaryDomain === undefined
@@ -373,6 +375,17 @@ export class MailAppsService {
         ...(domainCheckedAt !== undefined ? { domainCheckedAt } : {}),
       },
     });
+
+    if (
+      app.domainStatus === MailDomainStatus.ACTIVE &&
+      previous.domainStatus !== MailDomainStatus.ACTIVE
+    ) {
+      await this.subscriptions.provisionStarterAfterDomainVerified(
+        userId,
+        appId,
+      );
+    }
+
     return { app: this.toView(app) };
   }
 

@@ -51,7 +51,7 @@ const USE_CASES = [
   {
     icon: Users,
     title: "Team inboxes",
-    body: "Give people real addresses, webmail, and optional 2FA. Seats and storage stay on that Mail app.",
+    body: "Give people real addresses, webmail, and optional 2FA. Seats and storage stay on that workspace.",
   },
   {
     icon: Forward,
@@ -63,8 +63,8 @@ const USE_CASES = [
 const CONNECT_STEPS = [
   {
     step: "01",
-    title: "Create a Mail app",
-    body: "Sign in with Rukny, create an app, and request a plan.",
+    title: "Create a workspace",
+    body: "Sign in with Rukny, create a workspace, then verify DNS. Starter starts after DNS.",
   },
   {
     step: "02",
@@ -226,11 +226,11 @@ export function MailHomePage({
           <div className={L.container}>
             <p className={L.eyebrow}>Pricing</p>
             <h2 className={L.sectionTitle}>
-              Plans per Mail app, billed monthly in IQD
+              Plans per workspace, billed monthly in IQD
             </h2>
             <p className={L.sectionLead}>
-              Each app has its own subscription. Request a plan in the console;
-              an admin activates seats and storage.
+              Each workspace has its own subscription. Starter starts after DNS is verified;
+              Standard and Premium are requested in the console.
             </p>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {plans.map((plan) => (

@@ -161,7 +161,7 @@ export async function requestMailPlan(
   appId = readMailAppIdFromDocument(),
 ): Promise<{ alreadyPending: boolean; ticket: MailPendingPlanRequest }> {
   if (!isValidMailAppId(appId)) {
-    throw new Error("Open a Mail app first, then request a plan for that app.");
+    throw new Error("Open a workspace first, then request a plan for that workspace.");
   }
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/subscription/request`,

@@ -185,7 +185,7 @@ export function MailSettingsPage() {
     if (!appId || !app) return;
     if (
       !window.confirm(
-        `Archive ${app.name}? This Mail app will leave the workspace. You can still open other apps.`,
+        `Archive ${app.name}? This workspace will leave your picker. You can still open other workspaces.`,
       )
     ) {
       return;
@@ -197,7 +197,7 @@ export function MailSettingsPage() {
       clearMailAppIdCookie();
       window.location.assign("/apps");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not archive this Mail app.");
+      setError(err instanceof Error ? err.message : "Could not archive this workspace.");
       setArchiving(false);
     }
   }
@@ -290,7 +290,7 @@ export function MailSettingsPage() {
                 dir="ltr"
               />
               <Description>
-                Used for notices if this Mail app needs recovery.
+                Used for notices if this workspace needs recovery.
               </Description>
             </TextField>
 
@@ -467,7 +467,7 @@ export function MailSettingsPage() {
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-[var(--foreground)]">Danger zone</h2>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                Archive removes this Mail app from your picker. Mailboxes are not wiped.
+                Archive removes this workspace from your picker. Mailboxes are not wiped.
               </p>
             </div>
             <div className="flex justify-end">
@@ -477,7 +477,7 @@ export function MailSettingsPage() {
                 isDisabled={archiving}
                 onPress={() => void onArchive()}
               >
-                {archiving ? "Archiving…" : "Archive Mail app"}
+                {archiving ? "Archiving…" : "Archive workspace"}
               </Button>
             </div>
           </div>

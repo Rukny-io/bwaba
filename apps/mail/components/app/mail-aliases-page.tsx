@@ -291,7 +291,7 @@ export function MailAliasesPage() {
               <Alert.Content>
                 <Alert.Title>Plan required</Alert.Title>
                 <Alert.Description>
-                  This Mail app needs an active plan before you can add aliases.
+                  This workspace needs an active plan before you can add aliases.
                 </Alert.Description>
               </Alert.Content>
               <Button size="sm" onPress={() => router.push("/pricing")}>

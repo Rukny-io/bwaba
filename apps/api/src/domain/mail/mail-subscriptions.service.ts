@@ -7,6 +7,7 @@ import {
 import {
   BillingCycle,
   MailAppStatus,
+  MailDomainStatus,
   MailMailboxStatus,
   MailPlan,
   PaymentStatus,
@@ -204,6 +205,41 @@ export class MailSubscriptionsService {
         createdAt: new Date().toISOString(),
       },
     };
+  }
+
+  /** Activates Starter after DNS is verified. Does not replace an active paid plan. */
+  async provisionStarterAfterDomainVerified(userId: string, publicAppId: string) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { userId, appId: publicAppId, status: MailAppStatus.ACTIVE },
+      include: { subscription: true },
+    });
+    if (!app) {
+      throw new NotFoundException('Mail app not found.');
+    }
+    if (app.domainStatus !== MailDomainStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Verify domain DNS before Starter can start.',
+      );
+    }
+    if (app.subscription?.status === SubscriptionStatus.ACTIVE) {
+      return { alreadyActive: true as const };
+    }
+
+    const seats = MAIL_PLAN_LIMITS.STARTER.mailboxesIncluded;
+    await this.upsertForApp(
+      {
+        id: app.id,
+        appId: app.appId,
+        userId: app.userId,
+        name: app.name,
+        primaryDomain: app.primaryDomain,
+      },
+      MailPlan.STARTER,
+      seats,
+      BillingCycle.MONTHLY,
+      { source: 'auto_starter_after_dns' },
+    );
+    return { alreadyActive: false as const };
   }
 
   async adminActivateForApp(

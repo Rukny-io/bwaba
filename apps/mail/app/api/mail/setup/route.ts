@@ -68,7 +68,7 @@ export async function GET() {
   const session = await requireMailAppSession();
   if (!session) {
     return NextResponse.json(
-      { error: "Create and open a Mail app first." },
+      { error: "Create and open a workspace first." },
       { status: 403 },
     );
   }

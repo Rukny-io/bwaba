@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,11 @@ import {
   writeMailDomainSetup,
 } from "@/lib/mail-domain-storage";
 import { createDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
+import {
+  fulfillPendingMailbox,
+  readPendingMailbox,
+} from "@/lib/mail-pending-mailbox";
+import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 
 type Step = 1 | 2 | 3;
 
@@ -71,10 +76,14 @@ export function MailSetupWizard() {
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [creating, setCreating] = useState(false);
+  const autoCreateStarted = useRef(false);
 
   useEffect(() => {
     const existing = readMailDomainSetup();
-    // Only resume in-progress setup for THIS app — never ACTIVE (that's the dashboard).
+    const pending = readPendingMailbox();
+    if (pending?.domain && (!existing || existing.status === "ACTIVE")) {
+      setDomainInput(pending.domain);
+    }
     if (!existing || existing.status === "ACTIVE") return;
     setSetup(existing);
     setDomainInput(existing.domain);
@@ -107,6 +116,15 @@ export function MailSetupWizard() {
     }
   }
 
+  useEffect(() => {
+    if (autoCreateStarted.current || setup || creating) return;
+    if (!domainInput.trim() || domainError) return;
+    const pending = readPendingMailbox();
+    if (!pending?.domain) return;
+    autoCreateStarted.current = true;
+    void handleCreateDomain();
+  }, [creating, domainError, domainInput, setup]);
+
   async function handleVerify() {
     if (!setup) return;
     setError("");
@@ -123,6 +141,14 @@ export function MailSetupWizard() {
       persist(next);
       if (result.verified) {
         setMailWizardDismissed(false);
+        const appId = readMailAppIdFromDocument();
+        if (appId) {
+          try {
+            await fulfillPendingMailbox(appId);
+          } catch {
+            // Starter or mailbox can be finished from Mailboxes.
+          }
+        }
         router.refresh();
         router.replace("/app");
         return;
@@ -185,7 +211,7 @@ export function MailSetupWizard() {
                   <div>
                     <h2 className="text-sm font-semibold text-[var(--foreground)]">Your domain</h2>
                     <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-                      Use a domain you already own. Mailboxes such as support@{normalized || "example.com"} will
+                      Use a domain you already own. Mailboxes such as hello@{normalized || "example.com"} will
                       be created after DNS is verified.
                     </p>
                   </div>

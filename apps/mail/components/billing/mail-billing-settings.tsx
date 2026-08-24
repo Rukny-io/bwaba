@@ -74,7 +74,7 @@ export function MailPlanSettingsSection() {
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
             {appName
               ? `Seats and storage apply only to ${appName}.`
-              : "Seats and storage apply only to the Mail app you have open."}{" "}
+              : "Seats and storage apply only to the workspace you have open."}{" "}
             Card payment is coming soon.
           </p>
         </div>
@@ -105,7 +105,7 @@ export function MailPlanSettingsSection() {
         </Alert>
       ) : needsApp ? (
         <p className="text-sm text-[var(--muted-foreground)]">
-          Open a Mail app to see its subscription.
+          Open a workspace to see its subscription.
         </p>
       ) : active ? (
         <>
@@ -161,8 +161,8 @@ export function MailPlanSettingsSection() {
         </>
       ) : (
         <p className="text-sm text-[var(--muted-foreground)]">
-          No active plan on this app. Request Starter, Standard, or Premium from Pricing
-          so an admin can activate seats, storage, and features.
+          No paid plan on this workspace. Starter starts after DNS is verified. Request
+          Standard or Premium from Pricing so an admin can activate extra seats.
         </p>
       )}
 

@@ -137,28 +137,28 @@ export function MailPricingPage() {
           Mail plans
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-          Each Mail app has its own subscription — seats, storage, and features are not
-          shared with your other apps. Prices are in Iraqi dinar (IQD), billed monthly.
+          Each workspace has its own subscription — seats, storage, and features are not
+          shared with your other workspaces. Prices are in Iraqi dinar (IQD), billed monthly.
           Extra mailboxes above the included amount are added to the plan total. Card
-          payment is coming soon; request a plan and an admin will activate it for this
-          app.
+          payment is coming soon. Starter starts after DNS is verified; Standard and
+          Premium are requested here and activated by an admin.
         </p>
       </header>
 
       {needsApp ? (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
-          Open a Mail app first, then return here to request a plan for that app only.{" "}
+          Open a workspace first, then return here to request a paid plan for that workspace only.{" "}
           <Link
             href="/apps"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            Go to apps
+            Go to workspaces
           </Link>
         </div>
       ) : active ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
           <p className="text-sm font-semibold text-[var(--foreground)]">
-            Current plan for {appName || "this app"}: {active.planName}
+            Current plan for {appName || "this workspace"}: {active.planName}
           </p>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
             {active.mailboxCount} mailbox
@@ -172,9 +172,9 @@ export function MailPricingPage() {
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
-          No active plan on {appName || "this Mail app"} yet. Request Starter, Standard,
-          or Premium — an admin will activate seats, storage, and features for this app
-          only.
+          No paid plan on {appName || "this workspace"} yet. Starter starts after DNS is
+          verified. Request Standard or Premium — an admin will activate extra seats and
+          features for this workspace only.
         </div>
       )}
 

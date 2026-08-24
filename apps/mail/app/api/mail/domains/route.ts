@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   try {
     const session = await requireMailAppSession({ fresh: true });
     if (!session) {
-      return jsonError("Please login again, then open your Mail app.", 401);
+      return jsonError("Please login again, then open your workspace.", 401);
     }
 
     const body = (await request.json().catch(() => null)) as { domain?: string } | null;
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const owner = await findMailAppIdByDomain(domain);
     if (owner && owner !== session.appId) {
       return jsonError(
-        "This domain is already connected to another Mail app. Use a different domain.",
+        "This domain is already connected to another workspace. Use a different domain.",
         409,
       );
     }
@@ -102,7 +102,7 @@ export async function DELETE(request: Request) {
   try {
     const session = await requireMailAppSession({ fresh: true });
     if (!session) {
-      return jsonError("Please login again, then open your Mail app.", 401);
+      return jsonError("Please login again, then open your workspace.", 401);
     }
 
     const domain = normalizeDomain(new URL(request.url).searchParams.get("domain") ?? "");
@@ -113,7 +113,7 @@ export async function DELETE(request: Request) {
 
     const owner = await findMailAppIdByDomain(domain);
     if (owner && owner !== session.appId) {
-      return jsonError("This domain belongs to another Mail app.", 403);
+      return jsonError("This domain belongs to another workspace.", 403);
     }
 
     await deleteSesDomainIdentity(domain);

@@ -211,8 +211,14 @@ export function MailSetupWizard() {
                   <div>
                     <h2 className="text-sm font-semibold text-[var(--foreground)]">Your domain</h2>
                     <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-                      Use a domain you already own. Mailboxes such as hello@{normalized || "example.com"} will
-                      be created after DNS is verified.
+                      A domain you registered (yourbrand.com) — not rukny.io. After DNS is
+                      verified, mailboxes look like hello@
+                      {normalized &&
+                      normalized !== "rukny.io" &&
+                      !normalized.endsWith(".rukny.io")
+                        ? normalized
+                        : "yourbrand.com"}
+                      .
                     </p>
                   </div>
                 </div>

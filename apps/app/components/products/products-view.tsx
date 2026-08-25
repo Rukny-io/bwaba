@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductCard, ProductCardSkeleton } from '@/components/products/product-card';
+import { ProductDetailSheet } from '@/components/products/product-detail-sheet';
 import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { ProductsToolbar } from '@/components/products/products-toolbar';
 import type { ProductsSortOption } from '@/components/products/products-view-mode';
-import { fetchStoreProducts } from '@/lib/products/api';
+import { fetchStoreProducts, updateProductStatus } from '@/lib/products/api';
 import { PRODUCTS_CREATE_PATH } from '@/lib/products/paths';
 import type { StoreProduct } from '@/lib/products/types';
 import { ApiException } from '@/lib/api-client';
@@ -24,6 +25,10 @@ export function ProductsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<ProductsSortOption>('newest');
   const [showHidden, setShowHidden] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     setError(null);
@@ -75,6 +80,45 @@ export function ProductsView() {
     setSortBy(nextSort);
   }, []);
 
+  const handleOpenDetails = useCallback((product: StoreProduct) => {
+    setDetailProduct(product);
+    setDetailOpen(true);
+  }, []);
+
+  const handleDetailOpenChange = useCallback((open: boolean) => {
+    setDetailOpen(open);
+  }, []);
+
+  const handleToggleVisibility = useCallback(async (product: StoreProduct) => {
+    const previous = product.status;
+    const next = previous === 'INACTIVE' ? 'ACTIVE' : 'INACTIVE';
+    setBusyId(product.id);
+    setActionError(null);
+    setProducts((rows) =>
+      rows.map((row) => (row.id === product.id ? { ...row, status: next } : row)),
+    );
+    setDetailProduct((current) =>
+      current?.id === product.id ? { ...current, status: next } : current,
+    );
+    try {
+      await updateProductStatus(product.id, next);
+    } catch (err) {
+      setProducts((rows) =>
+        rows.map((row) =>
+          row.id === product.id ? { ...row, status: previous } : row,
+        ),
+      );
+      setDetailProduct((current) =>
+        current?.id === product.id ? { ...current, status: previous } : current,
+      );
+      setActionError(
+        err instanceof ApiException ? err.message : 'تعذّر تحديث حالة المنتج',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }, []);
+
   const emptyMessage = useMemo(() => {
     if (searchQuery.trim()) {
       return {
@@ -109,6 +153,10 @@ export function ProductsView() {
         onAdd={() => router.push(PRODUCTS_CREATE_PATH)}
       />
 
+      {actionError ? (
+        <p className="text-[13px] text-[var(--danger)]">{actionError}</p>
+      ) : null}
+
       {error ? (
         <div className="rounded-2xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-8 text-center">
           <p className="text-[14px] font-medium text-[var(--foreground)]">{error}</p>
@@ -134,8 +182,17 @@ export function ProductsView() {
           key={sortBy}
           products={visibleProducts}
           sortBy={sortBy}
+          busyId={busyId}
+          onOpenDetails={handleOpenDetails}
+          onToggleVisibility={handleToggleVisibility}
         />
       )}
+
+      <ProductDetailSheet
+        product={detailProduct}
+        isOpen={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+      />
     </section>
   );
 }
@@ -143,9 +200,15 @@ export function ProductsView() {
 function ProductsGrid({
   products,
   sortBy,
+  busyId,
+  onOpenDetails,
+  onToggleVisibility,
 }: {
   products: StoreProduct[];
   sortBy: ProductsSortOption;
+  busyId: string | null;
+  onOpenDetails: (product: StoreProduct) => void;
+  onToggleVisibility: (product: StoreProduct) => void;
 }) {
   return (
     <div
@@ -162,7 +225,12 @@ function ProductsGrid({
           className="min-w-0"
           style={{ order: index }}
         >
-          <ProductCard product={product} />
+          <ProductCard
+            product={product}
+            isBusy={busyId === product.id}
+            onOpenDetails={onOpenDetails}
+            onToggleVisibility={onToggleVisibility}
+          />
         </div>
       ))}
     </div>

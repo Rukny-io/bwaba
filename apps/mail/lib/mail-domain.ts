@@ -42,8 +42,8 @@ export function validateDomain(domain: string): string | null {
   if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain)) {
     return "Use a valid domain such as example.com.";
   }
-  if (domain.endsWith(".rukny.io") || domain === "rukny.io") {
-    return "Use your own domain, not a Rukny hostname.";
+  if (domain === "rukny.io" || domain.endsWith(".rukny.io")) {
+    return "rukny.io is the Rukny platform, not a mailbox domain. Enter a domain you registered, such as yourbrand.com.";
   }
   return null;
 }

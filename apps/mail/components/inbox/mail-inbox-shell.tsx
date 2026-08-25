@@ -55,6 +55,8 @@ const FOLDER_TO_API: Partial<Record<InboxFolderId, MailMessageFolderApi>> = {
   trash: "TRASH",
 };
 
+const INBOX_PAGE_SIZE = 15;
+
 function displayName(msg: MailMessageView) {
   return msg.fromName?.trim() || msg.from?.name?.trim() || msg.fromAddress;
 }
@@ -168,6 +170,7 @@ export function MailInboxShell() {
   const [replyBody, setReplyBody] = useState("");
   const [replySending, setReplySending] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [listPage, setListPage] = useState(1);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selected = mailboxes.find((m) => m.id === selectedMailboxId) ?? null;
@@ -406,11 +409,32 @@ export function MailInboxShell() {
     );
   }, [messages, search]);
 
+  const listPageCount = Math.max(
+    1,
+    Math.ceil(visibleMessages.length / INBOX_PAGE_SIZE),
+  );
+  const safeListPage = Math.min(Math.max(1, listPage), listPageCount);
+  const pagedMessages = useMemo(() => {
+    const start = (safeListPage - 1) * INBOX_PAGE_SIZE;
+    return visibleMessages.slice(start, start + INBOX_PAGE_SIZE);
+  }, [safeListPage, visibleMessages]);
+
   const selectedMessage =
     visibleMessages.find((m) => m.id === selectedMessageId) ?? null;
   const selectedIndex = selectedMessage
     ? visibleMessages.findIndex((m) => m.id === selectedMessage.id)
     : -1;
+
+  useEffect(() => {
+    setListPage(1);
+  }, [folder, search, selectedMailboxId]);
+
+  useEffect(() => {
+    if (!selectedMessageId) return;
+    const idx = visibleMessages.findIndex((m) => m.id === selectedMessageId);
+    if (idx < 0) return;
+    setListPage(Math.floor(idx / INBOX_PAGE_SIZE) + 1);
+  }, [selectedMessageId, visibleMessages]);
 
   function openCompose(draft?: ComposeDraft | null) {
     setSendError("");
@@ -964,7 +988,7 @@ export function MailInboxShell() {
                 folder={folder}
                 mailboxAddress={selected?.address ?? null}
                 mailboxAvatarUrl={selected?.avatarUrl ?? null}
-                messages={visibleMessages}
+                messages={pagedMessages}
                 selectedId={selectedMessageId}
                 onSelect={onSelectMessage}
                 search={search}
@@ -974,6 +998,9 @@ export function MailInboxShell() {
                 onImportInbound={handleImportInbound}
                 importing={importing}
                 error={error}
+                page={safeListPage}
+                pageCount={listPageCount}
+                onPageChange={setListPage}
               />
             </div>
 

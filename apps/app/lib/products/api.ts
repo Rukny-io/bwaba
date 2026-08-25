@@ -1,6 +1,11 @@
 import { ApiException, getCsrfToken } from '@/lib/api-client';
 import { ACTIVE_WORKSPACE_HEADER, readActiveWorkspaceIdFromBrowser } from '@/lib/workspace';
-import type { CreateProductInput, ProductKind, StoreProduct } from '@/lib/products/types';
+import type {
+  CreateProductInput,
+  ProductKind,
+  ProductStatus,
+  StoreProduct,
+} from '@/lib/products/types';
 import {
   buildProductAttributesPayload,
   buildVariantsPayload,
@@ -72,6 +77,26 @@ export async function fetchStoreProducts(search?: string): Promise<StoreProduct[
     ...(search?.trim() ? { search: search.trim() } : {}),
   });
   return Array.isArray(data) ? data : [];
+}
+
+export async function fetchStoreProduct(id: string): Promise<StoreProduct> {
+  const { api } = await import('@/lib/api-client');
+  const { data } = await api.get<StoreProduct>(
+    `/products/${encodeURIComponent(id)}`,
+  );
+  return data;
+}
+
+export async function updateProductStatus(
+  id: string,
+  status: ProductStatus,
+): Promise<StoreProduct> {
+  const { api } = await import('@/lib/api-client');
+  const { data } = await api.patch<StoreProduct>(
+    `/products/${encodeURIComponent(id)}`,
+    { status },
+  );
+  return data;
 }
 
 export async function createProduct(

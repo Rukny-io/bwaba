@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Package, Percent, Plus } from 'lucide-react';
+import { Pencil, Pause, Play, Package, Percent, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { CreateDiscountDialog } from '@/components/products/discounts/create-discount-dialog';
@@ -15,7 +15,7 @@ import {
 import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { fetchMyStoreProducts } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
-import { fetchDiscounts } from '@/lib/discounts/api';
+import { fetchDiscounts, deleteDiscount, toggleDiscountActive, formatDiscountLabel } from '@/lib/discounts/api';
 import type { ProductDiscount } from '@/lib/discounts/types';
 import { ApiException } from '@/lib/api-client';
 
@@ -32,6 +32,9 @@ export function DiscountsView() {
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<ProductDiscount | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ProductDiscount | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadDiscounts = useCallback(async () => {
     setError(null);
@@ -101,6 +104,51 @@ export function DiscountsView() {
 
   const productsLoading = loadingDiscounts || loadingProducts;
 
+  const handleToggleActive = useCallback(async (discount: ProductDiscount) => {
+    const previous = discount.isActive;
+    setBusyId(discount.id);
+    setActionError(null);
+    setDiscounts((rows) =>
+      rows.map((row) =>
+        row.id === discount.id ? { ...row, isActive: !previous } : row,
+      ),
+    );
+    try {
+      await toggleDiscountActive(discount.id);
+    } catch (err) {
+      setDiscounts((rows) =>
+        rows.map((row) =>
+          row.id === discount.id ? { ...row, isActive: previous } : row,
+        ),
+      );
+      setActionError(
+        err instanceof ApiException ? err.message : 'تعذّر تحديث حالة الخصم',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }, []);
+
+  const handleDelete = useCallback(async (discount: ProductDiscount) => {
+    setBusyId(discount.id);
+    setActionError(null);
+    try {
+      await deleteDiscount(discount.id);
+      setPendingDelete(null);
+      setEditingDiscount((current) =>
+        current?.id === discount.id ? null : current,
+      );
+      setLoadingDiscounts(true);
+      await loadDiscounts();
+    } catch (err) {
+      setActionError(
+        err instanceof ApiException ? err.message : 'تعذّر حذف الخصم',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }, [loadDiscounts]);
+
   return (
     <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
       <CreateDiscountDialog
@@ -129,6 +177,54 @@ export function DiscountsView() {
         }}
       />
 
+      {pendingDelete ? (
+        <div className="fixed inset-0 z-[120]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            aria-label="إغلاق"
+            onClick={() => setPendingDelete(null)}
+          />
+          <div className="relative flex h-full items-center justify-center p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-discount-title"
+              dir="rtl"
+              className="relative w-full max-w-sm rounded-2xl border border-[rgba(34,34,34,0.1)] bg-white p-5 shadow-[0px_8px_12px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-zinc-950"
+            >
+              <h2
+                id="delete-discount-title"
+                className="text-[15px] font-semibold text-[var(--foreground)]"
+              >
+                حذف {formatDiscountLabel(pendingDelete.percentage)}؟
+              </h2>
+              <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+                يُلغى الخصم عن المنتجات المشمولة ولا يمكن التراجع عن هذا الإجراء.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <Button
+                  variant="danger"
+                  isDisabled={busyId === pendingDelete.id}
+                  onPress={() => void handleDelete(pendingDelete)}
+                  className="h-10 flex-1 rounded-xl text-[13px] font-semibold"
+                >
+                  حذف الخصم
+                </Button>
+                <Button
+                  variant="secondary"
+                  isDisabled={busyId === pendingDelete.id}
+                  onPress={() => setPendingDelete(null)}
+                  className="h-10 rounded-xl px-4 text-[13px]"
+                >
+                  تراجع
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <DashboardPageHeader
         title="الخصومات"
         description="طبّق خصماً بنسبة مئوية على منتجات محددة في متجرك"
@@ -154,9 +250,16 @@ export function DiscountsView() {
             discounts={sortedDiscounts}
             selectedDiscountId={selectedDiscountId}
             loading={loadingDiscounts}
+            busyId={busyId}
             onSelect={setSelectedDiscountId}
             onEdit={setEditingDiscount}
+            onToggleActive={(discount) => void handleToggleActive(discount)}
+            onDelete={setPendingDelete}
           />
+
+          {actionError ? (
+            <p className="text-[13px] text-[var(--danger)]">{actionError}</p>
+          ) : null}
 
           {loadingDiscounts ? null : sortedDiscounts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center sm:py-20">
@@ -174,6 +277,48 @@ export function DiscountsView() {
             </div>
           ) : selectedDiscount ? (
             <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[13px] text-[var(--muted-foreground)]">
+                  {formatDiscountLabel(selectedDiscount.percentage)}
+                  {selectedDiscount.isActive ? '' : ' · متوقف'}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onPress={() => setEditingDiscount(selectedDiscount)}
+                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
+                  >
+                    <Pencil className="size-3.5" strokeWidth={2} aria-hidden />
+                    تعديل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    isDisabled={busyId === selectedDiscount.id}
+                    onPress={() => void handleToggleActive(selectedDiscount)}
+                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
+                  >
+                    {selectedDiscount.isActive ? (
+                      <Pause className="size-3.5" strokeWidth={2} aria-hidden />
+                    ) : (
+                      <Play className="size-3.5" strokeWidth={2} aria-hidden />
+                    )}
+                    {selectedDiscount.isActive ? 'إيقاف' : 'تفعيل'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    isDisabled={busyId === selectedDiscount.id}
+                    onPress={() => setPendingDelete(selectedDiscount)}
+                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
+                  >
+                    <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+
               {productsLoading ? (
                 <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {Array.from({ length: 8 }).map((_, index) => (

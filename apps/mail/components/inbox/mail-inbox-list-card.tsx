@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Inbox, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Inbox, RefreshCw } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
@@ -37,6 +37,9 @@ type Props = {
   onRefresh?: () => void;
   onImportInbound?: () => void;
   error?: string;
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
 };
 
 function rowPrimaryLabel(
@@ -72,17 +75,6 @@ function formatWhen(iso: string) {
   }
 }
 
-const FOLDER_LABELS: Record<InboxFolderId, string> = {
-  inbox: "Inbox",
-  starred: "Favorites",
-  scheduled: "Snoozed",
-  sent: "Sent",
-  drafts: "Drafts",
-  spam: "Spam",
-  archive: "Archive",
-  trash: "Trash",
-};
-
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
@@ -108,61 +100,27 @@ export function MailInboxListCard({
   onRefresh,
   onImportInbound,
   error = "",
+  page,
+  pageCount,
+  onPageChange,
 }: Props) {
-  const unreadCount = messages.filter((m) => m.unread).length;
-  const folderLabel = FOLDER_LABELS[folder] ?? folder;
+  const safePageCount = Math.max(1, pageCount);
+  const safePage = Math.min(Math.max(1, page), safePageCount);
 
   return (
     <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] dark:bg-[var(--surface)]">
-      <div className="shrink-0 border-b border-[var(--separator)] px-4 pb-3 pt-3.5 sm:px-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-[1.05rem] font-semibold tracking-tight text-[var(--foreground)]">
-              {folderLabel}
-            </h2>
-            <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
-              {mailboxAddress
-                ? `${messages.length} message${messages.length === 1 ? "" : "s"}${unreadCount ? ` · ${unreadCount} unread` : ""}`
-                : "No mailbox selected"}
+      {error || search.trim() ? (
+        <div className="shrink-0 space-y-1 px-3 pt-2">
+          {search.trim() ? (
+            <p className="text-[11px] text-[var(--muted-foreground)]">
+              Filtered by “{search.trim()}”
             </p>
-          </div>
-          <div className="flex items-center gap-1">
-            {onImportInbound ? (
-              <button
-                type="button"
-                onClick={onImportInbound}
-                disabled={importing || !mailboxAddress}
-                className="inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-40"
-                aria-label="Import inbound from S3"
-                title="Import inbound from S3"
-              >
-                <Download
-                  className={cn("size-3.5", importing && "animate-pulse")}
-                />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={!onRefresh || refreshing || !mailboxAddress}
-              className="inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-40"
-              aria-label="Refresh"
-            >
-              <RefreshCw
-                className={cn("size-3.5", refreshing && "animate-spin")}
-              />
-            </button>
-          </div>
+          ) : null}
+          {error ? (
+            <p className="text-xs text-[var(--danger)]">{error}</p>
+          ) : null}
         </div>
-        {search.trim() ? (
-          <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-            Filtered by “{search.trim()}”
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-2 text-xs text-[var(--danger)]">{error}</p>
-        ) : null}
-      </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2">
         {!mailboxAddress ? (
@@ -277,6 +235,57 @@ export function MailInboxListCard({
             })}
           </ul>
         )}
+      </div>
+
+      <div className="shrink-0 border-t border-[var(--separator)] px-2 py-1.5 sm:px-3 sm:py-2">
+        <div className="flex items-center justify-between gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+          <div className="flex items-center gap-0.5">
+            {onImportInbound ? (
+              <button
+                type="button"
+                onClick={onImportInbound}
+                disabled={importing || !mailboxAddress}
+                className="inline-flex size-8 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10"
+                aria-label="Import inbound from S3"
+                title="Import inbound from S3"
+              >
+                <Download className={cn("size-3.5", importing && "animate-pulse")} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={!onRefresh || refreshing || !mailboxAddress}
+              className="inline-flex size-8 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10"
+              aria-label="Refresh"
+            >
+              <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
+            </button>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onPageChange(safePage - 1)}
+              disabled={safePage <= 1}
+              className="inline-flex size-8 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="min-w-[4.5rem] text-center tabular-nums">
+              {safePage} of {safePageCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => onPageChange(safePage + 1)}
+              disabled={safePage >= safePageCount}
+              className="inline-flex size-8 items-center justify-center rounded-full transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10"
+              aria-label="Next page"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

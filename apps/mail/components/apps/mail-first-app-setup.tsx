@@ -65,7 +65,7 @@ const COPY = {
   welcome: "Start Rukny Mail",
   welcomeDesc: "Your domain, first mailbox, then a phone check.",
   step1Title: "Domain",
-  step1Desc: "You send as you@yourdomain — never @rukny.io.",
+  step1Desc: "A domain you registered — yourbrand.com — never rukny.io.",
   step2Title: "Mailbox",
   step2Desc: "Choose the address and the name people will see.",
   step3Title: "Verify",

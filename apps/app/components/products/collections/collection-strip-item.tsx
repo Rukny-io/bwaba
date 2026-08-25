@@ -28,7 +28,7 @@ function CollectionStripItemComponent({
   const showImage = Boolean(thumbUrl) && !imageFailed;
 
   return (
-    <div className="group flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 sm:w-[5rem]">
+    <div className="group flex w-[5.25rem] shrink-0 flex-col items-center gap-1.5 sm:w-[5.75rem]">
       <div className="relative w-full">
         <button
           type="button"
@@ -55,7 +55,7 @@ function CollectionStripItemComponent({
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Layers
-                  className="size-5 text-[var(--muted-foreground)]/30"
+                  className="size-6 text-[var(--muted-foreground)]/30"
                   strokeWidth={1.5}
                   aria-hidden
                 />
@@ -102,7 +102,7 @@ function CollectionStripItemComponent({
 
 export function CollectionStripItemSkeleton() {
   return (
-    <div className="flex w-[4.5rem] shrink-0 animate-pulse flex-col items-center gap-1.5 sm:w-[5rem]">
+    <div className="flex w-[5.25rem] shrink-0 animate-pulse flex-col items-center gap-1.5 sm:w-[5.75rem]">
       <div className="aspect-square w-full rounded-2xl bg-[var(--surface-secondary)]/80" />
       <div className="h-2.5 w-[70%] rounded bg-[var(--surface-secondary)]/60" />
     </div>

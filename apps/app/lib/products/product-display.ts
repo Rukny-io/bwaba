@@ -1,4 +1,8 @@
 import type { ProductKind, StoreProduct } from '@/lib/products/types';
+import {
+  DELIVERY_METHOD_OPTIONS,
+  SERVICE_TYPE_OPTIONS,
+} from '@/lib/products/types';
 import { getProductKindLabel } from '@/lib/products/api';
 
 export interface ProductCategoryRef {
@@ -100,4 +104,61 @@ export function getStockChipColor(
   if (variant === 'low') return 'danger';
   if (variant === 'unlimited') return 'success';
   return 'default';
+}
+
+export function getProductDescription(product: StoreProduct): string | null {
+  return product.descriptionAr?.trim() || product.description?.trim() || null;
+}
+
+export function formatProductDate(iso?: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('ar-IQ', { dateStyle: 'medium' }).format(date);
+}
+
+const ATTRIBUTE_LABELS: Record<string, string> = {
+  serviceType: 'نوع الخدمة',
+  duration: 'المدة',
+  deliveryMethod: 'طريقة التقديم',
+};
+
+function optionLabel(
+  options: ReadonlyArray<{ value: string; label: string }>,
+  value: string,
+): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+export function getProductAttributeRows(
+  product: StoreProduct,
+): Array<{ label: string; value: string }> {
+  return (product.productAttributes ?? [])
+    .map((attr) => {
+      const raw = attr.valueAr?.trim() || attr.value.trim();
+      if (!raw) return null;
+
+      let value = raw;
+      if (attr.key === 'serviceType') {
+        value = optionLabel(SERVICE_TYPE_OPTIONS, raw);
+      } else if (attr.key === 'deliveryMethod') {
+        value = optionLabel(DELIVERY_METHOD_OPTIONS, raw);
+      }
+
+      return {
+        label: ATTRIBUTE_LABELS[attr.key] ?? attr.key,
+        value,
+      };
+    })
+    .filter((row): row is { label: string; value: string } => row != null);
+}
+
+export function formatVariantAttributes(attributes?: unknown): string {
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) {
+    return '';
+  }
+  return Object.values(attributes as Record<string, unknown>)
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .join(' · ');
 }

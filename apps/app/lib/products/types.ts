@@ -46,6 +46,19 @@ export interface StoreProduct {
     fileSize?: number | string;
     mimeType?: string;
   }>;
+  variants?: Array<{
+    id: string;
+    sku?: string | null;
+    price: number | string;
+    stock: number;
+    attributes?: Record<string, string> | null;
+  }>;
+  _count?: {
+    order_items?: number;
+    reviews?: number;
+    variants?: number;
+    digitalAssets?: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

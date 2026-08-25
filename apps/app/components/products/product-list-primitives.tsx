@@ -147,6 +147,7 @@ interface ProductPriceDisplayProps {
   salePrice?: number | string | null;
   className?: string;
   size?: 'sm' | 'md';
+  layout?: 'inline' | 'stack';
 }
 
 export function ProductPriceDisplay({
@@ -154,6 +155,7 @@ export function ProductPriceDisplay({
   salePrice,
   className,
   size = 'sm',
+  layout = 'inline',
 }: ProductPriceDisplayProps) {
   const basePrice = Number(price);
   const parsedSale =
@@ -165,6 +167,19 @@ export function ProductPriceDisplay({
 
   if (!Number.isFinite(basePrice)) {
     return <span className={cn(textSize, 'text-[var(--muted-foreground)]', className)}>—</span>;
+  }
+
+  if (hasDiscount && layout === 'stack') {
+    return (
+      <span className={cn('flex min-w-0 flex-col items-start gap-0.5', className)}>
+        <span className="text-[14px] font-semibold tabular-nums leading-none text-[var(--foreground)]">
+          {formatProductPrice(parsedSale!)}
+        </span>
+        <span className="text-[12px] font-medium tabular-nums leading-none text-[var(--muted-foreground)] line-through">
+          {formatProductPrice(basePrice)}
+        </span>
+      </span>
+    );
   }
 
   if (hasDiscount) {
@@ -181,7 +196,14 @@ export function ProductPriceDisplay({
   }
 
   return (
-    <span className={cn(textSize, 'font-medium text-[var(--muted-foreground)]', className)}>
+    <span
+      className={cn(
+        layout === 'stack'
+          ? 'text-[14px] font-semibold tabular-nums text-[var(--foreground)]'
+          : cn(textSize, 'font-medium text-[var(--muted-foreground)]'),
+        className,
+      )}
+    >
       {formatProductPrice(basePrice)}
     </span>
   );

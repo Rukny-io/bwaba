@@ -11,8 +11,11 @@ interface DiscountStripProps {
   discounts: ProductDiscount[];
   selectedDiscountId: string | null;
   loading?: boolean;
+  busyId?: string | null;
   onSelect: (id: string) => void;
   onEdit: (discount: ProductDiscount) => void;
+  onToggleActive: (discount: ProductDiscount) => void;
+  onDelete: (discount: ProductDiscount) => void;
   className?: string;
 }
 
@@ -20,8 +23,11 @@ export function DiscountStrip({
   discounts,
   selectedDiscountId,
   loading = false,
+  busyId = null,
   onSelect,
   onEdit,
+  onToggleActive,
+  onDelete,
   className,
 }: DiscountStripProps) {
   return (
@@ -45,8 +51,11 @@ export function DiscountStrip({
             key={discount.id}
             discount={discount}
             selected={discount.id === selectedDiscountId}
+            isBusy={busyId === discount.id}
             onSelect={() => onSelect(discount.id)}
             onEdit={() => onEdit(discount)}
+            onToggleActive={() => onToggleActive(discount)}
+            onDelete={() => onDelete(discount)}
           />
         ))
       )}

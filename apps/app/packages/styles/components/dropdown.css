@@ -49,8 +49,7 @@
 
 /* Similar to select popover styles */
 .dropdown__popover {
-  @apply max-w-[48svw] origin-(--trigger-anchor-point) scroll-py-1 overflow-y-auto overscroll-contain bg-overlay p-0 text-sm scrollbar md:min-w-55;
-  border-radius: min(32px, var(--radius-3xl));
+  @apply max-w-[48svw] origin-(--trigger-anchor-point) scroll-py-1 overflow-y-auto overscroll-contain rounded-2xl bg-overlay p-0 text-sm scrollbar md:min-w-55;
   box-shadow: var(--shadow-overlay);
 
   /* Focus state */
@@ -120,7 +119,7 @@
 }
 
 .dropdown__menu {
-  @apply relative flex w-full flex-col gap-0.5 overflow-clip p-1;
+  @apply relative flex w-full flex-col gap-0.5 overflow-clip rounded-2xl p-1;
 
   /* This makes the separator take up 94% of the width and be centered */
   [data-slot="separator"] {

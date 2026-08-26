@@ -65,6 +65,7 @@ export class MailLogsController {
   @ApiQuery({ name: 'days', required: false })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'take', required: false })
+  @ApiQuery({ name: 'page', required: false })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -75,6 +76,7 @@ export class MailLogsController {
     @Query('days') days?: string,
     @Query('cursor') cursor?: string,
     @Query('take') take?: string,
+    @Query('page') page?: string,
   ) {
     return this.messages.listLogs(user.id, appId, {
       mailboxId: parseMailboxId(mailboxId),
@@ -84,6 +86,7 @@ export class MailLogsController {
       days: days ? Number(days) : undefined,
       cursor,
       take: take ? Number(take) : undefined,
+      page: page ? Number(page) : undefined,
     });
   }
 }

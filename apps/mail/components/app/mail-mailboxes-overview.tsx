@@ -486,7 +486,10 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         void onToggle2fa(box);
         break;
       case "delete":
-        void onDelete(box.id);
+        // Confirm after the menu closes — window.confirm inside onAction is swallowed.
+        window.setTimeout(() => {
+          void onDelete(box.id);
+        }, 0);
         break;
       default:
         break;

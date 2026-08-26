@@ -191,6 +191,21 @@ export async function sendMailMessage(
   return data;
 }
 
+export async function deleteMailMessage(
+  appId: string,
+  messageId: string,
+): Promise<void> {
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/${encodeURIComponent(messageId)}`,
+    { method: "DELETE" },
+  );
+  const data = await readJson(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok) {
+    throw new Error(errorMessage(data, "Could not delete message."));
+  }
+}
+
 export async function updateMailMessage(
   appId: string,
   messageId: string,

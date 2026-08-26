@@ -28,6 +28,7 @@ export type MailLogsQuery = {
   q?: string;
   days?: MailLogDays;
   take?: number;
+  page?: number;
   cursor?: string;
 };
 
@@ -52,7 +53,14 @@ function errorMessage(
 export async function listMailLogs(
   appId: string,
   opts: MailLogsQuery = {},
-): Promise<{ logs: MailLogEntry[]; nextCursor: string | null; days: MailLogDays }> {
+): Promise<{
+  logs: MailLogEntry[];
+  nextCursor: string | null;
+  total: number;
+  page: number;
+  take: number;
+  days: MailLogDays;
+}> {
   const params = new URLSearchParams();
   if (opts.mailboxId) params.set("mailboxId", opts.mailboxId);
   if (opts.direction) params.set("direction", opts.direction);
@@ -60,6 +68,7 @@ export async function listMailLogs(
   if (opts.q) params.set("q", opts.q);
   if (opts.days) params.set("days", String(opts.days));
   if (opts.take) params.set("take", String(opts.take));
+  if (opts.page) params.set("page", String(opts.page));
   if (opts.cursor) params.set("cursor", opts.cursor);
   const qs = params.toString();
   const response = await sessionFetch(
@@ -68,6 +77,9 @@ export async function listMailLogs(
   const data = await readJson<{
     logs?: MailLogEntry[];
     nextCursor?: string | null;
+    total?: number;
+    page?: number;
+    take?: number;
     days?: number;
   }>(response);
   if (!response.ok) {
@@ -78,6 +90,9 @@ export async function listMailLogs(
   return {
     logs: data.logs ?? [],
     nextCursor: data.nextCursor ?? null,
+    total: data.total ?? data.logs?.length ?? 0,
+    page: data.page ?? 1,
+    take: data.take ?? opts.take ?? 10,
     days,
   };
 }

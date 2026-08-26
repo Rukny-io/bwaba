@@ -19,6 +19,7 @@ import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
+  decrementMailboxStorage,
   incrementMailboxStorage,
   utf8StorageBytes,
 } from './mail-storage.util';
@@ -274,6 +275,7 @@ export class MailMessagesService {
       q?: string;
       days?: number;
       take?: number;
+      page?: number;
       cursor?: string;
     } = {},
   ) {
@@ -283,6 +285,10 @@ export class MailMessagesService {
     const take = Number.isFinite(parsedTake)
       ? Math.min(Math.max(parsedTake, 1), 100)
       : 50;
+    const parsedPage = Number(opts.page);
+    const page = Number.isFinite(parsedPage)
+      ? Math.min(Math.max(Math.floor(parsedPage), 1), 10_000)
+      : 1;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const needle = opts.q?.trim().slice(0, 200) || '';
 
@@ -320,35 +326,63 @@ export class MailMessagesService {
       ];
     }
 
+    const select = {
+      id: true,
+      mailboxId: true,
+      direction: true,
+      folder: true,
+      status: true,
+      fromAddress: true,
+      toAddresses: true,
+      subject: true,
+      sesMessageId: true,
+      errorMessage: true,
+      sentAt: true,
+      receivedAt: true,
+      createdAt: true,
+      mailbox: { select: { localPart: true, domain: true } },
+    } as const;
+    const orderBy = [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
+
+    if (opts.cursor) {
+      const rows = await this.prisma.mailMessage.findMany({
+        where,
+        select,
+        orderBy,
+        take: take + 1,
+        cursor: { id: opts.cursor },
+        skip: 1,
+      });
+      const hasMore = rows.length > take;
+      const slice = hasMore ? rows.slice(0, take) : rows;
+      return {
+        logs: slice.map((row) => this.toLogView(row)),
+        nextCursor: hasMore ? slice[slice.length - 1]?.id ?? null : null,
+        total: slice.length,
+        page: 1,
+        take,
+        days,
+      };
+    }
+
+    const total = await this.prisma.mailMessage.count({ where });
+    const pageCount = Math.max(1, Math.ceil(total / take) || 1);
+    const safePage = Math.min(page, pageCount);
     const rows = await this.prisma.mailMessage.findMany({
       where,
-      select: {
-        id: true,
-        mailboxId: true,
-        direction: true,
-        folder: true,
-        status: true,
-        fromAddress: true,
-        toAddresses: true,
-        subject: true,
-        sesMessageId: true,
-        errorMessage: true,
-        sentAt: true,
-        receivedAt: true,
-        createdAt: true,
-        mailbox: { select: { localPart: true, domain: true } },
-      },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: take + 1,
-      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+      select,
+      orderBy,
+      skip: (safePage - 1) * take,
+      take,
     });
 
-    const hasMore = rows.length > take;
-    const page = hasMore ? rows.slice(0, take) : rows;
-
     return {
-      logs: page.map((row) => this.toLogView(row)),
-      nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+      logs: rows.map((row) => this.toLogView(row)),
+      nextCursor:
+        safePage * take < total ? rows[rows.length - 1]?.id ?? null : null,
+      total,
+      page: safePage,
+      take,
       days,
     };
   }
@@ -491,7 +525,61 @@ export class MailMessagesService {
       },
     });
 
+    if (dto.folder !== undefined && dto.folder !== row.folder) {
+      this.realtime.publish({
+        type: 'mail.changed',
+        appId,
+        mailboxId: row.mailboxId,
+        folder: dto.folder,
+        messageId: updated.id,
+      });
+    }
+
     return this.toView(updated);
+  }
+
+  async remove(
+    userId: string,
+    appId: string,
+    messageId: string,
+    sessionToken?: string,
+  ) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { appId, userId, status: MailAppStatus.ACTIVE },
+    });
+    if (!app) throw new NotFoundException('Mail app not found.');
+
+    const row = await this.prisma.mailMessage.findFirst({
+      where: {
+        id: messageId,
+        userId,
+        mailbox: { mailAppId: app.id },
+      },
+    });
+    if (!row) throw new NotFoundException('Message not found.');
+
+    await this.mailboxSessions.assertAsync(sessionToken, {
+      userId,
+      appId,
+      mailboxId: row.mailboxId,
+    });
+
+    await decrementMailboxStorage(
+      this.prisma,
+      row.mailboxId,
+      utf8StorageBytes(row.bodyText, row.bodyHtml),
+    );
+    await this.prisma.mailMessage.delete({ where: { id: row.id } });
+
+    this.realtime.publish({
+      type: 'mail.changed',
+      appId,
+      mailboxId: row.mailboxId,
+      folder: row.folder,
+      messageId: row.id,
+    });
+
+    return { ok: true as const };
   }
 
   async send(

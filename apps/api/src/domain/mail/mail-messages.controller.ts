@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   MessageEvent,
   Param,
@@ -176,6 +177,22 @@ export class MailMessagesController {
       appId,
       messageId,
       dto,
+      extractMailboxSessionToken(req),
+    );
+  }
+
+  @Delete(':messageId')
+  @ApiOperation({ summary: 'Permanently delete a message' })
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('messageId') messageId: string,
+    @Req() req: Request,
+  ) {
+    return this.messages.remove(
+      user.id,
+      appId,
+      messageId,
       extractMailboxSessionToken(req),
     );
   }

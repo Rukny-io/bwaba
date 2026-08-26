@@ -543,7 +543,12 @@ export class MailMailboxesService {
     });
     await this.prisma.mailMailbox.update({
       where: { id: existing.id },
-      data: { status: MailMailboxStatus.DELETED, avatarKey: null },
+      data: {
+        status: MailMailboxStatus.DELETED,
+        avatarKey: null,
+        // Free @@unique([domain, localPart]) so the address can be created again.
+        localPart: `deleted.${existing.id}.${existing.localPart}`.slice(0, 191),
+      },
     });
     await this.mailboxSessions.revokeMailbox(existing.id);
     return { ok: true };

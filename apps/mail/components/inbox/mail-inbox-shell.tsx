@@ -39,6 +39,7 @@ import {
   listMailMessages,
   MailboxLockedError,
   sendMailMessage,
+  deleteMailMessage,
   updateMailMessage,
   type MailFolderCounts,
   type MailMessageFolderApi,
@@ -594,21 +595,33 @@ export function MailInboxShell() {
 
   async function onTrash(message: InboxMessageRow) {
     if (!appId) return;
+    const permanently =
+      folder === "trash" || message.folder === "TRASH";
     try {
-      await updateMailMessage(appId, message.id, { folder: "TRASH" });
+      if (permanently) {
+        await deleteMailMessage(appId, message.id);
+      } else {
+        await updateMailMessage(appId, message.id, { folder: "TRASH" });
+      }
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
       if (selectedMessageId === message.id) {
         setSelectedMessageId(null);
         setMobileShowReader(false);
       }
       await loadCounts(appId, selectedMailboxId);
-      showToast("Moved to Trash");
+      showToast(permanently ? "Deleted" : "Moved to Trash");
     } catch (err) {
       if (err instanceof MailboxLockedError) {
         setSelectedMailboxId(null);
         return;
       }
-      showToast(err instanceof Error ? err.message : "Could not move message.");
+      showToast(
+        err instanceof Error
+          ? err.message
+          : permanently
+            ? "Could not delete message."
+            : "Could not move message.",
+      );
     }
   }
 

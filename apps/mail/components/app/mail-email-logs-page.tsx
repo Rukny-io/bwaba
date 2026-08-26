@@ -1,16 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ScrollText } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
 import {
   Alert,
-  Button,
   Chip,
   Dropdown,
   EmptyState,
   Label,
   SearchField,
   Skeleton,
+  cn,
 } from "@heroui/react";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
@@ -25,7 +25,7 @@ import {
   type MailLogStatus,
 } from "@/lib/mail-logs-client";
 
-const TAKE = 40;
+const PAGE_SIZE = 10;
 const ALL_KEY = "__all__";
 
 type FilterOption = { value: string; label: string };
@@ -118,32 +118,32 @@ function statusLabel(status: MailLogStatus) {
 function LogRow({ entry }: { entry: MailLogEntry }) {
   const to = entry.toAddresses.join(", ") || "—";
   return (
-    <article className="min-w-0 px-4 py-3 md:px-6">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+    <article className="min-w-0 px-4 py-2.5 md:px-5">
+      <div className="flex min-w-0 items-center gap-2">
         <time
           dateTime={entry.createdAt}
-          className="text-[12px] text-[var(--muted-foreground)]"
+          className="w-[6.75rem] shrink-0 text-[11px] tabular-nums text-[var(--muted-foreground)]"
         >
           {formatLogWhen(entry.createdAt)}
         </time>
-        <span className="text-[12px] font-medium text-[var(--foreground)]">
+        <span className="w-8 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-[var(--foreground)]">
           {entry.direction === "INBOUND" ? "In" : "Out"}
         </span>
         <Chip color={statusChipColor(entry.status)} size="sm" variant="soft">
           {statusLabel(entry.status)}
         </Chip>
-        <span className="min-w-0 truncate text-[12px] text-[var(--muted-foreground)]" dir="ltr">
+        <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--muted-foreground)]" dir="ltr">
           {entry.mailboxAddress}
         </span>
       </div>
-      <p className="mt-1 truncate text-sm font-medium text-[var(--foreground)]">
+      <p className="mt-0.5 truncate pl-0 text-sm font-medium text-[var(--foreground)] sm:pl-[7.75rem]">
         {entry.subject.trim() || "(no subject)"}
       </p>
-      <p className="mt-0.5 truncate text-[12px] text-[var(--muted-foreground)]" dir="ltr">
+      <p className="mt-0.5 truncate text-[12px] text-[var(--muted-foreground)] sm:pl-[7.75rem]" dir="ltr">
         {entry.fromAddress} → {to}
       </p>
       {entry.errorMessage ? (
-        <p className="mt-1 break-words text-[12px] text-[var(--danger)]">
+        <p className="mt-1 break-words text-[12px] text-[var(--danger)] sm:pl-[7.75rem]">
           {entry.errorMessage}
         </p>
       ) : null}
@@ -155,7 +155,8 @@ export function MailEmailLogsPage() {
   const [appId, setAppId] = useState<string | null>(null);
   const [mailboxes, setMailboxes] = useState<MailMailboxView[]>([]);
   const [logs, setLogs] = useState<MailLogEntry[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [mailboxId, setMailboxId] = useState("");
   const [direction, setDirection] = useState<"" | MailLogDirection>("");
   const [status, setStatus] = useState<"" | MailLogStatus>("");
@@ -163,7 +164,6 @@ export function MailEmailLogsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -211,30 +211,30 @@ export function MailEmailLogsPage() {
       status: status || undefined,
       q: search || undefined,
       days,
-      take: TAKE,
+      take: PAGE_SIZE,
+      page,
     }),
-    [mailboxId, direction, status, search, days],
+    [mailboxId, direction, status, search, days, page],
   );
 
+  useEffect(() => {
+    setPage(1);
+  }, [mailboxId, direction, status, search, days]);
+
   const load = useCallback(
-    async (id: string, cursor?: string) => {
-      const appending = Boolean(cursor);
-      if (appending) setLoadingMore(true);
-      else setLoading(true);
+    async (id: string) => {
+      setLoading(true);
       try {
-        const result = await listMailLogs(id, { ...query, cursor });
-        setLogs((prev) => (appending ? [...prev, ...result.logs] : result.logs));
-        setNextCursor(result.nextCursor);
+        const result = await listMailLogs(id, query);
+        setLogs(result.logs);
+        setTotal(result.total);
         setError("");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load email logs.");
-        if (!appending) {
-          setLogs([]);
-          setNextCursor(null);
-        }
+        setLogs([]);
+        setTotal(0);
       } finally {
         setLoading(false);
-        setLoadingMore(false);
       }
     },
     [query],
@@ -244,6 +244,9 @@ export function MailEmailLogsPage() {
     if (!appId) return;
     void load(appId);
   }, [appId, load]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE) || 1);
+  const safePage = Math.min(Math.max(1, page), pageCount);
 
   return (
     <section className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-4 sm:gap-6">
@@ -330,7 +333,7 @@ export function MailEmailLogsPage() {
       ) : null}
 
       <section
-        className="min-w-0 md:overflow-hidden md:rounded-2xl md:bg-[var(--surface)]"
+        className="min-w-0"
         aria-label="Email log entries"
       >
         {loading ? (
@@ -352,25 +355,49 @@ export function MailEmailLogsPage() {
             </p>
           </EmptyState>
         ) : (
-          <>
-            <div className="flex flex-col divide-y divide-[var(--border)] rounded-2xl bg-[var(--surface)] md:rounded-none">
+          <div className="overflow-hidden rounded-2xl bg-[var(--surface)]">
+            <div className="flex flex-col divide-y divide-[var(--border)]">
               {logs.map((entry) => (
                 <LogRow key={entry.id} entry={entry} />
               ))}
             </div>
-            {nextCursor && appId ? (
-              <div className="px-4 py-3 md:px-6">
-                <Button
-                  size="sm"
-                  variant="tertiary"
-                  isDisabled={loadingMore}
-                  onPress={() => void load(appId, nextCursor)}
+            <div className="flex items-center justify-between gap-1 border-t border-[var(--separator)] px-2 py-1.5 text-xs font-medium text-[var(--muted-foreground)] sm:px-3 sm:py-2">
+              <span className="px-2 tabular-nums">
+                {total} {total === 1 ? "event" : "events"}
+              </span>
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={safePage <= 1}
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-full transition-colors",
+                    "hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10",
+                  )}
+                  aria-label="Previous page"
                 >
-                  {loadingMore ? "Loading…" : "Load more"}
-                </Button>
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="min-w-[4.5rem] text-center tabular-nums">
+                  {safePage} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((current) => Math.min(pageCount, current + 1))
+                  }
+                  disabled={safePage >= pageCount}
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-full transition-colors",
+                    "hover:bg-black/[0.04] hover:text-[var(--foreground)] disabled:opacity-30 dark:hover:bg-white/10",
+                  )}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
               </div>
-            ) : null}
-          </>
+            </div>
+          </div>
         )}
       </section>
     </section>

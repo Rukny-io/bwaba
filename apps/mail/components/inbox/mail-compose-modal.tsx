@@ -24,19 +24,6 @@ type Props = {
   onSend: (draft: ComposeDraft) => void | Promise<void>;
 };
 
-export function isWeakOutboundMail(subject: string, body: string): string | null {
-  const subjectText = subject.trim();
-  const bodyText = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  const words = bodyText.split(" ").filter(Boolean);
-  if (subjectText.length < 8) {
-    return "Gmail often files very short subjects (hi, test) as spam. Use a real subject.";
-  }
-  if (words.length < 12) {
-    return "Add a couple of sentences. One-word messages from a new domain usually hit spam.";
-  }
-  return null;
-}
-
 function parseRecipients(raw: string): string[] {
   return raw
     .split(/[,;\s]+/)
@@ -86,11 +73,6 @@ export function MailComposeModal({
     }
     if (!body.trim()) {
       setLocalError("Message body is required.");
-      return;
-    }
-    const weak = isWeakOutboundMail(subject, body);
-    if (weak) {
-      setLocalError(weak);
       return;
     }
     setLocalError("");

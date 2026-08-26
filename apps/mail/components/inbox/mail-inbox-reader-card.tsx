@@ -248,7 +248,7 @@ export function MailInboxReaderCard({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 md:pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none px-4 pb-4 pt-3 sm:px-6 md:pt-4">
         <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
           {isOutbound
             ? `to ${message.to || replyToAddress}`

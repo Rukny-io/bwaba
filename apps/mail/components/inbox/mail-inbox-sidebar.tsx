@@ -65,7 +65,7 @@ export function MailInboxSidebar({
         Compose
       </button>
 
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-0.5" aria-label="Mail folders">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain scrollbar-none px-0.5" aria-label="Mail folders">
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
           Folders
         </p>

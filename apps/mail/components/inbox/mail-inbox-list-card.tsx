@@ -122,7 +122,7 @@ export function MailInboxListCard({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none px-1.5 py-1.5 sm:px-2 sm:py-2">
         {!mailboxAddress ? (
           <EmptyState>Select a mailbox to load messages.</EmptyState>
         ) : loading ? (

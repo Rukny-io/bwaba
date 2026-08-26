@@ -80,4 +80,8 @@
   scrollbar-color: auto;
   scrollbar-gutter: auto;
   -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

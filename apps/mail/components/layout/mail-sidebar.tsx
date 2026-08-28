@@ -104,6 +104,7 @@ export function MailSidebar({
 }) {
   const pathname = usePathname();
   const { primary, secondary, footer, slot } = mailNavForPathname(pathname);
+  const profileHref = slot !== null ? `/u${slot}/profile` : "/profile";
   const settingsHref = slot !== null ? `/u${slot}/settings` : "/settings";
 
   return (
@@ -163,7 +164,7 @@ export function MailSidebar({
               <Dropdown.Item
                 id="profile"
                 textValue="Profile"
-                href={settingsHref}
+                href={profileHref}
                 className="gap-2"
               >
                 <User className="size-4 shrink-0" />

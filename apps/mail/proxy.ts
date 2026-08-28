@@ -64,7 +64,6 @@ const SLOTTED_PRODUCT_PREFIXES = [
   "/instagram",
   "/messenger",
   "/settings",
-  "/tutorials",
   "/developers",
 ];
 

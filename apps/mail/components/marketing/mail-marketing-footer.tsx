@@ -38,6 +38,11 @@ export function MailMarketingFooter({ signedIn }: { signedIn: boolean }) {
                 </Link>
               </li>
               <li>
+                <Link href="/tutorials" className="hover:text-[#062c30]">
+                  Tutorials
+                </Link>
+              </li>
+              <li>
                 <Link href="/faqs" className="hover:text-[#062c30]">
                   FAQs
                 </Link>

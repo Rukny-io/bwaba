@@ -94,7 +94,7 @@ export function MailHomePage({
   const plans = listMailPlans();
 
   return (
-    <MailMarketingShell signedIn={signedIn}>
+    <MailMarketingShell signedIn={signedIn} plainBackground>
       <main className="overflow-x-clip pt-14">
         <section id="overview" className={`relative ${L.heroPad}`}>
           <div className="pointer-events-none absolute inset-0 mx-auto hidden min-h-[28rem] w-full max-w-6xl lg:block" aria-hidden>
@@ -112,13 +112,16 @@ export function MailHomePage({
               Create mailboxes, authenticate DNS, and send from webmail. You
               keep the domain.
             </p>
-            <div className="mail-hero-enter-delayed mt-8 flex w-full max-w-sm flex-col gap-2.5 sm:max-w-none sm:flex-row sm:justify-center sm:gap-3">
+            <div className="mail-hero-enter-delayed mt-8 flex w-full max-w-sm flex-col gap-2.5 sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3">
               <Link href={primaryHref} className={L.btnPrimary}>
                 {primaryLabel}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
               <Link href="/getting-started" className={L.btnGhost}>
                 Getting started
+              </Link>
+              <Link href="/tutorials" className={L.btnGhost}>
+                Tutorials
               </Link>
             </div>
           </div>
@@ -292,7 +295,7 @@ export function MailHomePage({
                   Sign in, connect your domain, and open webmail when DNS is
                   ready.
                 </p>
-                <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:justify-center sm:gap-3">
+                <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3">
                   <Link href={primaryHref} className={L.btnPrimary}>
                     <Inbox className="size-4" aria-hidden />
                     {primaryLabel}
@@ -300,6 +303,9 @@ export function MailHomePage({
                   <Link href="/getting-started" className={L.btnGhost}>
                     Getting started
                     <ArrowRight className="size-3.5 opacity-60" aria-hidden />
+                  </Link>
+                  <Link href="/tutorials" className={L.btnGhost}>
+                    Tutorials
                   </Link>
                 </div>
               </div>

@@ -13,6 +13,7 @@ const NAV = [
   { href: "/#features", label: "Features", id: "features" },
   { href: "/#pricing", label: "Pricing", id: "pricing" },
   { href: "/getting-started", label: "Getting Started", id: "getting-started" },
+  { href: "/tutorials", label: "Tutorials", id: "tutorials" },
   { href: "/faqs", label: "FAQs", id: "faqs" },
 ] as const;
 
@@ -22,6 +23,9 @@ function isNavActive(
   hash: string,
 ) {
   if (id === "getting-started") return pathname === "/getting-started";
+  if (id === "tutorials") {
+    return pathname === "/tutorials" || pathname.startsWith("/tutorials/");
+  }
   if (id === "faqs") return pathname === "/faqs";
   if (pathname !== "/") return false;
   if (id === "features") return hash === "#features";

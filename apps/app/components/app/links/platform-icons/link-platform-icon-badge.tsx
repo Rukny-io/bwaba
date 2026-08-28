@@ -7,9 +7,27 @@ import { LinkPlatformIcon, PLATFORM_ICON_STYLES } from './link-platform-icon';
 
 interface LinkPlatformIconBadgeProps {
   type: LinkCatalogTypeId;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
+
+const SHELL: Record<NonNullable<LinkPlatformIconBadgeProps['size']>, string> = {
+  sm: 'size-9 rounded-xl',
+  md: 'size-11 rounded-2xl',
+  lg: 'size-12 rounded-2xl',
+};
+
+const SHELL_PX: Record<NonNullable<LinkPlatformIconBadgeProps['size']>, number> = {
+  sm: 36,
+  md: 44,
+  lg: 48,
+};
+
+const ICON_PX: Record<NonNullable<LinkPlatformIconBadgeProps['size']>, number> = {
+  sm: 18,
+  md: 22,
+  lg: 24,
+};
 
 export function LinkPlatformIconBadge({
   type,
@@ -18,9 +36,9 @@ export function LinkPlatformIconBadge({
 }: LinkPlatformIconBadgeProps) {
   const styles = PLATFORM_ICON_STYLES[type];
   const asset = getPlatformIconAsset(type);
-  const shell = size === 'sm' ? 'size-9 rounded-xl' : 'size-11 rounded-2xl';
-  const shellPx = size === 'sm' ? 36 : 44;
-  const iconSize = asset?.fill ? shellPx : size === 'sm' ? 18 : 22;
+  const shell = SHELL[size];
+  const shellPx = SHELL_PX[size];
+  const iconSize = asset?.fill ? shellPx : ICON_PX[size];
 
   return (
     <div

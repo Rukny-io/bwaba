@@ -223,7 +223,7 @@ export function LinksView() {
           values={links}
           onReorder={handleReorder}
           onPointerUp={() => void handleReorderPointerUp()}
-          className="flex flex-col gap-2.5 sm:gap-3"
+          className="flex flex-col gap-3 sm:gap-3.5"
         >
           {links.map((link) => (
             <SortableLinkCard

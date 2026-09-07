@@ -796,7 +796,12 @@
       "media:upload": "رفع وسائط",
       "forms:read": "قراءة النماذج",
       "forms:write": "إدارة النماذج",
-      "forms:webhooks": "Webhooks النماذج"
+      "forms:webhooks": "Webhooks النماذج",
+      "email:send": "إرسال البريد",
+      "email:read": "قراءة حالة البريد",
+      "email:domains:read": "قراءة نطاقات البريد",
+      "email:domains:write": "إدارة نطاقات البريد",
+      "email:webhooks:manage": "إدارة Webhooks البريد"
     },
     "createPage": {
       "heading": "إنشاء مفتاح API",

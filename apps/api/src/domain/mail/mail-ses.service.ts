@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import {
   GetEmailIdentityCommand,
+  CreateEmailIdentityCommand,
   SESv2Client,
   SendEmailCommand,
 } from '@aws-sdk/client-sesv2';
@@ -66,6 +67,39 @@ export class MailSesService {
           sending: false,
           dkim: 'NOT_STARTED',
           tokens: [],
+        };
+      }
+      throw error;
+    }
+  }
+
+  /** Starts SES domain verification and returns DKIM DNS tokens. Safe to call
+   * repeatedly: SES preserves an existing identity rather than creating a new one. */
+  async createEmailIdentity(domain: string): Promise<{
+    sending: boolean;
+    dkim: string;
+    tokens: string[];
+  }> {
+    try {
+      const identity = await this.getClient().send(
+        new CreateEmailIdentityCommand({ EmailIdentity: domain }),
+      );
+      return {
+        sending: Boolean(identity.VerifiedForSendingStatus),
+        dkim: identity.DkimAttributes?.Status ?? 'PENDING',
+        tokens: identity.DkimAttributes?.Tokens ?? [],
+      };
+    } catch (error) {
+      const name =
+        typeof error === 'object' && error && 'name' in error
+          ? String(error.name)
+          : '';
+      if (name.includes('AlreadyExists')) {
+        const current = await this.getEmailIdentity(domain);
+        return {
+          sending: current.sending,
+          dkim: current.dkim,
+          tokens: current.tokens,
         };
       }
       throw error;

@@ -10,6 +10,11 @@ export const ALL_API_KEY_SCOPES = [
   'forms:read',
   'forms:write',
   'forms:webhooks',
+  'email:send',
+  'email:read',
+  'email:domains:read',
+  'email:domains:write',
+  'email:webhooks:manage',
 ] as const;
 
 export type ApiKeyScope = (typeof ALL_API_KEY_SCOPES)[number];
@@ -30,6 +35,9 @@ export const WRITE_API_KEY_SCOPES: ApiKeyScope[] = [
   'media:upload',
   'forms:write',
   'forms:webhooks',
+  'email:send',
+  'email:domains:write',
+  'email:webhooks:manage',
 ];
 
 export type ApiKeyExpirationPreset = 'never' | '30d' | '90d' | '365d';

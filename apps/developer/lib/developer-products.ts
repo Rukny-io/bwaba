@@ -7,7 +7,7 @@ import {
   Facebook,
   Radio,
 } from 'lucide-react';
-import { appForms, appWhatsapp, appWhatsappApi } from '@/lib/app-routes';
+import { appEmailApi, appForms, appWhatsapp, appWhatsappApi } from '@/lib/app-routes';
 
 export type ProductStatus = 'available' | 'coming_soon';
 
@@ -61,7 +61,8 @@ export const DEVELOPER_PRODUCTS: DeveloperProduct[] = [
   {
     id: 'emailApi',
     icon: Mail,
-    status: 'coming_soon',
+    status: 'available',
+    resolveHref: (appId) => appEmailApi(appId),
   },
 ];
 

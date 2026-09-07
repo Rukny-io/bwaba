@@ -799,7 +799,12 @@
       "media:upload": "Upload media",
       "forms:read": "Read forms",
       "forms:write": "Manage forms",
-      "forms:webhooks": "Form webhooks"
+      "forms:webhooks": "Form webhooks",
+      "email:send": "Send email",
+      "email:read": "Read email status",
+      "email:domains:read": "Read email domains",
+      "email:domains:write": "Manage email domains",
+      "email:webhooks:manage": "Manage email webhooks"
     },
     "createPage": {
       "heading": "Create API key",

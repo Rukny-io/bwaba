@@ -5,6 +5,7 @@ export const PRODUCT_ROUTE_MAP: Record<string, DeveloperProductId> = {
   forms: 'forms',
   whatsapp: 'whatsapp',
   'whatsapp-api': 'whatsappApi',
+  'email-api': 'emailApi',
 };
 
 export function productIdFromPathSegment(

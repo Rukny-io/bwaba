@@ -34,6 +34,11 @@ export class CreateApiKeyDto {
       'forms:read',
       'forms:write',
       'forms:webhooks',
+      'email:send',
+      'email:read',
+      'email:domains:read',
+      'email:domains:write',
+      'email:webhooks:manage',
     ],
     { each: true },
   )

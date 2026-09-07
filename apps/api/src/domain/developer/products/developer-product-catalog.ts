@@ -20,7 +20,7 @@ export const DEVELOPER_PRODUCT_CATALOG: Record<
   whatsapp: { status: 'available' },
   instagram: { status: 'coming_soon' },
   messenger: { status: 'coming_soon' },
-  emailApi: { status: 'coming_soon' },
+  emailApi: { status: 'available' },
 };
 
 const PRODUCT_ID_PATTERN = /^[a-z][a-zA-Z0-9]*$/;

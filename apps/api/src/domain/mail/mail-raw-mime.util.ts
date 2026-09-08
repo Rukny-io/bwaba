@@ -95,8 +95,11 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
     );
-    body = `\r\n${wrapBase64(text || ' ')}\r\n`;
+    body = `${wrapBase64(text || ' ')}\r\n`;
   }
 
-  return Buffer.from(crlf(`${headers.join('\r\n')}\r\n${body}`), 'utf8');
+  return Buffer.from(
+    crlf(`${headers.join('\r\n')}\r\n\r\n${body}`),
+    'utf8',
+  );
 }

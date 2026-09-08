@@ -58,9 +58,9 @@ export async function getBimiSetupStatus(appId: string) {
 
 export async function uploadBimiLogo(appId: string, file: File) {
   const body = new FormData();
-  body.append("file", file);
+  body.append("file", file, file.name || "logo.png");
   const response = await sessionFetch(
-    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/logo`,
+    `/api/mail/apps/${encodeURIComponent(appId)}/bimi-logo`,
     { method: "POST", body },
   );
   return parse<MailBimiSetupStatus>(response);

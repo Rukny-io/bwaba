@@ -372,12 +372,40 @@ export async function rasterLogoToBimiSvg(input: Buffer): Promise<string> {
 }
 
 async function readUploadBuffer(file: Express.Multer.File): Promise<Buffer> {
-  if (file.buffer?.length) return file.buffer;
-  if (file.path) {
+  const normalize = (input: unknown): Buffer | null => {
+    if (!input) return null;
+    try {
+      if (Buffer.isBuffer(input)) return input.length ? input : null;
+      if (input instanceof Uint8Array) {
+        return input.length ? Buffer.from(input) : null;
+      }
+      if (typeof input === 'object') {
+        const maybe = input as {
+          type?: string;
+          data?: number[];
+          buffer?: { type?: string; data?: number[] };
+        };
+        if (Array.isArray(maybe.data)) {
+          return maybe.data.length ? Buffer.from(maybe.data) : null;
+        }
+        if (maybe.buffer && Array.isArray(maybe.buffer.data)) {
+          return maybe.buffer.data.length
+            ? Buffer.from(maybe.buffer.data)
+            : null;
+        }
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  let buffer = normalize(file?.buffer);
+  if (!buffer && file?.path) {
     const { readFile } = await import('fs/promises');
-    return readFile(file.path);
+    buffer = await readFile(file.path);
   }
-  return Buffer.alloc(0);
+  return buffer ?? Buffer.alloc(0);
 }
 
 type CertificateMetadata = {

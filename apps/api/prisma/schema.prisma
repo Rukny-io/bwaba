@@ -115,6 +115,10 @@ model User {
   developerContacts         DeveloperContact[]
   developerWebhooks         DeveloperWebhook[]
   developerMessageLogs      WhatsappMessageLog[]       @relation("developer_message_logs")
+  developerEmailMessages    DeveloperEmailMessage[]
+  developerEmailDomains     DeveloperEmailDomain[]
+  developerEmailSuppression DeveloperEmailSuppression[]
+  developerEmailEntitlement DeveloperEmailEntitlement?
   developerApiRequestLogs   ApiRequestLog[]
   developerSubscription     DeveloperSubscription?     @relation("developer_subscription")
   developerWallet           DeveloperWallet?           @relation("developer_wallet")
@@ -2600,6 +2604,8 @@ model DeveloperApp {
   developerWebhooks DeveloperWebhook[]
   forms            Form[]
   installedProducts DeveloperAppProduct[]
+  emailMessages    DeveloperEmailMessage[]
+  emailSenders     DeveloperEmailSender[]
 
   @@index([userId])
   @@index([appId])
@@ -2676,6 +2682,7 @@ model DeveloperApiKey {
   developerApp   DeveloperApp?        @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
   messageLogs    WhatsappMessageLog[]
   apiRequestLogs ApiRequestLog[]
+  emailMessages  DeveloperEmailMessage[]
 
   @@index([keyHash])
   @@index([userId])
@@ -2683,6 +2690,151 @@ model DeveloperApiKey {
   @@index([status])
   @@index([slug])
   @@map("developer_api_keys")
+}
+
+// ============================================
+// 📧 Developer Email API
+// ============================================
+
+enum DeveloperEmailDomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum DeveloperEmailSenderStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum DeveloperEmailMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  COMPLAINED
+  SUPPRESSED
+  FAILED
+}
+
+enum DeveloperEmailSuppressionReason {
+  BOUNCE
+  COMPLAINT
+  MANUAL
+}
+
+enum DeveloperEmailSubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+/// Domain is owned and verified once by the customer, then explicitly bound
+/// to one or more Developer Apps through DeveloperEmailSender.
+model DeveloperEmailDomain {
+  id          String                     @id @default(uuid())
+  userId      String
+  domain      String
+  status      DeveloperEmailDomainStatus @default(PENDING)
+  dkimTokens  String[]                   @default([])
+  verifiedAt  DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senders DeveloperEmailSender[]
+
+  @@unique([userId, domain])
+  @@index([userId, status])
+  @@map("developer_email_domains")
+}
+
+/// An app-level permission to send from one local part of an owned domain.
+model DeveloperEmailSender {
+  id             String                     @id @default(uuid())
+  developerAppId String
+  emailDomainId  String
+  localPart      String
+  status         DeveloperEmailSenderStatus @default(ACTIVE)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  developerApp DeveloperApp         @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  emailDomain  DeveloperEmailDomain @relation(fields: [emailDomainId], references: [id], onDelete: Cascade)
+
+  @@unique([developerAppId, emailDomainId, localPart])
+  @@index([developerAppId, status])
+  @@map("developer_email_senders")
+}
+
+/// Stores only operational metadata for API sends; email bodies are not retained.
+model DeveloperEmailMessage {
+  id             String                      @id @default(uuid())
+  externalId     String                      @unique
+  userId         String
+  developerAppId String
+  apiKeyId       String
+  senderId       String?
+  recipientHash  String
+  subject        String                      @default("")
+  status         DeveloperEmailMessageStatus @default(QUEUED)
+  sesMessageId   String?                     @unique
+  idempotencyKey String
+  environment    String
+  errorCode      String?
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp     @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  apiKey       DeveloperApiKey  @relation(fields: [apiKeyId], references: [id], onDelete: Restrict)
+
+  @@unique([apiKeyId, idempotencyKey])
+  @@index([developerAppId, createdAt])
+  @@index([userId, createdAt])
+  @@map("developer_email_messages")
+}
+
+/// Customer-scoped suppression list, written from verified delivery events.
+model DeveloperEmailSuppression {
+  id            String                          @id @default(uuid())
+  userId        String
+  recipientHash String
+  reason        DeveloperEmailSuppressionReason
+  createdAt     DateTime                        @default(now())
+  updatedAt     DateTime                        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipientHash])
+  @@index([userId, reason])
+  @@map("developer_email_suppressions")
+}
+
+/// Billing entitlement is account-scoped, not app-scoped. Payment activation
+/// will set the active period and monthly quota without duplicating trial quota.
+model DeveloperEmailEntitlement {
+  id                 String                           @id @default(uuid())
+  userId             String                           @unique
+  trialGrantedAt     DateTime?
+  trialQuota         Int                              @default(0)
+  trialUsed          Int                              @default(0)
+  subscriptionStatus DeveloperEmailSubscriptionStatus @default(INACTIVE)
+  periodStartsAt     DateTime?
+  periodEndsAt       DateTime?
+  monthlyQuota       Int                              @default(0)
+  monthlyUsed        Int                              @default(0)
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionStatus, periodEndsAt])
+  @@map("developer_email_entitlements")
 }
 
 // ============================================

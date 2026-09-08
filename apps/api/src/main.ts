@@ -15,6 +15,8 @@ import { Request } from 'express';
 import { FORMS_MAX_SUBMIT_BODY_BYTES } from './domain/forms/forms.constants';
 import { TrustedProxyResolver } from './core/common/utils/cloudflare-ip.guard';
 
+const EMAIL_API_MAX_SEND_BODY_BYTES = 128 * 1024;
+
 function isFormsSubmitRequest(req: Request): boolean {
   if (req.method !== 'POST') return false;
   const path = (req.originalUrl || req.url || '').split('?')[0];
@@ -22,6 +24,12 @@ function isFormsSubmitRequest(req: Request): boolean {
     /^\/api\/v\d+\/forms\/public\/[^/]+\/submit\/?$/i.test(path) ||
     /^\/api\/v\d+\/forms\/[^/]+\/submit\/?$/i.test(path)
   );
+}
+
+function isEmailApiSendRequest(req: Request): boolean {
+  if (req.method !== 'POST') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return /^\/api\/v\d+\/email\/messages\/?$/i.test(path);
 }
 
 async function bootstrap() {
@@ -76,7 +84,7 @@ async function bootstrap() {
     if (
       typeof req.body === 'string' &&
       req.body.length > 0 &&
-      /\/mail\/webhooks\/ses/i.test(req.originalUrl || req.url || '')
+      /\/(?:mail|email)\/webhooks\/ses/i.test(req.originalUrl || req.url || '')
     ) {
       try {
         req.body = JSON.parse(req.body);
@@ -92,9 +100,23 @@ async function bootstrap() {
       verify: (req, _res, buf) => {
         // 🔒 Capture raw body for webhook signature verification (Meta, Qaseh, etc.)
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
-        if (isFormsSubmitRequest(req as Request) && buf.length > FORMS_MAX_SUBMIT_BODY_BYTES) {
+        if (
+          isFormsSubmitRequest(req as Request) &&
+          buf.length > FORMS_MAX_SUBMIT_BODY_BYTES
+        ) {
           const err = new Error(
             `Payload too large. Maximum allowed size is ${FORMS_MAX_SUBMIT_BODY_BYTES} bytes.`,
+          ) as Error & { status: number; type: string };
+          err.status = 413;
+          err.type = 'entity.too.large';
+          throw err;
+        }
+        if (
+          isEmailApiSendRequest(req as Request) &&
+          buf.length > EMAIL_API_MAX_SEND_BODY_BYTES
+        ) {
+          const err = new Error(
+            `Payload too large. Maximum allowed size is ${EMAIL_API_MAX_SEND_BODY_BYTES} bytes.`,
           ) as Error & { status: number; type: string };
           err.status = 413;
           err.type = 'entity.too.large';
@@ -383,4 +405,3 @@ bootstrap().catch((err) => {
   console.error('❌ Failed to start application:', err);
   process.exit(1);
 });
-

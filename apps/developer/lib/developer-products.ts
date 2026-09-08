@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from "lucide-react";
 import {
   FileText,
   Mail,
@@ -6,18 +6,23 @@ import {
   Instagram,
   Facebook,
   Radio,
-} from 'lucide-react';
-import { appForms, appWhatsapp, appWhatsappApi } from '@/lib/app-routes';
+} from "lucide-react";
+import {
+  appEmailApi,
+  appForms,
+  appWhatsapp,
+  appWhatsappApi,
+} from "@/lib/app-routes";
 
-export type ProductStatus = 'available' | 'coming_soon';
+export type ProductStatus = "available" | "coming_soon";
 
 export type DeveloperProductId =
-  | 'forms'
-  | 'whatsappApi'
-  | 'whatsapp'
-  | 'instagram'
-  | 'messenger'
-  | 'emailApi';
+  | "forms"
+  | "whatsappApi"
+  | "whatsapp"
+  | "instagram"
+  | "messenger"
+  | "emailApi";
 
 export interface DeveloperProduct {
   id: DeveloperProductId;
@@ -31,37 +36,38 @@ export interface DeveloperProduct {
 
 export const DEVELOPER_PRODUCTS: DeveloperProduct[] = [
   {
-    id: 'forms',
+    id: "forms",
     icon: FileText,
-    status: 'available',
+    status: "available",
     resolveHref: (appId) => appForms(appId),
   },
   {
-    id: 'whatsappApi',
+    id: "whatsappApi",
     icon: Radio,
-    status: 'available',
+    status: "available",
     resolveHref: (appId) => appWhatsappApi(appId),
   },
   {
-    id: 'whatsapp',
+    id: "whatsapp",
     icon: MessageCircle,
-    status: 'available',
+    status: "available",
     resolveHref: (appId) => appWhatsapp(appId),
   },
   {
-    id: 'instagram',
+    id: "instagram",
     icon: Instagram,
-    status: 'coming_soon',
+    status: "coming_soon",
   },
   {
-    id: 'messenger',
+    id: "messenger",
     icon: Facebook,
-    status: 'coming_soon',
+    status: "coming_soon",
   },
   {
-    id: 'emailApi',
+    id: "emailApi",
     icon: Mail,
-    status: 'coming_soon',
+    status: "available",
+    resolveHref: (appId) => appEmailApi(appId),
   },
 ];
 

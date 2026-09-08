@@ -1,7 +1,12 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   GetEmailIdentityCommand,
+  CreateEmailIdentityCommand,
   SESv2Client,
   SendEmailCommand,
 } from '@aws-sdk/client-sesv2';
@@ -22,6 +27,7 @@ export type MailSesSendInput = {
   /** RFC Message-ID for this outbound message */
   messageIdHeader: string;
   inReplyTo?: string | null;
+  configurationSetName?: string;
 };
 
 @Injectable()
@@ -56,16 +62,43 @@ export class MailSesService {
         tokens: identity.DkimAttributes?.Tokens ?? [],
       };
     } catch (error) {
-      const name =
-        typeof error === 'object' && error && 'name' in error
-          ? String(error.name)
-          : '';
+      const name = this.errorName(error);
       if (name.includes('NotFound')) {
         return {
           found: false,
           sending: false,
           dkim: 'NOT_STARTED',
           tokens: [],
+        };
+      }
+      throw error;
+    }
+  }
+
+  /** Starts SES domain verification and returns DKIM DNS tokens. Safe to call
+   * repeatedly: SES preserves an existing identity rather than creating a new one. */
+  async createEmailIdentity(domain: string): Promise<{
+    sending: boolean;
+    dkim: string;
+    tokens: string[];
+  }> {
+    try {
+      const identity = await this.getClient().send(
+        new CreateEmailIdentityCommand({ EmailIdentity: domain }),
+      );
+      return {
+        sending: Boolean(identity.VerifiedForSendingStatus),
+        dkim: identity.DkimAttributes?.Status ?? 'PENDING',
+        tokens: identity.DkimAttributes?.Tokens ?? [],
+      };
+    } catch (error) {
+      const name = this.errorName(error);
+      if (name.includes('AlreadyExists')) {
+        const current = await this.getEmailIdentity(domain);
+        return {
+          sending: current.sending,
+          dkim: current.dkim,
+          tokens: current.tokens,
         };
       }
       throw error;
@@ -97,9 +130,14 @@ export class MailSesService {
     return this.client;
   }
 
+  private errorName(error: unknown): string {
+    return error instanceof Error ? error.name : '';
+  }
+
   async sendEmail(input: MailSesSendInput): Promise<{ sesMessageId: string }> {
     const command = new SendEmailCommand({
       FromEmailAddress: input.from,
+      ConfigurationSetName: input.configurationSetName,
       Destination: {
         ToAddresses: input.to,
         CcAddresses: input.cc?.length ? input.cc : undefined,

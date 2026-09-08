@@ -371,7 +371,14 @@ export async function rasterLogoToBimiSvg(input: Buffer): Promise<string> {
   return validateBimiSvg(Buffer.from(svg, 'utf8'));
 }
 
-async function readUploadBuffer(file: Express.Multer.File): Promise<Buffer> {
+export type MailBimiLogoUpload = {
+  buffer: Buffer;
+  size?: number;
+  mimetype?: string;
+  originalname?: string;
+};
+
+async function readUploadBuffer(file: MailBimiLogoUpload): Promise<Buffer> {
   const normalize = (input: unknown): Buffer | null => {
     if (!input) return null;
     try {
@@ -400,12 +407,7 @@ async function readUploadBuffer(file: Express.Multer.File): Promise<Buffer> {
     return null;
   };
 
-  let buffer = normalize(file?.buffer);
-  if (!buffer && file?.path) {
-    const { readFile } = await import('fs/promises');
-    buffer = await readFile(file.path);
-  }
-  return buffer ?? Buffer.alloc(0);
+  return normalize(file?.buffer) ?? Buffer.alloc(0);
 }
 
 type CertificateMetadata = {
@@ -447,7 +449,7 @@ export class MailBimiService {
   async uploadCustomerLogo(
     userId: string,
     publicAppId: string,
-    file: Express.Multer.File,
+    file: MailBimiLogoUpload,
   ) {
     this.flags.requireOutboundBimi();
     const app = await this.requireOwnedApp(userId, publicAppId);
@@ -462,7 +464,10 @@ export class MailBimiService {
     if (!buffer.length) {
       throw new BadRequestException('No logo file was received. Try again.');
     }
-    if (buffer.length > MAX_RASTER_BYTES || file.size > MAX_RASTER_BYTES) {
+    if (
+      buffer.length > MAX_RASTER_BYTES ||
+      (file.size ?? 0) > MAX_RASTER_BYTES
+    ) {
       throw new BadRequestException('Logo must be no larger than 2MB.');
     }
 
@@ -478,7 +483,8 @@ export class MailBimiService {
       ['png', 'jpg', 'jpeg', 'webp'].includes(extension) ||
       mime === 'image/png' ||
       mime === 'image/jpeg' ||
-      mime === 'image/webp';
+      mime === 'image/webp' ||
+      isLikelyBinaryImage(buffer);
 
     if (!isSvg && !isRaster) {
       throw new BadRequestException(

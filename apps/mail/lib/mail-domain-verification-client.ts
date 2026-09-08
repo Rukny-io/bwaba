@@ -34,6 +34,16 @@ async function parse<T>(response: Response): Promise<T> {
   return data;
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 export async function listDomainVerificationRequests(appId: string) {
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification`,
@@ -57,11 +67,21 @@ export async function getBimiSetupStatus(appId: string) {
 }
 
 export async function uploadBimiLogo(appId: string, file: File) {
-  const body = new FormData();
-  body.append("file", file, file.name || "logo.png");
+  if (!file.size) {
+    throw new Error("Selected file is empty.");
+  }
+  const contentBase64 = await fileToBase64(file);
   const response = await sessionFetch(
-    `/api/mail/apps/${encodeURIComponent(appId)}/bimi-logo`,
-    { method: "POST", body },
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/logo`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contentBase64,
+        fileName: file.name || "logo.png",
+        mimeType: file.type || "application/octet-stream",
+      }),
+    },
   );
   return parse<MailBimiSetupStatus>(response);
 }

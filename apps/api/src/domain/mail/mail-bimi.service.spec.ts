@@ -85,6 +85,28 @@ describe('Mail BIMI helpers', () => {
     ).toThrow(/active or external/i);
   });
 
+  it('normalizes common SVG exports into Tiny PS for upload', () => {
+    const normalized = sanitizeBimiSvg(
+      Buffer.from(
+        `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <rect width="100" height="100" fill="#111"/>
+</svg>`,
+      ),
+    );
+    expect(normalized).toMatch(/baseProfile="tiny-ps"/i);
+    expect(normalized).toMatch(/version="1\.2"/i);
+    expect(normalized).toMatch(/viewBox="0 0 100 100"/i);
+    expect(normalized).toMatch(/<title>Brand logo<\/title>/i);
+  });
+
+  it('rejects binary images renamed as SVG', () => {
+    expect(() =>
+      sanitizeBimiSvg(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])),
+    ).toThrow(/not an SVG document/i);
+  });
+
   it('maps SES verdict snapshots without trusting unknown statuses', () => {
     expect(normalizeSesVerdict({ status: 'pass' })).toBe(
       MailAuthenticationVerdict.PASS,
@@ -205,7 +227,7 @@ describe('MailBimiService customer setup', () => {
         mimetype: 'text/plain',
         originalname: 'brand.svg',
       } as Express.Multer.File),
-    ).rejects.toThrow(/image\/svg\+xml/i);
+    ).rejects.toThrow(/Only \.svg files are accepted/i);
     expect(s3.uploadBuffer).not.toHaveBeenCalled();
   });
 });

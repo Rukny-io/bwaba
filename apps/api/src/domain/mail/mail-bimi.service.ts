@@ -133,17 +133,135 @@ export function normalizeSesVerdict(
     : MailAuthenticationVerdict.UNKNOWN;
 }
 
+function isLikelyBinaryImage(input: Buffer): boolean {
+  if (input.length < 4) return false;
+  // PNG / JPEG / GIF / WebP / ZIP(SVGZ)
+  if (input[0] === 0x89 && input[1] === 0x50 && input[2] === 0x4e) return true;
+  if (input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff) return true;
+  if (input[0] === 0x47 && input[1] === 0x49 && input[2] === 0x46) return true;
+  if (
+    input[0] === 0x52 &&
+    input[1] === 0x49 &&
+    input[2] === 0x46 &&
+    input[3] === 0x46
+  ) {
+    return true;
+  }
+  if (input[0] === 0x50 && input[1] === 0x4b) return true;
+  return false;
+}
+
+function extractSvgDocument(text: string): string {
+  const cleaned = text
+    .replace(/^\uFEFF/, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
+    .replace(/<!ENTITY[\s\S]*?>/gi, '')
+    .replace(/<\?xml[\s\S]*?\?>/gi, '')
+    .replace(/<\?[\s\S]*?\?>/g, '')
+    .trim();
+  const start = cleaned.search(/<svg\b/i);
+  if (start < 0) {
+    throw new Error(
+      'BIMI logo is not an SVG document. Upload a real .svg file (not PNG/JPG renamed to .svg).',
+    );
+  }
+  const end = cleaned.toLowerCase().lastIndexOf('</svg>');
+  if (end < start) {
+    throw new Error('BIMI logo SVG is incomplete or malformed.');
+  }
+  return cleaned.slice(start, end + '</svg>'.length).trim();
+}
+
+function readAttr(rootAttrs: string, name: string): string | null {
+  const match = rootAttrs.match(
+    new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, 'i'),
+  );
+  return match?.[1]?.trim() || null;
+}
+
+function setAttr(rootAttrs: string, name: string, value: string): string {
+  const pattern = new RegExp(`\\b${name}\\s*=\\s*["'][^"']*["']`, 'i');
+  if (pattern.test(rootAttrs)) {
+    return rootAttrs.replace(pattern, `${name}="${value}"`);
+  }
+  return `${rootAttrs.trim()} ${name}="${value}"`.trim();
+}
+
+function ensureSquareViewBox(rootAttrs: string): string {
+  const viewBox = rootAttrs.match(
+    /\bviewBox\s*=\s*["']\s*([+-]?(?:\d+\.?\d*|\.\d+))[\s,]+([+-]?(?:\d+\.?\d*|\.\d+))[\s,]+([+-]?(?:\d+\.?\d*|\.\d+))[\s,]+([+-]?(?:\d+\.?\d*|\.\d+))\s*["']/i,
+  );
+  if (viewBox) {
+    if (Number(viewBox[3]) <= 0 || Number(viewBox[3]) !== Number(viewBox[4])) {
+      throw new Error('BIMI SVG must have a positive square viewBox.');
+    }
+    return rootAttrs;
+  }
+
+  const width = Number(readAttr(rootAttrs, 'width')?.replace(/px$/i, ''));
+  const height = Number(readAttr(rootAttrs, 'height')?.replace(/px$/i, ''));
+  if (
+    Number.isFinite(width) &&
+    Number.isFinite(height) &&
+    width > 0 &&
+    width === height
+  ) {
+    return setAttr(rootAttrs, 'viewBox', `0 0 ${width} ${height}`);
+  }
+
+  throw new Error(
+    'BIMI SVG must have a positive square viewBox (for example viewBox="0 0 100 100").',
+  );
+}
+
+/** Normalize common SVG exports into BIMI SVG Tiny PS when content is otherwise safe. */
+export function normalizeBimiSvg(input: Buffer): string {
+  if (!input.length || input.length > MAX_SVG_BYTES) {
+    throw new Error('BIMI SVG has an invalid size.');
+  }
+  if (isLikelyBinaryImage(input)) {
+    throw new Error(
+      'BIMI logo is not an SVG document. Upload a real .svg file (not PNG/JPG renamed to .svg).',
+    );
+  }
+
+  let svg = extractSvgDocument(input.toString('utf8'));
+  if (
+    /<script\b|<foreignObject\b|<iframe\b|<object\b|<embed\b|<image\b|<use\b|<animate\b|<set\b|<style\b/i.test(
+      svg,
+    ) ||
+    /\son[a-z]+\s*=|\b(?:href|xlink:href)\s*=|url\s*\(/i.test(svg)
+  ) {
+    throw new Error(
+      'BIMI SVG contains active or external content. Export a static SVG without links, images, styles, or scripts.',
+    );
+  }
+
+  const openTag = svg.match(/<svg\b([^>]*)>/i);
+  if (!openTag) {
+    throw new Error('BIMI logo is not an SVG document.');
+  }
+
+  let rootAttrs = openTag[1] || '';
+  rootAttrs = setAttr(rootAttrs, 'xmlns', 'http://www.w3.org/2000/svg');
+  rootAttrs = setAttr(rootAttrs, 'version', '1.2');
+  rootAttrs = setAttr(rootAttrs, 'baseProfile', 'tiny-ps');
+  rootAttrs = ensureSquareViewBox(rootAttrs);
+  svg = svg.replace(/<svg\b[^>]*>/i, `<svg ${rootAttrs}>`);
+
+  if (!/<title\b[^>]*>[^<]+<\/title>/i.test(svg)) {
+    svg = svg.replace(/<svg\b[^>]*>/i, (tag) => `${tag}<title>Brand logo</title>`);
+  }
+
+  return validateBimiSvg(Buffer.from(svg, 'utf8'));
+}
+
 export function validateBimiSvg(input: Buffer): string {
   if (!input.length || input.length > MAX_SVG_BYTES) {
     throw new Error('BIMI SVG has an invalid size.');
   }
-  const svg = input
-    .toString('utf8')
-    .replace(/^\uFEFF/, '')
-    .trim();
-  if (!/^<\?xml[\s\S]*?\?>\s*<svg\b/i.test(svg) && !/^<svg\b/i.test(svg)) {
-    throw new Error('BIMI logo is not an SVG document.');
-  }
+  const svg = extractSvgDocument(input.toString('utf8'));
   if (
     /<!DOCTYPE|<!ENTITY|<script\b|<foreignObject\b|<iframe\b|<object\b|<embed\b|<image\b|<use\b|<animate\b|<set\b|<style\b/i.test(
       svg,
@@ -179,15 +297,7 @@ export function validateBimiSvg(input: Buffer): string {
 }
 
 export function sanitizeBimiSvg(input: Buffer): string {
-  const text = input
-    .toString('utf8')
-    .replace(/^\uFEFF/, '')
-    .trim();
-  const sanitized = text
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<\?(?!xml(?:\s|\?>))[\s\S]*?\?>/gi, '')
-    .trim();
-  return validateBimiSvg(Buffer.from(sanitized, 'utf8'));
+  return normalizeBimiSvg(input);
 }
 
 type CertificateMetadata = {
@@ -248,9 +358,17 @@ export class MailBimiService {
       throw new BadRequestException('BIMI SVG must be no larger than 256KB.');
     }
     const extension = file.originalname?.toLowerCase().split('.').pop();
-    if (file.mimetype !== 'image/svg+xml' || extension !== 'svg') {
+    const mime = (file.mimetype || '').split(';')[0].trim().toLowerCase();
+    const allowedMime =
+      mime === 'image/svg+xml' ||
+      mime === 'image/svg' ||
+      mime === 'text/xml' ||
+      mime === 'application/xml' ||
+      mime === 'application/octet-stream' ||
+      mime === '';
+    if (!allowedMime || extension !== 'svg') {
       throw new BadRequestException(
-        'Only SVG files with image/svg+xml are accepted.',
+        'Only .svg files are accepted for BIMI logos.',
       );
     }
 

@@ -544,13 +544,13 @@ export function MailDomainDashboard({
                       Your BIMI logo
                     </h3>
                     <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">
-                      Before uploading, export a static SVG with all of these
-                      requirements:
+                      Upload a real square .svg file. We convert common static
+                      SVG exports into BIMI Tiny PS automatically.
                     </p>
                     <ul className="mt-2 space-y-1 text-xs leading-5 text-[var(--muted-foreground)]">
-                      <li>• SVG Tiny PS, version 1.2, with a title</li>
-                      <li>• Positive square viewBox and 256 KB maximum</li>
-                      <li>• No scripts, animation, images, links, or external content</li>
+                      <li>• Real SVG text file (not PNG/JPG renamed to .svg)</li>
+                      <li>• Square logo (equal width and height / viewBox)</li>
+                      <li>• Max 256 KB, no scripts, links, images, or styles</li>
                     </ul>
                     <label
                       className={cn(

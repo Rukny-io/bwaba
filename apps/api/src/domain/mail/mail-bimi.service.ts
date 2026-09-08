@@ -26,10 +26,12 @@ import { MailFeatureFlags } from './mail-feature-flags';
 const POSITIVE_TTL_SECONDS = 24 * 60 * 60;
 const NEGATIVE_TTL_SECONDS = 60 * 60;
 const MAX_SVG_BYTES = 256 * 1024;
+const MAX_RASTER_BYTES = 2 * 1024 * 1024;
 const MAX_CERT_BYTES = 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8_000;
 const BIMI_EKU_OID = '1.3.6.1.5.5.7.3.31';
 export const BIMI_MAX_SVG_BYTES = MAX_SVG_BYTES;
+export const BIMI_MAX_UPLOAD_BYTES = MAX_RASTER_BYTES;
 
 export type ParsedBimiRecord = {
   raw: string;
@@ -300,6 +302,84 @@ export function sanitizeBimiSvg(input: Buffer): string {
   return normalizeBimiSvg(input);
 }
 
+/** Convert a square opaque logo (PNG/JPEG/WebP) into a static BIMI Tiny PS SVG. */
+export async function rasterLogoToBimiSvg(input: Buffer): Promise<string> {
+  if (!input.length || input.length > MAX_RASTER_BYTES) {
+    throw new Error('Logo image must be between 1 byte and 2MB.');
+  }
+
+  const size = 128;
+  let data: Buffer;
+  let info: sharp.OutputInfo;
+  try {
+    ({ data, info } = await sharp(input, { limitInputPixels: 16_777_216 })
+      .rotate()
+      .resize(size, size, { fit: 'fill' })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true }));
+  } catch {
+    throw new Error('Could not read logo image. Use PNG, JPEG, WebP, or SVG.');
+  }
+
+  const width = info.width;
+  const height = info.height;
+  const channels = info.channels;
+  if (width !== height || width <= 0) {
+    throw new Error('BIMI logo must be square.');
+  }
+
+  const dark = new Uint8Array(width * height);
+  let darkCount = 0;
+  for (let i = 0; i < width * height; i += 1) {
+    const offset = i * channels;
+    const alpha = data[offset + 3] ?? 255;
+    const luminance = data[offset] + data[offset + 1] + data[offset + 2];
+    const isDark = alpha > 200 && luminance < 200;
+    dark[i] = isDark ? 1 : 0;
+    if (isDark) darkCount += 1;
+  }
+  if (darkCount < 16) {
+    throw new Error(
+      'Logo silhouette is empty. Use a dark logo on a light background.',
+    );
+  }
+
+  const rects: string[] = [];
+  for (let y = 0; y < height; y += 1) {
+    let x = 0;
+    while (x < width) {
+      while (x < width && !dark[y * width + x]) x += 1;
+      if (x >= width) break;
+      const start = x;
+      while (x < width && dark[y * width + x]) x += 1;
+      rects.push(
+        `<rect x="${start}" y="${y}" width="${x - start}" height="1"/>`,
+      );
+    }
+  }
+
+  const svg = [
+    `<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">`,
+    '<title>Brand logo</title>',
+    '<g fill="#000000">',
+    ...rects,
+    '</g>',
+    '</svg>',
+  ].join('');
+
+  return validateBimiSvg(Buffer.from(svg, 'utf8'));
+}
+
+async function readUploadBuffer(file: Express.Multer.File): Promise<Buffer> {
+  if (file.buffer?.length) return file.buffer;
+  if (file.path) {
+    const { readFile } = await import('fs/promises');
+    return readFile(file.path);
+  }
+  return Buffer.alloc(0);
+}
+
 type CertificateMetadata = {
   type: MailBrandCertificateType;
   subject: string;
@@ -349,37 +429,47 @@ export class MailBimiService {
         'Connect a valid domain before uploading a BIMI logo.',
       );
     }
-    if (
-      !file?.buffer ||
-      file.buffer.length === 0 ||
-      file.buffer.length > MAX_SVG_BYTES ||
-      file.size > MAX_SVG_BYTES
-    ) {
-      throw new BadRequestException('BIMI SVG must be no larger than 256KB.');
+
+    const buffer = await readUploadBuffer(file);
+    if (!buffer.length) {
+      throw new BadRequestException('No logo file was received. Try again.');
     }
-    const extension = file.originalname?.toLowerCase().split('.').pop();
+    if (buffer.length > MAX_RASTER_BYTES || file.size > MAX_RASTER_BYTES) {
+      throw new BadRequestException('Logo must be no larger than 2MB.');
+    }
+
+    const extension = file.originalname?.toLowerCase().split('.').pop() || '';
     const mime = (file.mimetype || '').split(';')[0].trim().toLowerCase();
-    const allowedMime =
+    const isSvg =
+      extension === 'svg' ||
       mime === 'image/svg+xml' ||
       mime === 'image/svg' ||
       mime === 'text/xml' ||
-      mime === 'application/xml' ||
-      mime === 'application/octet-stream' ||
-      mime === '';
-    if (!allowedMime || extension !== 'svg') {
+      mime === 'application/xml';
+    const isRaster =
+      ['png', 'jpg', 'jpeg', 'webp'].includes(extension) ||
+      mime === 'image/png' ||
+      mime === 'image/jpeg' ||
+      mime === 'image/webp';
+
+    if (!isSvg && !isRaster) {
       throw new BadRequestException(
-        'Only .svg files are accepted for BIMI logos.',
+        'Upload a square PNG, JPEG, WebP, or SVG logo.',
       );
     }
 
     let svg: string;
     try {
-      svg = sanitizeBimiSvg(file.buffer);
+      if (isSvg && !isLikelyBinaryImage(buffer)) {
+        svg = sanitizeBimiSvg(buffer);
+      } else {
+        svg = await rasterLogoToBimiSvg(buffer);
+      }
     } catch (error) {
       throw new BadRequestException(
         error instanceof Error
           ? error.message
-          : 'Invalid BIMI SVG Tiny PS document.',
+          : 'Invalid BIMI logo document.',
       );
     }
 

@@ -544,13 +544,13 @@ export function MailDomainDashboard({
                       Your BIMI logo
                     </h3>
                     <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">
-                      Upload a real square .svg file. We convert common static
-                      SVG exports into BIMI Tiny PS automatically.
+                      Upload a square PNG, JPEG, WebP, or SVG. Raster logos are
+                      converted automatically into a BIMI Tiny PS SVG.
                     </p>
                     <ul className="mt-2 space-y-1 text-xs leading-5 text-[var(--muted-foreground)]">
-                      <li>• Real SVG text file (not PNG/JPG renamed to .svg)</li>
-                      <li>• Square logo (equal width and height / viewBox)</li>
-                      <li>• Max 256 KB, no scripts, links, images, or styles</li>
+                      <li>• Square logo (1:1), preferably dark on light</li>
+                      <li>• Max 2 MB for images, 256 KB for SVG</li>
+                      <li>• No transparency-only marks or complex photo logos</li>
                     </ul>
                     <label
                       className={cn(
@@ -568,12 +568,12 @@ export function MailDomainDashboard({
                       <input
                         className="sr-only"
                         type="file"
-                        accept="image/svg+xml,.svg"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
                         disabled={bimiAction !== null}
                         aria-label={
                           bimi.logoUploaded
-                            ? "Replace BIMI SVG logo"
-                            : "Upload BIMI SVG logo"
+                            ? "Replace brand logo"
+                            : "Upload brand logo"
                         }
                         onChange={(event) => void uploadLogo(event)}
                       />

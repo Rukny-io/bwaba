@@ -1,11 +1,13 @@
 import { MailAuthenticationVerdict } from '@prisma/client';
 import { assertUrlSafe, safeFetch } from '../../core/common/utils/ssrf-guard';
+import sharp from 'sharp';
 import {
   MailBimiService,
   normalizeSenderDomain,
   normalizeSesVerdict,
   parseBimiRecord,
   parseDmarcRecord,
+  rasterLogoToBimiSvg,
   sanitizeBimiSvg,
   validateBimiSvg,
 } from './mail-bimi.service';
@@ -105,6 +107,39 @@ describe('Mail BIMI helpers', () => {
     expect(() =>
       sanitizeBimiSvg(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])),
     ).toThrow(/not an SVG document/i);
+  });
+
+  it('converts a square PNG logo into Tiny PS SVG', async () => {
+    const png = await sharp({
+      create: {
+        width: 64,
+        height: 64,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 },
+      },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: {
+              width: 20,
+              height: 40,
+              channels: 3,
+              background: { r: 0, g: 0, b: 0 },
+            },
+          })
+            .png()
+            .toBuffer(),
+          left: 12,
+          top: 12,
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    const svg = await rasterLogoToBimiSvg(png);
+    expect(svg).toMatch(/baseProfile="tiny-ps"/i);
+    expect(svg).toContain('<rect');
   });
 
   it('maps SES verdict snapshots without trusting unknown statuses', () => {
@@ -219,16 +254,54 @@ describe('MailBimiService customer setup', () => {
     expect(result.bimi.status).toBe('VERIFIED');
   });
 
-  it('rejects a spoofed upload MIME type before storage', async () => {
+  it('rejects unsupported upload types before storage', async () => {
     await expect(
       service.uploadCustomerLogo('user-1', '1234567890123456', {
-        buffer: validSvg,
-        size: validSvg.length,
+        buffer: Buffer.from('not-an-image'),
+        size: 12,
         mimetype: 'text/plain',
-        originalname: 'brand.svg',
+        originalname: 'brand.txt',
       } as Express.Multer.File),
-    ).rejects.toThrow(/Only \.svg files are accepted/i);
+    ).rejects.toThrow(/PNG, JPEG, WebP, or SVG/i);
     expect(s3.uploadBuffer).not.toHaveBeenCalled();
+  });
+
+  it('accepts a square PNG and stores converted BIMI assets', async () => {
+    const mark = await sharp({
+      create: {
+        width: 24,
+        height: 40,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0 },
+      },
+    })
+      .png()
+      .toBuffer();
+    const png = await sharp({
+      create: {
+        width: 96,
+        height: 96,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 },
+      },
+    })
+      .composite([{ input: mark, left: 20, top: 20 }])
+      .png()
+      .toBuffer();
+
+    const result = await service.uploadCustomerLogo(
+      'user-1',
+      '1234567890123456',
+      {
+        buffer: png,
+        size: png.length,
+        mimetype: 'image/png',
+        originalname: 'brand.png',
+      } as Express.Multer.File,
+    );
+
+    expect(s3.uploadBuffer).toHaveBeenCalledTimes(2);
+    expect(result.logoUploaded).toBe(true);
   });
 });
 

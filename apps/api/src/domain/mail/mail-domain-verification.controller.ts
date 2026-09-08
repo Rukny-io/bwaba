@@ -11,13 +11,14 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import {
   AuthenticatedUser,
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { MailDomainVerificationService } from './mail-domain-verification.service';
-import { BIMI_MAX_SVG_BYTES, MailBimiService } from './mail-bimi.service';
+import { BIMI_MAX_UPLOAD_BYTES, MailBimiService } from './mail-bimi.service';
 
 @ApiTags('Mail - Domain verification')
 @ApiBearerAuth()
@@ -40,18 +41,22 @@ export class MailDomainVerificationController {
   @Post('bimi/logo')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: BIMI_MAX_SVG_BYTES } }),
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: BIMI_MAX_UPLOAD_BYTES },
+    }),
   )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Upload and validate an SVG Tiny PS BIMI logo (max 256KB)',
+    summary:
+      'Upload a square PNG/JPEG/WebP/SVG logo and convert it to BIMI Tiny PS',
   })
   uploadBimiLogo(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file) throw new BadRequestException('No BIMI SVG uploaded.');
+    if (!file) throw new BadRequestException('No BIMI logo uploaded.');
     return this.bimi.uploadCustomerLogo(user.id, appId, file);
   }
 

@@ -1,6 +1,6 @@
-import { isValidAppId } from '@/lib/api/types';
+import { isValidAppId } from "@/lib/api/types";
 
-export const LAST_APP_COOKIE = 'rukny_last_app_id';
+export const LAST_APP_COOKIE = "rukny_last_app_id";
 
 export function appBase(appId: string): string {
   return `/apps/${appId}`;
@@ -34,8 +34,11 @@ export function appEmailApi(appId: string): string {
   return `${appBase(appId)}/email-api`;
 }
 
-export { appWhatsappApiHref, isWhatsappApiSectionActive } from '@/lib/whatsapp-api-routes';
-export type { WhatsappApiSectionId } from '@/lib/whatsapp-api-routes';
+export {
+  appWhatsappApiHref,
+  isWhatsappApiSectionActive,
+} from "@/lib/whatsapp-api-routes";
+export type { WhatsappApiSectionId } from "@/lib/whatsapp-api-routes";
 
 /** @deprecated Use appWhatsappApi */
 export function appDocs(appId: string): string {
@@ -51,7 +54,7 @@ export function appAnalytics(appId: string): string {
 }
 
 export function appCreation(): string {
-  return '/apps/creation';
+  return "/apps/creation";
 }
 
 export function appProducts(appId: string): string {

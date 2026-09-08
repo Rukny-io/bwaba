@@ -1,7 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import {
-  DeveloperEmailSubscriptionStatus,
-} from '@prisma/client';
+import { DeveloperEmailSubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 
 export const EMAIL_API_TRIAL_QUOTA = 1_000;
@@ -50,12 +48,16 @@ export class EmailEntitlementService {
     });
     if (trial.count === 1) return 'trial';
 
-    throw new HttpException({
-      code: 'quota_exceeded',
-      message: 'Email API quota exceeded. Activate Email API Starter to continue.',
-      monthlyPriceIqd: EMAIL_API_STARTER_MONTHLY_PRICE_IQD,
-      monthlyQuota: EMAIL_API_STARTER_MONTHLY_QUOTA,
-    }, HttpStatus.PAYMENT_REQUIRED);
+    throw new HttpException(
+      {
+        code: 'quota_exceeded',
+        message:
+          'Email API quota exceeded. Activate Email API Starter to continue.',
+        monthlyPriceIqd: EMAIL_API_STARTER_MONTHLY_PRICE_IQD,
+        monthlyQuota: EMAIL_API_STARTER_MONTHLY_QUOTA,
+      },
+      HttpStatus.PAYMENT_REQUIRED,
+    );
   }
 
   async getSummary(userId: string) {
@@ -70,19 +72,28 @@ export class EmailEntitlementService {
     });
     const now = new Date();
     const subscriptionActive =
-      entitlement.subscriptionStatus === DeveloperEmailSubscriptionStatus.ACTIVE &&
+      entitlement.subscriptionStatus ===
+        DeveloperEmailSubscriptionStatus.ACTIVE &&
       !!entitlement.periodStartsAt &&
       !!entitlement.periodEndsAt &&
       entitlement.periodStartsAt <= now &&
       entitlement.periodEndsAt > now;
     return {
-      trial: { quota: entitlement.trialQuota, used: entitlement.trialUsed, remaining: Math.max(0, entitlement.trialQuota - entitlement.trialUsed) },
+      trial: {
+        quota: entitlement.trialQuota,
+        used: entitlement.trialUsed,
+        remaining: Math.max(0, entitlement.trialQuota - entitlement.trialUsed),
+      },
       subscription: {
-        status: subscriptionActive ? 'active' : entitlement.subscriptionStatus.toLowerCase(),
+        status: subscriptionActive
+          ? 'active'
+          : entitlement.subscriptionStatus.toLowerCase(),
         priceIqd: EMAIL_API_STARTER_MONTHLY_PRICE_IQD,
         quota: entitlement.monthlyQuota,
         used: entitlement.monthlyUsed,
-        remaining: subscriptionActive ? Math.max(0, entitlement.monthlyQuota - entitlement.monthlyUsed) : 0,
+        remaining: subscriptionActive
+          ? Math.max(0, entitlement.monthlyQuota - entitlement.monthlyUsed)
+          : 0,
         periodEndsAt: entitlement.periodEndsAt?.toISOString() ?? null,
       },
     };
@@ -91,8 +102,13 @@ export class EmailEntitlementService {
   /** Manual activation used until a payment gateway is wired to the product. */
   async activateStarter(userId: string, periodEndsAt?: Date) {
     const startsAt = new Date();
-    const endsAt = periodEndsAt ?? new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-    if (endsAt <= startsAt) throw new HttpException('Subscription expiry must be in the future.', HttpStatus.BAD_REQUEST);
+    const endsAt =
+      periodEndsAt ?? new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (endsAt <= startsAt)
+      throw new HttpException(
+        'Subscription expiry must be in the future.',
+        HttpStatus.BAD_REQUEST,
+      );
     await this.prisma.developerEmailEntitlement.upsert({
       where: { userId },
       create: {

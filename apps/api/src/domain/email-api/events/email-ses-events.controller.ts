@@ -11,14 +11,16 @@ export class EmailSesEventsController {
 
   @Post()
   @HttpCode(200)
-  handle(@Req() request: { body?: unknown; rawBody?: Buffer }, @Body() body: unknown) {
-    const payload = body && typeof body === 'object'
-      ? body
-      : typeof body === 'string'
-        ? JSON.parse(body)
-        : request.rawBody
-          ? JSON.parse(request.rawBody.toString('utf8'))
-          : body;
+  handle(
+    @Req() request: { body?: unknown; rawBody?: Buffer },
+    @Body() body: unknown,
+  ) {
+    let payload: unknown = body;
+    if (typeof body === 'string') {
+      payload = JSON.parse(body) as unknown;
+    } else if ((!body || typeof body !== 'object') && request.rawBody) {
+      payload = JSON.parse(request.rawBody.toString('utf8')) as unknown;
+    }
     return this.events.handle(payload);
   }
 }

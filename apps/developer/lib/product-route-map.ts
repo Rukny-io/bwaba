@@ -1,11 +1,11 @@
-import type { DeveloperProductId } from '@/lib/developer-products';
+import type { DeveloperProductId } from "@/lib/developer-products";
 
 /** Maps URL path segments under /apps/{appId}/ to product IDs */
 export const PRODUCT_ROUTE_MAP: Record<string, DeveloperProductId> = {
-  forms: 'forms',
-  whatsapp: 'whatsapp',
-  'whatsapp-api': 'whatsappApi',
-  'email-api': 'emailApi',
+  forms: "forms",
+  whatsapp: "whatsapp",
+  "whatsapp-api": "whatsappApi",
+  "email-api": "emailApi",
 };
 
 export function productIdFromPathSegment(

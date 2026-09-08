@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { SupportTicketCategory } from '@prisma/client';
 import { SupportTicketsService } from '../../support-tickets/support-tickets.service';
-import { EmailEntitlementService, EMAIL_API_STARTER_MONTHLY_PRICE_IQD, EMAIL_API_STARTER_MONTHLY_QUOTA } from '../shared/email-entitlement.service';
+import {
+  EmailEntitlementService,
+  EMAIL_API_STARTER_MONTHLY_PRICE_IQD,
+  EMAIL_API_STARTER_MONTHLY_QUOTA,
+} from '../shared/email-entitlement.service';
 
 @Injectable()
 export class EmailBillingService {
@@ -26,7 +30,12 @@ export class EmailBillingService {
         'Email API Starter subscription activation request.',
       ].join('\n'),
       category: SupportTicketCategory.BILLING,
-      context: { kind: 'email_api_subscription', product: 'email', plan: 'STARTER', locale: 'ar' },
+      context: {
+        kind: 'email_api_subscription',
+        product: 'email',
+        plan: 'STARTER',
+        locale: 'ar',
+      },
     });
     return { ticketId: ticket.id, ticketNumber: ticket.number };
   }

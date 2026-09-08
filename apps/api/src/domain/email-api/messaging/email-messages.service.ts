@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma, DeveloperEmailMessageStatus } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
@@ -21,6 +22,7 @@ export class EmailMessagesService {
     private readonly prisma: PrismaService,
     private readonly ses: MailSesService,
     private readonly entitlements: EmailEntitlementService,
+    private readonly config: ConfigService,
   ) {}
 
   async send(
@@ -64,11 +66,16 @@ export class EmailMessagesService {
       select: { id: true },
     });
     if (suppressed) {
-      throw new ForbiddenException('Recipient is on this account suppression list.');
+      throw new ForbiddenException(
+        'Recipient is on this account suppression list.',
+      );
     }
 
-    let senderId: string | undefined;
-    senderId = await this.requireAuthorizedSender(userId, developerAppId, from);
+    const senderId = await this.requireAuthorizedSender(
+      userId,
+      developerAppId,
+      from,
+    );
     if (environment === 'test') {
       await this.requireTestRecipient(userId, recipient);
     }
@@ -79,7 +86,12 @@ export class EmailMessagesService {
     }
 
     const externalId = `em_${randomUUID().replace(/-/g, '')}`;
-    let message: { id: string; externalId: string; status: DeveloperEmailMessageStatus; createdAt: Date };
+    let message: {
+      id: string;
+      externalId: string;
+      status: DeveloperEmailMessageStatus;
+      createdAt: Date;
+    };
     try {
       message = await this.prisma.developerEmailMessage.create({
         data: {
@@ -96,7 +108,8 @@ export class EmailMessagesService {
         select: { id: true, externalId: true, status: true, createdAt: true },
       });
     } catch (error) {
-      if (reservation) await this.entitlements.releaseLiveSend(userId, reservation);
+      if (reservation)
+        await this.entitlements.releaseLiveSend(userId, reservation);
       if (this.isUniqueViolation(error)) {
         const replay = await this.prisma.developerEmailMessage.findUnique({
           where: { apiKeyId_idempotencyKey: { apiKeyId, idempotencyKey } },
@@ -118,6 +131,9 @@ export class EmailMessagesService {
         bodyHtml: dto.bodyHtml,
         replyTo: dto.replyTo?.map((address) => this.normalizeAddress(address)),
         messageIdHeader: `<${message.externalId}@api.rukny.io>`,
+        configurationSetName: this.config
+          .get<string>('EMAIL_SES_CONFIGURATION_SET')
+          ?.trim(),
       }));
     } catch (error) {
       await this.prisma.developerEmailMessage.update({
@@ -128,7 +144,8 @@ export class EmailMessagesService {
           errorMessage: this.safeProviderError(error),
         },
       });
-      if (reservation) await this.entitlements.releaseLiveSend(userId, reservation);
+      if (reservation)
+        await this.entitlements.releaseLiveSend(userId, reservation);
       throw new ServiceUnavailableException(
         'Email provider could not accept the message. The quota reservation was released.',
       );
@@ -145,7 +162,7 @@ export class EmailMessagesService {
         select: { externalId: true, status: true, createdAt: true },
       });
       return this.publicMessage(sent);
-    } catch (error) {
+    } catch {
       throw new ServiceUnavailableException(
         'Email was accepted by the provider but its status could not be persisted. Retry with the same Idempotency-Key.',
       );
@@ -162,7 +179,13 @@ export class EmailMessagesService {
     }
     const message = await this.prisma.developerEmailMessage.findFirst({
       where: { externalId, userId, developerAppId: apiKey.developerAppId },
-      select: { externalId: true, status: true, createdAt: true, sentAt: true, deliveredAt: true },
+      select: {
+        externalId: true,
+        status: true,
+        createdAt: true,
+        sentAt: true,
+        deliveredAt: true,
+      },
     });
     if (!message) throw new NotFoundException('Email message not found.');
     return {
@@ -217,7 +240,10 @@ export class EmailMessagesService {
 
   private normalizeAddress(value: string): string {
     const normalized = value.trim().toLowerCase();
-    if (/\r|\n/.test(normalized) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    if (
+      /\r|\n/.test(normalized) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
+    ) {
       throw new BadRequestException('Invalid email address.');
     }
     return normalized;
@@ -240,11 +266,15 @@ export class EmailMessagesService {
   }
 
   private isUniqueViolation(error: unknown): boolean {
-    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private safeProviderError(error: unknown): string {
-    const message = error instanceof Error ? error.message : 'Provider rejected message.';
+    const message =
+      error instanceof Error ? error.message : 'Provider rejected message.';
     return message.slice(0, 300);
   }
 }

@@ -41,13 +41,13 @@ export class SendEmailDto {
   @Matches(NO_HEADER_NEWLINES)
   subject!: string;
 
-  @ValidateIf((value) => !value.bodyHtml)
+  @ValidateIf((value: SendEmailDto) => !value.bodyHtml)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100_000)
   bodyText?: string;
 
-  @ValidateIf((value) => !value.bodyText)
+  @ValidateIf((value: SendEmailDto) => !value.bodyText)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100_000)

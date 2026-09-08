@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   GetEmailIdentityCommand,
@@ -23,6 +27,7 @@ export type MailSesSendInput = {
   /** RFC Message-ID for this outbound message */
   messageIdHeader: string;
   inReplyTo?: string | null;
+  configurationSetName?: string;
 };
 
 @Injectable()
@@ -57,10 +62,7 @@ export class MailSesService {
         tokens: identity.DkimAttributes?.Tokens ?? [],
       };
     } catch (error) {
-      const name =
-        typeof error === 'object' && error && 'name' in error
-          ? String(error.name)
-          : '';
+      const name = this.errorName(error);
       if (name.includes('NotFound')) {
         return {
           found: false,
@@ -90,10 +92,7 @@ export class MailSesService {
         tokens: identity.DkimAttributes?.Tokens ?? [],
       };
     } catch (error) {
-      const name =
-        typeof error === 'object' && error && 'name' in error
-          ? String(error.name)
-          : '';
+      const name = this.errorName(error);
       if (name.includes('AlreadyExists')) {
         const current = await this.getEmailIdentity(domain);
         return {
@@ -131,9 +130,14 @@ export class MailSesService {
     return this.client;
   }
 
+  private errorName(error: unknown): string {
+    return error instanceof Error ? error.name : '';
+  }
+
   async sendEmail(input: MailSesSendInput): Promise<{ sesMessageId: string }> {
     const command = new SendEmailCommand({
       FromEmailAddress: input.from,
+      ConfigurationSetName: input.configurationSetName,
       Destination: {
         ToAddresses: input.to,
         CcAddresses: input.cc?.length ? input.cc : undefined,

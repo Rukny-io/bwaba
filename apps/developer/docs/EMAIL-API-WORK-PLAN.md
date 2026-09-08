@@ -3,7 +3,7 @@
 > **الإصدار:** 1.0  
 > **التاريخ:** 5 سبتمبر 2026  
 > **النطاق:** `apps/developer` + `apps/api` (domain developer + email)  
-> **الحالة الحالية:** المنتج مسجّل في الكatalog فقط (`coming_soon`) — لا routes ولا backend ولا scopes
+> **الحالة الحالية:** MVP منفّذ على فرع `cursor/developer-email-api`، والبناء والاختبارات ناجحة، وmigration مطبّقة. الإطلاق الفعلي ينتظر نطاقاً مملوكاً وإعداد SES production access وconfiguration set وSNS topic.
 
 ---
 
@@ -15,13 +15,13 @@
 
 | الطبقة | الحالة |
 |--------|--------|
-| Frontend catalog | `emailApi` في `developer-products.ts` — `coming_soon`، بدون `resolveHref` |
-| Backend catalog | `emailApi: { status: 'coming_soon' }` — **غير قابل للتثبيت** |
-| Routes | لا يوجد `/apps/{appId}/email-api/` |
-| Components | لا يوجد `components/email-api/` |
-| Scopes | لا يوجد `email:*` في `lib/api/scopes.ts` |
-| Public API | لا يوجد `POST /api/v1/email/messages` |
-| Try it | لا يوجد `/developer/email/api-try` |
+| Frontend catalog | `emailApi` متاح وله route داخل التطبيق |
+| Backend catalog | `emailApi: { status: 'available' }` وقابل للتثبيت |
+| Routes | صفحات `/apps/{appId}/email-api/*` منفّذة |
+| Components | واجهات docs، domains، الاشتراك وTry it منفّذة |
+| Scopes | صلاحيات `email:*` مضافة في frontend وbackend |
+| Public API | `POST /api/v1/email/messages` وقراءة الحالة منفّذان |
+| Try it | `/developer/email/api-try` منفّذ لمفاتيح test |
 
 ### ما يُستخدم كمرجع (Template)
 
@@ -66,15 +66,15 @@ Email API منتج **مستقل** يشارك البنية التحتية (SES) �
 
 ### معايير القبول (Definition of Done)
 
-- [ ] `emailApi` = `available` في frontend + backend catalog
-- [ ] تثبيت/إلغاء تثبيت المنتج يعمل عبر API الموجود
-- [ ] `POST /api/v1/email/messages` يعمل بـ `X-API-Key` + scope `email:send`
-- [ ] لا يستطيع التطبيق قراءة رسالة أو استخدام sender أو نطاق لا يخص مالك التطبيق
-- [ ] قائمة suppression لكل عميل تعالج hard bounce وcomplaint قبل الإطلاق
-- [ ] لا يمكن إرسال الرسالة ذاتها مرتين عند تكرار طلب يحمل `Idempotency-Key` نفسه
-- [ ] صفحات `/apps/{appId}/email-api/*` تعرض docs كاملة
-- [ ] Try it يرسل طلبات server-side بمفتاح `rk_test_` فقط
-- [ ] Scopes تظهر في إنشاء/تعديل API keys
+- [x] `emailApi` = `available` في frontend + backend catalog
+- [x] تثبيت/إلغاء تثبيت المنتج مدعوم عبر API العام للمنتجات
+- [x] `POST /api/v1/email/messages` يستخدم `X-API-Key` + scope `email:send`
+- [x] عزل الرسائل والمرسلين والنطاقات بحسب المالك والتطبيق
+- [x] قائمة suppression تعالج hard bounce وcomplaint
+- [x] منع تكرار الرسالة باستخدام `Idempotency-Key`
+- [x] صفحات `/apps/{appId}/email-api/*` تعرض docs
+- [x] Try it يرسل server-side بمفتاح `rk_test_` فقط
+- [x] Scopes تظهر في إنشاء/تعديل API keys
 - [ ] Analytics تعرض إحصائيات email (اختياري — مرحلة لاحقة)
 - [ ] i18n: وصف المنتج بالعربية؛ docs API بالإنجليزية (LTR) مثل WhatsApp API
 

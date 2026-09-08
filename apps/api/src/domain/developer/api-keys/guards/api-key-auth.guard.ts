@@ -90,7 +90,9 @@ export class ApiKeyAuthGuard implements CanActivate {
       keyData.id,
     );
 
-    const requestPath = String(request.originalUrl || request.url || '').split('?')[0];
+    const requestPath = String(request.originalUrl || request.url || '').split(
+      '?',
+    )[0];
     if (/^\/api\/v\d+\/email\//i.test(requestPath)) {
       await this.rateLimitService.enforceEmailApiRateLimit(
         keyData.userId,

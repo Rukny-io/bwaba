@@ -1,7 +1,18 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../core/common/guards/auth/jwt-auth.guard';
-import { AuthenticatedUser, CurrentUser } from '../../../core/common/decorators/auth/current-user.decorator';
+import {
+  AuthenticatedUser,
+  CurrentUser,
+} from '../../../core/common/decorators/auth/current-user.decorator';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { CreateEmailDomainDto } from './dto/create-email-domain.dto';
 import { CreateEmailSenderDto } from './dto/create-email-sender.dto';
@@ -20,7 +31,10 @@ export class EmailDomainsPortalController {
   ) {}
 
   @Get('domains')
-  async listDomains(@CurrentUser() user: AuthenticatedUser, @Param('appId') appId: string) {
+  async listDomains(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ) {
     await this.requireOwnedApp(user.id, appId);
     return this.domains.list(user.id);
   }
@@ -46,7 +60,10 @@ export class EmailDomainsPortalController {
   }
 
   @Get('senders')
-  async listSenders(@CurrentUser() user: AuthenticatedUser, @Param('appId') appId: string) {
+  async listSenders(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ) {
     const app = await this.requireOwnedApp(user.id, appId);
     return this.domains.listSenders(user.id, app.id);
   }

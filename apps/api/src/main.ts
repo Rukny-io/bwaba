@@ -100,7 +100,10 @@ async function bootstrap() {
       verify: (req, _res, buf) => {
         // 🔒 Capture raw body for webhook signature verification (Meta, Qaseh, etc.)
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
-        if (isFormsSubmitRequest(req as Request) && buf.length > FORMS_MAX_SUBMIT_BODY_BYTES) {
+        if (
+          isFormsSubmitRequest(req as Request) &&
+          buf.length > FORMS_MAX_SUBMIT_BODY_BYTES
+        ) {
           const err = new Error(
             `Payload too large. Maximum allowed size is ${FORMS_MAX_SUBMIT_BODY_BYTES} bytes.`,
           ) as Error & { status: number; type: string };

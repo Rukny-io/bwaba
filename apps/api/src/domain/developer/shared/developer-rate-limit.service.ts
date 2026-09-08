@@ -61,13 +61,19 @@ export class DeveloperRateLimitService {
     );
     if (Number(allowed) !== 1) {
       throw new HttpException(
-        { message: 'Email API rate limit exceeded. Try again in a minute.', retryAfter: 60 },
+        {
+          message: 'Email API rate limit exceeded. Try again in a minute.',
+          retryAfter: 60,
+        },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
   }
 
-  async enforceApiKeyRateLimit(userId: string, apiKeyId: string): Promise<void> {
+  async enforceApiKeyRateLimit(
+    userId: string,
+    apiKeyId: string,
+  ): Promise<void> {
     const quotas = await this.devSubscriptions.getResourceQuotas(userId);
     const rateLimit = quotas.rateLimitPerMinute;
     const key = `ratelimit:apikey:${apiKeyId}`;

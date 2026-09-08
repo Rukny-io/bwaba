@@ -7,11 +7,17 @@ describe('requireEmailIdempotencyKey', () => {
   });
 
   it('rejects a missing key', () => {
-    expect(() => requireEmailIdempotencyKey(undefined)).toThrow(BadRequestException);
+    expect(() => requireEmailIdempotencyKey(undefined)).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects unsafe and too-short keys', () => {
-    expect(() => requireEmailIdempotencyKey('short')).toThrow(BadRequestException);
-    expect(() => requireEmailIdempotencyKey('key\r\nInjected: value')).toThrow(BadRequestException);
+    expect(() => requireEmailIdempotencyKey('short')).toThrow(
+      BadRequestException,
+    );
+    expect(() => requireEmailIdempotencyKey('key\r\nInjected: value')).toThrow(
+      BadRequestException,
+    );
   });
 });

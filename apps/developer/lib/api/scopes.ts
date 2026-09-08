@@ -1,54 +1,54 @@
 export const ALL_API_KEY_SCOPES = [
-  'whatsapp:send',
-  'whatsapp:read',
-  'templates:read',
-  'templates:write',
-  'contacts:read',
-  'contacts:write',
-  'webhooks:manage',
-  'media:upload',
-  'forms:read',
-  'forms:write',
-  'forms:webhooks',
-  'email:send',
-  'email:read',
-  'email:domains:read',
-  'email:domains:write',
-  'email:webhooks:manage',
+  "whatsapp:send",
+  "whatsapp:read",
+  "templates:read",
+  "templates:write",
+  "contacts:read",
+  "contacts:write",
+  "webhooks:manage",
+  "media:upload",
+  "forms:read",
+  "forms:write",
+  "forms:webhooks",
+  "email:send",
+  "email:read",
+  "email:domains:read",
+  "email:domains:write",
+  "email:webhooks:manage",
 ] as const;
 
 export type ApiKeyScope = (typeof ALL_API_KEY_SCOPES)[number];
 
 export const DEFAULT_API_KEY_SCOPES: ApiKeyScope[] = [
-  'whatsapp:send',
-  'whatsapp:read',
-  'templates:read',
-  'contacts:read',
+  "whatsapp:send",
+  "whatsapp:read",
+  "templates:read",
+  "contacts:read",
 ];
 
 /** Scopes that modify data — show a warning when combined with live environment */
 export const WRITE_API_KEY_SCOPES: ApiKeyScope[] = [
-  'whatsapp:send',
-  'templates:write',
-  'contacts:write',
-  'webhooks:manage',
-  'media:upload',
-  'forms:write',
-  'forms:webhooks',
-  'email:send',
-  'email:domains:write',
-  'email:webhooks:manage',
+  "whatsapp:send",
+  "templates:write",
+  "contacts:write",
+  "webhooks:manage",
+  "media:upload",
+  "forms:write",
+  "forms:webhooks",
+  "email:send",
+  "email:domains:write",
+  "email:webhooks:manage",
 ];
 
-export type ApiKeyExpirationPreset = 'never' | '30d' | '90d' | '365d';
+export type ApiKeyExpirationPreset = "never" | "30d" | "90d" | "365d";
 
 export function computeExpiresAt(
   preset: ApiKeyExpirationPreset,
 ): string | undefined {
-  if (preset === 'never') return undefined;
+  if (preset === "never") return undefined;
 
   const date = new Date();
-  const days = preset === '30d' ? 30 : preset === '90d' ? 90 : 365;
+  const days = preset === "30d" ? 30 : preset === "90d" ? 90 : 365;
   date.setUTCDate(date.getUTCDate() + days);
   date.setUTCHours(23, 59, 59, 999);
   return date.toISOString();

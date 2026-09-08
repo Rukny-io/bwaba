@@ -31,6 +31,11 @@ import {
   classifyInboundMail,
   type SesVerdict,
 } from './mail-message-classifier';
+import {
+  MailBimiService,
+  normalizeSenderDomain,
+  normalizeSesVerdict,
+} from './mail-bimi.service';
 
 type SesReceiptAction = {
   type?: string;
@@ -76,6 +81,7 @@ export class MailInboundService {
     private readonly realtime: MailRealtimeService,
     private readonly autoReply: MailAutoReplyService,
     private readonly forwarder: MailForwarderService,
+    private readonly bimi: MailBimiService,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -472,6 +478,7 @@ export class MailInboundService {
       this.addressesFrom(input.parsed.from)[0] ||
       'unknown@unknown';
     const fromName = this.firstName(input.parsed.from);
+    const senderDomain = normalizeSenderDomain(fromAddress);
     const folder = classifyInboundMail({
       fromAddress,
       spamVerdict: input.receipt?.spamVerdict,
@@ -521,6 +528,10 @@ export class MailInboundService {
           status: MailMessageStatus.RECEIVED,
           fromAddress,
           fromName,
+          senderDomain,
+          spfVerdict: normalizeSesVerdict(input.receipt?.spfVerdict),
+          dkimVerdict: normalizeSesVerdict(input.receipt?.dkimVerdict),
+          dmarcVerdict: normalizeSesVerdict(input.receipt?.dmarcVerdict),
           toAddresses: toFromParsed.length
             ? toFromParsed
             : [`${mailbox.localPart}@${mailbox.domain}`],
@@ -550,6 +561,15 @@ export class MailInboundService {
           messageId: created.id,
           direction: 'INBOUND',
         });
+        if (senderDomain) {
+          void this.bimi.resolveAndPersist(senderDomain).catch((error) => {
+            this.logger.warn(
+              `BIMI refresh failed domain=${senderDomain}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
+        }
         if (folder !== MailMessageFolder.SPAM) {
           void this.autoReply
             .maybeReply({

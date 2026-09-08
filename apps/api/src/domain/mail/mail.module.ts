@@ -28,6 +28,11 @@ import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesWebhookController } from './mail-ses-webhook.controller';
 import { MailPublicController } from './mail-public.controller';
 import { SupportTicketsModule } from '../support-tickets/support-tickets.module';
+import { MailBimiService } from './mail-bimi.service';
+import { SecurityModule } from '../../infrastructure/security/security.module';
+import { MailDomainVerificationController } from './mail-domain-verification.controller';
+import { MailDomainVerificationService } from './mail-domain-verification.service';
+import { MailFeatureFlags } from './mail-feature-flags';
 
 @Module({
   imports: [
@@ -37,6 +42,7 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     WhatsAppBusinessModule,
     StorageModule,
     SupportTicketsModule,
+    SecurityModule,
   ],
   controllers: [
     MailSubscriptionsController,
@@ -50,6 +56,7 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailForwarderController,
     MailSesWebhookController,
     MailPublicController,
+    MailDomainVerificationController,
   ],
   providers: [
     MailSubscriptionsService,
@@ -63,7 +70,10 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailForwarderService,
     MailSesService,
     MailInboundService,
+    MailBimiService,
+    MailFeatureFlags,
     MailRealtimeService,
+    MailDomainVerificationService,
   ],
   exports: [
     MailSubscriptionsService,
@@ -77,7 +87,10 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
     MailForwarderService,
     MailSesService,
     MailInboundService,
+    MailBimiService,
+    MailFeatureFlags,
     MailRealtimeService,
+    MailDomainVerificationService,
   ],
 })
 export class MailModule {}

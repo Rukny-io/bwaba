@@ -7,106 +7,109 @@ datasource db {
 }
 
 model User {
-  id                     String                  @id @default(uuid())
-  email                  String
+  id                        String                     @id @default(uuid())
+  email                     String
   // 🔒 F-10: deterministic HMAC blind index for equality lookups on the
   // (soon-to-be) encrypted `email` column. Nullable during migration; the
   // backfill job populates it, after which lookups use this column.
-  emailBlindIndex        String?                 @unique
-  role                   Role                    @default(BASIC)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  emailVerified          Boolean                 @default(false)
-  phone                  String?
-  passwordHash           String?
-  passwordUpdatedAt      DateTime?
-  twoFactorEnabled       Boolean                 @default(false)
-  twoFactorSecret        String?
-  googleId               String?                 @unique
-  githubId               String?                 @unique
-  linkedinId             String?                 @unique
-  facebookId             String?                 @unique
-  lastKnownIpFingerprint String?
-  lastLoginAt            DateTime?
-  lastLoginIpFingerprint String?
-  profileCompleted       Boolean                 @default(false)
-  googleAccessToken      String?
-  googleCalendarLinked   Boolean                 @default(false)
-  googleRefreshToken     String?
-  googleTokenExpiry      DateTime?
-  phoneNumber            String?                 @unique
-  phoneVerified          Boolean                 @default(false)
-  phoneVerifiedAt        DateTime?
-  accountType            AccountType             @default(REGULAR)
-  bannerUrls             String[]                @default([])
-  telegramChatId         String?                 @unique
-  telegramUsername       String?
-  telegramFirstName      String?
-  telegramLastName       String?
-  telegramEnabled        Boolean                 @default(true)
-  telegramConnectedAt    DateTime?
-  isDeactivated          Boolean                 @default(false)
-  deactivatedAt          DateTime?
-  verificationLevel      Int                     @default(0) // 0=none, 1=email, 2=phone, 3=id
-  isRuknyVerified        Boolean                 @default(false)
-  ruknyVerifiedAt        DateTime?
-  verifiedCategory       String?
-  verifiedDisplayName    String?
-  identityVerifications  IdentityVerification[]
+  emailBlindIndex           String?                    @unique
+  role                      Role                       @default(BASIC)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  emailVerified             Boolean                    @default(false)
+  phone                     String?
+  passwordHash              String?
+  passwordUpdatedAt         DateTime?
+  twoFactorEnabled          Boolean                    @default(false)
+  twoFactorSecret           String?
+  googleId                  String?                    @unique
+  githubId                  String?                    @unique
+  linkedinId                String?                    @unique
+  facebookId                String?                    @unique
+  lastKnownIpFingerprint    String?
+  lastLoginAt               DateTime?
+  lastLoginIpFingerprint    String?
+  profileCompleted          Boolean                    @default(false)
+  googleAccessToken         String?
+  googleCalendarLinked      Boolean                    @default(false)
+  googleRefreshToken        String?
+  googleTokenExpiry         DateTime?
+  phoneNumber               String?                    @unique
+  phoneVerified             Boolean                    @default(false)
+  phoneVerifiedAt           DateTime?
+  accountType               AccountType                @default(REGULAR)
+  bannerUrls                String[]                   @default([])
+  telegramChatId            String?                    @unique
+  telegramUsername          String?
+  telegramFirstName         String?
+  telegramLastName          String?
+  telegramEnabled           Boolean                    @default(true)
+  telegramConnectedAt       DateTime?
+  isDeactivated             Boolean                    @default(false)
+  deactivatedAt             DateTime?
+  verificationLevel         Int                        @default(0) // 0=none, 1=email, 2=phone, 3=id
+  isRuknyVerified           Boolean                    @default(false)
+  ruknyVerifiedAt           DateTime?
+  verifiedCategory          String?
+  verifiedDisplayName       String?
+  identityVerifications     IdentityVerification[]
   ruknyVerifiedApplications RuknyVerifiedApplication[]
-  instagramConnections   InstagramConnection[]
-  instagramBlocks        InstagramBlock[]
-  youtubeConnection      YouTubeConnection?
-  youtubeBlocks          YouTubeBlock[]
-  linkedinConnection     LinkedInConnection?
-  linkedinBlocks         LinkedInBlock[]
-  tiktokConnection       TikTokConnection?
-  tiktokBlocks           TikTokBlock[]
-  addresses              addresses[]
-  calendar_integrations  calendar_integrations[]
-  carts                  carts?
-  comments               comments[]
-  coupon_usages          coupon_usages[]
-  organizers_invited     EventOrganizer[]        @relation("event_organizers_invitedByTousers")
-  organizers             EventOrganizer[]        @relation("event_organizers_userIdTousers")
-  eventRegistrations     EventRegistration[]
-  eventReviews           EventReview[]
-  event_tickets          EventTicket[]
-  eventWaitlist          EventWaitlist[]
-  events                 Event[]
-  followers              follows[]               @relation("follows_followerIdTousers")
-  following              follows[]               @relation("follows_followingIdTousers")
-  form_submissions       form_submissions[]
-  forms                  Form[]
-  formsDeletedBy         Form[]                  @relation("forms_deleted_by")
-  likes                  likes[]
-  notifications          notifications[]
-  pushSubscriptions      PushSubscription[]
-  orders                 orders[]
-  posts                  posts[]
-  profile                Profile?
-  quicksign_links        quicksign_links[]
-  reviews                reviews[]
-  securityLogs           SecurityLog[]
-  security_preferences   security_preferences?
-  sessions               Session[]
-  stores                 Store[]
-  telegramSession        TelegramSession?
-  telegramLogs           TelegramWebhookLog[]
-  trusted_devices        trusted_devices[]
-  twoFactorBackupCodes   TwoFactorBackupCode[]
-  files                  UserFile[]
-  verification_codes     verification_codes[]
-  whatsappNotifications  WhatsappNotification[]
-  whatsappOtps           WhatsappOtp[]
-  wishlists              wishlists[]
-  emailChangeRequests    EmailChangeRequest[]
-  subscription           Subscription?
+  instagramConnections      InstagramConnection[]
+  instagramBlocks           InstagramBlock[]
+  youtubeConnection         YouTubeConnection?
+  youtubeBlocks             YouTubeBlock[]
+  linkedinConnection        LinkedInConnection?
+  linkedinBlocks            LinkedInBlock[]
+  tiktokConnection          TikTokConnection?
+  tiktokBlocks              TikTokBlock[]
+  addresses                 addresses[]
+  calendar_integrations     calendar_integrations[]
+  carts                     carts?
+  comments                  comments[]
+  coupon_usages             coupon_usages[]
+  organizers_invited        EventOrganizer[]           @relation("event_organizers_invitedByTousers")
+  organizers                EventOrganizer[]           @relation("event_organizers_userIdTousers")
+  eventRegistrations        EventRegistration[]
+  eventReviews              EventReview[]
+  event_tickets             EventTicket[]
+  eventWaitlist             EventWaitlist[]
+  events                    Event[]
+  followers                 follows[]                  @relation("follows_followerIdTousers")
+  following                 follows[]                  @relation("follows_followingIdTousers")
+  form_submissions          form_submissions[]
+  forms                     Form[]
+  formsDeletedBy            Form[]                     @relation("forms_deleted_by")
+  likes                     likes[]
+  notifications             notifications[]
+  pushSubscriptions         PushSubscription[]
+  orders                    orders[]
+  posts                     posts[]
+  profile                   Profile?
+  quicksign_links           quicksign_links[]
+  reviews                   reviews[]
+  securityLogs              SecurityLog[]
+  security_preferences      security_preferences?
+  sessions                  Session[]
+  stores                    Store[]
+  telegramSession           TelegramSession?
+  telegramLogs              TelegramWebhookLog[]
+  trusted_devices           trusted_devices[]
+  twoFactorBackupCodes      TwoFactorBackupCode[]
+  files                     UserFile[]
+  verification_codes        verification_codes[]
+  whatsappNotifications     WhatsappNotification[]
+  whatsappOtps              WhatsappOtp[]
+  wishlists                 wishlists[]
+  emailChangeRequests       EmailChangeRequest[]
+  subscription              Subscription?
 
   // Rukny Mail — one subscription per Mail app (not per user)
-  mailSubscriptions         MailSubscription[]
-  mailApps                  MailApp[]
-  mailMessages              MailMessage[]
+  mailSubscriptions              MailSubscription[]
+  mailApps                       MailApp[]
+  mailMessages                   MailMessage[]
+  mailDomainVerificationRequests MailDomainVerificationRequest[] @relation("mail_domain_verification_request_owner")
+  mailDomainReviews              MailDomainVerificationRequest[] @relation("mail_domain_verification_request_reviewer")
+  mailAppsDomainReviewed         MailApp[]                       @relation("mail_app_domain_reviewer")
 
   // Developer Portal relations
   developerApps             DeveloperApp[]
@@ -114,20 +117,20 @@ model User {
   developerWhatsappAccounts DeveloperWhatsappAccount[]
   developerContacts         DeveloperContact[]
   developerWebhooks         DeveloperWebhook[]
-  developerMessageLogs      WhatsappMessageLog[]       @relation("developer_message_logs")
+  developerMessageLogs      WhatsappMessageLog[]        @relation("developer_message_logs")
   developerEmailMessages    DeveloperEmailMessage[]
   developerEmailDomains     DeveloperEmailDomain[]
   developerEmailSuppression DeveloperEmailSuppression[]
   developerEmailEntitlement DeveloperEmailEntitlement?
   developerApiRequestLogs   ApiRequestLog[]
-  developerSubscription     DeveloperSubscription?     @relation("developer_subscription")
-  developerWallet           DeveloperWallet?           @relation("developer_wallet")
-  formTeamWorkspaceMembers  FormTeamMember[]           @relation("form_team_workspace")
-  formTeamMemberships       FormTeamMember[]           @relation("form_team_member")
-  formTeamInvitationsSent   FormTeamMember[]           @relation("form_team_inviter")
-  workspaceOwnedMembers     WorkspaceMember[]          @relation("workspace_owner")
-  workspaceMemberships      WorkspaceMember[]          @relation("workspace_member")
-  workspaceInvitationsSent  WorkspaceMember[]          @relation("workspace_inviter")
+  developerSubscription     DeveloperSubscription?      @relation("developer_subscription")
+  developerWallet           DeveloperWallet?            @relation("developer_wallet")
+  formTeamWorkspaceMembers  FormTeamMember[]            @relation("form_team_workspace")
+  formTeamMemberships       FormTeamMember[]            @relation("form_team_member")
+  formTeamInvitationsSent   FormTeamMember[]            @relation("form_team_inviter")
+  workspaceOwnedMembers     WorkspaceMember[]           @relation("workspace_owner")
+  workspaceMemberships      WorkspaceMember[]           @relation("workspace_member")
+  workspaceInvitationsSent  WorkspaceMember[]           @relation("workspace_inviter")
   supportTickets            SupportTicket[]
   businessWorkflows         BusinessWorkflow[]
 
@@ -171,25 +174,25 @@ model Profile {
 }
 
 model IdentityVerification {
-  id               String    @id @default(uuid())
-  userId           String
-  documentType     String // national_id | passport | driving_license
-  documentFrontUrl String // S3 key — primary document front
-  documentBackUrl  String? // S3 key — primary document back
-  residenceFrontKey String?
-  residenceBackKey  String?
-  selfieUrl        String? // S3 key
-  uploadSessionId  String?
-  status           String    @default("pending") // pending | approved | rejected | expired
-  rejectionReason  String?
-  reviewedBy       String?
-  reviewedAt       DateTime?
-  submittedAt      DateTime  @default(now())
-  expiresAt        DateTime?
-  documentsPurgeAt DateTime?
+  id                 String    @id @default(uuid())
+  userId             String
+  documentType       String // national_id | passport | driving_license
+  documentFrontUrl   String // S3 key — primary document front
+  documentBackUrl    String? // S3 key — primary document back
+  residenceFrontKey  String?
+  residenceBackKey   String?
+  selfieUrl          String? // S3 key
+  uploadSessionId    String?
+  status             String    @default("pending") // pending | approved | rejected | expired
+  rejectionReason    String?
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  submittedAt        DateTime  @default(now())
+  expiresAt          DateTime?
+  documentsPurgeAt   DateTime?
   documentsDeletedAt DateTime?
-  metadata         Json?
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata           Json?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -236,7 +239,9 @@ model SocialLink {
   totalClicks    Int              @default(0)
   layout         String           @default("classic")
   thumbnail      String?
-  /** InstagramConnection.id for profile_card / media_grid layouts */
+  /**
+   * InstagramConnection.id for profile_card / media_grid layouts
+   */
   connectionId   String?
   link_analytics link_analytics[]
   group          LinkGroup?       @relation(fields: [groupId], references: [id])
@@ -251,23 +256,23 @@ model SocialLink {
 }
 
 model InstagramConnection {
-  id             String    @id @default(uuid())
-  userId         String
-  accessToken    String
-  tokenExpiry    DateTime?
-  igUserId       String
-  username       String
-  name           String?
-  profilePicUrl  String?
-  biography      String?
-  website        String?
-  followersCount Int?
-  followsCount   Int?
-  mediaCount     Int?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments       InstagramComment[]
+  id                 String                       @id @default(uuid())
+  userId             String
+  accessToken        String
+  tokenExpiry        DateTime?
+  igUserId           String
+  username           String
+  name               String?
+  profilePicUrl      String?
+  biography          String?
+  website            String?
+  followersCount     Int?
+  followsCount       Int?
+  mediaCount         Int?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments           InstagramComment[]
   inboxConversations InstagramInboxConversation[]
 
   @@unique([userId, igUserId])
@@ -291,22 +296,22 @@ model BusinessWorkflow {
 }
 
 model InstagramComment {
-  id              String              @id @default(uuid())
-  connectionId    String              
-  mediaId         String              // Instagram Media ID
-  igCommentId     String              @unique // Meta Comment ID
-  fromUsername    String              
-  fromIgId        String              
-  text            String              
-  timestamp       DateTime
-  isReply         Boolean             @default(false)
-  parentId        String?             
-  isRead          Boolean             @default(false)
-  isReplied       Boolean             @default(false)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  
-  connection      InstagramConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  connectionId String
+  mediaId      String // Instagram Media ID
+  igCommentId  String   @unique // Meta Comment ID
+  fromUsername String
+  fromIgId     String
+  text         String
+  timestamp    DateTime
+  isReply      Boolean  @default(false)
+  parentId     String?
+  isRead       Boolean  @default(false)
+  isReplied    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection InstagramConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([connectionId, isRead])
   @@index([mediaId])
@@ -319,20 +324,20 @@ enum InstagramMessageDirection {
 }
 
 model InstagramInboxConversation {
-  id                       String   @id @default(uuid())
+  id                       String    @id @default(uuid())
   connectionId             String
   participantIgId          String
   participantName          String?
   participantUsername      String?
   participantPicUrl        String?
-  lastMessageAt            DateTime @default(now())
+  lastMessageAt            DateTime  @default(now())
   lastMessageText          String?
-  unreadCount              Int      @default(0)
+  unreadCount              Int       @default(0)
   messagingWindowExpiresAt DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
-  connection InstagramConnection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection InstagramConnection     @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   messages   InstagramInboxMessage[]
 
   @@unique([connectionId, participantIgId])
@@ -470,38 +475,38 @@ enum LinkedInBlockType {
 // ─── TikTok Integration ────────────────────────────────────────────
 
 model TikTokConnection {
-  id            String    @id @default(uuid())
-  userId        String    @unique
-  accessToken   String
-  refreshToken  String?
-  tokenExpiry   DateTime?
-  openId        String
-  unionId       String?
-  displayName   String
-  avatarUrl     String?
-  profileUrl    String?
-  isVerified    Boolean   @default(false)
-  bio           String?
-  followers     Int?
-  following     Int?
-  likes         Int?
-  videoCount    Int?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  accessToken  String
+  refreshToken String?
+  tokenExpiry  DateTime?
+  openId       String
+  unionId      String?
+  displayName  String
+  avatarUrl    String?
+  profileUrl   String?
+  isVerified   Boolean   @default(false)
+  bio          String?
+  followers    Int?
+  following    Int?
+  likes        Int?
+  videoCount   Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tiktok_connections")
 }
 
 model TikTokBlock {
-  id           String           @id @default(uuid())
+  id           String          @id @default(uuid())
   userId       String
   type         TikTokBlockType
-  displayOrder Int              @default(0)
-  isActive     Boolean          @default(true)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayOrder Int             @default(0)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tiktok_blocks")
 }
@@ -587,37 +592,37 @@ model SecurityLog {
 }
 
 model Store {
-  id                 String               @id @default(uuid())
-  userId             String
-  name               String
-  slug               String               @unique
-  description        String?
-  logo               String?
-  banner             String?
-  contactEmail       String?
-  contactPhone       String?
-  status             StoreStatus          @default(ACTIVE)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  address            String?
-  categoryId         String?
-  category           String?
-  employeesCount     String?
-  city               String?
-  country            String               @default("Iraq")
-  latitude           Float?
-  longitude          Float?
-  descriptionAr      String?
-  metadata           Json?
-  coupons            coupons[]
-  forms              Form[]
-  orders             orders[]
-  product_categories product_categories[]
+  id                  String                @id @default(uuid())
+  userId              String
+  name                String
+  slug                String                @unique
+  description         String?
+  logo                String?
+  banner              String?
+  contactEmail        String?
+  contactPhone        String?
+  status              StoreStatus           @default(ACTIVE)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  address             String?
+  categoryId          String?
+  category            String?
+  employeesCount      String?
+  city                String?
+  country             String                @default("Iraq")
+  latitude            Float?
+  longitude           Float?
+  descriptionAr       String?
+  metadata            Json?
+  coupons             coupons[]
+  forms               Form[]
+  orders              orders[]
+  product_categories  product_categories[]
   product_collections product_collections[]
   product_discounts   product_discounts[]
-  products           products[]
-  store_categories   store_categories?    @relation(fields: [categoryId], references: [id])
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products            products[]
+  store_categories    store_categories?     @relation(fields: [categoryId], references: [id])
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@index([status])
@@ -814,62 +819,62 @@ model EventSponsor {
 }
 
 model Form {
-  id                       String             @id @default(uuid())
+  id                       String                        @id @default(uuid())
   userId                   String
   title                    String
-  slug                     String             @unique
+  slug                     String                        @unique
   description              String?
-  type                     FormType           @default(OTHER)
-  status                   FormStatus         @default(DRAFT)
-  allowMultipleSubmissions Boolean            @default(false)
-  requiresAuthentication   Boolean            @default(false)
-  showProgressBar          Boolean            @default(true)
-  showQuestionNumbers      Boolean            @default(true)
-  shuffleQuestions         Boolean            @default(false)
+  type                     FormType                      @default(OTHER)
+  status                   FormStatus                    @default(DRAFT)
+  allowMultipleSubmissions Boolean                       @default(false)
+  requiresAuthentication   Boolean                       @default(false)
+  showProgressBar          Boolean                       @default(true)
+  showQuestionNumbers      Boolean                       @default(true)
+  shuffleQuestions         Boolean                       @default(false)
   maxSubmissions           Int?
   submissionLimit          Int?
   opensAt                  DateTime?
   closesAt                 DateTime?
-  notifyOnSubmission       Boolean            @default(true)
+  notifyOnSubmission       Boolean                       @default(true)
   notificationEmail        String?
-  autoResponseEnabled      Boolean            @default(false)
+  autoResponseEnabled      Boolean                       @default(false)
   autoResponseMessage      String?
   linkedEventId            String?
   linkedStoreId            String?
   developerAppId           String?
   theme                    Json?
   coverImage               String?
-  bannerImages             String[]           @default([])
-  bannerDisplayMode        String?            @default("single")
-  viewCount                Int                @default(0)
-  submissionCount          Int                @default(0)
-  createdAt                DateTime           @default(now())
-  updatedAt                DateTime           @updatedAt
+  bannerImages             String[]                      @default([])
+  bannerDisplayMode        String?                       @default("single")
+  viewCount                Int                           @default(0)
+  submissionCount          Int                           @default(0)
+  createdAt                DateTime                      @default(now())
+  updatedAt                DateTime                      @updatedAt
   deletedAt                DateTime?
   deletedById              String?
   purgeScheduledAt         DateTime?
   deletionReason           String?
-  closeAfterDate           Boolean            @default(false)
-  oneResponsePerUser       Boolean            @default(false)
-  requireTurnstileOnSubmit Boolean            @default(false)
-  isMultiStep              Boolean            @default(false)
-  webhookEnabled           Boolean            @default(false)
-  webhookEvents            String[]           @default([])
+  closeAfterDate           Boolean                       @default(false)
+  oneResponsePerUser       Boolean                       @default(false)
+  requireTurnstileOnSubmit Boolean                       @default(false)
+  isMultiStep              Boolean                       @default(false)
+  webhookEnabled           Boolean                       @default(false)
+  webhookEvents            String[]                      @default([])
   webhookSecret            String?
   webhookUrl               String?
   form_analytics           form_analytics[]
   fields                   FormField[]
   integrations             FormIntegration[]
   steps                    form_steps[]
-  submissions              form_submissions[] @relation("submissions")
+  submissions              form_submissions[]            @relation("submissions")
   submission_slots         form_submission_slot[]
   submission_idempotency   form_submission_idempotency[]
   webhook_deliveries       form_webhook_delivery[]
-  events                   Event?             @relation(fields: [linkedEventId], references: [id])
-  stores                   Store?             @relation(fields: [linkedStoreId], references: [id])
-  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deletedBy                User?              @relation("forms_deleted_by", fields: [deletedById], references: [id], onDelete: SetNull)
-  developerApp             DeveloperApp?      @relation(fields: [developerAppId], references: [id], onDelete: SetNull)
+  events                   Event?                        @relation(fields: [linkedEventId], references: [id])
+  stores                   Store?                        @relation(fields: [linkedStoreId], references: [id])
+  user                     User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deletedBy                User?                         @relation("forms_deleted_by", fields: [deletedById], references: [id], onDelete: SetNull)
+  developerApp             DeveloperApp?                 @relation(fields: [developerAppId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([slug])
@@ -886,23 +891,23 @@ model Form {
 }
 
 model FormDeletionLog {
-  id              String     @id @default(uuid())
-  formId          String
-  formTitle       String
-  formSlug        String
-  ownerId         String
-  deletedById     String
-  submissionCount Int        @default(0)
-  fieldCount      Int        @default(0)
-  statusAtDelete  FormStatus
-  typeAtDelete    FormType
-  reason          String?
-  ipAddress       String?
-  userAgent       String?
+  id               String     @id @default(uuid())
+  formId           String
+  formTitle        String
+  formSlug         String
+  ownerId          String
+  deletedById      String
+  submissionCount  Int        @default(0)
+  fieldCount       Int        @default(0)
+  statusAtDelete   FormStatus
+  typeAtDelete     FormType
+  reason           String?
+  ipAddress        String?
+  userAgent        String?
   purgeScheduledAt DateTime
-  restoredAt      DateTime?
-  purgedAt        DateTime?
-  createdAt       DateTime   @default(now())
+  restoredAt       DateTime?
+  purgedAt         DateTime?
+  createdAt        DateTime   @default(now())
 
   @@index([formId])
   @@index([ownerId])
@@ -1212,16 +1217,16 @@ model form_field_analytics {
 }
 
 model form_geographic_analytics {
-  id               String   @id
-  formId           String
-  date             DateTime @db.Date
-  country          String?
-  countryCode      String   @default("XX")
-  governorateCode  String   @default("")
-  city             String   @default("")
-  views            Int      @default(0)
-  submissions      Int      @default(0)
-  createdAt        DateTime @default(now())
+  id              String   @id
+  formId          String
+  date            DateTime @db.Date
+  country         String?
+  countryCode     String   @default("XX")
+  governorateCode String   @default("")
+  city            String   @default("")
+  views           Int      @default(0)
+  submissions     Int      @default(0)
+  createdAt       DateTime @default(now())
 
   @@unique([formId, date, countryCode, governorateCode, city])
   @@index([date])
@@ -1245,19 +1250,19 @@ model form_steps {
 }
 
 model form_submissions {
-  id             String   @id
-  formId         String
-  userId         String?
-  data           Json
-  ipAddress      String?
-  userAgent      String?
-  isCompleted    Boolean  @default(true)
-  completedAt    DateTime @default(now())
-  timeToComplete Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime
-  form           Form     @relation("submissions", fields: [formId], references: [id], onDelete: Cascade)
-  user           User?    @relation(fields: [userId], references: [id])
+  id                  String                        @id
+  formId              String
+  userId              String?
+  data                Json
+  ipAddress           String?
+  userAgent           String?
+  isCompleted         Boolean                       @default(true)
+  completedAt         DateTime                      @default(now())
+  timeToComplete      Int?
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime
+  form                Form                          @relation("submissions", fields: [formId], references: [id], onDelete: Cascade)
+  user                User?                         @relation(fields: [userId], references: [id])
   idempotency_records form_submission_idempotency[]
 
   @@index([formId, completedAt(sort: Desc)])
@@ -1580,28 +1585,28 @@ model product_images {
 }
 
 model products {
-  id                 String               @id
+  id                 String                     @id
   storeId            String
   name               String
-  slug               String               @unique
+  slug               String                     @unique
   description        String?
-  price              Decimal              @db.Decimal(12, 2)
-  salePrice          Decimal?             @db.Decimal(12, 2)
-  quantity           Int                  @default(0)
-  status             ProductStatus        @default(ACTIVE)
-  createdAt          DateTime             @default(now())
+  price              Decimal                    @db.Decimal(12, 2)
+  salePrice          Decimal?                   @db.Decimal(12, 2)
+  quantity           Int                        @default(0)
+  status             ProductStatus              @default(ACTIVE)
+  createdAt          DateTime                   @default(now())
   updatedAt          DateTime
   attributes         Json?
   categoryId         String?
-  currency           String               @default("IQD")
+  currency           String                     @default("IQD")
   descriptionAr      String?
-  isFeatured         Boolean              @default(false)
+  isFeatured         Boolean                    @default(false)
   nameAr             String?
   sku                String?
-  hasVariants        Boolean              @default(false)
-  trackInventory     Boolean              @default(true)
-  isDigital          Boolean              @default(false)
-  productKind        ProductKind          @default(PHYSICAL)
+  hasVariants        Boolean                    @default(false)
+  trackInventory     Boolean                    @default(true)
+  isDigital          Boolean                    @default(false)
+  productKind        ProductKind                @default(PHYSICAL)
   cart_items         cart_items[]
   digitalAssets      digital_assets[]
   order_items        order_items[]
@@ -1610,8 +1615,8 @@ model products {
   collection_items   product_collection_items[]
   discount_items     product_discount_items[]
   variants           product_variants[]
-  product_categories product_categories?  @relation(fields: [categoryId], references: [id])
-  stores             Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product_categories product_categories?        @relation(fields: [categoryId], references: [id])
+  stores             Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   reviews            reviews[]
   wishlists          wishlists[]
 
@@ -1827,20 +1832,20 @@ model wishlists {
 }
 
 model UserFile {
-  id        String       @id @default(uuid())
-  userId    String
-  key       String       @unique
-  fileName  String
-  fileType  String
-  fileSize  BigInt
-  category  FileCategory
-  entityId  String?
-  blurHash  String? // BlurHash for progressive image loading
-  width     Int? // Image width in pixels
-  height    Int? // Image height in pixels
-  createdAt DateTime     @default(now())
-  deletedAt DateTime? // حذف ناعم: الملف يبقى 30 يوم ثم يُحذف نهائياً
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String                   @id @default(uuid())
+  userId                  String
+  key                     String                   @unique
+  fileName                String
+  fileType                String
+  fileSize                BigInt
+  category                FileCategory
+  entityId                String?
+  blurHash                String? // BlurHash for progressive image loading
+  width                   Int? // Image width in pixels
+  height                  Int? // Image height in pixels
+  createdAt               DateTime                 @default(now())
+  deletedAt               DateTime? // حذف ناعم: الملف يبقى 30 يوم ثم يُحذف نهائياً
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   supportTicketAttachment SupportTicketAttachment?
 
   @@index([userId])
@@ -2570,42 +2575,42 @@ enum DeveloperAppType {
 
 /// 📱 تطبيق المطوّر
 model DeveloperApp {
-  id           String             @id @default(uuid())
-  appId        String             @unique
-  userId       String
-  name         String
-  contactEmail String?
+  id                      String             @id @default(uuid())
+  appId                   String             @unique
+  userId                  String
+  name                    String
+  contactEmail            String?
   /// Official company / business contact email (separate from app contactEmail)
-  companyEmail String?
-  appType      DeveloperAppType   @default(BUSINESS)
-  description  String?
-  businessId   String?
-  icon         String?
-  profileImage String?
-  websiteUrl   String?
+  companyEmail            String?
+  appType                 DeveloperAppType   @default(BUSINESS)
+  description             String?
+  businessId              String?
+  icon                    String?
+  profileImage            String?
+  websiteUrl              String?
   /// Origins allowed to embed linked forms via iframe (?embed=1), e.g. https://shop.example.com
-  embedAllowedOrigins String[] @default([])
-  termsOfUseUrl String?
-  privacyPolicyUrl String?
-  dpoName      String?
-  dpoEmail     String?
-  dpoPhone     String?
+  embedAllowedOrigins     String[]           @default([])
+  termsOfUseUrl           String?
+  privacyPolicyUrl        String?
+  dpoName                 String?
+  dpoEmail                String?
+  dpoPhone                String?
   accessReviewRequestedAt DateTime?
-  accessVerified Boolean            @default(false)
-  status       DeveloperAppStatus @default(ACTIVE)
-  verified     Boolean            @default(false)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  accessVerified          Boolean            @default(false)
+  status                  DeveloperAppStatus @default(ACTIVE)
+  verified                Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  user             User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apiKeys          DeveloperApiKey[]
-  appWallet        DeveloperAppWallet?
-  whatsappAccounts DeveloperWhatsappAccount[]
+  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys           DeveloperApiKey[]
+  appWallet         DeveloperAppWallet?
+  whatsappAccounts  DeveloperWhatsappAccount[]
   developerWebhooks DeveloperWebhook[]
-  forms            Form[]
+  forms             Form[]
   installedProducts DeveloperAppProduct[]
-  emailMessages    DeveloperEmailMessage[]
-  emailSenders     DeveloperEmailSender[]
+  emailMessages     DeveloperEmailMessage[]
+  emailSenders      DeveloperEmailSender[]
 
   @@index([userId])
   @@index([appId])
@@ -2678,8 +2683,8 @@ model DeveloperApiKey {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  developerApp   DeveloperApp?        @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp   DeveloperApp?           @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
   messageLogs    WhatsappMessageLog[]
   apiRequestLogs ApiRequestLog[]
   emailMessages  DeveloperEmailMessage[]
@@ -2733,16 +2738,16 @@ enum DeveloperEmailSubscriptionStatus {
 /// Domain is owned and verified once by the customer, then explicitly bound
 /// to one or more Developer Apps through DeveloperEmailSender.
 model DeveloperEmailDomain {
-  id          String                     @id @default(uuid())
-  userId      String
-  domain      String
-  status      DeveloperEmailDomainStatus @default(PENDING)
-  dkimTokens  String[]                   @default([])
-  verifiedAt  DateTime?
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @updatedAt
+  id         String                     @id @default(uuid())
+  userId     String
+  domain     String
+  status     DeveloperEmailDomainStatus @default(PENDING)
+  dkimTokens String[]                   @default([])
+  verifiedAt DateTime?
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
 
-  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   senders DeveloperEmailSender[]
 
   @@unique([userId, domain])
@@ -2789,9 +2794,9 @@ model DeveloperEmailMessage {
   createdAt      DateTime                    @default(now())
   updatedAt      DateTime                    @updatedAt
 
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  developerApp DeveloperApp     @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
-  apiKey       DeveloperApiKey  @relation(fields: [apiKeyId], references: [id], onDelete: Restrict)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp    @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  apiKey       DeveloperApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Restrict)
 
   @@unique([apiKeyId, idempotencyKey])
   @@index([developerAppId, createdAt])
@@ -3389,7 +3394,7 @@ model SupportTicket {
   updatedAt   DateTime              @updatedAt
   closedAt    DateTime?
 
-  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages    SupportTicketMessage[]
   attachments SupportTicketAttachment[]
 
@@ -3410,7 +3415,7 @@ model SupportTicketMessage {
   isInternal Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  ticket      SupportTicket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket      SupportTicket             @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   attachments SupportTicketAttachment[]
 
   @@index([ticketId, createdAt])
@@ -3426,9 +3431,9 @@ model SupportTicketAttachment {
   uploadedById String
   createdAt    DateTime @default(now())
 
-  ticket  SupportTicket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  message SupportTicketMessage?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  file    UserFile               @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  ticket  SupportTicket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message SupportTicketMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  file    UserFile              @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([messageId])
@@ -3458,40 +3463,143 @@ enum MailDomainStatus {
   FAILED
 }
 
+enum MailDomainTrustStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+enum MailDomainVerificationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum MailSenderBrandStatus {
+  UNKNOWN
+  NO_RECORD
+  INVALID
+  READY
+  ERROR
+}
+
+enum MailBrandCertificateType {
+  NONE
+  CMC
+  VMC
+  UNKNOWN
+}
+
+enum MailAuthenticationVerdict {
+  PASS
+  FAIL
+  GRAY
+  PROCESSING_FAILED
+  UNKNOWN
+}
+
 /// Mail workspace/app owned by a user account (independent of DeveloperApp)
 model MailApp {
-  id          String        @id @default(uuid())
+  id                 String                @id @default(uuid())
   /// Public 16-digit id used by the Mail product UI
-  appId       String        @unique
-  userId      String
+  appId              String                @unique
+  userId             String
   /// Stable per-user URL slot: /u0, /u1, … (never reused)
-  slotIndex   Int
-  name        String
-  contactEmail String?
-  appType     MailAppType   @default(BUSINESS)
-  description String?
-  status      MailAppStatus @default(ACTIVE)
+  slotIndex          Int
+  name               String
+  contactEmail       String?
+  appType            MailAppType           @default(BUSINESS)
+  description        String?
+  status             MailAppStatus         @default(ACTIVE)
   /// Optional primary domain label cached for list UI
-  primaryDomain String?
-  domainStatus    MailDomainStatus @default(NONE)
-  domainCheckedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  primaryDomain      String?
+  domainStatus       MailDomainStatus      @default(NONE)
+  domainCheckedAt    DateTime?
+  /// Rukny's administrative trust decision; separate from SES/DNS verification.
+  domainTrustStatus  MailDomainTrustStatus @default(UNVERIFIED)
+  domainVerifiedAt   DateTime?
+  domainReviewedById String?
+  domainTrustReason  String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mailboxes    MailMailbox[]
-  subscription MailSubscription?
-  catchAll     MailCatchAll?
-  autoReplies  MailAutoReply[]
-  aliases      MailAlias[]
-  forwarders   MailForwarder[]
+  user                       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
+  mailboxes                  MailMailbox[]
+  subscription               MailSubscription?
+  catchAll                   MailCatchAll?
+  autoReplies                MailAutoReply[]
+  aliases                    MailAlias[]
+  forwarders                 MailForwarder[]
+  domainVerificationRequests MailDomainVerificationRequest[]
 
   @@unique([userId, slotIndex])
   @@index([userId])
   @@index([status])
   @@index([domainStatus])
+  @@index([domainTrustStatus])
+  @@index([domainReviewedById])
   @@index([createdAt])
   @@map("mail_apps")
+}
+
+/// Auditable request/decision history for Rukny's administrative domain trust.
+model MailDomainVerificationRequest {
+  id              String                              @id @default(uuid())
+  mailAppId       String
+  requestedById   String
+  domain          String
+  status          MailDomainVerificationRequestStatus @default(PENDING)
+  evidence        Json?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime                            @default(now())
+  updatedAt       DateTime                            @updatedAt
+
+  mailApp     MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  requestedBy User    @relation("mail_domain_verification_request_owner", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?   @relation("mail_domain_verification_request_reviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([mailAppId, status])
+  @@index([domain])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([createdAt])
+  @@map("mail_domain_verification_requests")
+}
+
+/// Cached, server-validated BIMI identity for an inbound sender domain.
+model MailSenderBrand {
+  id                     String                   @id @default(uuid())
+  domain                 String                   @unique
+  status                 MailSenderBrandStatus    @default(UNKNOWN)
+  bimiRecord             String?
+  logoSourceUrl          String?
+  authorityUrl           String?
+  logoS3Key              String?
+  logoSha256             String?
+  dmarcPolicy            String?
+  certificateType        MailBrandCertificateType @default(NONE)
+  certificateSubject     String?
+  certificateIssuer      String?
+  certificateSerial      String?
+  certificateFingerprint String?
+  certificateValidFrom   DateTime?
+  certificateValidTo     DateTime?
+  certificateDomains     String[]                 @default([])
+  lastError              String?
+  checkedAt              DateTime?
+  expiresAt              DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("mail_sender_brands")
 }
 
 enum MailMailboxStatus {
@@ -3502,31 +3610,31 @@ enum MailMailboxStatus {
 
 /// Email address / mailbox under a Mail app domain
 model MailMailbox {
-  id           String            @id @default(uuid())
-  mailAppId    String
+  id               String            @id @default(uuid())
+  mailAppId        String
   /// Local part before @ (e.g. info)
-  localPart    String
+  localPart        String
   /// Domain at creation time (usually MailApp.primaryDomain)
-  domain       String
-  displayName  String?
+  domain           String
+  displayName      String?
   /// S3 object key for mailbox profile photo (served via /api/media/…)
-  avatarKey    String?
+  avatarKey        String?
   /// bcrypt hash — required for new mailboxes; optional for legacy rows
-  passwordHash String?
+  passwordHash     String?
   /// Optional mailbox-level TOTP 2FA
-  totpEnabled  Boolean           @default(false)
-  totpSecret   String?
+  totpEnabled      Boolean           @default(false)
+  totpSecret       String?
   /// UTF-8 body bytes stored in this mailbox (send + inbound)
-  storageUsedBytes BigInt        @default(0)
-  status       MailMailboxStatus @default(ACTIVE)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  storageUsedBytes BigInt            @default(0)
+  status           MailMailboxStatus @default(ACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
-  messages MailMessage[]
-  catchAlls MailCatchAll[]
-  autoReply MailAutoReply?
-  aliases MailAlias[]
+  mailApp    MailApp         @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  messages   MailMessage[]
+  catchAlls  MailCatchAll[]
+  autoReply  MailAutoReply?
+  aliases    MailAlias[]
   forwarders MailForwarder[]
 
   @@unique([domain, localPart])
@@ -3565,8 +3673,8 @@ model MailAutoReply {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  mailApp  MailApp                 @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
-  mailbox  MailMailbox             @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  mailApp  MailApp                @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox  MailMailbox            @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
   receipts MailAutoReplyReceipt[]
 
   @@index([mailAppId])
@@ -3655,43 +3763,49 @@ enum MailMessageStatus {
 
 /// Stored mail message (outbound via SES; inbound later via receipt rules)
 model MailMessage {
-  id           String               @id @default(uuid())
-  mailboxId    String
-  userId       String
+  id        String  @id @default(uuid())
+  mailboxId String
+  userId    String
   /// Groups conversation replies
-  threadId     String
+  threadId  String
   /// RFC Message-ID header
-  messageId    String?              @unique
-  inReplyTo    String?
+  messageId String? @unique
+  inReplyTo String?
 
-  direction    MailMessageDirection
-  folder       MailMessageFolder    @default(INBOX)
-  status       MailMessageStatus    @default(RECEIVED)
+  direction MailMessageDirection
+  folder    MailMessageFolder    @default(INBOX)
+  status    MailMessageStatus    @default(RECEIVED)
 
   fromAddress  String
   fromName     String?
-  toAddresses  String[]             @default([])
-  ccAddresses  String[]             @default([])
-  bccAddresses String[]             @default([])
+  /// Normalized envelope/header sender domain used for batched brand lookup.
+  senderDomain String?
+  /// Immutable SES authentication snapshots captured at receipt time.
+  spfVerdict   MailAuthenticationVerdict?
+  dkimVerdict  MailAuthenticationVerdict?
+  dmarcVerdict MailAuthenticationVerdict?
+  toAddresses  String[]                   @default([])
+  ccAddresses  String[]                   @default([])
+  bccAddresses String[]                   @default([])
   replyTo      String?
 
-  subject      String               @default("")
-  bodyText     String?              @db.Text
-  bodyHtml     String?              @db.Text
-  snippet      String?
+  subject  String  @default("")
+  bodyText String? @db.Text
+  bodyHtml String? @db.Text
+  snippet  String?
 
-  isRead       Boolean              @default(false)
-  isStarred    Boolean              @default(false)
+  isRead    Boolean @default(false)
+  isStarred Boolean @default(false)
 
   sesMessageId String?
   errorMessage String?
   /// Raw MIME object key after inbound S3 delivery (future)
   rawS3Key     String?
 
-  sentAt       DateTime?
-  receivedAt   DateTime?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  sentAt     DateTime?
+  receivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3701,6 +3815,7 @@ model MailMessage {
   @@index([threadId])
   @@index([userId])
   @@index([sesMessageId])
+  @@index([senderDomain])
   @@map("mail_messages")
 }
 

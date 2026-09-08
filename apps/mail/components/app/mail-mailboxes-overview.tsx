@@ -947,13 +947,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       quotaBytes={storageQuotaBytes}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push(mailInboxHref(slot, box.id))}
+                  <Link
+                    href={mailInboxHref(slot, box.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[13px] font-semibold text-[var(--foreground)]"
                   >
                     Webmail
-                  </button>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -1016,13 +1017,14 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       </td>
                       <td className="px-5 py-4 align-middle sm:px-6">
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => router.push(mailInboxHref(slot, box.id))}
+                          <Link
+                            href={mailInboxHref(slot, box.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex h-8 items-center rounded-lg bg-[var(--surface-secondary)] px-3 text-[12px] font-semibold text-[var(--foreground)] hover:bg-[rgba(15,23,42,0.08)]"
                           >
                             Webmail
-                          </button>
+                          </Link>
                           <MailboxActionMenu
                             box={box}
                             deletingId={deletingId}

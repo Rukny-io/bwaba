@@ -9,6 +9,10 @@ import {
   MailMessageDirection,
   MailMessageFolder,
   MailMessageStatus,
+  MailAuthenticationVerdict,
+  MailBrandCertificateType,
+  MailDomainTrustStatus,
+  MailSenderBrandStatus,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -23,6 +27,16 @@ import {
   incrementMailboxStorage,
   utf8StorageBytes,
 } from './mail-storage.util';
+import { MailFeatureFlags } from './mail-feature-flags';
+
+type SenderIdentity = {
+  domain: string;
+  logoS3Key: string | null;
+  brandStatus: MailSenderBrandStatus | null;
+  certificateType: MailBrandCertificateType | null;
+  certificateValidTo: Date | null;
+  ruknyVerified: boolean;
+};
 
 @Injectable()
 export class MailMessagesService {
@@ -32,6 +46,7 @@ export class MailMessagesService {
     private readonly realtime: MailRealtimeService,
     private readonly subscriptions: MailSubscriptionsService,
     private readonly mailboxSessions: MailMailboxSessionService,
+    private readonly flags: MailFeatureFlags,
   ) {}
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
@@ -75,6 +90,10 @@ export class MailMessagesService {
       status: MailMessageStatus;
       fromAddress: string;
       fromName: string | null;
+      senderDomain: string | null;
+      spfVerdict: MailAuthenticationVerdict | null;
+      dkimVerdict: MailAuthenticationVerdict | null;
+      dmarcVerdict: MailAuthenticationVerdict | null;
       toAddresses: string[];
       ccAddresses: string[];
       bccAddresses: string[];
@@ -92,10 +111,36 @@ export class MailMessagesService {
       updatedAt: Date;
       mailbox?: { avatarKey: string | null } | null;
     },
+    senderIdentity?: SenderIdentity,
   ) {
+    const authenticationPassed =
+      row.dmarcVerdict === MailAuthenticationVerdict.PASS;
+    const usableBrand =
+      row.direction === MailMessageDirection.INBOUND &&
+      authenticationPassed &&
+      this.flags.resolveBimi() &&
+      senderIdentity?.brandStatus === MailSenderBrandStatus.READY
+        ? senderIdentity
+        : null;
     const fromAvatarUrl =
       row.direction === MailMessageDirection.OUTBOUND
         ? this.mediaPath(row.mailbox?.avatarKey)
+        : this.flags.showBimiLogos()
+          ? this.mediaPath(usableBrand?.logoS3Key)
+          : null;
+    const hasCurrentVmc =
+      this.flags.showBimiLogos() &&
+      usableBrand?.certificateType === MailBrandCertificateType.VMC &&
+      Boolean(
+        usableBrand.certificateValidTo &&
+          usableBrand.certificateValidTo.getTime() > Date.now(),
+      );
+    const verificationType = hasCurrentVmc
+      ? 'BIMI_VMC'
+      : authenticationPassed &&
+          this.flags.ruknyVerification() &&
+          senderIdentity?.ruknyVerified
+        ? 'RUKNY'
         : null;
 
     return {
@@ -113,6 +158,22 @@ export class MailMessagesService {
       fromAddress: row.fromAddress,
       fromName: row.fromName,
       fromAvatarUrl,
+      senderDomain: row.senderDomain,
+      authentication: {
+        spf: row.spfVerdict,
+        dkim: row.dkimVerdict,
+        dmarc: row.dmarcVerdict,
+      },
+      senderBrand: senderIdentity
+        ? {
+            domain: senderIdentity.domain,
+            status: senderIdentity.brandStatus,
+            logoUrl: fromAvatarUrl,
+            certificateType: senderIdentity.certificateType,
+            ruknyVerified: senderIdentity.ruknyVerified,
+          }
+        : null,
+      verificationType,
       to: row.toAddresses,
       cc: row.ccAddresses,
       bcc: row.bccAddresses,
@@ -224,9 +285,17 @@ export class MailMessagesService {
 
     const hasMore = rows.length > take;
     const page = hasMore ? rows.slice(0, take) : rows;
+    const identities = await this.loadSenderIdentities(
+      page.map((row) => row.senderDomain),
+    );
 
     return {
-      messages: page.map((row) => this.toView(row)),
+      messages: page.map((row) =>
+        this.toView(
+          row,
+          row.senderDomain ? identities.get(row.senderDomain) : undefined,
+        ),
+      ),
       nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
     };
   }
@@ -422,7 +491,11 @@ export class MailMessagesService {
       row.isRead = true;
     }
 
-    return this.toView(row);
+    const identities = await this.loadSenderIdentities([row.senderDomain]);
+    return this.toView(
+      row,
+      row.senderDomain ? identities.get(row.senderDomain) : undefined,
+    );
   }
 
   async counts(
@@ -669,6 +742,7 @@ export class MailMessagesService {
         status: MailMessageStatus.QUEUED,
         fromAddress,
         fromName: mailbox.displayName,
+        senderDomain: mailbox.domain.toLowerCase(),
         toAddresses: to,
         ccAddresses: cc,
         bccAddresses: bcc,
@@ -754,5 +828,57 @@ export class MailMessagesService {
     });
     this.sentCountCache = { at: now, value };
     return value;
+  }
+
+  private async loadSenderIdentities(
+    values: Array<string | null | undefined>,
+  ): Promise<Map<string, SenderIdentity>> {
+    const domains = [
+      ...new Set(values.filter((value): value is string => Boolean(value))),
+    ];
+    const identities = new Map<string, SenderIdentity>();
+    if (!domains.length) return identities;
+
+    const [brands, trustedApps] = await Promise.all([
+      this.flags.resolveBimi()
+        ? this.prisma.mailSenderBrand.findMany({
+            where: { domain: { in: domains } },
+            select: {
+              domain: true,
+              status: true,
+              logoS3Key: true,
+              certificateType: true,
+              certificateValidTo: true,
+            },
+          })
+        : Promise.resolve([]),
+      this.flags.ruknyVerification()
+        ? this.prisma.mailApp.findMany({
+            where: {
+              primaryDomain: { in: domains },
+              domainTrustStatus: MailDomainTrustStatus.VERIFIED,
+            },
+            select: { primaryDomain: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const trusted = new Set(
+      trustedApps
+        .map((app) => app.primaryDomain?.toLowerCase())
+        .filter((domain): domain is string => Boolean(domain)),
+    );
+    const brandByDomain = new Map(brands.map((brand) => [brand.domain, brand]));
+    for (const domain of domains) {
+      const brand = brandByDomain.get(domain);
+      identities.set(domain, {
+        domain,
+        logoS3Key: brand?.logoS3Key ?? null,
+        brandStatus: brand?.status ?? null,
+        certificateType: brand?.certificateType ?? null,
+        certificateValidTo: brand?.certificateValidTo ?? null,
+        ruknyVerified: trusted.has(domain),
+      });
+    }
+    return identities;
   }
 }

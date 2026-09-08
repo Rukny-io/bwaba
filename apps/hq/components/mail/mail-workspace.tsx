@@ -1,12 +1,19 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BarChart3, Globe, Inbox, Mail, TriangleAlert } from 'lucide-react';
-import { hqApi } from '@/lib/hq-api';
-import { appToast } from '@/lib/app-toast';
-import { ApiException } from '@/lib/api-client';
-import { downloadCsv } from '@/lib/export-csv';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  BadgeCheck,
+  BarChart3,
+  Globe,
+  Inbox,
+  Mail,
+  TriangleAlert,
+} from "lucide-react";
+import { hqApi } from "@/lib/hq-api";
+import { appToast } from "@/lib/app-toast";
+import { ApiException } from "@/lib/api-client";
+import { downloadCsv } from "@/lib/export-csv";
 import type {
   MailAlertsResponse,
   MailAnalyticsResponse,
@@ -16,30 +23,35 @@ import type {
   MailDomainsResponse,
   MailStats,
   MailWorkspaceTab,
-} from '@/lib/types/mail';
+} from "@/lib/types/mail";
 import {
   buildMailSearchParams,
   MAIL_DEFAULT_LIMIT,
   parseMailQuery,
-} from '@/lib/mail-query';
+} from "@/lib/mail-query";
 import {
   workspaceTabClassName,
   workspaceTabGroupClassName,
-} from '@/components/ui/pill-tab';
-import { MailStatsStrip } from '@/components/mail/mail-stats-strip';
-import { MailAnalyticsPanel } from '@/components/mail/mail-analytics-panel';
-import { MailFilters } from '@/components/mail/mail-filters';
-import { MailAppsTable } from '@/components/mail/mail-apps-table';
-import { MailDeliveryTable } from '@/components/mail/mail-delivery-table';
-import { MailDomainsPanel } from '@/components/mail/mail-domains-panel';
-import { MailAlertsPanel } from '@/components/mail/mail-alerts-panel';
+} from "@/components/ui/pill-tab";
+import { MailStatsStrip } from "@/components/mail/mail-stats-strip";
+import { MailAnalyticsPanel } from "@/components/mail/mail-analytics-panel";
+import { MailFilters } from "@/components/mail/mail-filters";
+import { MailAppsTable } from "@/components/mail/mail-apps-table";
+import { MailDeliveryTable } from "@/components/mail/mail-delivery-table";
+import { MailDomainsPanel } from "@/components/mail/mail-domains-panel";
+import { MailAlertsPanel } from "@/components/mail/mail-alerts-panel";
+import { MailDomainVerificationQueue } from "@/components/mail/mail-domain-verification-queue";
+import { hqMailFeatureFlags } from "@/lib/mail-feature-flags";
 
 const TABS: { id: MailWorkspaceTab; label: string; icon: typeof Mail }[] = [
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'domains', label: 'Domains', icon: Globe },
-  { id: 'review', label: 'Apps', icon: Inbox },
-  { id: 'delivery', label: 'Delivery', icon: Mail },
-  { id: 'alerts', label: 'Alerts', icon: TriangleAlert },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "domains", label: "Domains", icon: Globe },
+  ...(hqMailFeatureFlags.ruknyVerification
+    ? [{ id: "verification" as const, label: "Verification", icon: BadgeCheck }]
+    : []),
+  { id: "review", label: "Apps", icon: Inbox },
+  { id: "delivery", label: "Delivery", icon: Mail },
+  { id: "alerts", label: "Alerts", icon: TriangleAlert },
 ];
 
 export function MailWorkspace() {
@@ -48,19 +60,26 @@ export function MailWorkspace() {
   const searchParams = useSearchParams();
   const queryKey = searchParams.toString();
   const query = parseMailQuery(searchParams);
-  const tab = query.tab ?? 'review';
+  const tab =
+    query.tab === "verification" && !hqMailFeatureFlags.ruknyVerification
+      ? "review"
+      : (query.tab ?? "review");
 
   const [list, setList] = useState<MailAppsListResponse | null>(null);
   const [stats, setStats] = useState<MailStats | null>(null);
-  const [analytics, setAnalytics] = useState<MailAnalyticsResponse | null>(null);
+  const [analytics, setAnalytics] = useState<MailAnalyticsResponse | null>(
+    null,
+  );
   const [analyticsDays, setAnalyticsDays] = useState(7);
   const [domains, setDomains] = useState<MailDomainsResponse | null>(null);
   const [alerts, setAlerts] = useState<MailAlertsResponse | null>(null);
-  const [delivery, setDelivery] = useState<MailDeliveryListResponse | null>(null);
+  const [delivery, setDelivery] = useState<MailDeliveryListResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [searchInput, setSearchInput] = useState(query.search ?? '');
+  const [searchInput, setSearchInput] = useState(query.search ?? "");
   const skipSearchDebounce = useRef(false);
 
   const updateQuery = useCallback(
@@ -74,30 +93,34 @@ export function MailWorkspace() {
     [pathname, router, searchParams],
   );
 
-  const isSearchPending = searchInput.trim() !== (query.search ?? '');
+  const isSearchPending = searchInput.trim() !== (query.search ?? "");
 
   const commitSearch = useCallback(() => {
     const trimmed = searchInput.trim();
-    if ((query.search ?? '') === trimmed) return;
+    if ((query.search ?? "") === trimmed) return;
     updateQuery({ search: trimmed || undefined, page: 1 });
   }, [searchInput, query.search, updateQuery]);
 
   const loadData = useCallback(async () => {
     const currentQuery = parseMailQuery(searchParams);
-    const currentTab = currentQuery.tab ?? 'review';
+    const currentTab =
+      currentQuery.tab === "verification" &&
+      !hqMailFeatureFlags.ruknyVerification
+        ? "review"
+        : (currentQuery.tab ?? "review");
     setLoading(true);
     try {
       const [statsRes] = await Promise.all([hqApi.getMailStats()]);
       setStats(statsRes);
 
-      if (currentTab === 'review') {
+      if (currentTab === "review") {
         const appsRes = await hqApi.getMailApps(currentQuery);
         setList(appsRes);
-      } else if (currentTab === 'domains') {
+      } else if (currentTab === "domains") {
         setDomains(await hqApi.getMailDomains());
-      } else if (currentTab === 'alerts') {
+      } else if (currentTab === "alerts") {
         setAlerts(await hqApi.getMailAlerts());
-      } else if (currentTab === 'delivery') {
+      } else if (currentTab === "delivery") {
         setDelivery(
           await hqApi.getMailDelivery({
             page: currentQuery.page,
@@ -108,7 +131,9 @@ export function MailWorkspace() {
       }
     } catch (error) {
       appToast.error(
-        error instanceof ApiException ? error.message : 'Could not load Mail data',
+        error instanceof ApiException
+          ? error.message
+          : "Could not load Mail data",
       );
     } finally {
       setLoading(false);
@@ -131,7 +156,7 @@ export function MailWorkspace() {
   }, [queryKey, loadData]);
 
   useEffect(() => {
-    if (tab === 'analytics') {
+    if (tab === "analytics") {
       void loadAnalytics();
     }
   }, [tab, loadAnalytics]);
@@ -143,14 +168,14 @@ export function MailWorkspace() {
     }
     const timer = window.setTimeout(() => {
       const trimmed = searchInput.trim();
-      if ((query.search ?? '') === trimmed) return;
+      if ((query.search ?? "") === trimmed) return;
       updateQuery({ search: trimmed || undefined, page: 1 });
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchInput, query.search, updateQuery]);
 
   useEffect(() => {
-    setSearchInput(query.search ?? '');
+    setSearchInput(query.search ?? "");
     skipSearchDebounce.current = true;
   }, [query.search]);
 
@@ -158,10 +183,15 @@ export function MailWorkspace() {
     setExporting(true);
     try {
       const currentQuery = parseMailQuery(searchParams);
-      const { page: _page, limit: _limit, tab: _tab, ...exportQuery } = currentQuery;
+      const {
+        page: _page,
+        limit: _limit,
+        tab: _tab,
+        ...exportQuery
+      } = currentQuery;
       const result = await hqApi.exportMailApps(exportQuery);
       if (!result.data.length) {
-        appToast.info('Nothing to export');
+        appToast.info("Nothing to export");
         return;
       }
       downloadCsv(
@@ -171,7 +201,7 @@ export function MailWorkspace() {
       appToast.success(`Exported ${result.total} apps`);
     } catch (error) {
       appToast.error(
-        error instanceof ApiException ? error.message : 'Could not export',
+        error instanceof ApiException ? error.message : "Could not export",
       );
     } finally {
       setExporting(false);
@@ -185,7 +215,8 @@ export function MailWorkspace() {
           Mail
         </h1>
         <p className="mt-1 text-[13px] text-[var(--muted-foreground)] sm:text-sm">
-          Operational review of apps, mailboxes, domain verification, and delivery.
+          Operational review of apps, mailboxes, domain verification, and
+          delivery.
         </p>
       </header>
 
@@ -209,7 +240,7 @@ export function MailWorkspace() {
         })}
       </div>
 
-      {tab === 'analytics' ? (
+      {tab === "analytics" ? (
         <MailAnalyticsPanel
           data={analytics}
           loading={analyticsLoading}
@@ -220,7 +251,7 @@ export function MailWorkspace() {
         />
       ) : null}
 
-      {tab === 'review' ? (
+      {tab === "review" ? (
         <>
           <MailFilters
             search={searchInput}
@@ -243,9 +274,15 @@ export function MailWorkspace() {
         </>
       ) : null}
 
-      {tab === 'domains' ? <MailDomainsPanel data={domains} loading={loading} /> : null}
+      {tab === "domains" ? (
+        <MailDomainsPanel data={domains} loading={loading} />
+      ) : null}
 
-      {tab === 'delivery' ? (
+      {tab === "verification" && hqMailFeatureFlags.ruknyVerification ? (
+        <MailDomainVerificationQueue />
+      ) : null}
+
+      {tab === "delivery" ? (
         <MailDeliveryTable
           items={delivery?.data ?? []}
           isLoading={loading}
@@ -256,7 +293,9 @@ export function MailWorkspace() {
         />
       ) : null}
 
-      {tab === 'alerts' ? <MailAlertsPanel data={alerts} loading={loading} /> : null}
+      {tab === "alerts" ? (
+        <MailAlertsPanel data={alerts} loading={loading} />
+      ) : null}
     </div>
   );
 }

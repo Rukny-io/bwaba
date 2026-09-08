@@ -10,6 +10,38 @@ export type MailMessageFolderApi =
   | "PROMOTIONS"
   | "SOCIAL";
 
+export type MailAuthenticationVerdictApi =
+  | "PASS"
+  | "FAIL"
+  | "GRAY"
+  | "PROCESSING_FAILED"
+  | "UNKNOWN";
+
+export type MailSenderBrandStatusApi =
+  | "UNKNOWN"
+  | "NO_RECORD"
+  | "INVALID"
+  | "READY"
+  | "ERROR";
+
+export type MailBrandCertificateTypeApi = "NONE" | "CMC" | "VMC" | "UNKNOWN";
+
+export type MailMessageVerificationType = "BIMI_VMC" | "RUKNY";
+
+export type MailMessageAuthentication = {
+  spf: MailAuthenticationVerdictApi | null;
+  dkim: MailAuthenticationVerdictApi | null;
+  dmarc: MailAuthenticationVerdictApi | null;
+};
+
+export type MailSenderBrandView = {
+  domain: string;
+  status: MailSenderBrandStatusApi | null;
+  logoUrl: string | null;
+  certificateType: MailBrandCertificateTypeApi | null;
+  ruknyVerified: boolean;
+};
+
 export type MailMessageView = {
   id: string;
   mailboxId: string;
@@ -23,6 +55,10 @@ export type MailMessageView = {
   fromAddress: string;
   fromName: string | null;
   fromAvatarUrl?: string | null;
+  senderDomain: string | null;
+  authentication: MailMessageAuthentication;
+  senderBrand: MailSenderBrandView | null;
+  verificationType: MailMessageVerificationType | null;
   to: string[];
   cc: string[];
   bcc: string[];

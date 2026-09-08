@@ -124,6 +124,12 @@ export const envSchema = z.object({
   SMTP_PORT: z.string().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  MAIL_BIMI_RESOLUTION_ENABLED: z.enum(['true', 'false', '1', '0']).optional(),
+  MAIL_BIMI_LOGOS_ENABLED: z.enum(['true', 'false', '1', '0']).optional(),
+  MAIL_RUKNY_DOMAIN_VERIFICATION_ENABLED: z
+    .enum(['true', 'false', '1', '0'])
+    .optional(),
+  MAIL_OUTBOUND_BIMI_ENABLED: z.enum(['true', 'false', '1', '0']).optional(),
 
   // Forms geo analytics (mock country for localhost/private IPs)
   GEOIP_MOCK_COUNTRY: z.string().optional(),

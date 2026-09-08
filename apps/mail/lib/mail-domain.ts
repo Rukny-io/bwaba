@@ -6,13 +6,36 @@ export type DnsRecordStatus = "pending" | "checking" | "verified" | "failed";
 
 export type MailDnsRecord = {
   id: string;
-  purpose: "MX" | "SPF" | "DKIM" | "DMARC" | "MAIL_FROM_MX" | "MAIL_FROM_SPF";
+  purpose: "MX" | "SPF" | "DKIM" | "DMARC" | "BIMI" | "MAIL_FROM_MX" | "MAIL_FROM_SPF";
   type: "MX" | "TXT" | "CNAME";
   host: string;
   value: string;
   priority?: number;
   status: DnsRecordStatus;
   hint: string;
+};
+
+export type MailBimiSetupStatus = {
+  domain: string;
+  selector: "default";
+  host: "default._bimi";
+  logoUploaded: boolean;
+  logoUrl: string;
+  previewUrl: string;
+  dmarc: {
+    status: "ENFORCED" | "NOT_ENFORCED" | "MISSING";
+    policy: string | null;
+    percentage: number | null;
+    record: string | null;
+    required: string;
+  };
+  bimi: {
+    status: "VERIFIED" | "MISMATCH" | "INVALID" | "MISSING";
+    expectedRecord: string;
+    observedRecord: string | null;
+    authorityUrl: string | null;
+  };
+  ready: boolean;
 };
 
 export type MailDomainSetup = {
@@ -148,6 +171,22 @@ export function syncMailDomainRecords(setup: MailDomainSetup): MailDomainSetup {
 /** Recommended DMARC when ready for BIMI / stronger protection. */
 export function dmarcEnforcementValue() {
   return "v=DMARC1; p=quarantine; pct=100;";
+}
+
+export function buildBimiDnsRecord(
+  logoUrl: string,
+  authorityUrl?: string | null,
+): MailDnsRecord {
+  const authority = authorityUrl?.trim();
+  return {
+    id: "bimi",
+    purpose: "BIMI",
+    type: "TXT",
+    host: "default._bimi",
+    value: `v=BIMI1; l=${logoUrl};${authority ? ` a=${authority};` : ""}`,
+    status: "pending",
+    hint: "Publish only after DMARC enforces quarantine or reject at pct=100.",
+  };
 }
 
 export function applyDnsCheckResults(

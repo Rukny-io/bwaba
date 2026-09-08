@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxMessageRow } from "@/components/inbox/mail-inbox-list-card";
-import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
+import { MailSenderBrandAvatar } from "@/components/inbox/mail-sender-brand-avatar";
 import { MailHtmlBody } from "@/components/inbox/mail-html-body";
 
 type Props = {
@@ -146,6 +146,12 @@ export function MailInboxReaderCard({
   const headerAvatarUrl = isOutbound
     ? message.fromAvatarUrl || mailboxAvatarUrl
     : null;
+  const brandLogoUrl = isOutbound
+    ? null
+    : message.senderBrand?.logoUrl || message.fromAvatarUrl;
+  const brandStatus = isOutbound ? null : message.senderBrand?.status;
+  const authentication = isOutbound ? null : message.authentication;
+  const verificationType = isOutbound ? null : message.verificationType;
 
   return (
     <section
@@ -171,10 +177,14 @@ export function MailInboxReaderCard({
             aria-hidden
           />
           <span className="flex min-w-0 items-center gap-2 px-1.5 py-1">
-            <MailPersonAvatar
+            <MailSenderBrandAvatar
               name={displayName}
               email={isOutbound ? replyToAddress : message.fromEmail}
               avatarUrl={headerAvatarUrl}
+              brandLogoUrl={brandLogoUrl}
+              brandStatus={brandStatus}
+              authentication={authentication}
+              verificationType={verificationType}
               className="size-7"
               textClassName="text-[10px]"
             />
@@ -222,10 +232,14 @@ export function MailInboxReaderCard({
 
       {/* Tablet / desktop header */}
       <div className="hidden shrink-0 items-center gap-2.5 border-b border-[var(--separator)] px-4 py-3 md:flex">
-        <MailPersonAvatar
+        <MailSenderBrandAvatar
           name={displayName}
           email={isOutbound ? replyToAddress : message.fromEmail}
           avatarUrl={headerAvatarUrl}
+          brandLogoUrl={brandLogoUrl}
+          brandStatus={brandStatus}
+          authentication={authentication}
+          verificationType={verificationType}
           className="size-10"
           textClassName="text-sm"
         />

@@ -45,6 +45,9 @@ const APP_LIST_SELECT = {
   primaryDomain: true,
   domainStatus: true,
   domainCheckedAt: true,
+  domainTrustStatus: true,
+  domainVerifiedAt: true,
+  domainTrustReason: true,
   createdAt: true,
   updatedAt: true,
   user: { select: OWNER_SELECT },
@@ -968,6 +971,9 @@ export class AdminMailService {
       primaryDomain: string | null;
       domainStatus: MailDomainStatus;
       domainCheckedAt: Date | null;
+      domainTrustStatus: string;
+      domainVerifiedAt: Date | null;
+      domainTrustReason: string | null;
       createdAt: Date;
       user: OwnerRow;
       subscription: {
@@ -992,6 +998,9 @@ export class AdminMailService {
       primaryDomain: app.primaryDomain,
       domainStatus: app.domainStatus,
       domainCheckedAt: app.domainCheckedAt?.toISOString() ?? null,
+      domainTrustStatus: app.domainTrustStatus,
+      domainVerifiedAt: app.domainVerifiedAt?.toISOString() ?? null,
+      domainTrustReason: app.domainTrustReason,
       createdAt: app.createdAt.toISOString(),
       mailboxCount: app._count.mailboxes,
       storageUsedBytes: usedBytes,

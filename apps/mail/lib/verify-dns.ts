@@ -21,6 +21,43 @@ function flattenTxt(chunks: string[][]) {
   return chunks.map((parts) => parts.join(""));
 }
 
+function tagValue(record: string, tag: string) {
+  const entry = record
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.slice(0, part.indexOf("=")).trim().toLowerCase() === tag);
+  return entry ? entry.slice(entry.indexOf("=") + 1).trim() : "";
+}
+
+export function inspectDmarcRecords(records: string[]) {
+  const candidates = records.filter((record) => /^\s*v\s*=\s*DMARC1(?:\s*;|$)/i.test(record));
+  if (candidates.length !== 1) {
+    return { enforced: false, policy: null, percentage: null, record: null };
+  }
+  const record = candidates[0];
+  const policy = tagValue(record, "p").toLowerCase();
+  const parsedPercentage = Number.parseInt(tagValue(record, "pct") || "100", 10);
+  const percentage = Number.isFinite(parsedPercentage) ? parsedPercentage : 0;
+  return {
+    enforced: (policy === "quarantine" || policy === "reject") && percentage === 100,
+    policy,
+    percentage,
+    record,
+  };
+}
+
+export async function verifyBimiDns(domain: string, expectedLogoUrl: string) {
+  const dmarc = inspectDmarcRecords(await lookupTxt(`_dmarc.${domain}`));
+  const records = await lookupTxt(`default._bimi.${domain}`);
+  const candidates = records.filter((record) => /^\s*v\s*=\s*BIMI1(?:\s*;|$)/i.test(record));
+  const record = candidates.length === 1 ? candidates[0] : null;
+  return {
+    dmarc,
+    record,
+    logoMatches: Boolean(record && tagValue(record, "l") === expectedLogoUrl),
+  };
+}
+
 async function lookupMx(name: string) {
   try {
     return await dns.resolveMx(name);
@@ -68,6 +105,9 @@ async function checkRecord(domain: string, record: MailDnsRecord): Promise<DnsRe
     }
     if (record.purpose === "DMARC") {
       return current.includes("v=dmarc1");
+    }
+    if (record.purpose === "BIMI") {
+      return current.includes("v=bimi1") && current.includes(expected);
     }
     return current === expected || current.includes(expected);
   });

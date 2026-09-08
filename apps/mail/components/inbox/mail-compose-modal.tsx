@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import {
   Button,
-  Drawer,
   Input,
   Label,
   Modal,
@@ -285,7 +284,7 @@ export function MailComposeModal({
       onSubmit={(event) => void handleSubmit(event)}
       className={
         isMobile
-          ? "flex h-[85dvh] min-h-0 w-full flex-col"
+          ? "flex h-full min-h-0 w-full flex-col"
           : "flex max-h-[min(94dvh,780px)] min-h-[620px] w-full flex-col"
       }
     >
@@ -296,7 +295,7 @@ export function MailComposeModal({
               className="hidden"
               onChange={(event) => void onImageSelected(event)}
             />
-            <div className="flex w-full flex-row items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 py-3 sm:px-5">
+            <div className="flex w-full flex-row items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-3">
               <div className="flex min-w-0 items-center gap-3">
                 {fromAddress ? (
                   <MailPersonAvatar
@@ -602,7 +601,7 @@ export function MailComposeModal({
               ) : null}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)]/70 px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)]/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:py-3">
               <Button
                 type="button"
                 variant="tertiary"
@@ -629,19 +628,18 @@ export function MailComposeModal({
 
   if (isMobile) {
     return (
-      <Drawer.Backdrop
+      <Modal.Backdrop
         isOpen={open}
         isDismissable={!sending}
         onOpenChange={handleOpenChange}
         className="z-50"
       >
-        <Drawer.Content placement="bottom">
-          <Drawer.Dialog className="overflow-hidden p-0">
-            <Drawer.Handle className="pt-2" />
+        <Modal.Container placement="center" scroll="inside" size="full">
+          <Modal.Dialog className="overflow-hidden p-0">
             {composeForm}
-          </Drawer.Dialog>
-        </Drawer.Content>
-      </Drawer.Backdrop>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     );
   }
 

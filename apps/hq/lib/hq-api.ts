@@ -69,6 +69,8 @@ import type {
   MailAppsListResponse,
   MailDeliveryListResponse,
   MailDomainRefreshResponse,
+  MailDomainVerificationListResponse,
+  MailDomainVerificationRequest,
   MailDomainsResponse,
   MailStats,
 } from '@/lib/types/mail';
@@ -456,6 +458,48 @@ export const hqApi = {
     api
       .post<MailDomainRefreshResponse>(
         `/admin/mail/apps/${encodeURIComponent(appId)}/domain/refresh`,
+      )
+      .then((r) => r.data),
+
+  getMailDomainVerificationRequests: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) =>
+    api
+      .get<MailDomainVerificationListResponse>(
+        '/admin/mail/domain-verification-requests',
+        params,
+      )
+      .then((r) => r.data),
+
+  getMailDomainVerificationRequest: (id: string) =>
+    api
+      .get<{ request: MailDomainVerificationRequest }>(
+        `/admin/mail/domain-verification-requests/${encodeURIComponent(id)}`,
+      )
+      .then((r) => r.data),
+
+  approveMailDomainVerification: (id: string) =>
+    api
+      .patch<{ request: MailDomainVerificationRequest }>(
+        `/admin/mail/domain-verification-requests/${encodeURIComponent(id)}/approve`,
+      )
+      .then((r) => r.data),
+
+  rejectMailDomainVerification: (id: string, reason: string) =>
+    api
+      .patch<{ request: MailDomainVerificationRequest }>(
+        `/admin/mail/domain-verification-requests/${encodeURIComponent(id)}/reject`,
+        { reason },
+      )
+      .then((r) => r.data),
+
+  revokeMailDomainVerification: (id: string, reason: string) =>
+    api
+      .patch<{ request: MailDomainVerificationRequest }>(
+        `/admin/mail/domain-verification-requests/${encodeURIComponent(id)}/revoke`,
+        { reason },
       )
       .then((r) => r.data),
 };

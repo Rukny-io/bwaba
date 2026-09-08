@@ -3,14 +3,23 @@
 import { ChevronLeft, ChevronRight, Download, Inbox, RefreshCw } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
-import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
-import type { MailMessageFolderApi } from "@/lib/mail-messages-client";
+import { MailSenderBrandAvatar } from "@/components/inbox/mail-sender-brand-avatar";
+import type {
+  MailMessageAuthentication,
+  MailMessageFolderApi,
+  MailMessageVerificationType,
+  MailSenderBrandView,
+} from "@/lib/mail-messages-client";
 
 export type InboxMessageRow = {
   id: string;
   from: string;
   fromEmail: string;
   fromAvatarUrl?: string | null;
+  senderDomain?: string | null;
+  authentication?: MailMessageAuthentication | null;
+  senderBrand?: MailSenderBrandView | null;
+  verificationType?: MailMessageVerificationType | null;
   to: string;
   toList?: string[];
   subject: string;
@@ -178,13 +187,26 @@ export function MailInboxListCard({
                         aria-hidden
                       />
                     ) : null}
-                    <MailPersonAvatar
+                    <MailSenderBrandAvatar
                       name={primary}
                       email={outbound ? message.to : message.fromEmail}
                       avatarUrl={
+                        outbound ? message.fromAvatarUrl || mailboxAvatarUrl : null
+                      }
+                      brandLogoUrl={
                         outbound
-                          ? message.fromAvatarUrl || mailboxAvatarUrl
-                          : null
+                          ? null
+                          : message.senderBrand?.logoUrl ||
+                            message.fromAvatarUrl
+                      }
+                      brandStatus={
+                        outbound ? null : message.senderBrand?.status
+                      }
+                      authentication={
+                        outbound ? null : message.authentication
+                      }
+                      verificationType={
+                        outbound ? null : message.verificationType
                       }
                       className={cn(
                         "size-10",

@@ -6,7 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MailAppStatus, MailAppType, MailDomainStatus, Prisma } from '@prisma/client';
+import {
+  MailAppStatus,
+  MailAppType,
+  MailDomainStatus,
+  MailDomainTrustStatus,
+  MailDomainVerificationRequestStatus,
+  Prisma,
+} from '@prisma/client';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -98,10 +105,16 @@ export class MailAppsService {
       primaryDomain: string | null;
       domainStatus?: MailDomainStatus;
       domainCheckedAt?: Date | null;
+      domainTrustStatus?: MailDomainTrustStatus;
+      domainVerifiedAt?: Date | null;
       createdAt: Date;
       updatedAt: Date;
     },
-    subscription?: { plan: string; status: string; mailboxCount: number } | null,
+    subscription?: {
+      plan: string;
+      status: string;
+      mailboxCount: number;
+    } | null,
   ) {
     const active =
       subscription && subscription.status === 'ACTIVE' ? subscription : null;
@@ -117,6 +130,9 @@ export class MailAppsService {
       primaryDomain: app.primaryDomain,
       domainStatus: app.domainStatus ?? MailDomainStatus.NONE,
       domainCheckedAt: app.domainCheckedAt?.toISOString() ?? null,
+      domainTrustStatus:
+        app.domainTrustStatus ?? MailDomainTrustStatus.UNVERIFIED,
+      domainVerifiedAt: app.domainVerifiedAt?.toISOString() ?? null,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
       subscription: active
@@ -332,7 +348,9 @@ export class MailAppsService {
         throw error;
       }
     }
-    throw new BadRequestException('Could not allocate a Mail app id. Try again.');
+    throw new BadRequestException(
+      'Could not allocate a Mail app id. Try again.',
+    );
   }
 
   async updateApp(userId: string, appId: string, dto: UpdateMailAppDto) {
@@ -360,7 +378,9 @@ export class MailAppsService {
       domainCheckedAt = new Date();
     }
 
-    const app = await this.prisma.mailApp.update({
+    const domainChanged =
+      primaryDomain !== undefined && primaryDomain !== previous.primaryDomain;
+    const update = this.prisma.mailApp.update({
       where: { appId },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -373,8 +393,34 @@ export class MailAppsService {
         ...(primaryDomain !== undefined ? { primaryDomain } : {}),
         ...(domainStatus !== undefined ? { domainStatus } : {}),
         ...(domainCheckedAt !== undefined ? { domainCheckedAt } : {}),
+        ...(domainChanged
+          ? {
+              domainTrustStatus: MailDomainTrustStatus.UNVERIFIED,
+              domainVerifiedAt: null,
+              domainReviewedById: null,
+              domainTrustReason: null,
+            }
+          : {}),
       },
     });
+    const app = domainChanged
+      ? (
+          await this.prisma.$transaction([
+            update,
+            this.prisma.mailDomainVerificationRequest.updateMany({
+              where: {
+                mailApp: { appId },
+                status: MailDomainVerificationRequestStatus.PENDING,
+              },
+              data: {
+                status: MailDomainVerificationRequestStatus.WITHDRAWN,
+                reviewedAt: new Date(),
+                rejectionReason: 'Automatically withdrawn after domain change.',
+              },
+            }),
+          ])
+        )[0]
+      : await update;
 
     if (
       app.domainStatus === MailDomainStatus.ACTIVE &&

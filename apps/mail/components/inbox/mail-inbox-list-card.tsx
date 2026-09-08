@@ -108,7 +108,7 @@ export function MailInboxListCard({
   const safePage = Math.min(Math.max(1, page), safePageCount);
 
   return (
-    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] dark:bg-[var(--surface)]">
+    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-white md:border-r md:border-[var(--separator)] dark:bg-[var(--surface)]">
       {error || search.trim() ? (
         <div className="shrink-0 space-y-1 px-3 pt-2">
           {search.trim() ? (
@@ -166,7 +166,7 @@ export function MailInboxListCard({
                     type="button"
                     onClick={() => onSelect(message.id)}
                     className={cn(
-                      "group relative flex w-full gap-3 rounded-2xl px-3 py-3 text-left transition-[background-color,transform] duration-150 md:px-2.5 md:py-2.5",
+                      "group relative flex w-full gap-3 rounded-xl px-3 py-3 text-left transition-[background-color,transform] duration-150 md:px-2.5 md:py-2.5",
                       active
                         ? "bg-[var(--brand-blue-soft)]/80"
                         : "hover:bg-[var(--surface-secondary)] active:scale-[0.995]",

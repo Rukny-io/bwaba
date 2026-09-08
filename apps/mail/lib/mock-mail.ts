@@ -1,4 +1,13 @@
-export type MailFolderId = "inbox" | "starred" | "sent" | "drafts" | "trash";
+export type MailFolderId =
+  | "inbox"
+  | "starred"
+  | "sent"
+  | "drafts"
+  | "promotions"
+  | "social"
+  | "spam"
+  | "archive"
+  | "trash";
 
 export type MailMessage = {
   id: string;
@@ -9,6 +18,7 @@ export type MailMessage = {
   subject: string;
   preview: string;
   body: string;
+  bodyHtml?: string;
   receivedAt: string;
   unread: boolean;
   starred: boolean;
@@ -29,6 +39,8 @@ export const MOCK_MESSAGES: MailMessage[] = [
     subject: "Welcome to Rukny Mail",
     preview: "This is a demo inbox. Messages are mock until the server is connected.",
     body: "Hi Sara,\n\nThis is a design preview of Rukny Mail with the same language as Business: white surfaces and rounded corners.\n\nReal messages will appear here later.",
+    bodyHtml:
+      '<div style="max-width:600px;margin:0 auto;padding:28px;font-family:Arial,sans-serif;color:#172026"><img src="https://placehold.co/1200x420/062c30/ffffff?text=Rukny+Mail" alt="Rukny Mail" style="display:block;width:100%;border-radius:14px"><h2 style="margin:24px 0 12px">Welcome to Rukny Mail</h2><p style="font-size:16px;line-height:1.7">Hi Sara,</p><p style="font-size:16px;line-height:1.7">This HTML message demonstrates responsive email rendering, safe links, and privacy protection for remote images.</p><p><a href="https://rukny.io" style="color:#02797e">Visit Rukny</a></p></div>',
     receivedAt: "2026-08-19T15:40:00.000Z",
     unread: true,
     starred: true,
@@ -82,6 +94,71 @@ export const MOCK_MESSAGES: MailMessage[] = [
     preview: "Draft: we need faster search in the list…",
     body: "Incomplete draft.",
     receivedAt: "2026-08-17T18:05:00.000Z",
+    unread: false,
+    starred: false,
+  },
+  {
+    id: "m6",
+    folder: "spam",
+    from: "Prize Center",
+    fromEmail: "offers@example.net",
+    to: MOCK_USER.email,
+    subject: "You have been selected",
+    preview: "Claim your reward before this limited offer expires.",
+    body: "This sample message demonstrates the Spam folder.",
+    receivedAt: "2026-08-16T10:35:00.000Z",
+    unread: true,
+    starred: false,
+  },
+  {
+    id: "m9",
+    folder: "promotions",
+    from: "Rukny Offers",
+    fromEmail: "offers@rukny.io",
+    to: MOCK_USER.email,
+    subject: "Save on your next workspace",
+    preview: "A seasonal offer selected for your team.",
+    body: "This sample newsletter was automatically categorized as Promotions.",
+    receivedAt: "2026-08-15T13:10:00.000Z",
+    unread: true,
+    starred: false,
+  },
+  {
+    id: "m10",
+    folder: "social",
+    from: "LinkedIn",
+    fromEmail: "notifications@updates.linkedin.com",
+    to: MOCK_USER.email,
+    subject: "You have a new connection request",
+    preview: "A new person wants to connect with you.",
+    body: "This notification was automatically categorized as Social.",
+    receivedAt: "2026-08-15T09:45:00.000Z",
+    unread: true,
+    starred: false,
+  },
+  {
+    id: "m7",
+    folder: "archive",
+    from: "Rukny Accounts",
+    fromEmail: "accounts@rukny.io",
+    to: MOCK_USER.email,
+    subject: "Your profile was updated",
+    preview: "The changes to your account profile were saved successfully.",
+    body: "Hi Sara,\n\nYour profile changes were saved successfully.",
+    receivedAt: "2026-08-14T08:20:00.000Z",
+    unread: false,
+    starred: false,
+  },
+  {
+    id: "m8",
+    folder: "trash",
+    from: "Old Newsletter",
+    fromEmail: "news@example.org",
+    to: MOCK_USER.email,
+    subject: "July product news",
+    preview: "A deleted newsletter retained in Trash.",
+    body: "This message is in Trash and can be permanently deleted.",
+    receivedAt: "2026-07-28T16:00:00.000Z",
     unread: false,
     starred: false,
   },

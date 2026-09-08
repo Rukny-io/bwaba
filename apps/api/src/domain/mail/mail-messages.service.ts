@@ -461,6 +461,8 @@ export class MailMessagesService {
       TRASH: 0,
       SPAM: 0,
       ARCHIVE: 0,
+      PROMOTIONS: 0,
+      SOCIAL: 0,
     };
     for (const row of byFolder) {
       folderCounts[row.folder] = row._count._all;
@@ -473,6 +475,8 @@ export class MailMessagesService {
       trash: folderCounts.TRASH,
       spam: folderCounts.SPAM,
       archive: folderCounts.ARCHIVE,
+      promotions: folderCounts.PROMOTIONS,
+      social: folderCounts.SOCIAL,
       starred,
     };
   }

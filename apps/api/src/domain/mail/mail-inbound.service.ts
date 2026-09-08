@@ -27,12 +27,26 @@ import {
   incrementMailboxStorage,
   utf8StorageBytes,
 } from './mail-storage.util';
+import {
+  classifyInboundMail,
+  type SesVerdict,
+} from './mail-message-classifier';
 
 type SesReceiptAction = {
   type?: string;
   bucketName?: string;
   objectKeyPrefix?: string;
   objectKey?: string;
+};
+
+type SesReceipt = {
+  action?: SesReceiptAction;
+  recipients?: string[];
+  spamVerdict?: SesVerdict;
+  virusVerdict?: SesVerdict;
+  spfVerdict?: SesVerdict;
+  dkimVerdict?: SesVerdict;
+  dmarcVerdict?: SesVerdict;
 };
 
 type SesReceivedNotification = {
@@ -48,10 +62,7 @@ type SesReceivedNotification = {
       messageId?: string;
     };
   };
-  receipt?: {
-    action?: SesReceiptAction;
-    recipients?: string[];
-  };
+  receipt?: SesReceipt;
 };
 
 @Injectable()
@@ -309,6 +320,7 @@ export class MailInboundService {
       parsed,
       rawS3Key: key,
       sesMessageId: notification.mail?.messageId || null,
+      receipt: notification.receipt,
       destinations: [
         ...(notification.receipt?.recipients || []),
         ...(notification.mail?.destination || []),
@@ -347,6 +359,7 @@ export class MailInboundService {
           parsed,
           rawS3Key: trimmed,
           sesMessageId: null,
+          receipt: undefined,
           destinations: [
             ...this.addressesFrom(parsed.to),
             ...this.headerAddresses(parsed, 'delivered-to'),
@@ -415,6 +428,7 @@ export class MailInboundService {
     parsed: ParsedMail;
     rawS3Key: string;
     sesMessageId: string | null;
+    receipt?: SesReceipt;
     destinations: string[];
   }) {
     const toFromParsed = this.addressesFrom(input.parsed.to);
@@ -458,6 +472,19 @@ export class MailInboundService {
       this.addressesFrom(input.parsed.from)[0] ||
       'unknown@unknown';
     const fromName = this.firstName(input.parsed.from);
+    const folder = classifyInboundMail({
+      fromAddress,
+      spamVerdict: input.receipt?.spamVerdict,
+      virusVerdict: input.receipt?.virusVerdict,
+      spfVerdict: input.receipt?.spfVerdict,
+      dkimVerdict: input.receipt?.dkimVerdict,
+      dmarcVerdict: input.receipt?.dmarcVerdict,
+      precedence: this.headerString(input.parsed, 'precedence'),
+      listId: this.headerString(input.parsed, 'list-id'),
+      listUnsubscribe: this.headerString(input.parsed, 'list-unsubscribe'),
+      xSpamFlag: this.headerString(input.parsed, 'x-spam-flag'),
+      xSpamStatus: this.headerString(input.parsed, 'x-spam-status'),
+    });
     const bodyText =
       typeof input.parsed.text === 'string' ? input.parsed.text : null;
     const bodyHtml =
@@ -490,7 +517,7 @@ export class MailInboundService {
           messageId,
           inReplyTo,
           direction: MailMessageDirection.INBOUND,
-          folder: MailMessageFolder.INBOX,
+          folder,
           status: MailMessageStatus.RECEIVED,
           fromAddress,
           fromName,
@@ -519,50 +546,52 @@ export class MailInboundService {
           type: 'mail.changed',
           appId: mailbox.mailApp.appId,
           mailboxId: mailbox.id,
-          folder: MailMessageFolder.INBOX,
+          folder,
           messageId: created.id,
           direction: 'INBOUND',
         });
-        void this.autoReply
-          .maybeReply({
-            mailboxId: mailbox.id,
-            fromAddress,
-            inboundMessageId: messageId,
-            autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
-            precedence: this.headerString(input.parsed, 'precedence'),
-            listId: this.headerString(input.parsed, 'list-id'),
-            autoResponseSuppress: this.headerString(
-              input.parsed,
-              'x-auto-response-suppress',
-            ),
-          })
-          .catch((error) => {
-            this.logger.warn(
-              `Auto-reply failed mailbox=${mailbox.id}: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            );
-          });
-        void this.forwarder
-          .maybeForward({
-            mailboxId: mailbox.id,
-            fromAddress,
-            inboundRecordId: created.id,
-            inboundMessageId: messageId,
-            subject: created.subject,
-            bodyText,
-            bodyHtml,
-            autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
-            precedence: this.headerString(input.parsed, 'precedence'),
-            listId: this.headerString(input.parsed, 'list-id'),
-          })
-          .catch((error) => {
-            this.logger.warn(
-              `Forward failed mailbox=${mailbox.id}: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            );
-          });
+        if (folder !== MailMessageFolder.SPAM) {
+          void this.autoReply
+            .maybeReply({
+              mailboxId: mailbox.id,
+              fromAddress,
+              inboundMessageId: messageId,
+              autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
+              precedence: this.headerString(input.parsed, 'precedence'),
+              listId: this.headerString(input.parsed, 'list-id'),
+              autoResponseSuppress: this.headerString(
+                input.parsed,
+                'x-auto-response-suppress',
+              ),
+            })
+            .catch((error) => {
+              this.logger.warn(
+                `Auto-reply failed mailbox=${mailbox.id}: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              );
+            });
+          void this.forwarder
+            .maybeForward({
+              mailboxId: mailbox.id,
+              fromAddress,
+              inboundRecordId: created.id,
+              inboundMessageId: messageId,
+              subject: created.subject,
+              bodyText,
+              bodyHtml,
+              autoSubmitted: this.headerString(input.parsed, 'auto-submitted'),
+              precedence: this.headerString(input.parsed, 'precedence'),
+              listId: this.headerString(input.parsed, 'list-id'),
+            })
+            .catch((error) => {
+              this.logger.warn(
+                `Forward failed mailbox=${mailbox.id}: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              );
+            });
+        }
         return created;
       });
   }

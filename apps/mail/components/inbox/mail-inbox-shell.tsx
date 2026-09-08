@@ -46,17 +46,84 @@ import {
   type MailMessageView,
 } from "@/lib/mail-messages-client";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
+import { MOCK_MESSAGES, MOCK_USER } from "@/lib/mock-mail";
 
 const FOLDER_TO_API: Partial<Record<InboxFolderId, MailMessageFolderApi>> = {
   inbox: "INBOX",
   sent: "SENT",
   drafts: "DRAFTS",
+  promotions: "PROMOTIONS",
+  social: "SOCIAL",
   spam: "SPAM",
   archive: "ARCHIVE",
   trash: "TRASH",
 };
 
 const INBOX_PAGE_SIZE = 15;
+const DEMO_APP_ID = "demo-app";
+const DEMO_MAILBOX_ID = "demo-mailbox";
+const DEMO_MAILBOX: MailMailboxView = {
+  id: DEMO_MAILBOX_ID,
+  appId: DEMO_APP_ID,
+  localPart: "sara",
+  domain: "rukny.demo",
+  address: MOCK_USER.email,
+  displayName: MOCK_USER.name,
+  avatarUrl: null,
+  hasPassword: true,
+  totpEnabled: false,
+  storageUsedBytes: 0,
+  status: "ACTIVE",
+  createdAt: "2026-08-01T08:00:00.000Z",
+  updatedAt: "2026-08-19T15:40:00.000Z",
+};
+
+function demoRows(folder: InboxFolderId): InboxMessageRow[] {
+  const folderMap = {
+    inbox: "INBOX",
+    sent: "SENT",
+    drafts: "DRAFTS",
+    promotions: "PROMOTIONS",
+    social: "SOCIAL",
+    spam: "SPAM",
+    archive: "ARCHIVE",
+    trash: "TRASH",
+  } as const;
+  return MOCK_MESSAGES.filter((message) =>
+    folder === "starred"
+      ? message.starred
+      : message.folder === folder,
+  ).map((message) => ({
+    id: message.id,
+    from: message.from,
+    fromEmail: message.fromEmail,
+    to: message.to,
+    toList: [message.to],
+    subject: message.subject,
+    preview: message.preview,
+    body: message.body,
+    bodyHtml: message.bodyHtml ?? null,
+    receivedAt: message.receivedAt,
+    unread: message.unread,
+    starred: message.starred,
+    folder: folderMap[message.folder as keyof typeof folderMap],
+  }));
+}
+
+function demoCounts(): Record<InboxFolderId, number> {
+  return {
+    inbox: MOCK_MESSAGES.filter((message) => message.folder === "inbox" && message.unread).length,
+    starred: MOCK_MESSAGES.filter((message) => message.starred).length,
+    scheduled: 0,
+    sent: MOCK_MESSAGES.filter((message) => message.folder === "sent").length,
+    drafts: MOCK_MESSAGES.filter((message) => message.folder === "drafts").length,
+    promotions: MOCK_MESSAGES.filter((message) => message.folder === "promotions").length,
+    social: MOCK_MESSAGES.filter((message) => message.folder === "social").length,
+    spam: MOCK_MESSAGES.filter((message) => message.folder === "spam").length,
+    archive: MOCK_MESSAGES.filter((message) => message.folder === "archive").length,
+    trash: MOCK_MESSAGES.filter((message) => message.folder === "trash").length,
+  };
+}
 
 function displayName(msg: MailMessageView) {
   return msg.fromName?.trim() || msg.from?.name?.trim() || msg.fromAddress;
@@ -103,6 +170,8 @@ function emptyCounts(): Record<InboxFolderId, number> {
     scheduled: 0,
     sent: 0,
     drafts: 0,
+    promotions: 0,
+    social: 0,
     spam: 0,
     archive: 0,
     trash: 0,
@@ -116,6 +185,8 @@ function mapCounts(c: MailFolderCounts): Record<InboxFolderId, number> {
     scheduled: 0,
     sent: c.sent,
     drafts: c.drafts,
+    promotions: c.promotions,
+    social: c.social,
     spam: c.spam,
     archive: c.archive,
     trash: c.trash,
@@ -133,16 +204,18 @@ function replyTarget(message: InboxMessageRow, mailboxAddress: string | null) {
   return message.fromEmail;
 }
 
-export function MailInboxShell() {
+export function MailInboxShell({ demo = false }: { demo?: boolean }) {
   const pathname = usePathname();
   const slot = parseMailSlot(pathname);
-  const appHref = withMailSlot("/app", slot);
-  const settingsHref = withMailSlot("/settings", slot);
+  const appHref = demo ? "/inbox/demo" : withMailSlot("/app", slot);
+  const settingsHref = demo ? "/inbox/demo" : withMailSlot("/settings", slot);
 
-  const [appId, setAppId] = useState<string | null>(null);
-  const [mailboxes, setMailboxes] = useState<MailMailboxView[]>([]);
+  const [appId, setAppId] = useState<string | null>(demo ? DEMO_APP_ID : null);
+  const [mailboxes, setMailboxes] = useState<MailMailboxView[]>(
+    demo ? [DEMO_MAILBOX] : [],
+  );
   const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(
-    null,
+    demo ? DEMO_MAILBOX_ID : null,
   );
   const [switchingMailbox, setSwitchingMailbox] = useState(false);
   const [loginPreferredId, setLoginPreferredId] = useState<string | null>(null);
@@ -150,12 +223,14 @@ export function MailInboxShell() {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null,
   );
-  const [messages, setMessages] = useState<InboxMessageRow[]>([]);
+  const [messages, setMessages] = useState<InboxMessageRow[]>(
+    demo ? demoRows("inbox") : [],
+  );
   const [counts, setCounts] = useState<Record<InboxFolderId, number>>(
-    emptyCounts,
+    demo ? demoCounts : emptyCounts,
   );
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!demo);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -183,6 +258,10 @@ export function MailInboxShell() {
 
   const loadCounts = useCallback(
     async (id: string, mailboxId: string | null) => {
+      if (demo) {
+        setCounts(demoCounts());
+        return;
+      }
       try {
         const next = await getMailMessageCounts(id, mailboxId ?? undefined);
         setCounts(mapCounts(next));
@@ -190,7 +269,7 @@ export function MailInboxShell() {
         /* keep previous counts */
       }
     },
-    [],
+    [demo],
   );
 
   const loadMessages = useCallback(
@@ -206,6 +285,11 @@ export function MailInboxShell() {
       }
       if (folderId === "scheduled") {
         setMessages([]);
+        return;
+      }
+      if (demo) {
+        setMessages(demoRows(folderId));
+        setError("");
         return;
       }
       if (!opts?.quiet) setMessagesLoading(true);
@@ -240,10 +324,11 @@ export function MailInboxShell() {
         if (!opts?.quiet) setMessagesLoading(false);
       }
     },
-    [],
+    [demo],
   );
 
   useEffect(() => {
+    if (demo) return;
     let cancelled = false;
     (async () => {
       const id = readMailAppIdFromDocument();
@@ -304,7 +389,7 @@ export function MailInboxShell() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [demo]);
 
   useEffect(() => {
     if (!appId || !selectedMailboxId) {
@@ -318,7 +403,7 @@ export function MailInboxShell() {
 
   // Instant updates via SSE (no polling interval).
   useEffect(() => {
-    if (!appId || !selectedMailboxId) return;
+    if (demo || !appId || !selectedMailboxId) return;
     const url = `/api/v1/mail/apps/${encodeURIComponent(appId)}/messages/stream`;
     const source = new EventSource(url, { withCredentials: true });
 
@@ -358,11 +443,12 @@ export function MailInboxShell() {
     folder,
     loadMessages,
     loadCounts,
+    demo,
   ]);
 
   // Catch-up: if Inbox is empty but SES already wrote to S3, import once.
   useEffect(() => {
-    if (!appId || !selectedMailboxId || folder !== "inbox") return;
+    if (demo || !appId || !selectedMailboxId || folder !== "inbox") return;
     if (messagesLoading || messages.length > 0) return;
     let cancelled = false;
     const key = `rukny_mail_auto_import_${appId}_${selectedMailboxId}`;
@@ -396,6 +482,7 @@ export function MailInboxShell() {
     loadMessages,
     loadCounts,
     showToast,
+    demo,
   ]);
 
   const visibleMessages = useMemo(() => {
@@ -474,6 +561,11 @@ export function MailInboxShell() {
       setSendError("Select a mailbox first.");
       return;
     }
+    if (demo) {
+      setComposeOpen(false);
+      showToast("Demo inbox — messages are not sent");
+      return;
+    }
     setSending(true);
     setSendError("");
     try {
@@ -481,8 +573,10 @@ export function MailInboxShell() {
         mailboxId: selectedMailboxId,
         to: parseEmails(draft.to),
         cc: draft.cc ? parseEmails(draft.cc) : undefined,
+        bcc: draft.bcc ? parseEmails(draft.bcc) : undefined,
         subject: draft.subject,
         bodyText: draft.body,
+        bodyHtml: draft.bodyHtml,
         replyToMessageId: draft.replyToMessageId,
       });
       setComposeOpen(false);
@@ -505,6 +599,12 @@ export function MailInboxShell() {
 
   async function handleRefresh() {
     if (!appId || !selectedMailboxId) return;
+    if (demo) {
+      setMessages(demoRows(folder));
+      setCounts(demoCounts());
+      showToast("Demo inbox refreshed");
+      return;
+    }
     setRefreshing(true);
     try {
       await Promise.all([
@@ -519,6 +619,10 @@ export function MailInboxShell() {
 
   async function handleImportInbound() {
     if (!appId || !selectedMailboxId) return;
+    if (demo) {
+      showToast("Demo inbox uses sample messages");
+      return;
+    }
     setImporting(true);
     try {
       const result = await importInboundMailMessages(appId, 40);
@@ -552,7 +656,7 @@ export function MailInboxShell() {
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, unread: false } : m)),
     );
-    if (!appId) return;
+    if (demo || !appId) return;
     try {
       const full = await getMailMessage(appId, id);
       const row = toRow(full);
@@ -569,6 +673,10 @@ export function MailInboxShell() {
     setMessages((prev) =>
       prev.map((m) => (m.id === message.id ? { ...m, starred: next } : m)),
     );
+    if (demo) {
+      showToast("Updated for this demo session");
+      return;
+    }
     try {
       await updateMailMessage(appId, message.id, { isStarred: next });
       await loadCounts(appId, selectedMailboxId);
@@ -593,10 +701,44 @@ export function MailInboxShell() {
     }
   }
 
+  async function onArchive(message: InboxMessageRow) {
+    const target = "ARCHIVE";
+    if (!appId || message.folder === target) return;
+    const label = "Archive";
+    if (demo) {
+      setMessages((prev) => prev.filter((item) => item.id !== message.id));
+      setSelectedMessageId(null);
+      setMobileShowReader(false);
+      showToast(`Moved to ${label} in this demo session`);
+      return;
+    }
+    try {
+      await updateMailMessage(appId, message.id, { folder: target });
+      setMessages((prev) => prev.filter((item) => item.id !== message.id));
+      setSelectedMessageId(null);
+      setMobileShowReader(false);
+      await loadCounts(appId, selectedMailboxId);
+      showToast(`Moved to ${label}`);
+    } catch (err) {
+      if (err instanceof MailboxLockedError) {
+        setSelectedMailboxId(null);
+        return;
+      }
+      showToast(err instanceof Error ? err.message : `Could not move to ${label}.`);
+    }
+  }
+
   async function onTrash(message: InboxMessageRow) {
     if (!appId) return;
     const permanently =
       folder === "trash" || message.folder === "TRASH";
+    if (demo) {
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      setSelectedMessageId(null);
+      setMobileShowReader(false);
+      showToast(permanently ? "Removed from demo" : "Moved in this demo session");
+      return;
+    }
     try {
       if (permanently) {
         await deleteMailMessage(appId, message.id);
@@ -632,6 +774,11 @@ export function MailInboxShell() {
       showToast("No reply recipient.");
       return;
     }
+    if (demo) {
+      setReplyBody("");
+      showToast("Demo inbox — replies are not sent");
+      return;
+    }
     setReplySending(true);
     try {
       const subject = message.subject.startsWith("Re:")
@@ -659,6 +806,10 @@ export function MailInboxShell() {
   }
 
   async function handleLockMailbox() {
+    if (demo) {
+      showToast("Mailbox locking is disabled in the demo");
+      return;
+    }
     if (!appId) {
       setSelectedMailboxId(null);
       return;
@@ -775,7 +926,7 @@ export function MailInboxShell() {
     >
       <header
         className={cn(
-          "relative z-20 flex shrink-0 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5",
+          "relative z-20 flex shrink-0 items-center gap-2 border-b border-[var(--separator)] px-3 py-2.5 sm:gap-3 sm:px-4",
           mobileShowReader && selectedMessage ? "max-md:hidden" : "",
         )}
       >
@@ -797,7 +948,7 @@ export function MailInboxShell() {
         </Link>
 
         {/* Desktop / large tablet search */}
-        <label className="mx-auto hidden h-11 w-full max-w-xl items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-4 transition-[box-shadow] focus-within:shadow-[0_0_0_3px_var(--brand-blue-soft)] md:flex">
+        <label className="mx-auto hidden h-10 w-full max-w-xl items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 transition-[box-shadow] focus-within:shadow-[0_0_0_3px_var(--brand-blue-soft)] md:flex">
           <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
           <input
             value={search}
@@ -889,7 +1040,7 @@ export function MailInboxShell() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-0 overflow-hidden px-0 pb-0 md:gap-3 md:px-3 md:pb-3 lg:gap-4 lg:px-4 lg:pb-4">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="hidden h-full shrink-0 lg:flex">
           <MailInboxSidebar
             folder={folder}
@@ -932,6 +1083,8 @@ export function MailInboxShell() {
                   "starred",
                   "sent",
                   "drafts",
+                  "promotions",
+                  "social",
                   "spam",
                   "archive",
                   "trash",
@@ -982,11 +1135,10 @@ export function MailInboxShell() {
 
           <div
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden dark:bg-[var(--surface-secondary)]",
+              "flex min-h-0 min-w-0 flex-1 overflow-hidden bg-white dark:bg-[var(--background)]",
               mobileShowReader && selectedMessage
                 ? "max-md:mx-0 max-md:mb-0 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:pt-[max(0.75rem,env(safe-area-inset-top))]"
-                : "mx-3 mb-3 rounded-2xl bg-[#eef0f3] p-2",
-              "md:mx-0 md:mb-0 md:rounded-2xl md:bg-[#eef0f3] md:p-2 lg:gap-2.5 lg:p-2.5",
+                : "",
             )}
           >
             <div
@@ -1054,6 +1206,11 @@ export function MailInboxShell() {
                 onToggleStar={() =>
                   selectedMessage
                     ? void onToggleStar(selectedMessage)
+                    : undefined
+                }
+                onArchive={() =>
+                  selectedMessage
+                    ? void onArchive(selectedMessage)
                     : undefined
                 }
                 onTrash={() =>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Camera, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
+import { ArrowRight, Camera, Check, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
 import { Checkbox, cn, Dropdown, Input, Label, TextField } from "@heroui/react";
 import type { MailDomainSetup } from "@/lib/mail-domain";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
@@ -268,6 +268,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const seatsLeft = Math.max(0, seatLimit - activeCount);
   const storageQuotaBytes = subscription?.storageQuotaBytesPerMailbox ?? 0;
   const canCreate = Boolean(appId && subscription && activeCount < seatLimit);
+  const hasActivePlan = Boolean(subscription);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -545,13 +546,15 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
           >
             Switch app
           </Link>
-          <button
-            type="button"
-            onClick={() => router.push(mailInboxHref(slot))}
-            className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none"
-          >
-            Open Mail
-          </button>
+          {loadingBoxes || mailboxes.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => router.push(mailInboxHref(slot))}
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none"
+            >
+              Open Mail
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -560,112 +563,109 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         aria-label="Email plan"
         className="min-w-0 rounded-2xl bg-[var(--surface)] p-4 sm:p-6"
       >
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
-              {setup.domain}
-            </h2>
-            <div className="mt-2 space-y-0.5 text-[14px] leading-relaxed">
-              <p className="text-[var(--muted-foreground)]">
-                Expires at:{" "}
-                <span className="text-[var(--foreground)]">
-                  {loadingSub ? "…" : formatDate(subscription?.renewsAt)}
-                </span>
-              </p>
-              <p className="break-words text-[var(--muted-foreground)]">
-                Email plan:{" "}
-                <span className="text-[var(--foreground)]">
-                  {loadingSub ? "…" : planDisplayName(subscription)}
-                </span>
+        {!loadingSub && !hasActivePlan ? (
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
+                {setup.domain}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                Choose a plan to start using email.
               </p>
             </div>
-          </div>
-
-          <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:shrink-0">
-            <button
-              type="button"
-              onClick={() => setLimitsOpen((open) => !open)}
-              className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:flex-none"
-              aria-expanded={limitsOpen}
-            >
-              View limits
-              <ChevronDown
-                className={cn("size-4 transition-transform", limitsOpen && "rotate-180")}
-                aria-hidden
-              />
-            </button>
             <Link
               href="/pricing"
-              className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none sm:rounded-lg"
+              className="inline-flex h-10 w-full shrink-0 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:w-auto sm:rounded-lg"
             >
-              Upgrade
+              Choose a plan
             </Link>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
+                  {setup.domain}
+                </h2>
+                <div className="mt-2 space-y-0.5 text-[14px] leading-relaxed">
+                  <p className="text-[var(--muted-foreground)]">
+                    Expires at:{" "}
+                    <span className="text-[var(--foreground)]">
+                      {loadingSub ? "…" : formatDate(subscription?.renewsAt)}
+                    </span>
+                  </p>
+                  <p className="break-words text-[var(--muted-foreground)]">
+                    Email plan:{" "}
+                    <span className="text-[var(--foreground)]">
+                      {loadingSub ? "…" : planDisplayName(subscription)}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setLimitsOpen((open) => !open)}
+                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:flex-none"
+                  aria-expanded={limitsOpen}
+                >
+                  View limits
+                  <ChevronDown
+                    className={cn("size-4 transition-transform", limitsOpen && "rotate-180")}
+                    aria-hidden
+                  />
+                </button>
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none sm:rounded-lg"
+                >
+                  Manage plan
+                </Link>
+              </div>
+            </div>
 
-        {limitsOpen ? (
-          <div className="mt-4 pt-4">
-            {!limits ? (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                {loadingSub
-                  ? "Loading plan limits…"
-                  : pendingRequest
-                    ? `Plan request pending (${pendingRequest.ticketNumber}). An admin will activate this workspace.`
-                    : "Starter starts after domain DNS is verified. Paid plans are requested from Pricing."}
-              </p>
-            ) : (
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Mailboxes</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {activeCount} / {seatLimit || limits.mailboxesIncluded}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Storage</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {limits.storageGbPerMailbox} GB for emails
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Forwarding rules</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {limits.forwardingRules}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {formatMailAliasLimit(limits.emailAliases)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Automatic replies</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {limits.automaticReplies ? "On" : "Off"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--muted-foreground)]">Open / link tracking</dt>
-                  <dd className="font-medium text-[var(--foreground)]">
-                    {limits.openTracking ? "Open" : "—"}
-                    {limits.linkAndFileTracking ? " · links & files" : ""}
-                  </dd>
-                </div>
-              </dl>
-            )}
-            <p className="mt-3 text-xs text-[var(--muted-foreground)]">
-              Domain DNS settings live on{" "}
-              <Link
-                href={href("/domain")}
-                className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-              >
-                Domain settings
-              </Link>
-              .
-            </p>
-          </div>
-        ) : null}
+            {limitsOpen && limits ? (
+              <div className="mt-4 pt-4">
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-[var(--muted-foreground)]">Mailboxes</dt>
+                    <dd className="font-medium text-[var(--foreground)]">
+                      {activeCount} / {seatLimit || limits.mailboxesIncluded}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--muted-foreground)]">Storage</dt>
+                    <dd className="font-medium text-[var(--foreground)]">
+                      {limits.storageGbPerMailbox} GB for emails
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--muted-foreground)]">Forwarding rules</dt>
+                    <dd className="font-medium text-[var(--foreground)]">
+                      {limits.forwardingRules}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
+                    <dd className="font-medium text-[var(--foreground)]">
+                      {formatMailAliasLimit(limits.emailAliases)}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs text-[var(--muted-foreground)]">
+                  Domain DNS settings live on{" "}
+                  <Link
+                    href={href("/domain")}
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    Domain settings
+                  </Link>
+                  .
+                </p>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Hostinger-style manage mailboxes card on desktop; stacked cards on phone */}
@@ -673,25 +673,41 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:flex-row md:items-center md:justify-between md:rounded-none md:bg-transparent md:p-0 md:px-6 md:py-4">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-[var(--foreground)]">
-              Manage mailboxes
+              {hasActivePlan ? "Manage mailboxes" : "Set up your email"}
             </h2>
             <p className="mt-0.5 break-words text-sm text-[var(--muted-foreground)]">
-              Mailboxes left:{" "}
-              <span className="font-medium text-[var(--foreground)]">
-                {loadingSub || loadingBoxes
-                  ? "…"
-                  : `${Math.max(0, seatsLeft)}/${seatLimit || "—"}`}
-              </span>
-              {" · "}
-              <Link
-                href="/pricing"
-                className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-              >
-                Buy more mailboxes
-              </Link>
+              {hasActivePlan ? (
+                <>
+                  Mailboxes left:{" "}
+                  <span className="font-medium text-[var(--foreground)]">
+                    {loadingSub || loadingBoxes
+                      ? "…"
+                      : `${Math.max(0, seatsLeft)}/${seatLimit || "—"}`}
+                  </span>
+                  {" · "}
+                  <Link
+                    href="/pricing"
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    Buy more mailboxes
+                  </Link>
+                </>
+              ) : (
+                "Complete these steps to create your first address."
+              )}
             </p>
           </div>
-          {createButton}
+          {hasActivePlan ? (
+            createButton
+          ) : (
+            <Link
+              href="/pricing"
+              className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1.5 self-start rounded-lg bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)]"
+            >
+              Choose a plan
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+          )}
         </div>
 
         {error ? (
@@ -812,16 +828,73 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             Loading mailboxes…
           </div>
         ) : mailboxes.length === 0 ? (
-          <div className="mt-3 rounded-2xl bg-[var(--surface)] px-5 py-12 text-center md:mt-0 md:rounded-none md:px-6">
-            <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
-              <Inbox className="size-5" aria-hidden />
+          hasActivePlan ? (
+            <div className="mt-3 rounded-2xl bg-[var(--surface)] px-5 py-12 text-center md:mt-0 md:rounded-none md:px-6">
+              <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+                <Inbox className="size-5" aria-hidden />
+              </div>
+              <p className="mt-3 text-sm font-medium text-[var(--foreground)]">
+                Create your first mailbox
+              </p>
+              <p className="mt-1 break-words text-sm text-[var(--muted-foreground)]">
+                Give your team an address on{" "}
+                <span className="font-medium text-[var(--foreground)]">{setup.domain}</span>.
+              </p>
+              <button
+                type="button"
+                disabled={!canCreate}
+                onClick={() => {
+                  setError("");
+                  setCreateOpen(true);
+                }}
+                className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--foreground)] px-3 text-[13px] font-semibold text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus className="size-3.5" aria-hidden />
+                Create mailbox
+              </button>
             </div>
-            <p className="mt-3 text-sm font-medium text-[var(--foreground)]">No mailboxes yet</p>
-            <p className="mt-1 break-words text-sm text-[var(--muted-foreground)]">
-              Create your first address on{" "}
-              <span className="font-medium text-[var(--foreground)]">{setup.domain}</span>.
-            </p>
-          </div>
+          ) : (
+            <div className="mt-3 rounded-2xl bg-[var(--surface)] px-5 py-7 md:mt-0 md:rounded-none md:px-6">
+              <div className="mx-auto max-w-lg text-left">
+                <div className="flex size-11 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+                  <Inbox className="size-5" aria-hidden />
+                </div>
+                <h3 className="mt-4 text-base font-semibold text-[var(--foreground)]">
+                  Start with your email plan
+                </h3>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  Your domain is ready to connect. Select a plan, publish its DNS records,
+                  then create addresses for your team.
+                </p>
+                <ol className="mt-6 space-y-3">
+                  <li className="flex items-start gap-3 text-sm">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)]">1</span>
+                    <div>
+                      <p className="font-medium text-[var(--foreground)]">Choose an email plan</p>
+                      <Link href="/pricing" className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
+                        View plans and request access
+                      </Link>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3 text-sm">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">2</span>
+                    <div>
+                      <p className="font-medium text-[var(--foreground)]">Configure domain DNS</p>
+                      <Link href={href("/domain")} className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
+                        Open domain settings
+                      </Link>
+                    </div>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
+                      <Check className="size-3" aria-hidden />
+                    </span>
+                    Create your first mailbox
+                  </li>
+                </ol>
+              </div>
+            </div>
+          )
         ) : (
           <>
             <ul className="mt-3 flex flex-col gap-3 md:hidden">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  Archive,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -32,6 +33,7 @@ type Props = {
   onReply?: () => void;
   onForward?: () => void;
   onToggleStar?: () => void;
+  onArchive?: () => void;
   onTrash?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
@@ -77,6 +79,7 @@ export function MailInboxReaderCard({
   onReply,
   onForward,
   onToggleStar,
+  onArchive,
   onTrash,
   onPrev,
   onNext,
@@ -87,7 +90,8 @@ export function MailInboxReaderCard({
   const messageId = message?.id ?? null;
 
   useEffect(() => {
-    setReplyOpen(false);
+    const frame = window.requestAnimationFrame(() => setReplyOpen(false));
+    return () => window.cancelAnimationFrame(frame);
   }, [messageId]);
 
   useEffect(() => {
@@ -103,7 +107,7 @@ export function MailInboxReaderCard({
 
   if (!message) {
     return (
-      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/70 lg:flex dark:bg-[var(--surface)]/70">
+      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white lg:flex dark:bg-[var(--surface)]">
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]">
             <MailOpen className="size-6" strokeWidth={1.75} />
@@ -148,12 +152,12 @@ export function MailInboxReaderCard({
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-[inbox-fade_220ms_ease-out]",
         "max-md:rounded-none max-md:bg-transparent max-md:shadow-none",
-        "md:rounded-2xl md:bg-white md:shadow-[0_1px_0_rgba(15,23,42,0.03)] dark:md:bg-[var(--surface)]",
+        "md:bg-white dark:md:bg-[var(--surface)]",
       )}
     >
       {/* Mobile: liquid-glass toolbar */}
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-2 pt-1 md:hidden">
-        <div className="mail-inbox-toolbar-glass inline-flex min-w-0 max-w-[70%] items-center gap-0.5 p-1">
+        <div className="mail-inbox-toolbar-glass inline-flex min-w-0 max-w-[45%] items-center gap-0.5 p-1">
           <button
             type="button"
             onClick={onBack}
@@ -195,6 +199,16 @@ export function MailInboxReaderCard({
               }
             />
           </button>
+          {message.folder !== "ARCHIVE" ? (
+            <button
+              type="button"
+              onClick={onArchive}
+              className={glassBtn}
+              aria-label="Archive"
+            >
+              <Archive className="size-4" />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onTrash}
@@ -242,6 +256,11 @@ export function MailInboxReaderCard({
               }
             />
           </IconBtn>
+          {message.folder !== "ARCHIVE" ? (
+            <IconBtn label="Archive" onClick={onArchive}>
+              <Archive className="size-4" />
+            </IconBtn>
+          ) : null}
           <IconBtn label="Delete" onClick={onTrash}>
             <Trash2 className="size-4" />
           </IconBtn>
@@ -264,11 +283,20 @@ export function MailInboxReaderCard({
         </div>
 
         <div className="mt-5 md:mt-6">
-          <MailHtmlBody html={message.bodyHtml} text={message.body || message.preview} />
+          <MailHtmlBody
+            key={message.id}
+            html={message.bodyHtml}
+            text={message.body || message.preview}
+          />
         </div>
       </div>
 
-      <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3 md:pb-3 md:pt-2.5">
+      <div
+        className={cn(
+          "shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3",
+          replyOpen ? "md:pb-3 md:pt-2.5" : "md:h-[49px] md:py-0",
+        )}
+      >
         {replyOpen ? (
           <div className="mb-2.5 rounded-2xl bg-white/90 p-3.5 backdrop-blur-sm sm:p-4 md:bg-[var(--surface-secondary)] md:backdrop-blur-none dark:bg-[var(--surface)]/90 dark:md:bg-[var(--surface-secondary)]">
             <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -320,11 +348,16 @@ export function MailInboxReaderCard({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between px-1 pt-0.5 text-xs font-medium text-[var(--muted-foreground)]">
+        <div
+          className={cn(
+            "flex items-center justify-between px-1 pt-0.5 text-xs font-medium text-[var(--muted-foreground)] md:pt-0",
+            !replyOpen && "h-full",
+          )}
+        >
           <button
             type="button"
             onClick={() => setReplyOpen(true)}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] md:min-h-8 dark:hover:bg-white/10"
           >
             <CornerUpLeft className="size-3.5" />
             Reply
@@ -355,7 +388,7 @@ export function MailInboxReaderCard({
           <button
             type="button"
             onClick={onForward}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] md:min-h-8 dark:hover:bg-white/10"
           >
             Forward
             <CornerUpRight className="size-3.5" />

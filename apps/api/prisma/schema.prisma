@@ -3642,6 +3642,8 @@ enum MailMessageFolder {
   TRASH
   SPAM
   ARCHIVE
+  PROMOTIONS
+  SOCIAL
 }
 
 enum MailMessageStatus {

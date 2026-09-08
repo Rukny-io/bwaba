@@ -32,6 +32,7 @@ export function isMailMarketingPath(pathname: string): boolean {
     pathname === "/" ||
     pathname === "/getting-started" ||
     pathname.startsWith("/getting-started/") ||
+    pathname === "/inbox/demo" ||
     pathname === "/faqs" ||
     pathname.startsWith("/faqs/") ||
     pathname === "/tutorials" ||

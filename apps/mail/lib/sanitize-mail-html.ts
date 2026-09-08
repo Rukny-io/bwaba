@@ -67,7 +67,7 @@ function stripEventHandlers(el: Element) {
   }
 }
 
-function walkAndSanitize(root: ParentNode) {
+function walkAndSanitize(root: ParentNode, allowRemoteImages: boolean) {
   const nodes = [...root.querySelectorAll("*")];
   for (const el of nodes) {
     const tag = el.tagName.toLowerCase();
@@ -84,10 +84,21 @@ function walkAndSanitize(root: ParentNode) {
       el.setAttribute("rel", "noopener noreferrer");
     }
     stripEventHandlers(el);
+    if (
+      tag === "img" &&
+      !allowRemoteImages &&
+      /^https?:/i.test(el.getAttribute("src")?.trim() ?? "")
+    ) {
+      el.removeAttribute("src");
+      el.setAttribute("data-remote-image-blocked", "true");
+    }
   }
 }
 
-function extractParts(raw: string): { styles: string; body: string } {
+function extractParts(
+  raw: string,
+  allowRemoteImages: boolean,
+): { styles: string; body: string } {
   const parser = new DOMParser();
   const looksFull = /<html[\s>]|<body[\s>]/i.test(raw);
   const doc = parser.parseFromString(
@@ -104,7 +115,7 @@ function extractParts(raw: string): { styles: string; body: string } {
   }
 
   const bodySource = doc.body ?? doc;
-  walkAndSanitize(bodySource);
+  walkAndSanitize(bodySource, allowRemoteImages);
 
   const root = doc.getElementById("rukny-mail-root");
   const body = (root ?? bodySource).innerHTML;
@@ -117,18 +128,34 @@ const MAIL_CLIENT_BASE_CSS = `
     padding: 0;
     background: #ffffff;
   }
+  body {
+    color: #172026;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
   img { max-width: 100%; height: auto; }
+  img[data-remote-image-blocked="true"] { display: none !important; }
+  table { max-width: 100%; }
+  pre { max-width: 100%; overflow-wrap: break-word; white-space: pre-wrap; }
 `;
 
 /** Isolated HTML document so message CSS cannot leak into the Mail app chrome. */
-export function buildSandboxedMailDocument(rawHtml: string): string {
-  const { styles, body } = extractParts(rawHtml);
+export function buildSandboxedMailDocument(
+  rawHtml: string,
+  options: { allowRemoteImages?: boolean } = {},
+): string {
+  const allowRemoteImages = options.allowRemoteImages === true;
+  const { styles, body } = extractParts(rawHtml, allowRemoteImages);
+  const imageSources = allowRemoteImages
+    ? "img-src data: blob: cid: https: http:;"
+    : "img-src data: blob: cid:;";
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=800">
-<meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; ${imageSources} style-src 'unsafe-inline'; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
 <base target="_blank">
 <style>${MAIL_CLIENT_BASE_CSS}</style>
 ${styles.trim() ? `<style>${styles}</style>` : ""}

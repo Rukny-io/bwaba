@@ -39,8 +39,7 @@ export class MailDomainVerificationController {
   @Post('bimi/logo')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
-    summary:
-      'Upload an SVG logo as base64 JSON and normalize it to BIMI Tiny PS',
+    summary: 'Upload a raster or SVG logo and convert it to BIMI Tiny PS',
   })
   uploadBimiLogo(
     @CurrentUser() user: AuthenticatedUser,
@@ -61,7 +60,7 @@ export class MailDomainVerificationController {
     }
     if (buffer.length > BIMI_MAX_UPLOAD_BYTES) {
       throw new BadRequestException(
-        'SVG must be no larger than 256KB before conversion.',
+        'Logo must be no larger than 2MB before conversion.',
       );
     }
 

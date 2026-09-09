@@ -6,11 +6,11 @@ import {
   AlertCircle,
   Check,
   Circle,
+  Copy,
   Image as ImageIcon,
   RefreshCw,
   Upload,
 } from "lucide-react";
-import { DnsRecordsTable } from "@/components/app/dns-records-table";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
   buildBimiDnsRecord,
@@ -23,7 +23,15 @@ import {
   uploadBimiLogo,
 } from "@/lib/mail-domain-verification-client";
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const MAX_SOURCE_SVG_BYTES = 256 * 1024;
+const LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".svg"];
+const LOGO_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+]);
 
 function ReadinessItem({
   complete,
@@ -35,7 +43,7 @@ function ReadinessItem({
   detail: string;
 }) {
   return (
-    <li className="flex gap-3 rounded-xl border border-[var(--border)]/70 px-3.5 py-3">
+    <li className="flex gap-3 py-2">
       <span
         className={cn(
           "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
@@ -52,7 +60,9 @@ function ReadinessItem({
         )}
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-[var(--foreground)]">{title}</p>
+        <p className="text-sm font-semibold text-[var(--foreground)]">
+          {title}
+        </p>
         <p className="mt-0.5 text-xs leading-5 text-[var(--muted-foreground)]">
           {detail}
         </p>
@@ -72,6 +82,7 @@ export function MailBimiSetupPanel({
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<"upload" | "recheck" | null>(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const appId = readMailAppIdFromDocument();
@@ -149,14 +160,22 @@ export function MailBimiSetupPanel({
     const appId = readMailAppIdFromDocument();
     event.target.value = "";
     if (!file || !appId) return;
-    if (
-      !file.name.toLowerCase().endsWith(".svg") &&
-      file.type !== "image/svg+xml"
-    ) {
-      setError("Choose an SVG file.");
+    const lowerName = file.name.toLowerCase();
+    const isSupported =
+      LOGO_EXTENSIONS.some((extension) => lowerName.endsWith(extension)) ||
+      LOGO_MIME_TYPES.has(file.type);
+    if (!isSupported) {
+      setError("Choose a PNG, JPG, WebP, or SVG logo.");
       return;
     }
-    if (file.size > MAX_SOURCE_SVG_BYTES) {
+    if (file.size > MAX_LOGO_BYTES) {
+      setError("The logo must be 2MB or smaller.");
+      return;
+    }
+    if (
+      (lowerName.endsWith(".svg") || file.type === "image/svg+xml") &&
+      file.size > MAX_SOURCE_SVG_BYTES
+    ) {
       setError("The source SVG must be 256KB or smaller.");
       return;
     }
@@ -176,6 +195,15 @@ export function MailBimiSetupPanel({
     }
   }
 
+  async function copy(id: string, value: string) {
+    await navigator.clipboard.writeText(value);
+    setCopied(id);
+    window.setTimeout(
+      () => setCopied((current) => (current === id ? null : current)),
+      1200,
+    );
+  }
+
   const completed = status
     ? [
         domainActive,
@@ -187,10 +215,10 @@ export function MailBimiSetupPanel({
 
   return (
     <section
-      className="overflow-hidden rounded-2xl bg-[var(--surface)]"
+      className="rounded-2xl bg-[var(--surface)] p-4 md:p-6"
       aria-labelledby="bimi-setup-title"
     >
-      <div className="border-b border-[var(--border)]/70 p-4 md:px-6 md:py-5">
+      <div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -211,21 +239,18 @@ export function MailBimiSetupPanel({
               ) : null}
             </div>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
-              Host a standards-ready logo and publish one DNS record for{" "}
-              {domain}. Display remains controlled by each mailbox provider.
+              Upload your normal logo. Rukny converts and hosts a BIMI-ready
+              version, then gives you the DNS values for {domain}.
             </p>
           </div>
           <button
             type="button"
             onClick={() => void recheck()}
             disabled={loading || action !== null}
-            className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--foreground)]/5 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--foreground)]/5 px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--foreground)]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             <RefreshCw
-              className={cn(
-                "size-3.5",
-                action === "recheck" && "animate-spin",
-              )}
+              className={cn("size-3.5", action === "recheck" && "animate-spin")}
               aria-hidden
             />
             {action === "recheck" ? "Checking…" : "Check status"}
@@ -244,17 +269,17 @@ export function MailBimiSetupPanel({
 
       {loading ? (
         <div
-          className="flex min-h-44 items-center justify-center gap-2 p-6 text-sm text-[var(--muted-foreground)]"
+          className="flex min-h-44 items-center justify-center gap-2 pt-6 text-sm text-[var(--muted-foreground)]"
           role="status"
         >
           <RefreshCw className="size-4 animate-spin" aria-hidden />
           Loading BIMI setup…
         </div>
       ) : status ? (
-        <div className="grid gap-6 p-4 md:p-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(360px,1.15fr)]">
-          <div className="min-w-0 space-y-5">
+        <div className="mt-7 grid gap-8 xl:grid-cols-[minmax(0,0.85fr)_minmax(360px,1.15fr)]">
+          <div className="min-w-0 space-y-7">
             <div className="grid gap-4 sm:grid-cols-[132px_minmax(0,1fr)]">
-              <div className="flex aspect-square w-full max-w-[132px] items-center justify-center overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
+              <div className="flex aspect-square w-full max-w-[132px] items-center justify-center overflow-hidden rounded-2xl bg-[var(--foreground)]/5">
                 {status.logoUploaded ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -272,11 +297,11 @@ export function MailBimiSetupPanel({
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-[var(--foreground)]">
-                  Upload your logo
+                  Convert and install your logo
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">
-                  Use a square SVG up to 256KB. Rukny removes unsupported
-                  metadata and validates a final SVG Tiny PS file under 32KB.
+                  PNG, JPG, or WebP up to 2MB, or SVG up to 256KB. Raster logos
+                  are automatically prepared as a one-color BIMI file.
                 </p>
                 <label
                   className={cn(
@@ -286,19 +311,19 @@ export function MailBimiSetupPanel({
                 >
                   <Upload className="size-3.5" aria-hidden />
                   {action === "upload"
-                    ? "Uploading…"
+                    ? "Converting…"
                     : status.logoUploaded
-                      ? "Replace SVG"
-                      : "Upload SVG"}
+                      ? "Replace logo"
+                      : "Upload logo"}
                   <input
                     className="sr-only"
                     type="file"
-                    accept="image/svg+xml,.svg"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
                     disabled={action !== null}
                     aria-label={
                       status.logoUploaded
-                        ? "Replace BIMI SVG logo"
-                        : "Upload BIMI SVG logo"
+                        ? "Replace BIMI logo"
+                        : "Upload logo for BIMI conversion"
                     }
                     onChange={(event) => void upload(event)}
                   />
@@ -315,7 +340,7 @@ export function MailBimiSetupPanel({
                   {completed}/4 complete
                 </span>
               </div>
-              <ol className="mt-3 grid gap-2">
+              <ol className="mt-2 grid">
                 <ReadinessItem
                   complete={domainActive}
                   title="Domain and SES active"
@@ -336,11 +361,11 @@ export function MailBimiSetupPanel({
                 />
                 <ReadinessItem
                   complete={status.logoUploaded}
-                  title="SVG logo hosted"
+                  title="BIMI logo converted and hosted"
                   detail={
                     status.logoUploaded
                       ? "The public HTTPS logo is available."
-                      : "Upload a safe square SVG logo."
+                      : "Upload your logo and Rukny will prepare it."
                   }
                 />
                 <ReadinessItem
@@ -363,17 +388,70 @@ export function MailBimiSetupPanel({
             <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">
               Copy these values exactly. DNS updates can take time to propagate.
             </p>
-            <div className="mt-3">
-              <DnsRecordsTable
-                domain={status.domain}
-                records={records}
-                showStatus
-              />
+            <div className="mt-4 grid gap-3">
+              {records.map((record) => (
+                <div
+                  key={record.id}
+                  className="rounded-xl bg-[var(--foreground)]/5 p-3.5"
+                >
+                  <div className="mb-2.5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          record.status === "verified"
+                            ? "bg-[var(--success)]"
+                            : "bg-[var(--muted-foreground)]/35",
+                        )}
+                        aria-hidden
+                      />
+                      <span className="text-xs font-semibold text-[var(--foreground)]">
+                        {record.purpose}
+                      </span>
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wide text-[var(--muted-foreground)]">
+                      {record.type}
+                    </span>
+                  </div>
+
+                  {[
+                    { key: "host", label: "Host", value: record.host },
+                    { key: "value", label: "Value", value: record.value },
+                  ].map((field) => {
+                    const copyId = `${record.id}-${field.key}`;
+                    return (
+                      <div
+                        key={field.key}
+                        className="grid grid-cols-[3.5rem_minmax(0,1fr)_2rem] items-start gap-2 py-1"
+                      >
+                        <span className="pt-1 text-[11px] text-[var(--muted-foreground)]">
+                          {field.label}
+                        </span>
+                        <span className="break-all font-mono text-xs leading-5 text-[var(--foreground)]">
+                          {field.value}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void copy(copyId, field.value)}
+                          className="flex size-8 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--foreground)]/10 hover:text-[var(--foreground)]"
+                          aria-label={`Copy ${field.label.toLowerCase()}`}
+                        >
+                          {copied === copyId ? (
+                            <Check className="size-3.5" aria-hidden />
+                          ) : (
+                            <Copy className="size-3.5" aria-hidden />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-6 text-sm text-[var(--muted-foreground)]">
+        <div className="pt-6 text-sm text-[var(--muted-foreground)]">
           BIMI setup is unavailable right now. Refresh the page and try again.
         </div>
       )}

@@ -16,6 +16,7 @@ import {
 import { createHash, X509Certificate } from 'crypto';
 import { resolveTxt } from 'dns/promises';
 import { rootCertificates } from 'tls';
+import { trace } from '@pwa-manifest/potrace';
 import sharp from 'sharp';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
@@ -27,11 +28,12 @@ const POSITIVE_TTL_SECONDS = 24 * 60 * 60;
 const NEGATIVE_TTL_SECONDS = 60 * 60;
 const MAX_SVG_BYTES = 32 * 1024;
 const MAX_SVG_UPLOAD_BYTES = 256 * 1024;
+const MAX_RASTER_UPLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_CERT_BYTES = 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8_000;
 const BIMI_EKU_OID = '1.3.6.1.5.5.7.3.31';
 export const BIMI_MAX_SVG_BYTES = MAX_SVG_BYTES;
-export const BIMI_MAX_UPLOAD_BYTES = MAX_SVG_UPLOAD_BYTES;
+export const BIMI_MAX_UPLOAD_BYTES = MAX_RASTER_UPLOAD_BYTES;
 
 export type ParsedBimiRecord = {
   raw: string;
@@ -305,6 +307,65 @@ export function sanitizeBimiSvg(input: Buffer): string {
   return normalizeBimiSvg(input);
 }
 
+/** Convert a simple raster logo into real vector paths in a BIMI Tiny PS file. */
+export async function rasterLogoToBimiSvg(input: Buffer): Promise<string> {
+  if (!input.length || input.length > MAX_RASTER_UPLOAD_BYTES) {
+    throw new Error('PNG, JPG, or WebP logo must be 2MB or smaller.');
+  }
+
+  try {
+    const image = sharp(input, {
+      animated: false,
+      failOn: 'error',
+      limitInputPixels: 16_777_216,
+    });
+    const metadata = await image.metadata();
+    if (!['png', 'jpeg', 'webp'].includes(metadata.format || '')) {
+      throw new Error('Upload a PNG, JPG, WebP, or SVG logo.');
+    }
+
+    const { data, info } = await image
+      .rotate()
+      .flatten({ background: '#ffffff' })
+      .trim({ background: '#ffffff', threshold: 10 })
+      .resize(448, 448, {
+        fit: 'contain',
+        background: '#ffffff',
+        withoutEnlargement: false,
+      })
+      .extend({
+        top: 32,
+        bottom: 32,
+        left: 32,
+        right: 32,
+        background: '#ffffff',
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const traced = trace(data, info.width, info.height);
+    if (!/<path\b[^>]*\bd\s*=/i.test(traced)) {
+      throw new Error(
+        'The image has no visible logo. Use a dark logo on a light background.',
+      );
+    }
+    return normalizeBimiSvg(Buffer.from(traced, 'utf8'));
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (/^Upload a /.test(error.message) ||
+        /no visible logo/i.test(error.message) ||
+        /BIMI SVG/i.test(error.message))
+    ) {
+      throw error;
+    }
+    throw new Error(
+      'The logo could not be converted. Use a clear PNG, JPG, or WebP with a simple high-contrast mark.',
+    );
+  }
+}
+
 export type MailBimiLogoUpload = {
   buffer: Buffer;
   size?: number;
@@ -399,11 +460,11 @@ export class MailBimiService {
       throw new BadRequestException('No logo file was received. Try again.');
     }
     if (
-      buffer.length > MAX_SVG_UPLOAD_BYTES ||
-      (file.size ?? 0) > MAX_SVG_UPLOAD_BYTES
+      buffer.length > MAX_RASTER_UPLOAD_BYTES ||
+      (file.size ?? 0) > MAX_RASTER_UPLOAD_BYTES
     ) {
       throw new BadRequestException(
-        'SVG must be no larger than 256KB before conversion.',
+        'Logo must be no larger than 2MB before conversion.',
       );
     }
 
@@ -415,13 +476,20 @@ export class MailBimiService {
       mime === 'image/svg' ||
       mime === 'text/xml' ||
       mime === 'application/xml';
-    if (!isSvg || isLikelyBinaryImage(buffer)) {
-      throw new BadRequestException('Upload an SVG logo file.');
-    }
-
     let svg: string;
     try {
-      svg = sanitizeBimiSvg(buffer);
+      if (isSvg && !isLikelyBinaryImage(buffer)) {
+        if (buffer.length > MAX_SVG_UPLOAD_BYTES) {
+          throw new Error(
+            'SVG must be no larger than 256KB before conversion.',
+          );
+        }
+        svg = sanitizeBimiSvg(buffer);
+      } else if (isLikelyBinaryImage(buffer)) {
+        svg = await rasterLogoToBimiSvg(buffer);
+      } else {
+        throw new Error('Upload a PNG, JPG, WebP, or SVG logo.');
+      }
     } catch (error) {
       throw new BadRequestException(
         error instanceof Error ? error.message : 'Invalid BIMI logo document.',

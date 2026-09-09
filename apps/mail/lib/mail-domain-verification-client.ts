@@ -1,6 +1,16 @@
 import { sessionFetch } from "@/lib/api-client";
 import type { MailBimiSetupStatus } from "@/lib/mail-domain";
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_SVG_BYTES = 256 * 1024;
+const LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".svg"];
+const LOGO_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+]);
+
 async function parse<T>(response: Response): Promise<T> {
   const data = (await response.json().catch(() => ({}))) as T & {
     message?: string | string[];
@@ -33,13 +43,20 @@ export async function uploadBimiLogo(appId: string, file: File) {
   if (!file.size) {
     throw new Error("Selected file is empty.");
   }
-  if (
-    !file.name.toLowerCase().endsWith(".svg") &&
-    file.type !== "image/svg+xml"
-  ) {
-    throw new Error("Choose an SVG file.");
+  const lowerName = file.name.toLowerCase();
+  const isSupported =
+    LOGO_EXTENSIONS.some((extension) => lowerName.endsWith(extension)) ||
+    LOGO_MIME_TYPES.has(file.type);
+  if (!isSupported) {
+    throw new Error("Choose a PNG, JPG, WebP, or SVG logo.");
   }
-  if (file.size > 256 * 1024) {
+  if (file.size > MAX_LOGO_BYTES) {
+    throw new Error("The logo must be 2MB or smaller.");
+  }
+  if (
+    (lowerName.endsWith(".svg") || file.type === "image/svg+xml") &&
+    file.size > MAX_SVG_BYTES
+  ) {
     throw new Error("The source SVG must be 256KB or smaller.");
   }
   const contentBase64 = await fileToBase64(file);

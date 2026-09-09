@@ -16,16 +16,10 @@ export type MailDomainTrustStatus =
   | 'VERIFIED'
   | 'REJECTED'
   | 'REVOKED';
-export type MailDomainVerificationRequestStatus =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'WITHDRAWN';
 
 export type MailWorkspaceTab =
   | 'analytics'
   | 'domains'
-  | 'verification'
   | 'review'
   | 'delivery'
   | 'alerts';
@@ -64,54 +58,6 @@ export interface AdminMailApp {
   storageQuotaBytes: number;
   owner: AdminMailOwner;
   subscription: AdminMailSubscriptionSummary | null;
-}
-
-export interface MailDomainVerificationRequest {
-  id: string;
-  mailAppId: string;
-  requestedById: string;
-  domain: string;
-  status: MailDomainVerificationRequestStatus;
-  evidence: Record<string, unknown> | null;
-  reviewedById: string | null;
-  reviewedAt: string | null;
-  rejectionReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-  mailApp: {
-    id: string;
-    appId: string;
-    name: string;
-    primaryDomain: string | null;
-    domainStatus: MailDomainStatus;
-    domainCheckedAt: string | null;
-    domainTrustStatus: MailDomainTrustStatus;
-    domainVerifiedAt: string | null;
-    domainTrustReason: string | null;
-    user: {
-      id: string;
-      email: string;
-      profile: { name: string | null; username: string | null; avatar: string | null } | null;
-    };
-  };
-  requestedBy: {
-    id: string;
-    email: string;
-    profile: { name: string | null; username: string | null; avatar: string | null } | null;
-  };
-  reviewedBy: {
-    id: string;
-    email: string;
-    profile: { name: string | null; username: string | null; avatar: string | null } | null;
-  } | null;
-}
-
-export interface MailDomainVerificationListResponse {
-  data: MailDomainVerificationRequest[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 }
 
 export interface MailAppsListResponse {

@@ -28,7 +28,7 @@ export class MailPublicController {
     if (!body) throw new NotFoundException('BIMI logo not found.');
     response.set({
       'Content-Type': format === 'svg' ? 'image/svg+xml' : 'image/webp',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
       'X-Content-Type-Options': 'nosniff',
       'Content-Disposition': 'inline',
     });

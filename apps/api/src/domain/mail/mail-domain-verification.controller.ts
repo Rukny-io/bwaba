@@ -40,7 +40,7 @@ export class MailDomainVerificationController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary:
-      'Upload a square PNG/JPEG/WebP/SVG logo as base64 JSON and convert it to BIMI Tiny PS',
+      'Upload an SVG logo as base64 JSON and normalize it to BIMI Tiny PS',
   })
   uploadBimiLogo(
     @CurrentUser() user: AuthenticatedUser,
@@ -60,14 +60,16 @@ export class MailDomainVerificationController {
       throw new BadRequestException('No logo file was received. Try again.');
     }
     if (buffer.length > BIMI_MAX_UPLOAD_BYTES) {
-      throw new BadRequestException('Logo must be no larger than 2MB.');
+      throw new BadRequestException(
+        'SVG must be no larger than 256KB before conversion.',
+      );
     }
 
     return this.bimi.uploadCustomerLogo(user.id, appId, {
       buffer,
       size: buffer.length,
       mimetype: dto.mimeType || 'application/octet-stream',
-      originalname: dto.fileName || 'logo.png',
+      originalname: dto.fileName || 'logo.svg',
     });
   }
 
@@ -80,10 +82,7 @@ export class MailDomainVerificationController {
   }
 
   @Get()
-  list(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('appId') appId: string,
-  ) {
+  list(@CurrentUser() user: AuthenticatedUser, @Param('appId') appId: string) {
     return this.verification.listForOwner(user.id, appId);
   }
 

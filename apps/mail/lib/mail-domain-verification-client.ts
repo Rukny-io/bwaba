@@ -1,28 +1,6 @@
 import { sessionFetch } from "@/lib/api-client";
 import type { MailBimiSetupStatus } from "@/lib/mail-domain";
 
-export type MailDomainTrustStatus =
-  | "UNVERIFIED"
-  | "PENDING"
-  | "VERIFIED"
-  | "REJECTED"
-  | "REVOKED";
-
-export type MailDomainVerificationRequest = {
-  id: string;
-  domain: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
-  rejectionReason: string | null;
-  reviewedAt: string | null;
-  createdAt: string;
-  mailApp: {
-    domainStatus: "NONE" | "PENDING_DNS" | "VERIFYING" | "ACTIVE" | "FAILED";
-    domainTrustStatus: MailDomainTrustStatus;
-    domainVerifiedAt: string | null;
-    domainTrustReason: string | null;
-  };
-};
-
 async function parse<T>(response: Response): Promise<T> {
   const data = (await response.json().catch(() => ({}))) as T & {
     message?: string | string[];
@@ -44,21 +22,6 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export async function listDomainVerificationRequests(appId: string) {
-  const response = await sessionFetch(
-    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification`,
-  );
-  return parse<{ requests: MailDomainVerificationRequest[] }>(response);
-}
-
-export async function requestDomainVerification(appId: string) {
-  const response = await sessionFetch(
-    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification`,
-    { method: "POST" },
-  );
-  return parse<{ request: MailDomainVerificationRequest }>(response);
-}
-
 export async function getBimiSetupStatus(appId: string) {
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi`,
@@ -70,6 +33,15 @@ export async function uploadBimiLogo(appId: string, file: File) {
   if (!file.size) {
     throw new Error("Selected file is empty.");
   }
+  if (
+    !file.name.toLowerCase().endsWith(".svg") &&
+    file.type !== "image/svg+xml"
+  ) {
+    throw new Error("Choose an SVG file.");
+  }
+  if (file.size > 256 * 1024) {
+    throw new Error("The source SVG must be 256KB or smaller.");
+  }
   const contentBase64 = await fileToBase64(file);
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/logo`,
@@ -78,7 +50,7 @@ export async function uploadBimiLogo(appId: string, file: File) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contentBase64,
-        fileName: file.name || "logo.png",
+        fileName: file.name || "logo.svg",
         mimeType: file.type || "application/octet-stream",
       }),
     },

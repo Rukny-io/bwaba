@@ -11,7 +11,7 @@ export class UploadMailBimiLogoDto {
   /** Base64 or data-URL encoded logo bytes. */
   @IsString()
   @MinLength(8)
-  @MaxLength(4_000_000)
+  @MaxLength(400_000)
   contentBase64: string;
 
   @IsOptional()

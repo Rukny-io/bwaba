@@ -5,7 +5,6 @@ export const MAIL_DEFAULT_LIMIT = 10;
 const TABS: MailWorkspaceTab[] = [
   "analytics",
   "domains",
-  "verification",
   "review",
   "delivery",
   "alerts",

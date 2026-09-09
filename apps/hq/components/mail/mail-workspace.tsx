@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  BadgeCheck,
   BarChart3,
   Globe,
   Inbox,
@@ -40,15 +39,10 @@ import { MailAppsTable } from "@/components/mail/mail-apps-table";
 import { MailDeliveryTable } from "@/components/mail/mail-delivery-table";
 import { MailDomainsPanel } from "@/components/mail/mail-domains-panel";
 import { MailAlertsPanel } from "@/components/mail/mail-alerts-panel";
-import { MailDomainVerificationQueue } from "@/components/mail/mail-domain-verification-queue";
-import { hqMailFeatureFlags } from "@/lib/mail-feature-flags";
 
 const TABS: { id: MailWorkspaceTab; label: string; icon: typeof Mail }[] = [
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "domains", label: "Domains", icon: Globe },
-  ...(hqMailFeatureFlags.ruknyVerification
-    ? [{ id: "verification" as const, label: "Verification", icon: BadgeCheck }]
-    : []),
   { id: "review", label: "Apps", icon: Inbox },
   { id: "delivery", label: "Delivery", icon: Mail },
   { id: "alerts", label: "Alerts", icon: TriangleAlert },
@@ -60,10 +54,7 @@ export function MailWorkspace() {
   const searchParams = useSearchParams();
   const queryKey = searchParams.toString();
   const query = parseMailQuery(searchParams);
-  const tab =
-    query.tab === "verification" && !hqMailFeatureFlags.ruknyVerification
-      ? "review"
-      : (query.tab ?? "review");
+  const tab = query.tab ?? "review";
 
   const [list, setList] = useState<MailAppsListResponse | null>(null);
   const [stats, setStats] = useState<MailStats | null>(null);
@@ -103,11 +94,7 @@ export function MailWorkspace() {
 
   const loadData = useCallback(async () => {
     const currentQuery = parseMailQuery(searchParams);
-    const currentTab =
-      currentQuery.tab === "verification" &&
-      !hqMailFeatureFlags.ruknyVerification
-        ? "review"
-        : (currentQuery.tab ?? "review");
+    const currentTab = currentQuery.tab ?? "review";
     setLoading(true);
     try {
       const [statsRes] = await Promise.all([hqApi.getMailStats()]);
@@ -276,10 +263,6 @@ export function MailWorkspace() {
 
       {tab === "domains" ? (
         <MailDomainsPanel data={domains} loading={loading} />
-      ) : null}
-
-      {tab === "verification" && hqMailFeatureFlags.ruknyVerification ? (
-        <MailDomainVerificationQueue />
       ) : null}
 
       {tab === "delivery" ? (

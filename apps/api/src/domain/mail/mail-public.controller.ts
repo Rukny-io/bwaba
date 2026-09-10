@@ -36,6 +36,24 @@ export class MailPublicController {
   }
 
   @Public()
+  @Get('bimi/:appId/authority.pem')
+  @ApiOperation({ summary: 'Stable public BIMI CMC/VMC certificate' })
+  async bimiAuthority(
+    @Param('appId') appId: string,
+    @Res() response: Response,
+  ) {
+    const body = await this.bimi.publicCustomerAuthority(appId);
+    if (!body) throw new NotFoundException('BIMI certificate not found.');
+    response.set({
+      'Content-Type': 'application/pem-certificate-chain',
+      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline; filename="authority.pem"',
+    });
+    return response.send(body);
+  }
+
+  @Public()
   @Get('stats')
   @ApiOperation({
     summary: 'Platform outbound send count for the marketing homepage',

@@ -1,12 +1,23 @@
 import { MAIL_SES } from "@/lib/ses";
 
-export type MailDomainStatus = "PENDING_DNS" | "VERIFYING" | "ACTIVE" | "FAILED";
+export type MailDomainStatus =
+  | "PENDING_DNS"
+  | "VERIFYING"
+  | "ACTIVE"
+  | "FAILED";
 
 export type DnsRecordStatus = "pending" | "checking" | "verified" | "failed";
 
 export type MailDnsRecord = {
   id: string;
-  purpose: "MX" | "SPF" | "DKIM" | "DMARC" | "BIMI" | "MAIL_FROM_MX" | "MAIL_FROM_SPF";
+  purpose:
+    | "MX"
+    | "SPF"
+    | "DKIM"
+    | "DMARC"
+    | "BIMI"
+    | "MAIL_FROM_MX"
+    | "MAIL_FROM_SPF";
   type: "MX" | "TXT" | "CNAME";
   host: string;
   value: string;
@@ -22,6 +33,8 @@ export type MailBimiSetupStatus = {
   logoUploaded: boolean;
   logoUrl: string;
   previewUrl: string;
+  certificateUploaded: boolean;
+  authorityUrl: string | null;
   dmarc: {
     status: "ENFORCED" | "NOT_ENFORCED" | "MISSING";
     policy: string | null;
@@ -62,13 +75,20 @@ export function normalizeDomain(raw: string): string {
 export function validateDomain(domain: string): string | null {
   if (!domain) return "Enter a domain you own.";
   if (domain.length > 253) return "Domain is too long.";
-  if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain)) {
+  if (
+    !/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
+      domain,
+    )
+  ) {
     return "Use a valid domain such as example.com.";
   }
   return null;
 }
 
-export function buildDnsRecords(domain: string, dkimTokens: string[] = []): MailDnsRecord[] {
+export function buildDnsRecords(
+  domain: string,
+  dkimTokens: string[] = [],
+): MailDnsRecord[] {
   const tokens = dkimTokens.filter(Boolean);
 
   return [
@@ -131,7 +151,10 @@ export function buildDnsRecords(domain: string, dkimTokens: string[] = []): Mail
   ];
 }
 
-export function createMailDomainSetup(domain: string, dkimTokens: string[] = []): MailDomainSetup {
+export function createMailDomainSetup(
+  domain: string,
+  dkimTokens: string[] = [],
+): MailDomainSetup {
   return {
     domain,
     mailFromHost: `mail.${domain}`,
@@ -146,10 +169,15 @@ export function createMailDomainSetup(domain: string, dkimTokens: string[] = [])
 /** Keep stored setups aligned with the latest DNS template (e.g. DMARC row). */
 export function syncMailDomainRecords(setup: MailDomainSetup): MailDomainSetup {
   const fromRecords = setup.records
-    .filter((record) => record.purpose === "DKIM" && record.host.includes("._domainkey"))
+    .filter(
+      (record) =>
+        record.purpose === "DKIM" && record.host.includes("._domainkey"),
+    )
     .map((record) => record.host.replace(/\._domainkey$/i, ""))
     .filter(Boolean);
-  const tokens = (setup.dkimTokens?.length ? setup.dkimTokens : fromRecords).filter(Boolean);
+  const tokens = (
+    setup.dkimTokens?.length ? setup.dkimTokens : fromRecords
+  ).filter(Boolean);
   const template = buildDnsRecords(setup.domain, tokens);
   const previous = new Map(setup.records.map((record) => [record.id, record]));
   return {
@@ -209,7 +237,9 @@ export function applyDnsCheckResults(
 }
 
 export function recordContent(record: MailDnsRecord): string {
-  return record.priority != null ? `${record.priority} ${record.value}` : record.value;
+  return record.priority != null
+    ? `${record.priority} ${record.value}`
+    : record.value;
 }
 
 export function recordsAsPlainText(records: MailDnsRecord[]): string {
@@ -231,7 +261,10 @@ function fqdnTarget(value: string): string {
 }
 
 /** BIND zone file for Cloudflare DNS → Import and Export (not CSV). */
-export function recordsAsZoneFile(domain: string, records: MailDnsRecord[]): string {
+export function recordsAsZoneFile(
+  domain: string,
+  records: MailDnsRecord[],
+): string {
   const lines = records.map((record) => {
     const name = fqdnName(record.host, domain);
     if (record.type === "MX") {

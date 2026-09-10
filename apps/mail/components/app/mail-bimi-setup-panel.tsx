@@ -9,6 +9,7 @@ import {
   Copy,
   Image as ImageIcon,
   RefreshCw,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
@@ -19,7 +20,10 @@ import {
   type MailDnsRecord,
 } from "@/lib/mail-domain";
 import {
+  deleteBimiAuthority,
+  deleteBimiLogo,
   getBimiSetupStatus,
+  uploadBimiAuthority,
   uploadBimiLogo,
 } from "@/lib/mail-domain-verification-client";
 
@@ -80,7 +84,9 @@ export function MailBimiSetupPanel({
 }) {
   const [status, setStatus] = useState<MailBimiSetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [action, setAction] = useState<"upload" | "recheck" | null>(null);
+  const [action, setAction] = useState<
+    "upload" | "delete" | "upload-cert" | "delete-cert" | "recheck" | null
+  >(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -129,7 +135,7 @@ export function MailBimiSetupPanel({
       status: status.dmarc.status === "ENFORCED" ? "verified" : "failed",
       hint: "BIMI requires quarantine or reject at pct=100.",
     };
-    const bimi = buildBimiDnsRecord(status.logoUrl);
+    const bimi = buildBimiDnsRecord(status.logoUrl, status.authorityUrl);
     bimi.status = status.bimi.status === "VERIFIED" ? "verified" : "failed";
     return [dmarc, bimi];
   }, [status]);
@@ -204,11 +210,85 @@ export function MailBimiSetupPanel({
     );
   }
 
+  async function removeLogo() {
+    const appId = readMailAppIdFromDocument();
+    if (!appId || !status?.logoUploaded) return;
+    if (
+      !window.confirm(
+        "Delete the current BIMI logo? Your DNS record will remain unchanged.",
+      )
+    ) {
+      return;
+    }
+
+    setAction("delete");
+    setError("");
+    try {
+      setStatus(await deleteBimiLogo(appId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Could not delete the BIMI logo.",
+      );
+    } finally {
+      setAction(null);
+    }
+  }
+
+  async function uploadCertificate(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    const appId = readMailAppIdFromDocument();
+    event.target.value = "";
+    if (!file || !appId) return;
+
+    setAction("upload-cert");
+    setError("");
+    try {
+      setStatus(await uploadBimiAuthority(appId, file));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload the CMC/VMC certificate.",
+      );
+    } finally {
+      setAction(null);
+    }
+  }
+
+  async function removeCertificate() {
+    const appId = readMailAppIdFromDocument();
+    if (!appId || !status?.certificateUploaded) return;
+    if (
+      !window.confirm(
+        "Delete the current CMC/VMC certificate? Update your BIMI DNS record afterward.",
+      )
+    ) {
+      return;
+    }
+
+    setAction("delete-cert");
+    setError("");
+    try {
+      setStatus(await deleteBimiAuthority(appId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Could not delete the certificate.",
+      );
+    } finally {
+      setAction(null);
+    }
+  }
+
   const completed = status
     ? [
         domainActive,
         status.dmarc.status === "ENFORCED",
         status.logoUploaded,
+        status.certificateUploaded,
         status.bimi.status === "VERIFIED",
       ].filter(Boolean).length
     : 0;
@@ -239,8 +319,8 @@ export function MailBimiSetupPanel({
               ) : null}
             </div>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
-              Upload your normal logo. Rukny converts and hosts a BIMI-ready
-              version, then gives you the DNS values for {domain}.
+              Upload your logo and CMC/VMC certificate. Rukny hosts both and
+              gives you the BIMI DNS values for {domain}.
             </p>
           </div>
           <button
@@ -303,32 +383,99 @@ export function MailBimiSetupPanel({
                   PNG, JPG, or WebP up to 2MB, or SVG up to 256KB. Raster logos
                   are automatically prepared as a one-color BIMI file.
                 </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <label
+                    className={cn(
+                      "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] sm:w-auto",
+                      action !== null && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <Upload className="size-3.5" aria-hidden />
+                    {action === "upload"
+                      ? "Converting…"
+                      : status.logoUploaded
+                        ? "Replace logo"
+                        : "Upload logo"}
+                    <input
+                      className="sr-only"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
+                      disabled={action !== null}
+                      aria-label={
+                        status.logoUploaded
+                          ? "Replace BIMI logo"
+                          : "Upload logo for BIMI conversion"
+                      }
+                      onChange={(event) => void upload(event)}
+                    />
+                  </label>
+                  {status.logoUploaded ? (
+                    <button
+                      type="button"
+                      onClick={() => void removeLogo()}
+                      disabled={action !== null}
+                      className="inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-[var(--danger)] transition-colors hover:bg-[var(--danger)]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                      {action === "delete" ? "Deleting…" : "Delete"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
+                CMC / VMC certificate
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">
+                Upload the PEM chain from your certificate authority. Rukny
+                hosts it and adds the <span className="font-mono">a=</span> URL
+                to your BIMI DNS record.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <label
                   className={cn(
-                    "mt-3 inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] sm:w-auto",
+                    "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] sm:w-auto",
                     action !== null && "cursor-not-allowed opacity-50",
                   )}
                 >
                   <Upload className="size-3.5" aria-hidden />
-                  {action === "upload"
-                    ? "Converting…"
-                    : status.logoUploaded
-                      ? "Replace logo"
-                      : "Upload logo"}
+                  {action === "upload-cert"
+                    ? "Uploading…"
+                    : status.certificateUploaded
+                      ? "Replace certificate"
+                      : "Upload certificate"}
                   <input
                     className="sr-only"
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
+                    accept=".pem,.crt,.cer,application/pem-certificate-chain,application/x-pem-file,application/x-x509-ca-cert,text/plain"
                     disabled={action !== null}
                     aria-label={
-                      status.logoUploaded
-                        ? "Replace BIMI logo"
-                        : "Upload logo for BIMI conversion"
+                      status.certificateUploaded
+                        ? "Replace CMC/VMC certificate"
+                        : "Upload CMC/VMC certificate"
                     }
-                    onChange={(event) => void upload(event)}
+                    onChange={(event) => void uploadCertificate(event)}
                   />
                 </label>
+                {status.certificateUploaded ? (
+                  <button
+                    type="button"
+                    onClick={() => void removeCertificate()}
+                    disabled={action !== null}
+                    className="inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-[var(--danger)] transition-colors hover:bg-[var(--danger)]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 className="size-3.5" aria-hidden />
+                    {action === "delete-cert" ? "Deleting…" : "Delete"}
+                  </button>
+                ) : null}
               </div>
+              {status.certificateUploaded && status.authorityUrl ? (
+                <p className="mt-2 break-all font-mono text-[11px] leading-5 text-[var(--muted-foreground)]">
+                  {status.authorityUrl}
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -337,7 +484,7 @@ export function MailBimiSetupPanel({
                   Readiness
                 </h3>
                 <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
-                  {completed}/4 complete
+                  {completed}/5 complete
                 </span>
               </div>
               <ol className="mt-2 grid">
@@ -369,11 +516,20 @@ export function MailBimiSetupPanel({
                   }
                 />
                 <ReadinessItem
+                  complete={status.certificateUploaded}
+                  title="CMC / VMC certificate hosted"
+                  detail={
+                    status.certificateUploaded
+                      ? "The public HTTPS authority certificate is available."
+                      : "Upload your PEM certificate to enable the verified mark."
+                  }
+                />
+                <ReadinessItem
                   complete={status.bimi.status === "VERIFIED"}
                   title="BIMI record published"
                   detail={
                     status.bimi.status === "VERIFIED"
-                      ? "The public DNS record matches this logo."
+                      ? "The public DNS record matches this logo and certificate."
                       : "Copy the BIMI value, publish it, then check again."
                   }
                 />

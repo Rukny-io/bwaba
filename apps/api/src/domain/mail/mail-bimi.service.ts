@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -34,6 +35,7 @@ const FETCH_TIMEOUT_MS = 8_000;
 const BIMI_EKU_OID = '1.3.6.1.5.5.7.3.31';
 export const BIMI_MAX_SVG_BYTES = MAX_SVG_BYTES;
 export const BIMI_MAX_UPLOAD_BYTES = MAX_RASTER_UPLOAD_BYTES;
+export const BIMI_MAX_CERT_BYTES = MAX_CERT_BYTES;
 
 export type ParsedBimiRecord = {
   raw: string;
@@ -524,6 +526,99 @@ export class MailBimiService {
     return this.buildSetupStatus(publicAppId, domain);
   }
 
+  async deleteCustomerLogo(userId: string, publicAppId: string) {
+    this.flags.requireOutboundBimi();
+    const app = await this.requireOwnedApp(userId, publicAppId);
+    const domain = normalizeSenderDomain(app.primaryDomain || '');
+    if (!domain) {
+      throw new BadRequestException(
+        'Connect a valid domain before deleting a BIMI logo.',
+      );
+    }
+
+    const bucket = this.s3.getDefaultBucket();
+    const prefix = this.customerLogoPrefix(publicAppId);
+    const deleted = await Promise.all([
+      this.s3.deleteObject(bucket, `${prefix}/logo.svg`),
+      this.s3.deleteObject(bucket, `${prefix}/logo.webp`),
+    ]);
+    if (deleted.some((result) => !result)) {
+      throw new ServiceUnavailableException(
+        'The BIMI logo could not be deleted. Try again.',
+      );
+    }
+
+    return this.buildSetupStatus(publicAppId, domain);
+  }
+
+  async uploadCustomerAuthority(
+    userId: string,
+    publicAppId: string,
+    file: MailBimiLogoUpload,
+  ) {
+    this.flags.requireOutboundBimi();
+    const app = await this.requireOwnedApp(userId, publicAppId);
+    const domain = normalizeSenderDomain(app.primaryDomain || '');
+    if (!domain) {
+      throw new BadRequestException(
+        'Connect a valid domain before uploading a BIMI certificate.',
+      );
+    }
+
+    const buffer = readUploadBuffer(file);
+    if (!buffer.length) {
+      throw new BadRequestException(
+        'No certificate file was received. Try again.',
+      );
+    }
+    if (buffer.length > MAX_CERT_BYTES || (file.size ?? 0) > MAX_CERT_BYTES) {
+      throw new BadRequestException(
+        'CMC/VMC certificate must be no larger than 1MB.',
+      );
+    }
+
+    let pem: string;
+    try {
+      pem = normalizeAuthorityPem(buffer, domain);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Invalid CMC/VMC certificate.',
+      );
+    }
+
+    await this.s3.uploadBuffer(
+      this.s3.getDefaultBucket(),
+      `${this.customerLogoPrefix(publicAppId)}/authority.pem`,
+      Buffer.from(pem, 'utf8'),
+      'application/pem-certificate-chain',
+    );
+
+    return this.buildSetupStatus(publicAppId, domain);
+  }
+
+  async deleteCustomerAuthority(userId: string, publicAppId: string) {
+    this.flags.requireOutboundBimi();
+    const app = await this.requireOwnedApp(userId, publicAppId);
+    const domain = normalizeSenderDomain(app.primaryDomain || '');
+    if (!domain) {
+      throw new BadRequestException(
+        'Connect a valid domain before deleting a BIMI certificate.',
+      );
+    }
+
+    const deleted = await this.s3.deleteObject(
+      this.s3.getDefaultBucket(),
+      `${this.customerLogoPrefix(publicAppId)}/authority.pem`,
+    );
+    if (!deleted) {
+      throw new ServiceUnavailableException(
+        'The BIMI certificate could not be deleted. Try again.',
+      );
+    }
+
+    return this.buildSetupStatus(publicAppId, domain);
+  }
+
   async publicCustomerLogo(
     publicAppId: string,
     format: 'svg' | 'webp',
@@ -536,19 +631,38 @@ export class MailBimiService {
     );
   }
 
+  async publicCustomerAuthority(publicAppId: string): Promise<Buffer | null> {
+    if (!this.flags.outboundBimi()) return null;
+    if (!/^\d{16}$/.test(publicAppId)) return null;
+    return this.s3.getObject(
+      this.s3.getDefaultBucket(),
+      `${this.customerLogoPrefix(publicAppId)}/authority.pem`,
+    );
+  }
+
   private async buildSetupStatus(publicAppId: string, domain: string) {
-    const [dmarcRecords, bimiRecords, logoUploaded] = await Promise.all([
-      this.txtRecords(`_dmarc.${domain}`),
-      this.txtRecords(`default._bimi.${domain}`),
-      this.s3.objectExists(
-        this.s3.getDefaultBucket(),
-        `${this.customerLogoPrefix(publicAppId)}/logo.svg`,
-      ),
-    ]);
+    const prefix = this.customerLogoPrefix(publicAppId);
+    const bucket = this.s3.getDefaultBucket();
+    const [dmarcRecords, bimiRecords, logoUploaded, certificateUploaded] =
+      await Promise.all([
+        this.txtRecords(`_dmarc.${domain}`),
+        this.txtRecords(`default._bimi.${domain}`),
+        this.s3.objectExists(bucket, `${prefix}/logo.svg`),
+        this.s3.objectExists(bucket, `${prefix}/authority.pem`),
+      ]);
     const dmarc = parseDmarcRecord(dmarcRecords);
     const bimi = parseBimiRecord(bimiRecords);
     const logoUrl = this.customerLogoUrl(publicAppId, 'svg');
-    const expectedRecord = `v=BIMI1; l=${logoUrl};`;
+    const authorityUrl = certificateUploaded
+      ? this.customerAuthorityUrl(publicAppId)
+      : null;
+    const expectedRecord = authorityUrl
+      ? `v=BIMI1; l=${logoUrl}; a=${authorityUrl};`
+      : `v=BIMI1; l=${logoUrl};`;
+    const logoMatches = Boolean(bimi && bimi.logoUrl === logoUrl);
+    const authorityMatches =
+      !authorityUrl || bimi?.authorityUrl === authorityUrl;
+    const recordVerified = logoMatches && authorityMatches;
     return {
       domain,
       selector: 'default',
@@ -556,6 +670,8 @@ export class MailBimiService {
       logoUploaded,
       logoUrl,
       previewUrl: this.customerLogoUrl(publicAppId, 'webp'),
+      certificateUploaded,
+      authorityUrl,
       dmarc: {
         status: dmarc?.enforced
           ? 'ENFORCED'
@@ -569,7 +685,7 @@ export class MailBimiService {
       },
       bimi: {
         status: bimi
-          ? bimi.logoUrl === logoUrl
+          ? recordVerified
             ? 'VERIFIED'
             : 'MISMATCH'
           : bimiRecords.length
@@ -579,9 +695,7 @@ export class MailBimiService {
         observedRecord: bimi?.raw || bimiRecords[0] || null,
         authorityUrl: bimi?.authorityUrl || null,
       },
-      ready: Boolean(
-        logoUploaded && dmarc?.enforced && bimi?.logoUrl === logoUrl,
-      ),
+      ready: Boolean(logoUploaded && dmarc?.enforced && recordVerified),
     };
   }
 
@@ -602,12 +716,19 @@ export class MailBimiService {
   }
 
   private customerLogoUrl(publicAppId: string, format: 'svg' | 'webp') {
-    const base = (
+    return `${this.publicApiBase()}/api/v1/mail/public/bimi/${publicAppId}/logo.${format}`;
+  }
+
+  private customerAuthorityUrl(publicAppId: string) {
+    return `${this.publicApiBase()}/api/v1/mail/public/bimi/${publicAppId}/authority.pem`;
+  }
+
+  private publicApiBase() {
+    return (
       this.config.get<string>('API_PUBLIC_URL') ||
       this.config.get<string>('API_BASE_URL') ||
       'http://localhost:3001'
     ).replace(/\/$/, '');
-    return `${base}/api/v1/mail/public/bimi/${publicAppId}/logo.${format}`;
   }
 
   async resolveAndPersist(value: string): Promise<MailSenderBrand | null> {
@@ -797,51 +918,7 @@ export class MailBimiService {
     domain: string,
   ): Promise<CertificateMetadata> {
     const body = await this.fetchLimited(url, MAX_CERT_BYTES);
-    const certificates = parseCertificateBundle(body);
-    if (!certificates.length)
-      throw new Error('BIMI authority is not an X.509 certificate.');
-    const leaf = certificates[0];
-    const validFrom = new Date(leaf.validFrom);
-    const validTo = new Date(leaf.validTo);
-    const now = Date.now();
-    if (
-      !Number.isFinite(validFrom.getTime()) ||
-      !Number.isFinite(validTo.getTime()) ||
-      validFrom.getTime() > now ||
-      validTo.getTime() <= now
-    ) {
-      throw new Error('BIMI certificate is outside its validity period.');
-    }
-    if (!leaf.checkHost(domain, { wildcards: true })) {
-      throw new Error('BIMI certificate does not match the sender domain.');
-    }
-
-    const legacy = leaf.toLegacyObject() as {
-      ext_key_usage?: string[];
-      subjectaltname?: string;
-    };
-    const eku = legacy.ext_key_usage ?? [];
-    if (!eku.includes(BIMI_EKU_OID)) {
-      throw new Error('Certificate is not authorized for BIMI.');
-    }
-    if (!validateCertificateChain(certificates)) {
-      throw new Error('BIMI certificate chain could not be validated.');
-    }
-
-    return {
-      // Node's X509Certificate can validate identity metadata and the BIMI EKU,
-      // but cannot prove VMC-vs-CMC trademark policy or embedded logo binding.
-      // Fail closed for the blue VMC badge until a policy/logotype ASN.1
-      // validator is available.
-      type: MailBrandCertificateType.UNKNOWN,
-      subject: leaf.subject,
-      issuer: leaf.issuer,
-      serial: leaf.serialNumber,
-      fingerprint: leaf.fingerprint256,
-      validFrom,
-      validTo,
-      domains: certificateDomains(leaf),
-    };
+    return inspectAuthorityPem(body, domain);
   }
 
   private async saveResult(
@@ -908,6 +985,78 @@ function parseCertificateBundle(body: Buffer): X509Certificate[] {
   } catch {
     return [];
   }
+}
+
+/** Validate and normalize a customer CMC/VMC PEM chain for hosting. */
+export function normalizeAuthorityPem(body: Buffer, domain: string): string {
+  if (!body.length || body.length > MAX_CERT_BYTES) {
+    throw new Error('CMC/VMC certificate must be no larger than 1MB.');
+  }
+  inspectAuthorityPem(body, domain);
+  const text = body
+    .toString('utf8')
+    .replace(/^\uFEFF/, '')
+    .trim();
+  const pemBlocks =
+    text.match(
+      /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g,
+    ) ?? [];
+  if (!pemBlocks.length) {
+    throw new Error('Upload a PEM certificate chain (.pem or .crt).');
+  }
+  return `${pemBlocks.join('\n')}\n`;
+}
+
+function inspectAuthorityPem(
+  body: Buffer,
+  domain: string,
+): CertificateMetadata {
+  const certificates = parseCertificateBundle(body);
+  if (!certificates.length) {
+    throw new Error('BIMI authority is not an X.509 certificate.');
+  }
+  const leaf = certificates[0];
+  const validFrom = new Date(leaf.validFrom);
+  const validTo = new Date(leaf.validTo);
+  const now = Date.now();
+  if (
+    !Number.isFinite(validFrom.getTime()) ||
+    !Number.isFinite(validTo.getTime()) ||
+    validFrom.getTime() > now ||
+    validTo.getTime() <= now
+  ) {
+    throw new Error('BIMI certificate is outside its validity period.');
+  }
+  if (!leaf.checkHost(domain, { wildcards: true })) {
+    throw new Error('BIMI certificate does not match the sender domain.');
+  }
+
+  const legacy = leaf.toLegacyObject() as {
+    ext_key_usage?: string[];
+    subjectaltname?: string;
+  };
+  const eku = legacy.ext_key_usage ?? [];
+  if (!eku.includes(BIMI_EKU_OID)) {
+    throw new Error('Certificate is not authorized for BIMI (missing EKU).');
+  }
+  if (!validateCertificateChain(certificates)) {
+    throw new Error('BIMI certificate chain could not be validated.');
+  }
+
+  return {
+    // Node's X509Certificate can validate identity metadata and the BIMI EKU,
+    // but cannot prove VMC-vs-CMC trademark policy or embedded logo binding.
+    // Fail closed for the blue VMC badge until a policy/logotype ASN.1
+    // validator is available.
+    type: MailBrandCertificateType.UNKNOWN,
+    subject: leaf.subject,
+    issuer: leaf.issuer,
+    serial: leaf.serialNumber,
+    fingerprint: leaf.fingerprint256,
+    validFrom,
+    validTo,
+    domains: certificateDomains(leaf),
+  };
 }
 
 function validateCertificateChain(certificates: X509Certificate[]): boolean {

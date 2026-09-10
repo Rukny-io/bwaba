@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import { assertUrlSafe, safeFetch } from '../../core/common/utils/ssrf-guard';
 import {
   MailBimiService,
+  normalizeAuthorityPem,
   normalizeSenderDomain,
   normalizeSesVerdict,
   parseBimiRecord,
@@ -117,6 +118,12 @@ describe('Mail BIMI helpers', () => {
     expect(normalized).toMatch(/<title>Brand logo<\/title>/i);
   });
 
+  it('rejects a non-PEM authority certificate', () => {
+    expect(() =>
+      normalizeAuthorityPem(Buffer.from('not-a-certificate'), 'example.com'),
+    ).toThrow(/PEM|certificate/i);
+  });
+
   it('rejects binary images renamed as SVG', () => {
     expect(() =>
       sanitizeBimiSvg(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])),
@@ -210,8 +217,13 @@ describe('MailBimiService customer setup', () => {
   };
   const s3 = {
     getDefaultBucket: jest.fn().mockReturnValue('bucket'),
-    objectExists: jest.fn().mockResolvedValue(true),
+    objectExists: jest
+      .fn()
+      .mockImplementation((_bucket: string, key: string) =>
+        Promise.resolve(/\/logo\.(svg|webp)$/.test(key)),
+      ),
     uploadBuffer: jest.fn().mockResolvedValue({}),
+    deleteObject: jest.fn().mockResolvedValue(true),
     getObject: jest.fn(),
   };
   const config = {
@@ -317,6 +329,56 @@ describe('MailBimiService customer setup', () => {
       expect.any(Buffer),
       'image/svg+xml',
     );
+  });
+
+  it('deletes both hosted logo formats for the authenticated owner', async () => {
+    s3.objectExists.mockResolvedValueOnce(false);
+
+    const result = await service.deleteCustomerLogo(
+      'user-1',
+      '1234567890123456',
+    );
+
+    expect(s3.deleteObject).toHaveBeenCalledTimes(2);
+    expect(s3.deleteObject).toHaveBeenCalledWith(
+      'bucket',
+      'logos/mail-bimi/1234567890123456/logo.svg',
+    );
+    expect(s3.deleteObject).toHaveBeenCalledWith(
+      'bucket',
+      'logos/mail-bimi/1234567890123456/logo.webp',
+    );
+    expect(result.logoUploaded).toBe(false);
+    expect(result.ready).toBe(false);
+  });
+
+  it('rejects invalid authority PEMs before storage', async () => {
+    await expect(
+      service.uploadCustomerAuthority('user-1', '1234567890123456', {
+        buffer: Buffer.from('not-a-certificate'),
+        size: 18,
+        mimetype: 'application/pem-certificate-chain',
+        originalname: 'authority.pem',
+      } as Express.Multer.File),
+    ).rejects.toThrow(/PEM|certificate/i);
+    expect(s3.uploadBuffer).not.toHaveBeenCalled();
+  });
+
+  it('deletes the hosted authority certificate for the authenticated owner', async () => {
+    s3.objectExists.mockImplementation((_bucket: string, key: string) =>
+      Promise.resolve(/\/logo\.(svg|webp)$/.test(key)),
+    );
+
+    const result = await service.deleteCustomerAuthority(
+      'user-1',
+      '1234567890123456',
+    );
+
+    expect(s3.deleteObject).toHaveBeenCalledWith(
+      'bucket',
+      'logos/mail-bimi/1234567890123456/authority.pem',
+    );
+    expect(result.certificateUploaded).toBe(false);
   });
 
   it('rejects uploads to a Mail app owned by another user', async () => {

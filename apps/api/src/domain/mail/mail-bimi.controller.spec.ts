@@ -49,6 +49,73 @@ describe('Mail BIMI controllers', () => {
     );
   });
 
+  it('delegates BIMI logo deletion for the authenticated owner', async () => {
+    const bimi = {
+      deleteCustomerLogo: jest.fn().mockResolvedValue({ logoUploaded: false }),
+    };
+    const controller = new MailDomainVerificationController(
+      {} as never,
+      bimi as never,
+    );
+
+    await expect(
+      controller.deleteBimiLogo({ id: 'user-1' } as never, '1234567890123456'),
+    ).resolves.toEqual({ logoUploaded: false });
+    expect(bimi.deleteCustomerLogo).toHaveBeenCalledWith(
+      'user-1',
+      '1234567890123456',
+    );
+  });
+
+  it('delegates BIMI authority upload and deletion for the authenticated owner', async () => {
+    const pem = Buffer.from(
+      '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n',
+    );
+    const bimi = {
+      uploadCustomerAuthority: jest
+        .fn()
+        .mockResolvedValue({ certificateUploaded: true }),
+      deleteCustomerAuthority: jest
+        .fn()
+        .mockResolvedValue({ certificateUploaded: false }),
+    };
+    const controller = new MailDomainVerificationController(
+      {} as never,
+      bimi as never,
+    );
+
+    await expect(
+      controller.uploadBimiAuthority(
+        { id: 'user-1' } as never,
+        '1234567890123456',
+        {
+          contentBase64: pem.toString('base64'),
+          fileName: 'authority.pem',
+          mimeType: 'application/pem-certificate-chain',
+        },
+      ),
+    ).resolves.toEqual({ certificateUploaded: true });
+    expect(bimi.uploadCustomerAuthority).toHaveBeenCalledWith(
+      'user-1',
+      '1234567890123456',
+      expect.objectContaining({
+        buffer: pem,
+        originalname: 'authority.pem',
+      }),
+    );
+
+    await expect(
+      controller.deleteBimiAuthority(
+        { id: 'user-1' } as never,
+        '1234567890123456',
+      ),
+    ).resolves.toEqual({ certificateUploaded: false });
+    expect(bimi.deleteCustomerAuthority).toHaveBeenCalledWith(
+      'user-1',
+      '1234567890123456',
+    );
+  });
+
   it('serves the public SVG with a safe content type and cache policy', async () => {
     const logo = Buffer.from('<svg/>');
     const response = {
@@ -74,6 +141,33 @@ describe('Mail BIMI controllers', () => {
       }),
     );
     expect(response.send).toHaveBeenCalledWith(logo);
+  });
+
+  it('serves the public authority PEM with a safe content type', async () => {
+    const pem = Buffer.from(
+      '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n',
+    );
+    const response = {
+      set: jest.fn(),
+      send: jest.fn().mockReturnValue(undefined),
+    } as unknown as Response;
+    const bimi = {
+      publicCustomerAuthority: jest.fn().mockResolvedValue(pem),
+    };
+    const controller = new MailPublicController({} as never, bimi as never);
+
+    await controller.bimiAuthority('1234567890123456', response);
+
+    expect(bimi.publicCustomerAuthority).toHaveBeenCalledWith(
+      '1234567890123456',
+    );
+    expect(response.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        'Content-Type': 'application/pem-certificate-chain',
+        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      }),
+    );
+    expect(response.send).toHaveBeenCalledWith(pem);
   });
 
   it('returns not found when a public BIMI logo does not exist', async () => {

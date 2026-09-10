@@ -74,3 +74,60 @@ export async function uploadBimiLogo(appId: string, file: File) {
   );
   return parse<MailBimiSetupStatus>(response);
 }
+
+export async function deleteBimiLogo(appId: string) {
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/logo`,
+    { method: "DELETE" },
+  );
+  return parse<MailBimiSetupStatus>(response);
+}
+
+const MAX_CERT_BYTES = 1024 * 1024;
+const CERT_EXTENSIONS = [".pem", ".crt", ".cer"];
+const CERT_MIME_TYPES = new Set([
+  "application/pem-certificate-chain",
+  "application/x-pem-file",
+  "application/x-x509-ca-cert",
+  "application/pkix-cert",
+  "text/plain",
+]);
+
+export async function uploadBimiAuthority(appId: string, file: File) {
+  if (!file.size) {
+    throw new Error("Selected certificate is empty.");
+  }
+  const lowerName = file.name.toLowerCase();
+  const isSupported =
+    CERT_EXTENSIONS.some((extension) => lowerName.endsWith(extension)) ||
+    CERT_MIME_TYPES.has(file.type) ||
+    !file.type;
+  if (!isSupported) {
+    throw new Error("Choose a PEM certificate (.pem or .crt).");
+  }
+  if (file.size > MAX_CERT_BYTES) {
+    throw new Error("The certificate must be 1MB or smaller.");
+  }
+  const contentBase64 = await fileToBase64(file);
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/authority`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contentBase64,
+        fileName: file.name || "authority.pem",
+        mimeType: file.type || "application/pem-certificate-chain",
+      }),
+    },
+  );
+  return parse<MailBimiSetupStatus>(response);
+}
+
+export async function deleteBimiAuthority(appId: string) {
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/domain-verification/bimi/authority`,
+    { method: "DELETE" },
+  );
+  return parse<MailBimiSetupStatus>(response);
+}

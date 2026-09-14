@@ -40,6 +40,12 @@ export {
 } from "@/lib/whatsapp-api-routes";
 export type { WhatsappApiSectionId } from "@/lib/whatsapp-api-routes";
 
+export {
+  appEmailApiHref,
+  isEmailApiSectionActive,
+} from "@/lib/email-api-routes";
+export type { EmailApiSectionId } from "@/lib/email-api-routes";
+
 /** @deprecated Use appWhatsappApi */
 export function appDocs(appId: string): string {
   return appWhatsappApi(appId);

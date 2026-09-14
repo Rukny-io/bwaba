@@ -1,60 +1,192 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export function LandingHeader() {
+type LandingLocale = 'ar' | 'en';
+
+const COPY = {
+  ar: {
+    announcement: 'Email API وForms متاحة الآن في بوابة المطوّرين',
+    docs: 'التوثيق',
+    pricing: 'الأسعار',
+    login: 'تسجيل الدخول',
+    start: 'ابدأ البناء',
+    footerBrand: 'بوابة المطوّرين',
+    products: 'المنتجات',
+    resources: 'الموارد',
+    company: 'الشركة',
+    whatsapp: 'WhatsApp API',
+    email: 'Email API',
+    forms: 'Forms',
+    getStarted: 'البدء',
+    contact: 'تواصل',
+  },
+  en: {
+    announcement: 'Email API and Forms are live in the developer portal',
+    docs: 'Docs',
+    pricing: 'Pricing',
+    login: 'Sign in',
+    start: 'Start Building',
+    footerBrand: 'Developer portal',
+    products: 'Products',
+    resources: 'Resources',
+    company: 'Company',
+    whatsapp: 'WhatsApp API',
+    email: 'Email API',
+    forms: 'Forms',
+    getStarted: 'Get started',
+    contact: 'Contact',
+  },
+} as const;
+
+export function LandingAnnouncement({ locale = 'ar' }: { locale?: LandingLocale }) {
+  const t = COPY[locale];
+
   return (
-    <header className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-3 px-5 py-4 min-[720px]:px-6 min-[720px]:py-5 min-[1280px]:px-0">
-      <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-        <Image
-          src="/rukny-logo.svg"
-          alt="Rukny"
-          width={36}
-          height={36}
-          className="shrink-0 dark:brightness-0 dark:invert"
-        />
-        <span className="truncate text-base font-semibold sm:text-lg">
-          Rukny Developers
-        </span>
-      </Link>
-      <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <Link
-          href="/pricing"
-          className="touch-target inline-flex h-9 items-center justify-center rounded-full px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:px-4"
-        >
-          الأسعار
+    <div className="border-b border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)]">
+      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-center px-5 py-2.5 text-center text-xs font-medium tracking-wide min-[720px]:px-8">
+        {t.announcement}
+      </div>
+    </div>
+  );
+}
+
+export function LandingHeader({ locale = 'ar' }: { locale?: LandingLocale }) {
+  const t = COPY[locale];
+
+  return (
+    <header className="border-b border-[var(--border)] bg-[var(--background)]">
+      <div className="mx-auto flex h-[73px] w-full max-w-[1280px] items-center justify-between gap-3 px-5 min-[720px]:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <Image
+            src="/rukny-logo.svg"
+            alt="Rukny"
+            width={28}
+            height={28}
+            className="shrink-0 dark:brightness-0 dark:invert"
+          />
+          <span className="truncate text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+            Rukny
+          </span>
         </Link>
-        <Link
-          href="/login"
-          className="touch-target inline-flex h-9 items-center justify-center rounded-full px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:px-4"
-        >
-          تسجيل الدخول
-        </Link>
-        <Link
-          href="/login?next=/apps"
-          className="touch-target inline-flex h-9 items-center justify-center rounded-full bg-[var(--primary)] px-3 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 sm:px-4"
-        >
-          ابدأ الآن
-        </Link>
-      </nav>
+        <nav className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/documentation"
+            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)] min-[720px]:inline-flex"
+          >
+            {t.docs}
+          </Link>
+          <Link
+            href="/pricing"
+            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)] min-[720px]:inline-flex"
+          >
+            {t.pricing}
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)]"
+          >
+            {t.login}
+          </Link>
+          <Link
+            href="/login?next=/apps"
+            className="ms-1 inline-flex h-9 items-center bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--brand-blue-hover)]"
+          >
+            {t.start}
+          </Link>
+        </nav>
+      </div>
     </header>
   );
 }
 
-export function LandingFooter() {
+export function LandingFooter({ locale = 'ar' }: { locale?: LandingLocale }) {
+  const t = COPY[locale];
+
   return (
-    <footer className="border-t border-[var(--border)] bg-[var(--surface)]">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center justify-between gap-4 px-5 py-8 text-sm text-[var(--muted-foreground)] min-[720px]:flex-row min-[720px]:px-6 min-[1280px]:px-0">
-        <p>© {new Date().getFullYear()} Rukny — بوابة المطوّرين</p>
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link href="/pricing" className="transition-colors hover:text-[var(--foreground)]">
-            الأسعار
-          </Link>
-          <Link href="/app/docs" className="transition-colors hover:text-[var(--foreground)]">
-            التوثيق
-          </Link>
-          <Link href="/login" className="transition-colors hover:text-[var(--foreground)]">
-            تسجيل الدخول
-          </Link>
+    <footer className="border-t border-[var(--border)] bg-[var(--background)]">
+      <div className="mx-auto grid w-full max-w-[1280px] gap-10 px-5 py-16 min-[720px]:grid-cols-4 min-[720px]:px-8">
+        <div className="min-[720px]:col-span-1">
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/rukny-logo.svg"
+              alt="Rukny"
+              width={28}
+              height={28}
+              className="dark:brightness-0 dark:invert"
+            />
+            <span className="text-[15px] font-semibold">Rukny</span>
+          </div>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {t.footerBrand}
+          </p>
+        </div>
+        <div>
+          <p className="eyebrow-label mb-4">{t.products}</p>
+          <ul className="space-y-3 text-sm text-[var(--muted-foreground)]">
+            <li>
+              <Link href="/documentation" className="hover:text-[var(--foreground)]">
+                {t.whatsapp}
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/documentation/email-api"
+                className="hover:text-[var(--foreground)]"
+              >
+                {t.email}
+              </Link>
+            </li>
+            <li>
+              <Link href="/documentation/forms" className="hover:text-[var(--foreground)]">
+                {t.forms}
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="eyebrow-label mb-4">{t.resources}</p>
+          <ul className="space-y-3 text-sm text-[var(--muted-foreground)]">
+            <li>
+              <Link href="/documentation" className="hover:text-[var(--foreground)]">
+                {t.docs}
+              </Link>
+            </li>
+            <li>
+              <Link href="/pricing" className="hover:text-[var(--foreground)]">
+                {t.pricing}
+              </Link>
+            </li>
+            <li>
+              <Link href="/login?next=/apps" className="hover:text-[var(--foreground)]">
+                {t.getStarted}
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="eyebrow-label mb-4">{t.company}</p>
+          <ul className="space-y-3 text-sm text-[var(--muted-foreground)]">
+            <li>
+              <Link href="/login" className="hover:text-[var(--foreground)]">
+                {t.login}
+              </Link>
+            </li>
+            <li>
+              <a
+                href="mailto:developers@rukny.io"
+                className="hover:text-[var(--foreground)]"
+              >
+                {t.contact}
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-[var(--border)]">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-5 py-6 text-sm text-[var(--muted-foreground)] min-[720px]:px-8">
+          <p>
+            © {new Date().getFullYear()} Rukny — {t.footerBrand}
+          </p>
         </div>
       </div>
     </footer>

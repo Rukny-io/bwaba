@@ -1,9 +1,9 @@
 # خطة عمل Email API — بوابة المطورين (Rukny Developer)
 
-> **الإصدار:** 1.0  
-> **التاريخ:** 5 سبتمبر 2026  
-> **النطاق:** `apps/developer` + `apps/api` (domain developer + email)  
-> **الحالة الحالية:** MVP منفّذ على فرع `cursor/developer-email-api`، والبناء والاختبارات ناجحة، وmigration مطبّقة. الإطلاق الفعلي ينتظر نطاقاً مملوكاً وإعداد SES production access وconfiguration set وSNS topic.
+> **الإصدار:** 1.1  
+> **التاريخ:** 11 سبتمبر 2026  
+> **النطاق:** `apps/developer` + `apps/api` + `packages/email`  
+> **الحالة الحالية:** MVP + إعادة تصميم البوابة + وثائق عامة على `/documentation` (نمط Meta) + حزمة `@rukny/email`. الإطلاق الفعلي ما زال ينتظر نطاقاً مملوكاً وSES production.
 
 ---
 

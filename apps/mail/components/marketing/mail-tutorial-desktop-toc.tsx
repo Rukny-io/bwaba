@@ -55,7 +55,7 @@ export function MailTutorialDesktopToc({
         className,
       )}
     >
-      <p className="mb-4 text-[11px] font-semibold tracking-[0.08em] text-[#132327]/40">
+      <p className="mb-4 text-[11px] font-semibold tracking-[0.08em] text-[#a8a29e]">
         ON THIS PAGE
       </p>
       <ol className="space-y-1">
@@ -67,10 +67,10 @@ export function MailTutorialDesktopToc({
                 type="button"
                 onClick={() => scrollTo(item.id)}
                 className={cn(
-                  "w-full rounded-lg px-2.5 py-1.5 text-start text-[13px] leading-snug transition-colors",
+                  "w-full px-2.5 py-1.5 text-start text-[13px] leading-snug transition-colors",
                   active
                     ? "bg-[#062c30]/[0.08] font-medium text-[#062c30]"
-                    : "text-[#132327]/55 hover:bg-[#F6F7F8] hover:text-[#132327]",
+                    : "text-[#57534e] hover:bg-[#f2f3f6] hover:text-[#1c1917]",
                 )}
               >
                 <span className="tabular-nums">{item.number}.</span> {item.title}

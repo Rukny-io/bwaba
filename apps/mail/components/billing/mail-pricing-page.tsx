@@ -130,10 +130,10 @@ export function MailPricingPage() {
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10">
       <header className="max-w-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+        <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]">
           Billing
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+        <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[var(--foreground)]">
           Mail plans
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
@@ -146,7 +146,7 @@ export function MailPricingPage() {
       </header>
 
       {needsApp ? (
-        <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
+        <div className="border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
           Open a workspace first, then return here to request a paid plan for that workspace only.{" "}
           <Link
             href="/apps"
@@ -156,7 +156,7 @@ export function MailPricingPage() {
           </Link>
         </div>
       ) : active ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+        <div className="border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
           <p className="text-sm font-semibold text-[var(--foreground)]">
             Current plan for {appName || "this workspace"}: {active.planName}
           </p>
@@ -171,7 +171,7 @@ export function MailPricingPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
+        <div className="border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
           No paid plan on {appName || "this workspace"} yet. Starter starts after DNS is
           verified. Request Standard or Premium — an admin will activate extra seats and
           features for this workspace only.
@@ -179,7 +179,7 @@ export function MailPricingPage() {
       )}
 
       {pendingRequest ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-sm">
+        <div className="border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-sm">
           <p className="font-semibold text-[var(--foreground)]">Request pending</p>
           <p className="mt-1 text-[var(--muted-foreground)]">
             Ticket {pendingRequest.ticketNumber}
@@ -197,7 +197,7 @@ export function MailPricingPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] lg:grid-cols-3">
         {plans.map((plan) => {
           const included = includedFor(plan);
           const seats = planSeats[plan.id] || included;
@@ -212,10 +212,8 @@ export function MailPricingPage() {
             <article
               key={plan.id}
               className={cn(
-                "flex flex-col rounded-2xl border bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]",
-                plan.popular
-                  ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
-                  : "border-[var(--border)]",
+                "flex flex-col bg-[var(--surface)] p-5",
+                plan.popular && "ring-1 ring-inset ring-[var(--primary)]",
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -226,13 +224,13 @@ export function MailPricingPage() {
                   </p>
                 </div>
                 {plan.popular ? (
-                  <span className="rounded-full bg-[var(--secondary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--secondary-foreground)]">
+                  <span className="border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--secondary-foreground)]">
                     Popular
                   </span>
                 ) : null}
               </div>
 
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-[var(--surface-secondary)] px-3 py-2">
+              <div className="mt-4 flex items-center justify-between border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-2">
                 <div>
                   <p className="text-xs font-medium text-[var(--muted-foreground)]">Mailboxes</p>
                   {extra > 0 ? (
@@ -251,7 +249,7 @@ export function MailPricingPage() {
                     aria-label={`Fewer mailboxes on ${plan.name}`}
                     disabled={lockSeats || seats <= included}
                     onClick={() => setPlanSeats(plan.id, seats - 1, included)}
-                    className="inline-flex size-8 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--foreground)] disabled:opacity-40"
+                    className="inline-flex size-8 items-center justify-center border border-[var(--border)] text-[var(--foreground)] disabled:opacity-40"
                   >
                     <Minus className="size-3.5" />
                   </button>
@@ -263,14 +261,14 @@ export function MailPricingPage() {
                     aria-label={`More mailboxes on ${plan.name}`}
                     disabled={lockSeats || seats >= 500}
                     onClick={() => setPlanSeats(plan.id, seats + 1, included)}
-                    className="inline-flex size-8 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--foreground)] disabled:opacity-40"
+                    className="inline-flex size-8 items-center justify-center border border-[var(--border)] text-[var(--foreground)] disabled:opacity-40"
                   >
                     <Plus className="size-3.5" />
                   </button>
                 </div>
               </div>
 
-              <p className="mt-5 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+              <p className="mt-5 text-3xl font-bold tracking-[-0.03em] text-[var(--foreground)]">
                 {formatMailIqD(total)}
                 <span className="text-sm font-medium text-[var(--muted-foreground)]">/mo</span>
               </p>
@@ -300,24 +298,34 @@ export function MailPricingPage() {
                 disabled={requestDisabled}
                 onClick={() => void choosePlan(plan.id)}
                 className={cn(
-                  "mt-6 inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors disabled:opacity-60",
-                  isCurrent
-                    ? "bg-[var(--surface-secondary)] text-[var(--foreground)]"
-                    : "bg-[var(--foreground)] text-[var(--background)] hover:opacity-90",
+                  "group relative mt-6 inline-flex items-center justify-center p-1.5 disabled:opacity-60",
                 )}
               >
-                {busy
-                  ? "Sending…"
-                  : pendingRequest
-                    ? "Request pending"
-                    : isCurrent
-                      ? "Request seat change"
-                      : `Request ${plan.name}`}
+                <span
+                  className={cn(
+                    "mail-frame-cta relative inline-flex h-11 w-full items-center justify-center px-4 text-sm font-medium transition-colors",
+                    isCurrent
+                      ? "mail-frame-cta--ghost border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)]"
+                      : "mail-frame-cta--primary border border-[#062c30] bg-[#062c30] text-white hover:border-[#1c1917] hover:bg-[#1c1917]",
+                  )}
+                >
+                  <span className="mail-frame-tick mail-frame-tick--tl" aria-hidden />
+                  <span className="mail-frame-tick mail-frame-tick--tr" aria-hidden />
+                  <span className="mail-frame-tick mail-frame-tick--bl" aria-hidden />
+                  <span className="mail-frame-tick mail-frame-tick--br" aria-hidden />
+                  {busy
+                    ? "Sending…"
+                    : pendingRequest
+                      ? "Request pending"
+                      : isCurrent
+                        ? "Request seat change"
+                        : `Request ${plan.name}`}
+                </span>
               </button>
               <button
                 type="button"
                 disabled
-                className="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-4 text-xs font-medium text-[var(--muted-foreground)]"
+                className="mt-2 inline-flex h-10 items-center justify-center border border-[var(--border)] px-4 text-xs font-medium text-[var(--muted-foreground)]"
               >
                 Pay by card — coming soon
               </button>

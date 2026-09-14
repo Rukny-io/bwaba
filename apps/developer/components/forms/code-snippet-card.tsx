@@ -71,11 +71,11 @@ export function CodeSnippetCard({
 
   return (
     <section className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:px-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5 sm:px-5">
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
           {description ? (
-            <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
               {description}
             </p>
           ) : null}
@@ -83,7 +83,7 @@ export function CodeSnippetCard({
 
         <div className="flex shrink-0 items-center gap-2">
           {language !== 'url' ? (
-            <span className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            <span className="rounded-lg bg-[var(--surface-secondary)] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
               {languageLabels[language]}
             </span>
           ) : null}
@@ -91,25 +91,31 @@ export function CodeSnippetCard({
             type="button"
             onClick={() => void handleCopy()}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors',
               copied
                 ? 'bg-[color-mix(in_srgb,var(--success)_14%,var(--background))] text-[var(--success)]'
-                : 'bg-[var(--surface-secondary)] text-[var(--foreground)] hover:bg-[color-mix(in_srgb,var(--foreground)_6%,var(--surface-secondary))]',
+                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
             )}
             aria-label={copyLabel}
           >
-            {copied ? <Check className="size-3.5 shrink-0" /> : <Copy className="size-3.5 shrink-0" />}
+            {copied ? (
+              <Check className="size-3.5 shrink-0" />
+            ) : (
+              <Copy className="size-3.5 shrink-0" />
+            )}
             <span>{copied ? t.common.copied : copyLabel}</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-[color-mix(in_srgb,var(--foreground)_4%,var(--background))]">
+      <div className="mx-4 mb-4 overflow-hidden rounded-xl bg-[var(--surface-secondary)] sm:mx-5 sm:mb-5">
         <pre
           dir="ltr"
           className={cn(
-            'overflow-x-auto px-4 py-4 font-mono text-[11px] leading-[1.7] sm:px-5 sm:text-xs',
-            language === 'url' ? 'whitespace-nowrap' : 'max-h-[min(360px,50vh)] whitespace-pre',
+            'overflow-x-auto px-3.5 py-3.5 font-mono text-[11px] leading-[1.7] sm:px-4 sm:text-xs',
+            language === 'url'
+              ? 'whitespace-nowrap'
+              : 'max-h-[min(360px,50vh)] whitespace-pre',
           )}
         >
           <code

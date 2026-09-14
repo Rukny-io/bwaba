@@ -223,11 +223,28 @@ export class EmailMessagesService {
       where: { id: userId },
       select: { email: true },
     });
-    if (!user || this.normalizeAddress(user.email) !== recipient) {
-      throw new ForbiddenException(
-        'Test API keys may send only to the account email address.',
-      );
+    if (user && this.normalizeAddress(user.email) === recipient) {
+      return;
     }
+
+    const [, domain] = this.splitAddress(recipient);
+    const ownedDomain = await this.prisma.developerEmailDomain.findFirst({
+      where: {
+        userId,
+        domain,
+        status: 'VERIFIED',
+      },
+      select: { id: true },
+    });
+    if (ownedDomain) {
+      return;
+    }
+
+    throw new ForbiddenException({
+      code: 'EMAIL_TEST_RECIPIENT',
+      message:
+        'Test API keys may send only to your account email or an address on a verified domain you own.',
+    });
   }
 
   private splitAddress(value: string): [string, string] {

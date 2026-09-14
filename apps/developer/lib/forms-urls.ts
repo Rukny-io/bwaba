@@ -26,6 +26,7 @@ export function getPublicFormUrl(slug: string, embed = false): string {
 export function buildIframeEmbedCode(slug: string, height = 640): string {
   const src = getPublicFormUrl(slug, true);
   return `<iframe
+  data-rukny-form
   src="${src}"
   width="100%"
   height="${height}"

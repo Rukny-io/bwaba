@@ -1,31 +1,45 @@
 export const mailBrand = {
   brand: "#062c30",
   teal: "#02797E",
-  text: "#132327",
-  muted: "rgba(19, 35, 39, 0.55)",
-  border: "#E8ECF0",
-  surface: "#F6F7F8",
-  soft: "#EEF2F2",
+  text: "#1c1917",
+  muted: "#57534e",
+  tertiary: "#a8a29e",
+  border: "#e7e5e4",
+  canvas: "#fbfbfc",
+  paper: "#ffffff",
+  surface: "#f2f3f6",
+  soft: "#eef2f2",
+  /** Dark-mode primary (console) */
+  brandDark: "#3d9ea3",
+  tealDark: "#4db5b9",
+  canvasDark: "#0b1213",
+  surfaceDark: "#121a1b",
 } as const;
 
 export const mailMarketingLayout = {
-  container: "mx-auto w-full max-w-6xl px-4 sm:px-6",
-  heroPad: "px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-14 md:pt-16",
+  container: "mail-mkt-container relative mx-auto w-full max-w-6xl px-4 sm:px-8",
+  heroPad: "px-4 pb-10 pt-10 sm:px-8 sm:pb-14 sm:pt-14 md:pt-16",
   heroBadge:
-    "inline-flex items-center gap-2 rounded-full border border-[#E8ECF0] bg-white/80 px-3 py-1 text-[11px] font-medium text-[#132327]/70 backdrop-blur-sm sm:text-xs",
+    "text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]",
   heroTitle:
-    "text-balance text-center text-[1.625rem] font-bold leading-[1.18] tracking-[-0.02em] text-[#132327] sm:text-4xl md:text-5xl lg:text-[3.25rem]",
+    "text-balance text-[2rem] font-bold leading-[1.1] tracking-[-0.03em] text-[#1c1917] sm:text-5xl md:text-[3.5rem] lg:text-[4rem]",
   heroLead:
-    "mx-auto max-w-md text-center text-[15px] leading-[1.75] text-[#132327]/75 sm:text-base md:text-lg",
+    "max-w-xl text-[15px] leading-[1.6] text-[#57534e] sm:text-base md:text-lg",
   section:
-    "scroll-mt-24 border-t border-[#E8ECF0] px-4 py-16 sm:px-6 sm:py-20 md:py-24",
-  eyebrow: "mb-3 text-[13px] font-medium text-[#132327]/50",
+    "scroll-mt-24 border-t border-[#e7e5e4] px-4 py-16 sm:px-8 sm:py-20 md:py-24",
+  eyebrow:
+    "mb-3 text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]",
   sectionTitle:
-    "text-[1.75rem] font-bold leading-[1.2] tracking-[-0.02em] text-[#132327] sm:text-3xl md:text-[2.25rem]",
-  sectionLead:
-    "mt-4 max-w-2xl text-[15px] leading-[1.8] text-[#132327]/55 sm:text-base",
+    "text-[1.75rem] font-bold leading-[1.15] tracking-[-0.03em] text-[#1c1917] sm:text-3xl md:text-[2.5rem]",
+  sectionLead: "mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#57534e] sm:text-base",
+  /** Base frame CTA — pair with MailFrameCta for corner ticks */
   btnPrimary:
-    "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#062c30] px-8 text-[14px] font-semibold text-white shadow-[0_2px_10px_rgba(6,44,48,0.22)] transition hover:opacity-90 hover:shadow-[0_4px_16px_rgba(6,44,48,0.28)]",
+    "mail-frame-cta mail-frame-cta--primary inline-flex items-center justify-center gap-2 border border-[#062c30] bg-[#062c30] px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-white transition-colors duration-200 hover:border-[#1c1917] hover:bg-[#1c1917]",
   btnGhost:
-    "inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-[#132327]/10 bg-white/80 px-6 text-[14px] font-semibold text-[#132327]/75 transition hover:border-[#132327]/15 hover:bg-white hover:text-[#132327]",
+    "mail-frame-cta mail-frame-cta--ghost inline-flex items-center justify-center gap-2 border border-[#e7e5e4] bg-transparent px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-[#57534e] transition-colors duration-200 hover:border-[#1c1917]/25 hover:text-[#1c1917]",
+  btnNav:
+    "mail-frame-cta mail-frame-cta--primary inline-flex h-9 items-center justify-center border border-[#062c30] bg-[#062c30] px-4 text-[13px] font-medium text-white transition-colors duration-200 hover:border-[#1c1917] hover:bg-[#1c1917]",
+  gridFrame: "grid gap-px overflow-hidden border border-[#e7e5e4] bg-[#e7e5e4]",
+  cell: "bg-[#fbfbfc] p-5 sm:p-6",
+  panel: "border border-[#e7e5e4] bg-white",
 } as const;

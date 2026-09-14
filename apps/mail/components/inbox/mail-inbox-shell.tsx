@@ -1114,7 +1114,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
                     className={cn(
                       "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors duration-150",
                       active
-                        ? "bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.12)]"
+                        ? "bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--brand-teal)_18%,transparent)]"
                         : "bg-[var(--surface-secondary)]/70 text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]",
                     )}
                   >

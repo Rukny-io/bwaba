@@ -387,7 +387,7 @@ export function MailAutoReplyPage() {
               You can save a draft, but automatic replies send only on Standard or Premium.
             </Alert.Description>
           </Alert.Content>
-          <Button size="sm" onPress={() => router.push("/pricing")}>
+          <Button size="sm" onPress={() => router.push("/billing")}>
             Upgrade
           </Button>
         </Alert>

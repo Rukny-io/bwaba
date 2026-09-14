@@ -287,7 +287,7 @@ export function MailForwardersPage() {
                   This workspace needs an active plan before you can add forwarders.
                 </Alert.Description>
               </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
+              <Button size="sm" onPress={() => router.push("/billing")}>
                 View plans
               </Button>
             </Alert>
@@ -300,7 +300,7 @@ export function MailForwardersPage() {
                   This plan includes {limit} forwarding rules. Remove one or upgrade for more.
                 </Alert.Description>
               </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
+              <Button size="sm" onPress={() => router.push("/billing")}>
                 Upgrade
               </Button>
             </Alert>

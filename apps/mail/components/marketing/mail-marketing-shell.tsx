@@ -14,11 +14,10 @@ export function MailMarketingShell({
   return (
     <div
       className={cn(
-        "mail-marketing relative isolate min-h-dvh text-[#132327]",
-        plainBackground && "bg-white",
+        "mail-marketing relative isolate min-h-dvh bg-[#fbfbfc] text-[#1c1917]",
+        plainBackground && "bg-[#fbfbfc]",
       )}
     >
-      {plainBackground ? null : <div className="mail-marketing-radial" aria-hidden />}
       <div className="relative z-0 min-h-dvh">
         <MailHomeHeader signedIn={signedIn} />
         {children}

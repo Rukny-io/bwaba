@@ -3,10 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  CircleCheck,
+  BookOpen,
   Download,
-  Eye,
-  Inbox,
+  ExternalLink,
   Link2,
   Loader2,
   Plus,
@@ -14,8 +13,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
-import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
 import {
   useAvailableForms,
   useFormsAppSummary,
@@ -23,7 +20,8 @@ import {
   useLinkedForms,
 } from '@/hooks/use-app-forms';
 import { useSidebarProductsOptional } from '@/hooks/use-sidebar-products';
-import { appFormConnect, appForms, appSettings } from '@/lib/app-routes';
+import { appFormConnect, appSettings } from '@/lib/app-routes';
+import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 import { getFormsCreateUrl, getFormsDashboardUrl } from '@/lib/forms-urls';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 import { cn } from '@/lib/utils';
@@ -68,63 +66,65 @@ function LinkFormDialog({
   const linkable = forms.filter((form) => !form.isLinked && !form.linkedElsewhere);
   const blockedElsewhere = forms.filter((form) => form.linkedElsewhere);
 
-  const emptyMessage =
-    isError
-      ? f.linkFormsLoadError
-      : blockedElsewhere.length > 0 && linkable.length === 0
-        ? f.noFormsLinkedElsewhere
-        : f.noFormsToLink;
+  const emptyMessage = isError
+    ? f.linkFormsLoadError
+    : blockedElsewhere.length > 0 && linkable.length === 0
+      ? f.noFormsLinkedElsewhere
+      : f.noFormsToLink;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
       <div
-        className="dashboard-card max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl"
+        className="w-full max-w-lg overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl"
         role="dialog"
         aria-modal
         aria-labelledby="link-form-title"
       >
-        <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 id="link-form-title" className="text-sm font-semibold text-[var(--foreground)]">
+        <div className="px-5 py-4">
+          <h2
+            id="link-form-title"
+            className="text-sm font-semibold text-[var(--foreground)]"
+          >
             {f.linkFormTitle}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
             {f.linkFormDesc}
           </p>
-          <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted-foreground)]/80">
+          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
             {f.linkFormNote}
           </p>
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto p-3">
+        <div className="max-h-[50vh] overflow-y-auto px-2 pb-2">
           {isLoading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="size-5 animate-spin text-[var(--muted-foreground)]" />
             </div>
           ) : linkable.length === 0 ? (
-            <div className="space-y-4 px-2 py-6 text-center">
+            <div className="space-y-4 px-3 py-6 text-center">
               <p className="text-sm text-[var(--muted-foreground)]">{emptyMessage}</p>
               {!isError && blockedElsewhere.length === 0 ? (
                 <a
                   href={getFormsCreateUrl(appId)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)]"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)]"
                 >
                   <Plus className="size-3.5" />
                   {f.createForm}
                 </a>
               ) : null}
               {blockedElsewhere.length > 0 ? (
-                <ul className="space-y-2 text-start">
+                <ul className="space-y-1.5 text-start">
                   {blockedElsewhere.map((form) => (
                     <li
                       key={form.id}
-                      className="rounded-2xl bg-[var(--surface-secondary)] px-3 py-2.5 opacity-70"
+                      className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 opacity-70"
                     >
                       <p className="truncate text-sm font-medium text-[var(--foreground)]">
                         {form.title}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-[var(--muted-foreground)]">
+                      <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
                         {f.formLinkedElsewhere}
                       </p>
                     </li>
@@ -133,7 +133,7 @@ function LinkFormDialog({
               ) : null}
             </div>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-0.5">
               {linkable.map((form) => (
                 <li key={form.id}>
                   <button
@@ -146,21 +146,26 @@ function LinkFormDialog({
                           onClose();
                         },
                         onError: (error) => {
-                          appToast.error(getApiErrorMessage(error, f.linkFailed));
+                          appToast.error(
+                            getApiErrorMessage(error, f.linkFailed),
+                          );
                         },
                       });
                     }}
-                    className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-start transition-colors hover:bg-[var(--surface-secondary)]"
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-start transition-colors hover:bg-[var(--surface-secondary)]"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-[var(--foreground)]">
                         {form.title}
                       </p>
-                      <p className="mt-0.5 font-mono text-[10px] text-[var(--muted-foreground)]">
+                      <p
+                        className="mt-0.5 font-mono text-[11px] text-[var(--muted-foreground)]"
+                        dir="ltr"
+                      >
                         {form.slug}
                       </p>
                     </div>
-                    <Plus className="size-4 shrink-0 text-[var(--primary)]" />
+                    <Plus className="size-4 shrink-0 text-[var(--muted-foreground)]" />
                   </button>
                 </li>
               ))}
@@ -168,11 +173,11 @@ function LinkFormDialog({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+        <div className="flex justify-end px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)]"
+            className="rounded-full px-4 py-2 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
           >
             {t.common.cancel}
           </button>
@@ -182,43 +187,75 @@ function LinkFormDialog({
   );
 }
 
-function EmbedSecurityCard({ appId }: { appId: string }) {
+function DomainSetupStrip({ appId }: { appId: string }) {
   const f = useTranslations().forms;
-  const { data: summary } = useFormsAppSummary(appId);
+  const { data: summary, isLoading } = useFormsAppSummary(appId);
   const domain = summary?.websiteOrigin ?? null;
 
-  return (
-    <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 shadow-none sm:rounded-3xl">
-      <div>
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">{f.embedSecurityTitle}</h2>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-          {f.embedSecurityDesc}
-        </p>
-      </div>
+  if (isLoading) return null;
 
-      {domain ? (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-[var(--foreground)]">{f.embedAllowedDomain}</p>
+  if (domain) {
+    return (
+      <div className="flex flex-col gap-2 rounded-2xl bg-[var(--surface-secondary)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[12px] font-medium text-[var(--muted-foreground)]">
+            {f.embedAllowedDomain}
+          </p>
           <code
             dir="ltr"
-            className="block rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 font-mono text-[12px] text-[var(--foreground)]"
+            className="mt-0.5 block truncate font-mono text-[13px] text-[var(--foreground)]"
           >
             {domain}
           </code>
-          <p className="text-xs text-[var(--muted-foreground)]">{f.embedDomainReady}</p>
         </div>
-      ) : (
-        <div className="rounded-xl border border-[color-mix(in_srgb,var(--warning)_35%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--background))] px-4 py-3">
-          <p className="text-xs leading-relaxed text-[var(--foreground)]">{f.embedDomainMissing}</p>
-          <Link
-            href={`${appSettings(appId)}/domains`}
-            className="mt-3 inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
-          >
-            {f.manageDomain}
-          </Link>
-        </div>
-      )}
-    </section>
+        <p className="shrink-0 text-[12px] text-[var(--muted-foreground)]">
+          {f.embedDomainReady}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--surface-secondary)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+        {f.embedDomainMissing}
+      </p>
+      <Link
+        href={`${appSettings(appId)}/domains`}
+        className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] px-3.5 text-[12px] font-medium text-[var(--background)] transition-opacity hover:opacity-90"
+      >
+        {f.manageDomain}
+      </Link>
+    </div>
+  );
+}
+
+function SummaryLine({
+  linked,
+  published,
+  submissions,
+  views,
+  loading,
+}: {
+  linked: number;
+  published: number;
+  submissions: number;
+  views: number;
+  loading: boolean;
+}) {
+  const f = useTranslations().forms;
+  if (loading) return null;
+
+  return (
+    <p className="text-[12px] text-[var(--muted-foreground)]">
+      {formatCount(linked)} {f.metricLinked.toLowerCase()}
+      {' · '}
+      {formatCount(published)} {f.metricPublished.toLowerCase()}
+      {' · '}
+      {formatCount(submissions)} {f.submissions}
+      {' · '}
+      {formatCount(views)} {f.views}
+    </p>
   );
 }
 
@@ -246,16 +283,11 @@ export function FormsHub({ appId }: { appId: string }) {
     return (
       <div className="dashboard-section-stack">
         <DashboardPageHeader
-          eyebrow={
-            <p className="font-mono text-[11px] text-[var(--muted-foreground)]">
-              {appId}
-            </p>
-          }
           title={p.installRequiredTitle}
           description={p.installRequiredDesc.replace('{name}', formsName)}
         />
-        <div className="dashboard-card rounded-2xl p-8 text-center sm:rounded-3xl">
-          <p className="text-sm text-[var(--muted-foreground)]">
+        <div className="rounded-2xl bg-[var(--surface)] px-6 py-10 text-center sm:rounded-3xl">
+          <p className="mx-auto max-w-md text-[13px] leading-relaxed text-[var(--muted-foreground)]">
             {p.items?.forms?.desc ?? f.subtitle}
           </p>
           <button
@@ -267,7 +299,7 @@ export function FormsHub({ appId }: { appId: string }) {
                 (error) => appToast.fromError(error, p.installFailed),
               );
             }}
-            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
+            className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)] disabled:opacity-60"
           >
             {products.isInstalling ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -281,23 +313,29 @@ export function FormsHub({ appId }: { appId: string }) {
     );
   }
 
-  const placeholder = '…';
+  const hasLinked = Boolean(linked?.length);
 
   return (
     <div className="dashboard-section-stack">
       <DashboardPageHeader
-        eyebrow={
-          <p className="font-mono text-[11px] text-[var(--muted-foreground)]">{appId}</p>
-        }
+        className="mb-5 pt-2 sm:mb-6 sm:pt-3"
         title={f.title}
-        description={f.subtitle}
+        description={<p className="max-w-2xl leading-relaxed">{f.subtitle}</p>}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setLinkOpen(true)}
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[var(--foreground)] px-3.5 text-[13px] font-medium text-[var(--background)] transition-opacity hover:opacity-90 sm:flex-none"
+            >
+              <Link2 className="size-3.5" />
+              {f.linkForm}
+            </button>
             <a
               href={getFormsCreateUrl(appId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:flex-none"
             >
               <Plus className="size-3.5" />
               {f.createForm}
@@ -306,82 +344,86 @@ export function FormsHub({ appId }: { appId: string }) {
               href={getFormsDashboardUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center rounded-full bg-[var(--surface-secondary)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3.5 text-[13px] font-medium text-[var(--foreground)] transition-opacity hover:opacity-90 sm:flex-none"
             >
               {f.openDashboard}
+              <ExternalLink className="size-3.5 opacity-60" />
             </a>
+            <Link
+              href={`${DOCUMENTATION_BASE}/forms`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:flex-none"
+            >
+              <BookOpen className="size-3.5 opacity-70" />
+              {f.documentation}
+            </Link>
           </div>
         }
       />
 
-      <DashboardGrid>
-        <DashboardMetricCard
-          icon={Link2}
-          label={f.metricLinked}
-          value={summaryLoading ? placeholder : formatCount(summary?.linkedCount ?? 0)}
-          comparisonPrimary={f.metricLinkedHint}
-        />
-        <DashboardMetricCard
-          icon={CircleCheck}
-          label={f.metricPublished}
-          value={summaryLoading ? placeholder : formatCount(summary?.publishedCount ?? 0)}
-          comparisonPrimary={f.metricPublishedHint}
-        />
-        <DashboardMetricCard
-          icon={Inbox}
-          label={f.metricSubmissions}
-          value={summaryLoading ? placeholder : formatCount(summary?.totalSubmissions ?? 0)}
-          comparisonPrimary={f.metricTotalHint}
-        />
-        <DashboardMetricCard
-          icon={Eye}
-          label={f.metricViews}
-          value={summaryLoading ? placeholder : formatCount(summary?.totalViews ?? 0)}
-          comparisonPrimary={f.metricTotalHint}
-        />
-      </DashboardGrid>
+      <DomainSetupStrip appId={appId} />
 
-      <EmbedSecurityCard appId={appId} />
+      {hasLinked || summaryLoading ? (
+        <SummaryLine
+          linked={summary?.linkedCount ?? 0}
+          published={summary?.publishedCount ?? 0}
+          submissions={summary?.totalSubmissions ?? 0}
+          views={summary?.totalViews ?? 0}
+          loading={summaryLoading}
+        />
+      ) : null}
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">{f.linkedForms}</h2>
-          <button
-            type="button"
-            onClick={() => setLinkOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
-          >
-            <Plus className="size-3.5" />
-            {f.linkForm}
-          </button>
-        </div>
+        {hasLinked ? (
+          <h2 className="text-[13px] font-semibold text-[var(--foreground)]">
+            {f.linkedForms}
+          </h2>
+        ) : null}
 
         {linkedLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="size-6 animate-spin text-[var(--muted-foreground)]" />
+          <div className="flex justify-center py-14">
+            <Loader2 className="size-5 animate-spin text-[var(--muted-foreground)]" />
           </div>
-        ) : !linked?.length ? (
-          <div className="dashboard-card rounded-2xl p-8 text-center sm:rounded-3xl">
-            <p className="text-sm text-[var(--muted-foreground)]">{f.emptyLinked}</p>
-            <button
-              type="button"
-              onClick={() => setLinkOpen(true)}
-              className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)]"
-            >
-              <Plus className="size-3.5" />
-              {f.linkForm}
-            </button>
+        ) : !hasLinked ? (
+          <div className="rounded-2xl bg-[var(--surface)] px-6 py-12 text-center sm:rounded-3xl">
+            <p className="mx-auto max-w-sm text-[14px] leading-relaxed text-[var(--muted-foreground)]">
+              {f.emptyLinked}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)]"
+              >
+                <Link2 className="size-3.5" />
+                {f.linkForm}
+              </button>
+              <a
+                href={getFormsCreateUrl(appId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-4 text-[13px] font-medium text-[var(--foreground)]"
+              >
+                <Plus className="size-3.5" />
+                {f.createForm}
+              </a>
+            </div>
           </div>
         ) : (
-          <ul className="space-y-3">
-            {linked.map((form) => (
+          <ul className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
+            {linked!.map((form, index) => (
               <li
                 key={form.id}
-                className="dashboard-card flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:rounded-3xl"
+                className={cn(
+                  'flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5',
+                  index > 0 &&
+                    'border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)]',
+                )}
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-sm font-semibold text-[var(--foreground)]">
+                    <h3 className="truncate text-[14px] font-semibold text-[var(--foreground)]">
                       {form.title}
                     </h3>
                     <StatusPill
@@ -394,19 +436,23 @@ export function FormsHub({ appId }: { appId: string }) {
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 font-mono text-[10px] text-[var(--muted-foreground)]">
+                  <p
+                    className="mt-1 font-mono text-[11px] text-[var(--muted-foreground)]"
+                    dir="ltr"
+                  >
                     {form.slug}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                    {formatCount(form.submissionCount)} {f.submissions} ·{' '}
+                  <p className="mt-1 text-[12px] text-[var(--muted-foreground)]">
+                    {formatCount(form.submissionCount)} {f.submissions}
+                    {' · '}
                     {formatCount(form.viewCount)} {f.views}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <Link
                     href={appFormConnect(appId, form.id)}
-                    className="inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+                    className="inline-flex h-8 items-center rounded-full bg-[var(--foreground)] px-3.5 text-[12px] font-medium text-[var(--background)] transition-opacity hover:opacity-90"
                   >
                     {f.connectEmbed}
                   </Link>
@@ -414,7 +460,7 @@ export function FormsHub({ appId }: { appId: string }) {
                     type="button"
                     disabled={unlinkMutation.isPending}
                     onClick={() => unlinkMutation.mutate(form.id)}
-                    className="inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--danger)]"
+                    className="inline-flex h-8 items-center gap-1 rounded-full px-3 text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--danger)]"
                   >
                     <Unlink className="size-3.5" />
                     {f.unlink}
@@ -426,7 +472,11 @@ export function FormsHub({ appId }: { appId: string }) {
         )}
       </section>
 
-      <LinkFormDialog appId={appId} open={linkOpen} onClose={() => setLinkOpen(false)} />
+      <LinkFormDialog
+        appId={appId}
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+      />
     </div>
   );
 }

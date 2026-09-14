@@ -574,7 +574,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
               </p>
             </div>
             <Link
-              href="/pricing"
+              href="/billing"
               className="inline-flex h-10 w-full shrink-0 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:w-auto sm:rounded-lg"
             >
               Choose a plan
@@ -616,7 +616,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   />
                 </button>
                 <Link
-                  href="/pricing"
+                  href="/billing"
                   className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none sm:rounded-lg"
                 >
                   Manage plan
@@ -686,7 +686,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   </span>
                   {" · "}
                   <Link
-                    href="/pricing"
+                    href="/billing"
                     className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
                   >
                     Buy more mailboxes
@@ -701,7 +701,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             createButton
           ) : (
             <Link
-              href="/pricing"
+              href="/billing"
               className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1.5 self-start rounded-lg bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)]"
             >
               Choose a plan
@@ -871,7 +871,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)]">1</span>
                     <div>
                       <p className="font-medium text-[var(--foreground)]">Choose an email plan</p>
-                      <Link href="/pricing" className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
+                      <Link href="/billing" className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
                         View plans and request access
                       </Link>
                     </div>

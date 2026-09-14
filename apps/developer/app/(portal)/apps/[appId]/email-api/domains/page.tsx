@@ -1,5 +1,5 @@
-import { EmailApiDocs } from '@/components/email-api/email-api-docs';
+import { EmailApiDomains } from '@/components/email-api/email-api-domains';
 
 export default function EmailApiDomainsPage() {
-  return <EmailApiDocs section="domains" />;
+  return <EmailApiDomains />;
 }

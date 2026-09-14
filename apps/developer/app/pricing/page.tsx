@@ -1,21 +1,30 @@
 import type { Metadata } from 'next';
-import { LandingFooter, LandingHeader } from '@/components/landing/landing-shell';
+import {
+  LandingAnnouncement,
+  LandingFooter,
+  LandingHeader,
+} from '@/components/landing/landing-shell';
 import { PricingSection } from '@/components/landing/pricing-section';
 
 export const metadata: Metadata = {
-  title: 'الأسعار | Rukny Developers',
+  title: 'Pricing | Rukny Developers',
   description:
-    'خطط Free و Pro لبوابة مطوّري Rukny — تطبيقات، مفاتيح API، ورسائل WhatsApp بفوترة حسب الاستخدام.',
+    'Free and Pro developer plans, WhatsApp usage pricing, and Email API Starter at 15,000 IQD per month.',
 };
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <LandingHeader />
+    <div
+      className="min-h-screen bg-[var(--background)] text-[var(--foreground)]"
+      dir="ltr"
+      lang="en"
+    >
+      <LandingAnnouncement locale="en" />
+      <LandingHeader locale="en" />
       <main>
         <PricingSection />
       </main>
-      <LandingFooter />
+      <LandingFooter locale="en" />
     </div>
   );
 }

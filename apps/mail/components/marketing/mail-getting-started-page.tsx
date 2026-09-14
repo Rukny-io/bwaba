@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@heroui/react";
+import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
 const STEPS = [
@@ -15,20 +15,21 @@ const STEPS = [
 export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
   const [step, setStep] = useState(0);
   const primaryHref = signedIn ? "/apps" : "/login";
-  const primaryLabel = signedIn ? "Open console" : "Get started";
+  const primaryLabel = signedIn ? "Open console" : "Start Building";
 
   return (
-    <main className="overflow-x-clip pt-14">
-      <section className={L.heroPad}>
-        <div className="mx-auto flex max-w-6xl flex-col items-center">
-          <p className={`mail-hero-enter ${L.heroBadge}`}>Getting started</p>
-          <h1 className={`mail-hero-enter-delayed mt-5 ${L.heroTitle}`}>
-            Three steps
-            <span className="mt-2 block text-[#02797E]">to you@yourdomain</span>
-          </h1>
-          <p className={`mail-hero-enter-delayed mt-5 ${L.heroLead}`}>
-            A Rukny account. A domain you already own. Then webmail is live.
-          </p>
+    <main className="overflow-x-clip">
+      <section className="border-b border-[#e7e5e4]">
+        <div className={L.container}>
+          <div className="max-w-screen-sm space-y-6 py-12 md:py-16">
+            <p className={`mail-hero-enter ${L.heroBadge}`}>Getting started</p>
+            <h1 className={`mail-hero-enter-delayed ${L.heroTitle}`}>
+              Three steps to you@yourdomain
+            </h1>
+            <p className={`mail-hero-enter-delayed ${L.heroLead}`}>
+              A Rukny account. A domain you already own. Then webmail is live.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -44,8 +45,10 @@ export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
                     onClick={() => setStep(item.id)}
                     aria-current={active ? "step" : undefined}
                     className={cn(
-                      "flex w-full items-baseline gap-4 rounded-2xl px-3 py-4 text-left transition-colors sm:gap-6 sm:px-4",
-                      active ? "bg-white" : "hover:bg-white/70",
+                      "flex w-full items-baseline gap-4 border px-3 py-4 text-left transition-colors sm:gap-6 sm:px-4",
+                      active
+                        ? "border-[#e7e5e4] bg-white"
+                        : "border-transparent hover:border-[#e7e5e4] hover:bg-white/70",
                     )}
                   >
                     <span
@@ -53,7 +56,7 @@ export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
                         "font-bold tracking-tight transition-all",
                         active
                           ? "text-5xl text-[#062c30] sm:text-6xl"
-                          : "text-3xl text-[#132327]/20 sm:text-4xl",
+                          : "text-3xl text-[#e7e5e4] sm:text-4xl",
                       )}
                     >
                       {item.num}
@@ -62,7 +65,7 @@ export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
                       <span
                         className={cn(
                           "block text-xl font-semibold tracking-tight",
-                          active ? "text-[#132327]" : "text-[#132327]/45",
+                          active ? "text-[#1c1917]" : "text-[#a8a29e]",
                         )}
                       >
                         {item.title}
@@ -70,7 +73,7 @@ export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
                       <span
                         className={cn(
                           "mt-1 block text-sm",
-                          active ? "text-[#132327]/55" : "text-[#132327]/30",
+                          active ? "text-[#57534e]" : "text-[#a8a29e]",
                         )}
                       >
                         {item.line}
@@ -82,23 +85,23 @@ export function MailGettingStartedPage({ signedIn }: { signedIn: boolean }) {
             })}
           </ol>
 
-          <div className="relative min-h-[22rem] overflow-hidden rounded-[1.75rem] border border-[#E8ECF0] bg-white shadow-[0_8px_32px_rgba(19,35,39,0.06)] sm:min-h-[26rem]">
+          <div className="relative min-h-[22rem] overflow-hidden border border-[#e7e5e4] bg-white sm:min-h-[26rem]">
             <Stage step={step} />
           </div>
         </div>
       </section>
 
-      <section className="pb-12 sm:pb-16 md:pb-[72px]">
+      <section className="border-t border-[#e7e5e4] pb-12 sm:pb-16 md:pb-[72px]">
         <div className={L.container}>
-          <div className="flex flex-col items-center gap-5 rounded-[34px] border border-[#E8ECF0] bg-white/80 px-6 py-12 text-center sm:px-12">
+          <div className="flex flex-col items-center gap-5 border border-[#e7e5e4] bg-white px-6 py-12 text-center sm:px-12">
             <h2 className={L.sectionTitle}>The console is next</h2>
-            <p className="max-w-md text-[15px] leading-[1.8] text-[#132327]/55">
+            <p className="max-w-md text-[15px] leading-[1.8] text-[#57534e]">
               Sign in, add your domain, and send from webmail.
             </p>
-            <Link href={primaryHref} className={L.btnPrimary}>
+            <MailFrameLink href={primaryHref}>
               {primaryLabel}
               <ArrowRight className="size-4" aria-hidden />
-            </Link>
+            </MailFrameLink>
           </div>
         </div>
       </section>
@@ -119,23 +122,23 @@ function Stage({ step }: { step: number }) {
 function SceneSignIn() {
   return (
     <div className="mail-send-rise w-full max-w-sm">
-      <div className="rounded-2xl border border-[#E8ECF0] bg-[#F6F7F8] p-5">
+      <div className="border border-[#e7e5e4] bg-[#f2f3f6] p-5">
         <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full bg-[#062c30]" />
-          <span className="text-xs font-semibold tracking-wide text-[#132327]/50">
+          <span className="size-2 bg-[#062c30]" />
+          <span className="text-xs font-semibold tracking-wide text-[#a8a29e]">
             Rukny
           </span>
         </div>
-        <p className="mt-6 text-2xl font-bold tracking-tight text-[#132327]">Mail</p>
-        <p className="mt-1 text-sm text-[#132327]/45">One workspace. Your domain.</p>
+        <p className="mt-6 text-2xl font-bold tracking-tight text-[#1c1917]">Mail</p>
+        <p className="mt-1 text-sm text-[#57534e]">One workspace. Your domain.</p>
         <div className="mt-6 space-y-2">
-          <div className="flex items-center justify-between rounded-xl bg-white px-3 py-3">
-            <span className="text-sm text-[#132327]">studio.iq</span>
+          <div className="flex items-center justify-between border border-[#e7e5e4] bg-white px-3 py-3">
+            <span className="text-sm text-[#1c1917]">studio.iq</span>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#02797E]">
               ready
             </span>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-3 text-[#132327]/35">
+          <div className="flex items-center justify-between border border-[#e7e5e4] bg-white/60 px-3 py-3 text-[#a8a29e]">
             <span className="text-sm">New workspace</span>
             <span className="text-[11px]">+</span>
           </div>
@@ -148,19 +151,19 @@ function SceneSignIn() {
 function SceneDomain() {
   return (
     <div className="mail-send-rise w-full max-w-md text-center">
-      <p className="font-mono text-2xl tracking-tight text-[#132327] sm:text-3xl">
+      <p className="font-mono text-2xl tracking-tight text-[#1c1917] sm:text-3xl">
         you@
         <span className="text-[#02797E]">yourdomain.com</span>
         <span className="mail-caret ml-0.5 inline-block h-6 w-[2px] translate-y-1 bg-[#062c30] align-middle sm:h-7" />
       </p>
-      <div className="mt-10 grid grid-cols-3 gap-3">
+      <div className="mt-10 grid grid-cols-3 gap-px border border-[#e7e5e4] bg-[#e7e5e4]">
         {["SPF", "DKIM", "DMARC"].map((label, index) => (
           <div
             key={label}
-            className="mail-auth-in rounded-2xl border border-[#E8ECF0] bg-[#F6F7F8] px-2 py-4"
+            className="mail-auth-in bg-[#fbfbfc] px-2 py-4"
             style={{ animationDelay: `${index * 140}ms` }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#132327]/40">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">
               {label}
             </p>
             <p className="mt-2 text-sm font-semibold text-[#062c30]">Pass</p>
@@ -181,17 +184,17 @@ function SceneSend() {
 
   return (
     <div className="mail-send-rise w-full max-w-sm">
-      <div className="rounded-2xl border border-[#E8ECF0] bg-[#F6F7F8] p-5 text-left">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#132327]/40">
+      <div className="border border-[#e7e5e4] bg-[#f2f3f6] p-5 text-left">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#a8a29e]">
           From
         </p>
-        <p className="mt-1 text-sm font-medium text-[#132327]">you@yourdomain.com</p>
-        <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-[#132327]/40">
+        <p className="mt-1 text-sm font-medium text-[#1c1917]">you@yourdomain.com</p>
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-[#a8a29e]">
           Subject
         </p>
-        <p className="mt-1 text-sm text-[#132327]">Invoice 1842</p>
+        <p className="mt-1 text-sm text-[#1c1917]">Invoice 1842</p>
         <div className="mt-6">
-          <span className="inline-flex rounded-full bg-[#062c30] px-4 py-2 text-xs font-semibold text-white">
+          <span className="inline-flex border border-[#062c30] bg-[#062c30] px-4 py-2 text-xs font-semibold text-white">
             Send
           </span>
         </div>

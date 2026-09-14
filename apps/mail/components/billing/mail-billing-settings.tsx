@@ -175,7 +175,7 @@ export function MailPlanSettingsSection() {
       ) : null}
 
       <div className="flex justify-end">
-        <Button size="sm" onPress={() => router.push("/pricing")}>
+        <Button size="sm" onPress={() => router.push("/billing")}>
           {active ? "Change plan" : "Request a plan"}
         </Button>
       </div>

@@ -36,7 +36,9 @@ export function isMailMarketingPath(pathname: string): boolean {
     pathname === "/faqs" ||
     pathname.startsWith("/faqs/") ||
     pathname === "/tutorials" ||
-    pathname.startsWith("/tutorials/")
+    pathname.startsWith("/tutorials/") ||
+    pathname === "/pricing" ||
+    pathname.startsWith("/pricing/")
   );
 }
 
@@ -50,8 +52,8 @@ export function withMailSlot(pathname: string, slotIndex: number | null | undefi
     isMailMarketingPath(pathname) ||
     pathname === "/apps" ||
     pathname.startsWith("/apps/") ||
-    pathname === "/pricing" ||
-    pathname.startsWith("/pricing/")
+    pathname === "/billing" ||
+    pathname.startsWith("/billing/")
   ) {
     return pathname;
   }

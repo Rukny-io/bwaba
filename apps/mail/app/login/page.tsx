@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@heroui/react";
 import { AuthLoadingCard } from "@/components/auth/auth-status-card";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { MailFrameButton } from "@/components/marketing/mail-frame-cta";
 import {
   DEFAULT_APP_PATH,
   getAccountsLoginUrl,
@@ -66,12 +66,15 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <div className="w-full rounded-2xl bg-[var(--surface)] p-6 sm:p-8">
+      <div className="w-full border border-[#e7e5e4] bg-white p-6 sm:p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+          <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]">
+            Rukny Mail
+          </p>
+          <h1 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-[#1c1917]">
             Welcome to Mail
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
             {sessionFlag === "expired"
               ? "Your session expired. Sign in to continue."
               : sessionFlag === "invalid"
@@ -82,26 +85,26 @@ function LoginContent() {
           </p>
         </div>
 
-        <div className="mt-8 space-y-3">
-          <Button
-            className="h-11 w-full rounded-full bg-[var(--foreground)] text-[var(--background)]"
-            onPress={() => {
+        <div className="mt-8 flex flex-col gap-2">
+          <MailFrameButton
+            className="w-full [&_button]:w-full"
+            onClick={() => {
               window.location.href = getGoogleOAuthUrl(nextPath);
             }}
           >
             <GoogleIcon />
-            <span className="ms-2">Continue with Google</span>
-          </Button>
+            <span>Continue with Google</span>
+          </MailFrameButton>
 
-          <Button
-            variant="secondary"
-            className="h-11 w-full rounded-full"
-            onPress={() => {
+          <MailFrameButton
+            variant="ghost"
+            className="w-full [&_button]:w-full"
+            onClick={() => {
               window.location.href = getAccountsLoginUrl(nextPath);
             }}
           >
             Sign in with Rukny
-          </Button>
+          </MailFrameButton>
         </div>
       </div>
     </AuthShell>

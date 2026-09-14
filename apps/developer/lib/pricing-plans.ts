@@ -1,12 +1,13 @@
 /**
- * بيانات الأسعار لبوابة المطوّرين — Free + Pro + فوترة الاستخدام
- * الأسعار متوافقة مع apps/api DEVELOPER_PRO_PRICING
+ * Developer portal pricing — Free + Pro + product usage.
+ * Platform prices align with apps/api DEVELOPER_PRO_PRICING.
+ * Email API Starter: 15,000 IQD / month for 10,000 messages.
  */
 
 export type PlanId = 'free' | 'pro';
 export type BillingPeriod = 'monthly' | 'yearly';
 
-export const CURRENCY = 'د.ع';
+export const CURRENCY = 'IQD';
 export const CURRENCY_EN = 'IQD';
 export const YEARLY_DISCOUNT_PERCENT = 17;
 
@@ -26,41 +27,44 @@ export interface PricingPlan {
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'free',
-    name: 'مجاني',
+    name: 'Free',
     nameEn: 'Free',
     description:
-      'ابدأ التكامل مع WhatsApp API بدون اشتراك شهري. تدفع فقط على الرسائل من محفظة التطبيق.',
+      'Build on WhatsApp and Email API with no platform subscription. Pay only for actual product usage.',
     priceMonthly: 0,
     priceYearly: 0,
-    ctaLabel: 'ابدأ مجاناً',
+    ctaLabel: 'Start for free',
     highlights: [
-      'حتى 10 تطبيقات',
-      '5 مفاتيح API لكل حساب',
-      'رسائل WhatsApp — فوترة حسب الاستخدام',
-      'Webhook واحد لكل تطبيق (حتى 3)',
-      'سجلات 14 يوماً',
-      '60 طلب API / دقيقة',
+      'Up to 10 apps',
+      '5 API keys per account',
+      'WhatsApp API — wallet-based billing',
+      'Email API — 1,000 free messages once',
+      'Up to 3 webhooks per app',
+      '14-day log retention',
+      '60 API requests / minute',
+      'Public docs and SDKs',
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
     nameEn: 'Pro',
-    badge: 'للإنتاج',
+    badge: 'For production',
     popular: true,
     description:
-      'سقوف مفتوحة للتطبيقات والمفاتيح والتكاملات. نفس نموذج الدفع حسب الاستخدام للرسائل.',
+      'Open ceilings for apps and keys. Same usage billing for messages — with higher performance and priority support.',
     priceMonthly: 43_500,
     priceYearly: 435_000,
-    ctaLabel: 'اشترك في Pro',
+    ctaLabel: 'Subscribe to Pro',
     highlights: [
-      'كل مزايا المجاني، بالإضافة إلى:',
-      'تطبيقات غير محدودة',
-      'مفاتيح API غير محدودة',
-      'أرقام WhatsApp و Webhooks بلا حد عملي',
-      'سجلات 365 يوماً',
-      '300 طلب API / دقيقة',
-      'دعم أولوية ومزامنة القوالب',
+      'Everything in Free, plus:',
+      'Unlimited apps',
+      'Unlimited API keys',
+      'WhatsApp numbers & webhooks without practical limits',
+      '365-day log retention',
+      '300 API requests / minute',
+      'Priority support and template sync',
+      'Built to run Email + WhatsApp together',
     ],
   },
 ];
@@ -85,96 +89,136 @@ export const FEATURE_SECTIONS: FeatureSection[] = [
   {
     id: 'platform',
     eyebrow: 'Platform',
-    title: 'التطبيقات ومفاتيح API',
-    description: 'إدارة تطبيقاتك ومفاتيح الوصول من لوحة المطوّر.',
+    title: 'Apps & API keys',
+    description: 'Manage apps and access keys from the developer dashboard.',
     rows: [
       {
-        label: 'عدد التطبيقات',
-        values: { free: '10', pro: 'غير محدود' },
+        label: 'Apps',
+        values: { free: '10', pro: 'Unlimited' },
       },
       {
-        label: 'مفاتيح API',
-        values: { free: '5', pro: 'غير محدود' },
+        label: 'API keys',
+        values: { free: '5', pro: 'Unlimited' },
       },
       {
-        label: 'صلاحيات دقيقة (Scopes)',
+        label: 'Fine-grained scopes',
         values: { free: true, pro: true },
       },
       {
-        label: 'بيئة اختبار + إنتاج',
+        label: 'Test + live environments',
+        values: { free: true, pro: true },
+      },
+      {
+        label: 'Public docs & SDKs',
+        hint: '@rukny/email and @rukny/whatsapp',
         values: { free: true, pro: true },
       },
     ],
   },
   {
     id: 'whatsapp',
-    title: 'WhatsApp والرسائل',
-    description: 'الرسائل تُفوتر من محفظة التطبيق — بدون حد شهري على الاشتراك.',
+    title: 'WhatsApp API',
+    description:
+      'Messages are billed from the app wallet — no monthly message cap on the platform plan.',
     rows: [
       {
-        label: 'إرسال رسائل API',
+        label: 'Send via API',
         values: { free: true, pro: true },
       },
       {
-        label: 'نموذج الفوترة',
-        hint: 'حسب فئة المحادثة (Meta + هامش المنصة)',
-        values: { free: 'حسب الاستخدام', pro: 'حسب الاستخدام' },
+        label: 'Billing model',
+        hint: 'By conversation category (Meta + platform margin)',
+        values: { free: 'Usage-based', pro: 'Usage-based' },
       },
       {
-        label: 'رسائل الخدمة (Service)',
-        hint: 'أول 1000 محادثة/شهر مجاناً من Meta',
+        label: 'Service messages',
+        hint: 'First 1,000 conversations / month free from Meta',
         values: { free: true, pro: true },
       },
       {
-        label: 'أرقام WhatsApp Business',
-        values: { free: '1', pro: 'غير محدود' },
+        label: 'WhatsApp Business numbers',
+        values: { free: '1', pro: 'Unlimited' },
       },
       {
-        label: 'مزامنة القوالب',
+        label: 'Template sync',
         values: { free: false, pro: true },
       },
     ],
   },
   {
-    id: 'integrations',
-    title: 'Webhooks والتكامل',
+    id: 'email',
+    title: 'Email API',
+    description:
+      'Transactional email from a verified domain. One-time free allowance, then Email Starter for the product.',
     rows: [
       {
-        label: 'Webhooks',
-        values: { free: '3', pro: 'غير محدود' },
-      },
-      {
-        label: 'جهات اتصال',
-        values: { free: '1,000', pro: 'غير محدود' },
-      },
-      {
-        label: 'قائمة IP مسموحة',
+        label: 'Product install',
         values: { free: true, pro: true },
       },
       {
-        label: 'توثيق API تفاعلي',
+        label: 'Free allowance',
+        hint: 'Once per account',
+        values: { free: '1,000 messages', pro: '1,000 messages' },
+      },
+      {
+        label: 'Email API Starter',
+        hint: '15,000 IQD / month',
+        values: { free: '10,000 messages / month', pro: '10,000 messages / month' },
+      },
+      {
+        label: 'Domain verify + sender authorize',
+        values: { free: true, pro: true },
+      },
+      {
+        label: 'Test / live keys',
+        values: { free: true, pro: true },
+      },
+      {
+        label: 'Official SDK @rukny/email',
+        values: { free: true, pro: true },
+      },
+    ],
+  },
+  {
+    id: 'integrations',
+    title: 'Webhooks & integrations',
+    rows: [
+      {
+        label: 'Webhooks (WhatsApp)',
+        values: { free: '3', pro: 'Unlimited' },
+      },
+      {
+        label: 'Contacts',
+        values: { free: '1,000', pro: 'Unlimited' },
+      },
+      {
+        label: 'IP allowlist',
+        values: { free: true, pro: true },
+      },
+      {
+        label: 'Portal Try it',
         values: { free: true, pro: true },
       },
     ],
   },
   {
     id: 'ops',
-    title: 'الأداء والدعم',
+    title: 'Performance & support',
     rows: [
       {
-        label: 'طلبات API / دقيقة',
+        label: 'API requests / minute',
         values: { free: '60', pro: '300' },
       },
       {
-        label: 'احتفاظ بالسجلات',
-        values: { free: '14 يوم', pro: '365 يوم' },
+        label: 'Log retention',
+        values: { free: '14 days', pro: '365 days' },
       },
       {
-        label: 'أولوية الطوابير',
-        values: { free: 'عادية', pro: 'عالية' },
+        label: 'Queue priority',
+        values: { free: 'Standard', pro: 'High' },
       },
       {
-        label: 'دعم مخصص',
+        label: 'Priority support',
         values: { free: false, pro: true },
       },
     ],
@@ -210,41 +254,94 @@ export const USAGE_RATES = [
 ] as const;
 
 export const USAGE_SECTION_COPY = {
-  eyebrow: 'Usage-based billing',
-  title: 'Message pricing',
+  eyebrow: 'WhatsApp usage',
+  title: 'WhatsApp message pricing',
   subtitle:
-    'Charged from your app wallet. Same rates on Free and Pro — no monthly message cap.',
+    'Charged from your app wallet. Same rates on Free and Pro — no monthly message cap on the platform plan.',
   perMessage: 'per message',
   free: 'Free',
   footnote:
     'Prices include Meta conversation fees and Rukny platform margin. Billed per delivered message category.',
 } as const;
 
+export const EMAIL_PRODUCT_PLANS = [
+  {
+    id: 'email-free',
+    name: 'Free allowance',
+    nameEn: 'Free',
+    priceLabel: 'Free',
+    priceNote: 'Once per account',
+    volume: '1,000 messages',
+    description: 'Start integrating after you install Email API.',
+    highlights: [
+      'Verified domain and authorized sender',
+      'Test and live keys',
+      'SDK and REST',
+      'Does not renew monthly',
+    ],
+  },
+  {
+    id: 'email-starter',
+    name: 'Email API Starter',
+    nameEn: 'Starter',
+    priceLabel: '15,000',
+    priceNote: `${CURRENCY} / month`,
+    volume: '10,000 messages / month',
+    description: 'Fixed monthly allowance for transactional email in production.',
+    highlights: [
+      '10,000 messages every billing cycle',
+      'Same API and SDK surface',
+      'Request from the developer portal',
+      'No unlimited sending in the MVP',
+    ],
+    popular: true,
+  },
+] as const;
+
+export const EMAIL_SECTION_COPY = {
+  eyebrow: 'Email API',
+  title: 'Email API pricing',
+  subtitle:
+    'Separate from Free / Pro platform plans. Start with the free allowance, then enable Starter when you need more volume.',
+  docsCta: 'Read Email API docs',
+  docsHref: '/documentation/email-api/quotas',
+} as const;
+
 export const PRICING_FAQS = [
   {
-    question: 'هل الرسائل مشمولة في اشتراك Pro؟',
+    question: 'Are messages included in Pro?',
     answer:
-      'لا. اشتراك Pro يفتح السقوف والميزات (تطبيقات، مفاتيح، webhooks…). تكلفة الرسائل تُخصم من محفظة كل تطبيق حسب الاستخدام الفعلي، في كلا الخطتين.',
+      'No. Pro unlocks platform ceilings (apps, keys, webhooks…). WhatsApp messages are charged from the app wallet by usage. Email API has a one-time free allowance, then a separate Email Starter product plan.',
   },
   {
-    question: 'ما الفرق بين المجاني و Pro؟',
+    question: 'What is the difference between Free and Pro?',
     answer:
-      'المجاني مناسب للتجربة والمشاريع الصغيرة (حتى 10 تطبيقات و5 مفاتيح). Pro يزيل السقوف تقريباً ويرفع معدل الطلبات ومدة السجلات ويضيف دعماً أولوياً.',
+      'Free fits experiments and small projects (up to 10 apps and 5 keys). Pro removes most ceilings, raises rate limits and log retention, and adds priority support.',
   },
   {
-    question: 'لدي باقة أعمال (BUSINESS) في منصة ركني — هل أحتاج Pro؟',
+    question: 'How is Email API priced?',
     answer:
-      'باقات المنصة (Pro / Whale / Business) تمنحك مزايا Pro في بوابة المطوّرين تلقائياً دون اشتراك منفصل.',
+      'Every account gets 1,000 free messages once. After that you can request Email API Starter for 15,000 IQD per month for 10,000 messages per cycle. Unlimited sending is not available in the MVP.',
   },
   {
-    question: 'كيف أشحن المحفظة؟',
+    question: 'Do I need Pro to use Email API?',
     answer:
-      'من لوحة كل تطبيق → المحفظة. يمكنك شحن الرصيد بالدينار العراقي واستخدامه لرسائل WhatsApp.',
+      'No. Email API can be installed on Free. Pro helps when you need more apps, keys, and higher request rates.',
   },
   {
-    question: 'هل يمكنني الترقية أو الإلغاء في أي وقت؟',
+    question: 'I already have a Rukny BUSINESS plan — do I need Pro?',
     answer:
-      'نعم. الترقية إلى Pro فورية. عند الإلغاء تبقى على المجاني مع حدوده؛ الرصيد المتبقي في المحفظة يظل متاحاً.',
+      'Platform plans (Pro / Whale / Business) grant developer-portal Pro benefits automatically without a separate subscription.',
+  },
+  {
+    question: 'How do I top up the wallet?',
+    answer:
+      'Open each app → Wallet. IQD balance is used for WhatsApp messages. Email Starter is requested from the product page in the portal.',
+  },
+  {
+    question: 'Can I upgrade or cancel anytime?',
+    answer:
+      'Yes. Upgrading to Pro is immediate. If you cancel, you stay on Free with its limits; remaining wallet balance stays available.',
   },
 ];
 

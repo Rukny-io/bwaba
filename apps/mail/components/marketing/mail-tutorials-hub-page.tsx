@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Search, SearchX } from "lucide-react";
+import { ArrowRight, Search, SearchX } from "lucide-react";
 import { cn } from "@heroui/react";
 import {
   filterMailTutorialArticles,
@@ -13,12 +13,12 @@ import {
 } from "@/lib/mail-tutorials";
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
-function pillClass(active: boolean) {
+function filterClass(active: boolean) {
   return cn(
-    "inline-flex min-h-9 items-center rounded-full px-3.5 py-2 text-xs font-semibold transition-colors sm:text-sm",
+    "inline-flex min-h-9 items-center border px-3.5 py-2 text-xs font-medium transition-colors sm:text-sm",
     active
-      ? "bg-[#062c30] text-white"
-      : "bg-white text-[#132327]/55 ring-1 ring-[#E8ECF0] hover:text-[#132327]",
+      ? "border-[#062c30] bg-[#062c30] text-white"
+      : "border-[#e7e5e4] bg-white text-[#57534e] hover:border-[#1c1917]/25 hover:text-[#1c1917]",
   );
 }
 
@@ -53,30 +53,29 @@ export function MailTutorialsHubPage() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <main className="overflow-x-clip pt-14">
-      <section className={L.heroPad}>
-        <div className="mx-auto flex max-w-6xl flex-col items-center text-center">
-          <p className={`mail-hero-enter ${L.heroBadge}`}>Help center</p>
-          <div className="mail-hero-enter-delayed mt-5 flex size-14 items-center justify-center rounded-2xl border border-[#E8ECF0] bg-white shadow-[0_8px_32px_rgba(19,35,39,0.06)]">
-            <BookOpen className="size-6 text-[#062c30]" strokeWidth={1.75} aria-hidden />
+    <main className="overflow-x-clip">
+      <section className="border-b border-[#e7e5e4]">
+        <div className={L.container}>
+          <div className="max-w-screen-sm space-y-6 py-12 md:py-16">
+            <p className={`mail-hero-enter ${L.heroBadge}`}>Help center</p>
+            <h1 className={`mail-hero-enter-delayed ${L.heroTitle}`}>
+              Email tutorials
+            </h1>
+            <p className={`mail-hero-enter-delayed ${L.heroLead}`}>
+              Step-by-step guides for domain setup, mailboxes, routing, and delivery —
+              no sign-in required.
+            </p>
+            <p className="mail-hero-enter-delayed text-sm font-medium text-[#a8a29e]">
+              {articleCount} articles
+            </p>
           </div>
-          <h1 className={`mail-hero-enter-delayed mt-5 ${L.heroTitle}`}>
-            Email tutorials
-          </h1>
-          <p className={`mail-hero-enter-delayed mt-4 max-w-xl ${L.heroLead}`}>
-            Step-by-step guides for domain setup, mailboxes, routing, and delivery —
-            no sign-in required.
-          </p>
-          <p className="mail-hero-enter-delayed mt-3 text-sm font-medium text-[#132327]/45">
-            {articleCount} articles
-          </p>
         </div>
       </section>
 
-      <section className={`${L.container} pb-6`}>
-        <div className="relative mx-auto max-w-xl">
+      <section className={`${L.container} border-b border-[#e7e5e4] py-8`}>
+        <div className="relative max-w-xl">
           <Search
-            className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-[#132327]/40"
+            className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-[#a8a29e]"
             aria-hidden
           />
           <input
@@ -85,12 +84,12 @@ export function MailTutorialsHubPage() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search tutorials: DNS, alias, inbox…"
             aria-label="Search tutorials"
-            className="h-12 w-full rounded-2xl border border-[#E8ECF0] bg-white ps-11 pe-4 text-sm text-[#132327] shadow-[0_4px_20px_rgba(19,35,39,0.04)] outline-none placeholder:text-[#132327]/40 focus:border-[#062c30]/25"
+            className="h-12 w-full border border-[#e7e5e4] bg-white ps-11 pe-4 text-sm text-[#1c1917] outline-none placeholder:text-[#a8a29e] focus:border-[#062c30]"
           />
         </div>
 
-        <div className="mx-auto mt-4 flex max-w-3xl flex-wrap justify-center gap-2">
-          <button type="button" onClick={() => setCategory("all")} className={pillClass(category === "all")}>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setCategory("all")} className={filterClass(category === "all")}>
             All
           </button>
           {MAIL_TUTORIAL_CATEGORIES.map((item) => (
@@ -98,7 +97,7 @@ export function MailTutorialsHubPage() {
               key={item.id}
               type="button"
               onClick={() => setCategory(item.id)}
-              className={pillClass(category === item.id)}
+              className={filterClass(category === item.id)}
             >
               {item.label}
             </button>
@@ -106,13 +105,13 @@ export function MailTutorialsHubPage() {
         </div>
       </section>
 
-      <section className={`${L.container} space-y-10 pb-12 sm:space-y-12 sm:pb-16 md:pb-[72px]`}>
+      <section className={`${L.container} space-y-10 py-12 sm:space-y-12 sm:py-16 md:pb-[72px]`}>
         {grouped.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#E8ECF0] bg-white px-6 py-16 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-[#F6F7F8] text-[#132327]/45">
+          <div className="flex flex-col items-center gap-3 border border-dashed border-[#e7e5e4] bg-white px-6 py-16 text-center">
+            <div className="flex size-11 items-center justify-center border border-[#e7e5e4] bg-[#f2f3f6] text-[#a8a29e]">
               <SearchX className="size-5" aria-hidden />
             </div>
-            <p className="max-w-sm text-sm text-[#132327]/55">
+            <p className="max-w-sm text-sm text-[#57534e]">
               {hasQuery
                 ? `No articles matched “${query.trim()}”. Try another keyword.`
                 : "No articles in this category yet."}
@@ -125,37 +124,37 @@ export function MailTutorialsHubPage() {
                 <div>
                   <h2
                     id={`tutorial-cat-${group.id}`}
-                    className="text-xl font-semibold tracking-tight text-[#132327] sm:text-2xl"
+                    className="text-xl font-bold tracking-tight text-[#1c1917] sm:text-2xl"
                   >
                     {group.label}
                   </h2>
-                  <p className="mt-1 text-sm text-[#132327]/50">{group.description}</p>
+                  <p className="mt-1 text-sm text-[#57534e]">{group.description}</p>
                 </div>
-                <p className="text-xs font-medium text-[#132327]/40">
+                <p className="text-xs font-medium text-[#a8a29e]">
                   {articles.length} article{articles.length === 1 ? "" : "s"}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className={`${L.gridFrame} grid-cols-1`}>
                 {articles.map((article) => (
                   <Link
                     key={article.slug}
                     href={`/tutorials/${article.slug}`}
-                    className="group flex items-start gap-4 rounded-2xl border border-[#E8ECF0] bg-white px-4 py-4 transition-colors hover:bg-[#F6F7F8]/80 sm:px-5 sm:py-5"
+                    className="group flex items-start gap-4 bg-white px-4 py-4 transition-colors hover:bg-[#f2f3f6] sm:px-5 sm:py-5"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-semibold leading-snug text-[#132327] transition-colors group-hover:text-[#062c30] sm:text-base">
+                      <p className="text-[15px] font-semibold leading-snug text-[#1c1917] transition-colors group-hover:text-[#062c30] sm:text-base">
                         {article.title}
                       </p>
-                      <p className="mt-1 text-[13px] leading-relaxed text-[#132327]/50 sm:text-sm">
+                      <p className="mt-1 text-[13px] leading-relaxed text-[#57534e] sm:text-sm">
                         {article.summary}
                       </p>
-                      <p className="mt-2 text-[11px] font-medium text-[#132327]/35">
+                      <p className="mt-2 text-[11px] font-medium text-[#a8a29e]">
                         {article.duration} read
                       </p>
                     </div>
                     <ArrowRight
-                      className="mt-1 size-4 shrink-0 text-[#132327]/25 transition-transform group-hover:-translate-x-0.5 group-hover:text-[#062c30]"
+                      className="mt-1 size-4 shrink-0 text-[#a8a29e] transition-transform group-hover:translate-x-0.5 group-hover:text-[#062c30]"
                       aria-hidden
                     />
                   </Link>

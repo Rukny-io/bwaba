@@ -169,6 +169,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       'PHONE_ALREADY_CLAIMED',
       'MAILBOX_LOCKED',
       'MAILBOX_LOGIN_FAILED',
+      'EMAIL_TEST_RECIPIENT',
     ]);
     if (code && passthroughCodes.has(code)) {
       return originalMessage;

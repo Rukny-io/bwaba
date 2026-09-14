@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   Forward,
-  Inbox,
   KeyRound,
   Mails,
   Send,
@@ -10,8 +9,10 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
 import { MailMarketingShell } from "@/components/marketing/mail-marketing-shell";
 import { MailProductivitySection } from "@/components/marketing/mail-productivity-section";
+import { MailWebmailPreview } from "@/components/marketing/mail-webmail-preview";
 import {
   formatMailIqD,
   listMailPlans,
@@ -90,39 +91,41 @@ export function MailHomePage({
   emailsSent?: number;
 }) {
   const primaryHref = signedIn ? "/apps" : "/login";
-  const primaryLabel = signedIn ? "Open console" : "Get started";
+  const primaryLabel = signedIn ? "Open console" : "Start Building";
   const plans = listMailPlans();
 
   return (
     <MailMarketingShell signedIn={signedIn} plainBackground>
-      <main className="overflow-x-clip pt-14">
-        <section id="overview" className={`relative ${L.heroPad}`}>
-          <div className="pointer-events-none absolute inset-0 mx-auto hidden min-h-[28rem] w-full max-w-6xl lg:block" aria-hidden>
-            <div className="absolute inset-y-0 left-0 w-px bg-[#E8ECF0]/80" />
-            <div className="absolute inset-y-0 right-0 w-px bg-[#E8ECF0]/80" />
+      <main className="overflow-x-clip">
+        <section id="overview" className="relative border-b border-[#e7e5e4]">
+          <div className={L.container}>
+            <div className="grid grid-cols-1 items-start gap-10 py-12 md:gap-12 md:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
+              <div className="space-y-8 max-w-screen-sm">
+                <p className={`mail-hero-enter ${L.heroBadge}`}>Rukny Mail</p>
+                <h1 className={`mail-hero-enter-delayed ${L.heroTitle}`}>
+                  Business email on your domain
+                </h1>
+                <p className={`mail-hero-enter-delayed ${L.heroLead}`}>
+                  Create mailboxes, authenticate DNS, and send from webmail. You
+                  keep the domain.
+                </p>
+                <div className="mail-hero-enter-delayed flex flex-wrap gap-2">
+                  <MailFrameLink href={primaryHref}>{primaryLabel}</MailFrameLink>
+                  <MailFrameLink href="/getting-started" variant="ghost">
+                    Getting started
+                  </MailFrameLink>
+                </div>
+              </div>
+
+              <div className="mail-hero-enter-late hidden min-w-0 lg:block">
+                <MailWebmailPreview />
+              </div>
+            </div>
           </div>
 
-          <div className="relative mx-auto flex max-w-6xl flex-col items-center">
-            <p className={`mail-hero-enter ${L.heroBadge}`}>Rukny Mail</p>
-            <h1 className={`mail-hero-enter-delayed mt-5 ${L.heroTitle}`}>
-            Business email on your domain
-            <span className="mt-2 block text-[#02797E]">by Rukny</span>
-            </h1>
-            <p className={`mail-hero-enter-delayed mt-5 ${L.heroLead}`}>
-              Create mailboxes, authenticate DNS, and send from webmail. You
-              keep the domain.
-            </p>
-            <div className="mail-hero-enter-delayed mt-8 flex w-full max-w-sm flex-col gap-2.5 sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3">
-              <Link href={primaryHref} className={L.btnPrimary}>
-                {primaryLabel}
-                <ArrowRight className="size-4" aria-hidden />
-              </Link>
-              <Link href="/getting-started" className={L.btnGhost}>
-                Getting started
-              </Link>
-              <Link href="/tutorials" className={L.btnGhost}>
-                Tutorials
-              </Link>
+          <div className="mail-hero-enter-late border-t border-[#e7e5e4] lg:hidden">
+            <div className="mx-auto max-w-6xl">
+              <MailWebmailPreview fullBleed />
             </div>
           </div>
         </section>
@@ -138,25 +141,22 @@ export function MailHomePage({
               delivery, DNS you publish, and a console for people and routing.
             </p>
 
-            <ul
-              className="mt-10 grid gap-px overflow-hidden rounded-2xl border sm:grid-cols-2 sm:rounded-3xl"
-              style={{ borderColor: "#E8ECF0", backgroundColor: "#E8ECF0" }}
-            >
+            <ul className={`mt-10 ${L.gridFrame} sm:grid-cols-2`}>
               {BENEFITS.map((item, index) => {
                 const Icon = item.icon;
                 return (
-                  <li key={item.title} className="flex gap-4 bg-white p-5 sm:p-6">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#F6F7F8] text-[#062c30] sm:size-11">
+                  <li key={item.title} className={`flex gap-4 ${L.cell}`}>
+                    <span className="flex size-10 shrink-0 items-center justify-center border border-[#e7e5e4] bg-white text-[#062c30] sm:size-11">
                       <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className="mb-1 font-mono text-[10px] tracking-wide text-[#132327]/45">
+                      <p className="mb-1 font-mono text-[10px] tracking-wide text-[#a8a29e]">
                         {String(index + 1).padStart(2, "0")}
                       </p>
-                      <h3 className="text-[15px] font-semibold text-[#132327] sm:text-base">
+                      <h3 className="text-[15px] font-semibold text-[#1c1917] sm:text-base">
                         {item.title}
                       </h3>
-                      <p className="mt-1.5 text-[13px] leading-[1.75] text-[#132327]/55 sm:text-[14px]">
+                      <p className="mt-1.5 text-[13px] leading-[1.75] text-[#57534e] sm:text-[14px]">
                         {item.body}
                       </p>
                     </div>
@@ -179,16 +179,16 @@ export function MailHomePage({
               Connect a domain you own. DNS records appear in the console after
               you add the domain.
             </p>
-            <ol className="mt-10 grid gap-px overflow-hidden rounded-2xl border sm:grid-cols-2 lg:grid-cols-4 sm:rounded-3xl" style={{ borderColor: "#E8ECF0", backgroundColor: "#E8ECF0" }}>
+            <ol className={`mt-10 ${L.gridFrame} sm:grid-cols-2 lg:grid-cols-4`}>
               {CONNECT_STEPS.map((item) => (
-                <li key={item.step} className="bg-white p-5 sm:p-6">
-                  <p className="font-mono text-[10px] tracking-wide text-[#132327]/45">
+                <li key={item.step} className={L.cell}>
+                  <p className="font-mono text-[10px] tracking-wide text-[#a8a29e]">
                     {item.step}
                   </p>
-                  <h3 className="mt-2 text-[15px] font-semibold text-[#132327]">
+                  <h3 className="mt-2 text-[15px] font-semibold text-[#1c1917]">
                     {item.title}
                   </h3>
-                  <p className="mt-1.5 text-[13px] leading-[1.75] text-[#132327]/55">
+                  <p className="mt-1.5 text-[13px] leading-[1.75] text-[#57534e]">
                     {item.body}
                   </p>
                 </li>
@@ -201,21 +201,18 @@ export function MailHomePage({
           <div className={L.container}>
             <p className={L.eyebrow}>Use cases</p>
             <h2 className={L.sectionTitle}>Built for the mail you already send</h2>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <div className={`mt-10 ${L.gridFrame} md:grid-cols-3`}>
               {USE_CASES.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <article
-                    key={item.title}
-                    className="rounded-2xl border border-[#E8ECF0] bg-white/80 p-5 sm:p-6"
-                  >
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-[#F6F7F8] text-[#062c30]">
+                  <article key={item.title} className={L.cell}>
+                    <span className="flex size-10 items-center justify-center border border-[#e7e5e4] bg-white text-[#062c30]">
                       <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
                     </span>
-                    <h3 className="mt-4 text-[15px] font-semibold text-[#132327] sm:text-base">
+                    <h3 className="mt-4 text-[15px] font-semibold text-[#1c1917] sm:text-base">
                       {item.title}
                     </h3>
-                    <p className="mt-1.5 text-[13px] leading-[1.75] text-[#132327]/55 sm:text-[14px]">
+                    <p className="mt-1.5 text-[13px] leading-[1.75] text-[#57534e] sm:text-[14px]">
                       {item.body}
                     </p>
                   </article>
@@ -235,30 +232,25 @@ export function MailHomePage({
               Each workspace has its own subscription. Starter starts after DNS is verified;
               Standard and Premium are requested in the console.
             </p>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <div className={`mt-10 ${L.gridFrame} md:grid-cols-3`}>
               {plans.map((plan) => (
-                <article
-                  key={plan.id}
-                  className="flex flex-col rounded-2xl border border-[#E8ECF0] bg-white p-5 sm:p-6"
-                >
+                <article key={plan.id} className={`flex flex-col ${L.cell} bg-white`}>
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-[15px] font-semibold text-[#132327] sm:text-base">
+                    <h3 className="text-[15px] font-semibold text-[#1c1917] sm:text-base">
                       {plan.name}
                     </h3>
                     {plan.popular ? (
-                      <span className="rounded-full bg-[#EEF2F2] px-2.5 py-0.5 text-[11px] font-semibold text-[#062c30]">
+                      <span className="border border-[#e7e5e4] bg-[#f2f3f6] px-2.5 py-0.5 text-[11px] font-semibold text-[#062c30]">
                         Popular
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm text-[#132327]/55">{plan.bestFor}</p>
-                  <p className="mt-4 text-2xl font-bold tracking-tight text-[#132327]">
+                  <p className="mt-1 text-sm text-[#57534e]">{plan.bestFor}</p>
+                  <p className="mt-4 text-2xl font-bold tracking-tight text-[#1c1917]">
                     {formatMailIqD(plan.priceMonthly)}
-                    <span className="text-sm font-medium text-[#132327]/45">
-                      /mo
-                    </span>
+                    <span className="text-sm font-medium text-[#a8a29e]">/mo</span>
                   </p>
-                  <ul className="mt-4 flex flex-1 flex-col gap-2 text-sm text-[#132327]/55">
+                  <ul className="mt-4 flex flex-1 flex-col gap-2 text-sm text-[#57534e]">
                     {mailPlanHighlights(plan).map((item) => (
                       <li key={item}>{item}</li>
                     ))}
@@ -267,8 +259,8 @@ export function MailHomePage({
               ))}
             </div>
             <Link
-              href={signedIn ? "/pricing" : "/login?next=/pricing"}
-              className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-[#062c30]"
+              href="/pricing"
+              className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-[#062c30] transition-colors hover:text-[#1c1917]"
             >
               Full pricing and plan requests
               <ArrowRight className="size-4" aria-hidden />
@@ -276,38 +268,21 @@ export function MailHomePage({
           </div>
         </section>
 
-        <section className="pb-12 sm:pb-16 md:pb-[72px]">
+        <section className="border-t border-[#e7e5e4] pb-12 sm:pb-16 md:pb-[72px]">
           <div className={L.container}>
-            <div className="relative mx-auto flex flex-col gap-5 overflow-hidden rounded-2xl p-6 text-center sm:gap-8 sm:rounded-[34px] sm:p-12 md:p-16">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, rgba(210, 214, 239, 0.2) 0%, rgba(210, 214, 239, 0.2) 100%), linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%)",
-                }}
-              />
-              <div className="relative">
-                <h2 className="text-[1.5rem] font-bold leading-[1.25] tracking-[-0.025em] text-[#132327] sm:text-[2rem]">
-                  Ready to send as yourself?
-                </h2>
-                <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-[1.85] text-[#132327]/58 sm:text-base">
-                  Sign in, connect your domain, and open webmail when DNS is
-                  ready.
-                </p>
-                <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3">
-                  <Link href={primaryHref} className={L.btnPrimary}>
-                    <Inbox className="size-4" aria-hidden />
-                    {primaryLabel}
-                  </Link>
-                  <Link href="/getting-started" className={L.btnGhost}>
-                    Getting started
-                    <ArrowRight className="size-3.5 opacity-60" aria-hidden />
-                  </Link>
-                  <Link href="/tutorials" className={L.btnGhost}>
-                    Tutorials
-                  </Link>
-                </div>
+            <div className="border border-[#e7e5e4] bg-white px-6 py-12 text-center sm:px-12 md:py-16">
+              <p className={L.eyebrow}>Get started</p>
+              <h2 className="mt-2 text-[1.5rem] font-bold leading-[1.2] tracking-[-0.03em] text-[#1c1917] sm:text-[2rem]">
+                Ready to send as yourself?
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#57534e] sm:text-base">
+                Sign in, connect your domain, and open webmail when DNS is ready.
+              </p>
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
+                <MailFrameLink href={primaryHref}>{primaryLabel}</MailFrameLink>
+                <MailFrameLink href="/getting-started" variant="ghost">
+                  Getting started
+                </MailFrameLink>
               </div>
             </div>
           </div>

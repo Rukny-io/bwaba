@@ -1,5 +1,5 @@
-import { EmailApiDocs } from '@/components/email-api/email-api-docs';
+import { EmailApiAuth } from '@/components/email-api/email-api-auth';
 
 export default function EmailApiAuthPage() {
-  return <EmailApiDocs section="auth" />;
+  return <EmailApiAuth />;
 }

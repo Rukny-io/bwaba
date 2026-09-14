@@ -25,7 +25,7 @@ import {
 const AUTH_PAGES = ["/login", "/callback"];
 const PUBLIC_PREFIXES = ["/login", "/callback"];
 const APP_PICKER_PREFIXES = ["/apps"];
-const BILLING_PREFIXES = ["/pricing"];
+const BILLING_PREFIXES = ["/billing"];
 
 const DOMAIN_GATED_PREFIXES = [
   "/inbox",

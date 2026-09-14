@@ -8,7 +8,7 @@ import { checkDeveloperAuth } from '@/lib/middleware-auth';
 
 const PROTECTED_PREFIXES = ['/apps', '/settings'];
 const AUTH_PAGES = ['/login', '/callback'];
-const PUBLIC_PREFIXES = ['/check-email'];
+const PUBLIC_PREFIXES = ['/check-email', '/documentation', '/pricing'];
 
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
   const path = pathname.toLowerCase();

@@ -46,7 +46,7 @@ export const MAIL_HEADER_NAV: { href: string; label: string; exact?: boolean }[]
 ];
 
 export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [
-  { href: "/pricing", icon: CreditCard, label: "Pricing", exact: true },
+  { href: "/billing", icon: CreditCard, label: "Pricing", exact: true },
 ];
 
 export function isNavItemActive(

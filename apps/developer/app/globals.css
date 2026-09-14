@@ -192,6 +192,14 @@ body {
 }
 
 @layer components {
+  .eyebrow-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
   .liquid-glass {
     position: relative;
     isolation: isolate;

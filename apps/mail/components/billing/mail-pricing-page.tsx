@@ -298,21 +298,24 @@ export function MailPricingPage() {
                 disabled={requestDisabled}
                 onClick={() => void choosePlan(plan.id)}
                 className={cn(
-                  "group relative mt-6 inline-flex items-center justify-center p-1.5 disabled:opacity-60",
+                  "mail-frame-cta group relative mt-6 inline-flex w-full items-center justify-center p-1.5 disabled:opacity-60",
+                  isCurrent ? "mail-frame-cta--ghost" : "mail-frame-cta--primary",
                 )}
               >
+                <span className="mail-frame-ticks" aria-hidden>
+                  <span className="mail-frame-tick mail-frame-tick--tl" />
+                  <span className="mail-frame-tick mail-frame-tick--tr" />
+                  <span className="mail-frame-tick mail-frame-tick--bl" />
+                  <span className="mail-frame-tick mail-frame-tick--br" />
+                </span>
                 <span
                   className={cn(
-                    "mail-frame-cta relative inline-flex h-11 w-full items-center justify-center px-4 text-sm font-medium transition-colors",
+                    "relative inline-flex h-11 w-full items-center justify-center px-4 text-sm font-medium transition-[color,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
                     isCurrent
-                      ? "mail-frame-cta--ghost border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)]"
-                      : "mail-frame-cta--primary border border-[#062c30] bg-[#062c30] text-white hover:border-[#1c1917] hover:bg-[#1c1917]",
+                      ? "border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)]"
+                      : "border border-[#062c30] bg-[#062c30] text-white group-hover:border-[#1c1917] group-hover:bg-[#1c1917]",
                   )}
                 >
-                  <span className="mail-frame-tick mail-frame-tick--tl" aria-hidden />
-                  <span className="mail-frame-tick mail-frame-tick--tr" aria-hidden />
-                  <span className="mail-frame-tick mail-frame-tick--bl" aria-hidden />
-                  <span className="mail-frame-tick mail-frame-tick--br" aria-hidden />
                   {busy
                     ? "Sending…"
                     : pendingRequest

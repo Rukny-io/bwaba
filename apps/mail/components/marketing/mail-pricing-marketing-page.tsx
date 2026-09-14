@@ -392,13 +392,15 @@ export async function MailPricingMarketingPage() {
                 </MailFrameLink>
                 <a
                   href="mailto:support@rukny.io"
-                  className="group relative inline-flex items-center justify-center gap-2 p-1.5"
+                  className="mail-frame-cta mail-frame-cta--ghost group relative inline-flex items-center justify-center gap-2 p-1.5 focus-visible:outline-none"
                 >
-                  <span className="mail-frame-cta mail-frame-cta--ghost relative inline-flex items-center justify-center gap-2 border border-[#e7e5e4] bg-transparent px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-[#57534e] transition-colors duration-200 hover:border-[#1c1917]/25 hover:text-[#1c1917]">
-                    <span className="mail-frame-tick mail-frame-tick--tl" aria-hidden />
-                    <span className="mail-frame-tick mail-frame-tick--tr" aria-hidden />
-                    <span className="mail-frame-tick mail-frame-tick--bl" aria-hidden />
-                    <span className="mail-frame-tick mail-frame-tick--br" aria-hidden />
+                  <span className="mail-frame-ticks" aria-hidden>
+                    <span className="mail-frame-tick mail-frame-tick--tl" />
+                    <span className="mail-frame-tick mail-frame-tick--tr" />
+                    <span className="mail-frame-tick mail-frame-tick--bl" />
+                    <span className="mail-frame-tick mail-frame-tick--br" />
+                  </span>
+                  <span className="relative inline-flex items-center justify-center gap-2 border border-[#e7e5e4] bg-transparent px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-[#57534e] transition-[color,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:border-[#1c1917]/30 group-hover:text-[#1c1917]">
                     Contact Us for Pricing
                   </span>
                 </a>

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../packages/styles/index.css";
+@import "lenis/dist/lenis.css";
 @custom-variant dark (&:is(.dark *));
 @source "./**/*.{js,ts,jsx,tsx}";
 @source "../components/**/*.{js,ts,jsx,tsx}";
@@ -154,31 +155,57 @@ body {
 }
 
 .mail-marketing {
-  --background: #fbfbfc;
-  --foreground: #1c1917;
-  --muted: #57534e;
-  --muted-foreground: #57534e;
-  --border: #e7e5e4;
-  --primary: #062c30;
+  --mkt-deep: #041f22;
+  --mkt-brand: #062c30;
+  --mkt-teal: #02797e;
+  --mkt-lagoon: #1aabb2;
+  --mkt-mist: #d7ebea;
+  --mkt-soft: #e3f0ef;
+  --mkt-surface: #eef5f4;
+  --mkt-canvas: #f7faf9;
+  --mkt-ink: #041f22;
+  --mkt-body: #4a5c5a;
+  --mkt-border: #d7ebea;
+
+  --background: var(--mkt-canvas);
+  --foreground: var(--mkt-ink);
+  --muted: var(--mkt-body);
+  --muted-foreground: var(--mkt-body);
+  --border: var(--mkt-border);
+  --primary: var(--mkt-brand);
   --primary-foreground: #ffffff;
-  --brand-blue: #062c30;
-  --brand-blue-soft: #eef2f2;
-  --brand-teal: #02797e;
-  --secondary: #f2f3f6;
-  --secondary-foreground: #062c30;
-  --accent: #02797e;
+  --brand-blue: var(--mkt-brand);
+  --brand-blue-soft: var(--mkt-soft);
+  --brand-teal: var(--mkt-teal);
+  --secondary: var(--mkt-surface);
+  --secondary-foreground: var(--mkt-brand);
+  --accent: var(--mkt-teal);
   --accent-foreground: #ffffff;
   --surface: #ffffff;
-  --surface-secondary: #f2f3f6;
+  --surface-secondary: var(--mkt-surface);
   --success: #15b077;
-  --link: #02797e;
-  --focus: #02797e;
-  color: #1c1917;
-  background-color: #fbfbfc;
+  --link: var(--mkt-teal);
+  --focus: var(--mkt-teal);
+  color: var(--mkt-ink);
+  background-color: var(--mkt-canvas);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 100% -10%, rgba(2, 121, 126, 0.09), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 0% 20%, rgba(6, 44, 48, 0.04), transparent 50%);
 }
 
-.mail-marketing-radial {
-  display: none;
+.mail-mkt-band-ink {
+  background:
+    radial-gradient(ellipse 70% 80% at 15% 0%, rgba(26, 171, 178, 0.18), transparent 50%),
+    radial-gradient(ellipse 50% 60% at 90% 100%, rgba(2, 121, 126, 0.22), transparent 45%),
+    #041f22;
+}
+
+.mail-mkt-dns-grid {
+  background-image:
+    linear-gradient(rgba(215, 235, 234, 0.7) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(215, 235, 234, 0.7) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-color: #f7faf9;
 }
 
 .mail-estimate-range {
@@ -215,7 +242,7 @@ body {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #e7e5e4;
+  background: #d7ebea;
   display: none;
 }
 
@@ -235,112 +262,128 @@ body {
   position: relative;
 }
 
-.mail-frame-tick {
+.mail-frame-ticks {
   position: absolute;
-  z-index: 1;
-  background: currentColor;
-  transition: transform 0.2s ease-out;
+  inset: 0;
   pointer-events: none;
+  z-index: 1;
 }
 
+.mail-frame-tick {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  color: #062c30;
+  opacity: 0.72;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.mail-frame-tick::before,
 .mail-frame-tick::after {
   content: "";
   position: absolute;
   background: currentColor;
 }
 
-.mail-frame-cta--primary .mail-frame-tick {
-  color: #062c30;
+/* L arms */
+.mail-frame-tick::before {
+  width: 7px;
+  height: 1px;
 }
 
+.mail-frame-tick::after {
+  width: 1px;
+  height: 7px;
+}
+
+.mail-frame-cta--primary .mail-frame-tick,
 .mail-frame-cta--ghost .mail-frame-tick {
   color: #062c30;
 }
 
-.group:hover .mail-frame-cta--primary .mail-frame-tick,
-.group:hover .mail-frame-cta--ghost .mail-frame-tick,
-.mail-frame-cta:hover .mail-frame-tick {
+.mail-frame-cta:hover .mail-frame-tick,
+.mail-frame-cta:focus-visible .mail-frame-tick,
+.mail-frame-cta:focus-within .mail-frame-tick,
+.group:hover .mail-frame-tick,
+.group:focus-visible .mail-frame-tick,
+.group:focus-within .mail-frame-tick {
   color: #1c1917;
+  opacity: 1;
 }
 
 .mail-frame-tick--tl {
+  top: 0;
   left: 0;
-  top: 5px;
-  height: 1px;
-  width: 6px;
+}
+.mail-frame-tick--tl::before {
+  top: 0;
+  left: 0;
 }
 .mail-frame-tick--tl::after {
-  left: 5px;
-  top: -5px;
-  height: 6px;
-  width: 1px;
+  top: 0;
+  left: 0;
 }
 
 .mail-frame-tick--tr {
+  top: 0;
   right: 0;
-  top: 5px;
-  height: 1px;
-  width: 6px;
+}
+.mail-frame-tick--tr::before {
+  top: 0;
+  right: 0;
 }
 .mail-frame-tick--tr::after {
-  right: 5px;
-  top: -5px;
-  height: 6px;
-  width: 1px;
+  top: 0;
+  right: 0;
 }
 
 .mail-frame-tick--bl {
+  bottom: 0;
   left: 0;
-  bottom: 5px;
-  height: 1px;
-  width: 6px;
+}
+.mail-frame-tick--bl::before {
+  bottom: 0;
+  left: 0;
 }
 .mail-frame-tick--bl::after {
-  left: 5px;
-  bottom: -5px;
-  height: 6px;
-  width: 1px;
+  bottom: 0;
+  left: 0;
 }
 
 .mail-frame-tick--br {
+  bottom: 0;
   right: 0;
-  bottom: 5px;
-  height: 1px;
-  width: 6px;
+}
+.mail-frame-tick--br::before {
+  bottom: 0;
+  right: 0;
 }
 .mail-frame-tick--br::after {
-  right: 5px;
-  bottom: -5px;
-  height: 6px;
-  width: 1px;
+  bottom: 0;
+  right: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .group:hover .mail-frame-tick--tl {
-    transform: translateX(5px);
-  }
-  .group:hover .mail-frame-tick--tl::after {
-    transform: translateY(5px);
-  }
-  .group:hover .mail-frame-tick--tr {
-    transform: translateX(-5px);
-  }
-  .group:hover .mail-frame-tick--tr::after {
-    transform: translateY(5px);
-  }
-  .group:hover .mail-frame-tick--bl {
-    transform: translateX(5px);
-  }
-  .group:hover .mail-frame-tick--bl::after {
-    transform: translateY(-5px);
-  }
-  .group:hover .mail-frame-tick--br {
-    transform: translateX(-5px);
-  }
-  .group:hover .mail-frame-tick--br::after {
-    transform: translateY(-5px);
+/* Reduced-motion / non-JS fallback: park ticks at rest inset */
+.mail-frame-tick--static.mail-frame-tick--tl {
+  transform: translate(-1px, -1px);
+}
+.mail-frame-tick--static.mail-frame-tick--tr {
+  transform: translate(1px, -1px);
+}
+.mail-frame-tick--static.mail-frame-tick--bl {
+  transform: translate(-1px, 1px);
+}
+.mail-frame-tick--static.mail-frame-tick--br {
+  transform: translate(1px, 1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mail-frame-tick {
+    transition: none;
   }
 }
+
 
 .mail-hero-enter {
   opacity: 1;
@@ -480,17 +523,33 @@ body {
 
 @keyframes mail-marquee {
   from {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translateX(-50%);
+    /* Three equal tracks → shift by exactly one track */
+    transform: translate3d(-33.3333%, 0, 0);
   }
 }
 
 .mail-marquee-track {
   display: flex;
   width: max-content;
-  animation: mail-marquee 32s linear infinite;
+  will-change: transform;
+  animation: mail-marquee 40s linear infinite;
+}
+
+.mail-marquee-shell:hover .mail-marquee-track {
+  animation-play-state: paused;
+}
+
+.mail-marquee-logo:hover img {
+  opacity: 0.95;
+  filter: grayscale(0%);
+  transform: translateY(-2px) scale(1.04);
+}
+
+.mail-marquee-static {
+  display: none;
 }
 
 @keyframes mail-caret {
@@ -534,7 +593,15 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mail-marquee-track,
+  .mail-marquee-track {
+    display: none;
+    animation: none;
+  }
+
+  .mail-marquee-static {
+    display: flex;
+  }
+
   .mail-caret,
   .mail-auth-in,
   .mail-send-rise {

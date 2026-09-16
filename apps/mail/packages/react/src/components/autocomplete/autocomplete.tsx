@@ -275,6 +275,8 @@ interface AutocompleteClearButtonProps<
 > extends DOMRenderProps<E, undefined> {
   children?: ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  ref?: React.Ref<HTMLButtonElement | null>;
 }
 
 const AutocompleteClearButton = <E extends keyof React.JSX.IntrinsicElements = "button">({

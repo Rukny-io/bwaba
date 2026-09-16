@@ -133,6 +133,7 @@ interface SliderFillProps<
   E extends keyof React.JSX.IntrinsicElements = "div",
 > extends DOMRenderProps<E, undefined> {
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const SliderFill = <E extends keyof React.JSX.IntrinsicElements = "div">({

@@ -218,6 +218,7 @@ interface CalendarYearPickerGridProps<E extends keyof React.JSX.IntrinsicElement
   extends DOMRenderProps<E, undefined>, CalendarYearPickerVariants {
   children?: ReactNode;
   className?: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
 }
 
 interface CalendarYearPickerCellRenderProps {

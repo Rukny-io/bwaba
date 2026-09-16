@@ -83,8 +83,8 @@ function useDeferredVisible(enabled: boolean) {
     const el = ref.current;
     if (!el) return;
 
-    let idleId = 0;
-    let timeoutId = 0;
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
     let cancelled = false;
     let started = false;
 
@@ -94,7 +94,7 @@ function useDeferredVisible(enabled: boolean) {
       const run = () => {
         if (!cancelled) setReady(true);
       };
-      if ("requestIdleCallback" in window) {
+      if (typeof window.requestIdleCallback === "function") {
         idleId = window.requestIdleCallback(run, { timeout: 900 });
       } else {
         timeoutId = window.setTimeout(run, 180);
@@ -115,10 +115,10 @@ function useDeferredVisible(enabled: boolean) {
     return () => {
       cancelled = true;
       io.disconnect();
-      if (idleId && "cancelIdleCallback" in window) {
+      if (idleId !== undefined && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleId);
       }
-      if (timeoutId) window.clearTimeout(timeoutId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, [enabled]);
 

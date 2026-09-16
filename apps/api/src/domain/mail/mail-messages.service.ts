@@ -18,6 +18,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { SendMailMessageDto } from './dto/mail-message.dto';
+import { MailAppAccessService } from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
@@ -47,6 +48,7 @@ export class MailMessagesService {
     private readonly subscriptions: MailSubscriptionsService,
     private readonly mailboxSessions: MailMailboxSessionService,
     private readonly flags: MailFeatureFlags,
+    private readonly access: MailAppAccessService,
   ) {}
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
@@ -193,22 +195,19 @@ export class MailMessagesService {
   }
 
   private async requireOwnedMailbox(userId: string, appId: string, mailboxId: string) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
+    const access = await this.access.requireAccess(userId, appId);
 
     const mailbox = await this.prisma.mailMailbox.findFirst({
       where: {
         id: mailboxId,
-        mailAppId: app.id,
+        mailAppId: access.app.id,
         status: MailMailboxStatus.ACTIVE,
       },
     });
     if (!mailbox) {
       throw new NotFoundException('Mailbox not found or inactive.');
     }
-    return { app, mailbox };
+    return { app: access.app, mailbox };
   }
 
   private async requireUnlockedMailbox(
@@ -229,11 +228,8 @@ export class MailMessagesService {
   }
 
   async assertOwnedApp(userId: string, appId: string) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
-    return app;
+    const access = await this.access.requireAccess(userId, appId);
+    return access.app;
   }
 
   async list(
@@ -248,21 +244,18 @@ export class MailMessagesService {
       sessionToken?: string;
     } = {},
   ) {
-    await this.requireUnlockedMailbox(
+    const { app } = await this.requireUnlockedMailbox(
       userId,
       appId,
       opts.mailboxId,
       opts.sessionToken,
     );
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
 
     const take = Math.min(Math.max(opts.take ?? 50, 1), 100);
 
     const where: Prisma.MailMessageWhereInput = {
-      userId,
+      // Messages are stored under the workspace owner; access is via unlocked session.
+      userId: app.userId,
       mailbox: {
         mailAppId: app.id,
         status: { not: MailMailboxStatus.DELETED },
@@ -270,7 +263,18 @@ export class MailMessagesService {
       },
       ...(opts.starred
         ? { isStarred: true }
-        : { folder: opts.folder ?? MailMessageFolder.INBOX }),
+        : opts.folder === MailMessageFolder.INBOX || opts.folder === undefined
+          ? {
+              // Inbox = all arriving mail except Spam (and non-incoming folders).
+              folder: {
+                in: [
+                  MailMessageFolder.INBOX,
+                  MailMessageFolder.SOCIAL,
+                  MailMessageFolder.PROMOTIONS,
+                ],
+              },
+            }
+          : { folder: opts.folder }),
     };
 
     const rows = await this.prisma.mailMessage.findMany({
@@ -362,7 +366,7 @@ export class MailMessagesService {
     const needle = opts.q?.trim().slice(0, 200) || '';
 
     const where: Prisma.MailMessageWhereInput = {
-      userId,
+      userId: app.userId,
       folder: { not: MailMessageFolder.DRAFTS },
       createdAt: { gte: since },
       mailbox: {
@@ -462,15 +466,12 @@ export class MailMessagesService {
     messageId: string,
     sessionToken?: string,
   ) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
+    const app = await this.assertOwnedApp(userId, appId);
 
     const row = await this.prisma.mailMessage.findFirst({
       where: {
         id: messageId,
-        userId,
+        userId: app.userId,
         mailbox: { mailAppId: app.id },
       },
       include: { mailbox: { select: { avatarKey: true } } },
@@ -504,11 +505,12 @@ export class MailMessagesService {
     mailboxId: string | undefined,
     sessionToken?: string,
   ) {
-    await this.requireUnlockedMailbox(userId, appId, mailboxId, sessionToken);
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
+    const { app } = await this.requireUnlockedMailbox(
+      userId,
+      appId,
+      mailboxId,
+      sessionToken,
+    );
 
     const mailboxFilter = {
       mailAppId: app.id,
@@ -519,11 +521,15 @@ export class MailMessagesService {
     const [byFolder, starred] = await Promise.all([
       this.prisma.mailMessage.groupBy({
         by: ['folder'],
-        where: { userId, mailbox: mailboxFilter },
+        where: { userId: app.userId, mailbox: mailboxFilter },
         _count: { _all: true },
       }),
       this.prisma.mailMessage.count({
-        where: { userId, isStarred: true, mailbox: mailboxFilter },
+        where: {
+          userId: app.userId,
+          isStarred: true,
+          mailbox: mailboxFilter,
+        },
       }),
     ]);
 
@@ -542,7 +548,11 @@ export class MailMessagesService {
     }
 
     return {
-      inbox: folderCounts.INBOX,
+      // Inbox badge covers primary + social + promotions (spam stays separate).
+      inbox:
+        folderCounts.INBOX +
+        folderCounts.SOCIAL +
+        folderCounts.PROMOTIONS,
       sent: folderCounts.SENT,
       drafts: folderCounts.DRAFTS,
       trash: folderCounts.TRASH,
@@ -565,15 +575,12 @@ export class MailMessagesService {
     },
     sessionToken?: string,
   ) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
+    const app = await this.assertOwnedApp(userId, appId);
 
     const row = await this.prisma.mailMessage.findFirst({
       where: {
         id: messageId,
-        userId,
+        userId: app.userId,
         mailbox: { mailAppId: app.id },
       },
     });
@@ -621,15 +628,12 @@ export class MailMessagesService {
     messageId: string,
     sessionToken?: string,
   ) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
+    const app = await this.assertOwnedApp(userId, appId);
 
     const row = await this.prisma.mailMessage.findFirst({
       where: {
         id: messageId,
-        userId,
+        userId: app.userId,
         mailbox: { mailAppId: app.id },
       },
     });
@@ -678,7 +682,7 @@ export class MailMessagesService {
       throw new BadRequestException('Message body is required.');
     }
 
-    const { mailbox } = await this.requireUnlockedMailbox(
+    const { app, mailbox } = await this.requireUnlockedMailbox(
       userId,
       appId,
       dto.mailboxId,
@@ -710,7 +714,7 @@ export class MailMessagesService {
       const parent = await this.prisma.mailMessage.findFirst({
         where: {
           id: dto.replyToMessageId,
-          userId,
+          userId: app.userId,
           mailboxId: mailbox.id,
         },
       });
@@ -733,7 +737,7 @@ export class MailMessagesService {
     const queued = await this.prisma.mailMessage.create({
       data: {
         mailboxId: mailbox.id,
-        userId,
+        userId: app.userId,
         threadId,
         messageId: messageIdHeader,
         inReplyTo,

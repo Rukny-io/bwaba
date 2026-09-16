@@ -42,7 +42,11 @@ export class MailMessagesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List messages for a Mail app' })
+  @ApiOperation({
+    summary: 'List messages for a Mail app',
+    description:
+      'folder=INBOX returns primary inbox plus Social and Promotions (excludes Spam). Other folders filter exactly.',
+  })
   @ApiQuery({ name: 'mailboxId', required: false })
   @ApiQuery({
     name: 'folder',

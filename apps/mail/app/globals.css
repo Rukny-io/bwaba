@@ -16,57 +16,57 @@
 .default,
 [data-theme="light"],
 [data-theme="default"] {
-  /* Aligned with marketing mailBrand (Pinecone × Rukny teal) */
-  --brand-blue: #062c30;
-  --brand-blue-soft: #eef2f2;
-  --brand-slate: #e7e5e4;
-  --brand-teal: #02797e;
+  /* Simple mono — black / white / gray */
+  --brand-blue: #111111;
+  --brand-blue-soft: #f5f5f5;
+  --brand-slate: #e8e8e8;
+  --brand-teal: #111111;
 
-  --background: #fbfbfc;
-  --foreground: #1c1917;
-  --muted: #57534e;
-  --muted-foreground: #57534e;
+  --background: #fafafa;
+  --foreground: #111111;
+  --muted: #666666;
+  --muted-foreground: #666666;
   --border: var(--brand-slate);
-  --separator: #f2f3f6;
+  --separator: #f0f0f0;
 
   --primary: var(--brand-blue);
   --primary-foreground: #ffffff;
   --secondary: var(--brand-blue-soft);
-  --secondary-foreground: #062c30;
+  --secondary-foreground: #111111;
 
-  --accent: var(--brand-teal);
+  --accent: #111111;
   --accent-foreground: #ffffff;
 
   --surface: #ffffff;
-  --surface-foreground: #1c1917;
-  --surface-secondary: #f2f3f6;
-  --surface-secondary-foreground: #1c1917;
+  --surface-foreground: #111111;
+  --surface-secondary: #f5f5f5;
+  --surface-secondary-foreground: #111111;
   --surface-tertiary: var(--brand-blue-soft);
-  --surface-tertiary-foreground: #062c30;
+  --surface-tertiary-foreground: #111111;
 
   --overlay: #ffffff;
-  --overlay-foreground: #1c1917;
+  --overlay-foreground: #111111;
 
   --field-background: #ffffff;
-  --field-foreground: #1c1917;
+  --field-foreground: #111111;
   --field-placeholder: var(--muted);
 
-  --danger: #e31957;
+  --danger: #dc2626;
   --danger-foreground: #ffffff;
-  --success: #15b077;
-  --success-foreground: #064e3b;
-  --warning: #dd815d;
+  --success: #16a34a;
+  --success-foreground: #14532d;
+  --warning: #d97706;
   --warning-foreground: #78350f;
 
-  --default: #f2f3f6;
-  --default-foreground: #1c1917;
-  --focus: var(--brand-teal);
-  --scrollbar: #d1cdc9;
+  --default: #f5f5f5;
+  --default-foreground: #111111;
+  --focus: #111111;
+  --scrollbar: #d4d4d4;
   --segment: #ffffff;
-  --segment-foreground: #1c1917;
+  --segment-foreground: #111111;
 
-  --card-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 16px rgba(28, 25, 23, 0.03);
-  --card-shadow-hover: 0 4px 20px rgba(28, 25, 23, 0.08);
+  --card-shadow: 0 1px 2px rgba(17, 17, 17, 0.04), 0 4px 16px rgba(17, 17, 17, 0.03);
+  --card-shadow-hover: 0 4px 20px rgba(17, 17, 17, 0.08);
   --surface-shadow: var(--card-shadow);
   --overlay-shadow: var(--card-shadow-hover);
 
@@ -75,7 +75,7 @@
   --radius-2xl: calc(var(--radius) * 1.5);
   --radius-3xl: calc(var(--radius) * 3);
   --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
-  --link: var(--brand-teal);
+  --link: #111111;
 }
 
 @media screen and (max-width: 768px) {
@@ -90,53 +90,53 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --brand-blue: #3d9ea3;
-  --brand-blue-soft: #14383c;
-  --brand-slate: #2a3536;
-  --brand-teal: #4db5b9;
+  --brand-blue: #f5f5f5;
+  --brand-blue-soft: #262626;
+  --brand-slate: #2a2a2a;
+  --brand-teal: #f5f5f5;
 
-  --background: #0b1213;
-  --foreground: #f5f5f4;
-  --muted: #a8a29e;
-  --muted-foreground: #a8a29e;
-  --border: #2a3536;
-  --separator: #1a2223;
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --muted: #a3a3a3;
+  --muted-foreground: #a3a3a3;
+  --border: #2a2a2a;
+  --separator: #1a1a1a;
 
-  --primary: #3d9ea3;
-  --primary-foreground: #0b1213;
-  --secondary: #14383c;
-  --secondary-foreground: #e7f6f6;
+  --primary: #f5f5f5;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
 
-  --accent: var(--brand-teal);
-  --accent-foreground: #0b1213;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
 
-  --surface: #121a1b;
-  --surface-foreground: #f5f5f4;
-  --surface-secondary: #1a2223;
-  --surface-secondary-foreground: #e7e5e4;
-  --surface-tertiary: #1e2e30;
-  --surface-tertiary-foreground: #e7f6f6;
+  --surface: #141414;
+  --surface-foreground: #f5f5f5;
+  --surface-secondary: #1a1a1a;
+  --surface-secondary-foreground: #e5e5e5;
+  --surface-tertiary: #262626;
+  --surface-tertiary-foreground: #f5f5f5;
 
-  --overlay: #161f20;
-  --overlay-foreground: #f5f5f4;
+  --overlay: #171717;
+  --overlay-foreground: #f5f5f5;
 
-  --field-background: #161f20;
-  --field-foreground: #f5f5f4;
+  --field-background: #171717;
+  --field-foreground: #f5f5f5;
   --field-placeholder: var(--muted);
 
   --danger: #f87171;
-  --danger-foreground: #0b1213;
-  --success: #34d399;
-  --success-foreground: #064e3b;
+  --danger-foreground: #0a0a0a;
+  --success: #4ade80;
+  --success-foreground: #14532d;
   --warning: #fbbf24;
   --warning-foreground: #78350f;
 
-  --default: #1a2223;
-  --default-foreground: #f5f5f4;
-  --focus: var(--brand-teal);
-  --scrollbar: #3d4a4b;
-  --segment: #1a2223;
-  --segment-foreground: #f5f5f4;
+  --default: #1a1a1a;
+  --default-foreground: #f5f5f5;
+  --focus: #f5f5f5;
+  --scrollbar: #404040;
+  --segment: #1a1a1a;
+  --segment-foreground: #f5f5f5;
 
   --card-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.05),
@@ -155,17 +155,17 @@ body {
 }
 
 .mail-marketing {
-  --mkt-deep: #041f22;
-  --mkt-brand: #062c30;
-  --mkt-teal: #02797e;
-  --mkt-lagoon: #1aabb2;
-  --mkt-mist: #d7ebea;
-  --mkt-soft: #e3f0ef;
-  --mkt-surface: #eef5f4;
-  --mkt-canvas: #f7faf9;
-  --mkt-ink: #041f22;
-  --mkt-body: #4a5c5a;
-  --mkt-border: #d7ebea;
+  --mkt-deep: #111111;
+  --mkt-brand: #111111;
+  --mkt-teal: #111111;
+  --mkt-lagoon: #666666;
+  --mkt-mist: #e8e8e8;
+  --mkt-soft: #f5f5f5;
+  --mkt-surface: #f5f5f5;
+  --mkt-canvas: #fafafa;
+  --mkt-ink: #111111;
+  --mkt-body: #666666;
+  --mkt-border: #e8e8e8;
 
   --background: var(--mkt-canvas);
   --foreground: var(--mkt-ink);
@@ -183,36 +183,31 @@ body {
   --accent-foreground: #ffffff;
   --surface: #ffffff;
   --surface-secondary: var(--mkt-surface);
-  --success: #15b077;
-  --link: var(--mkt-teal);
-  --focus: var(--mkt-teal);
+  --success: #16a34a;
+  --link: var(--mkt-brand);
+  --focus: var(--mkt-brand);
   color: var(--mkt-ink);
   background-color: var(--mkt-canvas);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 100% -10%, rgba(2, 121, 126, 0.09), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 0% 20%, rgba(6, 44, 48, 0.04), transparent 50%);
+  background-image: none;
 }
 
 .mail-mkt-band-ink {
-  background:
-    radial-gradient(ellipse 70% 80% at 15% 0%, rgba(26, 171, 178, 0.18), transparent 50%),
-    radial-gradient(ellipse 50% 60% at 90% 100%, rgba(2, 121, 126, 0.22), transparent 45%),
-    #041f22;
+  background: #111111;
 }
 
 .mail-mkt-dns-grid {
   background-image:
-    linear-gradient(rgba(215, 235, 234, 0.7) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(215, 235, 234, 0.7) 1px, transparent 1px);
+    linear-gradient(rgba(232, 232, 232, 0.9) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 232, 232, 0.9) 1px, transparent 1px);
   background-size: 28px 28px;
-  background-color: #f7faf9;
+  background-color: #fafafa;
 }
 
 .mail-estimate-range {
   appearance: none;
   height: 2px;
   border-radius: 0;
-  background: #e7e5e4;
+  background: #e8e8e8;
   outline: none;
 }
 
@@ -220,16 +215,16 @@ body {
   appearance: none;
   width: 16px;
   height: 16px;
-  border: 2px solid #062c30;
-  background: #fbfbfc;
+  border: 2px solid #111111;
+  background: #fafafa;
   cursor: pointer;
 }
 
 .mail-estimate-range::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border: 2px solid #062c30;
-  background: #fbfbfc;
+  border: 2px solid #111111;
+  background: #fafafa;
   border-radius: 0;
   cursor: pointer;
 }
@@ -242,7 +237,7 @@ body {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #d7ebea;
+  background: #e8e8e8;
   display: none;
 }
 
@@ -273,7 +268,7 @@ body {
   position: absolute;
   width: 7px;
   height: 7px;
-  color: #062c30;
+  color: #111111;
   opacity: 0.72;
   pointer-events: none;
   will-change: transform;
@@ -299,7 +294,7 @@ body {
 
 .mail-frame-cta--primary .mail-frame-tick,
 .mail-frame-cta--ghost .mail-frame-tick {
-  color: #062c30;
+  color: #111111;
 }
 
 .mail-frame-cta:hover .mail-frame-tick,
@@ -308,7 +303,7 @@ body {
 .group:hover .mail-frame-tick,
 .group:focus-visible .mail-frame-tick,
 .group:focus-within .mail-frame-tick {
-  color: #1c1917;
+  color: #111111;
   opacity: 1;
 }
 
@@ -529,6 +524,31 @@ body {
     /* Three equal tracks → shift by exactly one track */
     transform: translate3d(-33.3333%, 0, 0);
   }
+}
+
+.mail-globe-glow {
+  isolation: isolate;
+  border-radius: 9999px;
+}
+
+/* Soft halo that follows the sphere — no hard edge clipping */
+.mail-globe-glow::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 6%;
+  z-index: -1;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 24px 8px rgba(147, 197, 253, 0.2),
+    0 0 48px 16px rgba(147, 197, 253, 0.1),
+    0 0 80px 28px rgba(255, 255, 255, 0.04);
+}
+
+.mail-globe-glow--mobile::after {
+  box-shadow:
+    0 0 16px 4px rgba(147, 197, 253, 0.14),
+    0 0 32px 10px rgba(147, 197, 253, 0.06);
 }
 
 .mail-marquee-track {

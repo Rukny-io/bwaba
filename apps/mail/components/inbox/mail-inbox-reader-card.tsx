@@ -231,7 +231,7 @@ export function MailInboxReaderCard({
       </div>
 
       {/* Tablet / desktop header */}
-      <div className="hidden shrink-0 items-center gap-2.5 border-b border-[var(--separator)] px-4 py-3 md:flex">
+      <div className="hidden shrink-0 items-center gap-2.5 border-b border-[var(--separator)] px-5 py-3.5 md:flex lg:px-7">
         <MailSenderBrandAvatar
           name={displayName}
           email={isOutbound ? replyToAddress : message.fromEmail}
@@ -281,22 +281,22 @@ export function MailInboxReaderCard({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none px-4 pb-4 pt-3 sm:px-6 md:pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none px-4 pb-6 pt-3 sm:px-6 md:px-7 md:pb-8 md:pt-2">
         <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
           {isOutbound
             ? `to ${message.to || replyToAddress}`
             : message.fromEmail}
         </p>
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
-          <h1 className="text-[1.25rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.4rem]">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <h1 className="text-[1.3rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.45rem]">
             {message.subject}
           </h1>
-          <time className="text-xs tabular-nums text-[var(--muted-foreground)]">
+          <time className="shrink-0 pt-0.5 text-xs tabular-nums text-[var(--muted-foreground)] sm:text-right">
             {formatFull(message.receivedAt)}
           </time>
-        </div>
+        </header>
 
-        <div className="mt-5 md:mt-6">
+        <div className="mt-6 md:mt-7">
           <MailHtmlBody
             key={message.id}
             html={message.bodyHtml}
@@ -307,7 +307,7 @@ export function MailInboxReaderCard({
 
       <div
         className={cn(
-          "shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-3",
+          "shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:border-t md:border-[var(--separator)] md:px-5 lg:px-6",
           replyOpen ? "md:pb-3 md:pt-2.5" : "md:h-[49px] md:py-0",
         )}
       >

@@ -6,6 +6,7 @@ import { Loader2, Link2, Plus } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { useEmbeddedSignupConfig, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
+import type { WhatsappAccountSummary } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
 
 export type EmbeddedSignupMode = 'connect' | 'add-phone';
@@ -45,6 +46,27 @@ function buildSignupExtras(mode: EmbeddedSignupMode, wabaId?: string) {
   };
 }
 
+function notifyOnboarding(account: WhatsappAccountSummary, w: {
+  pinGeneratedTitle: string;
+  pinGeneratedDesc: string;
+  paymentRequiredTitle: string;
+  paymentRequiredToast: string;
+}) {
+  const pins = (account.registrationPins || []).filter((p) => p.pin && p.registered);
+  if (pins.length > 0) {
+    const first = pins[0];
+    appToast.success(w.pinGeneratedTitle, {
+      description: w.pinGeneratedDesc.replace('{pin}', first.pin),
+    });
+  }
+
+  if (account.onboarding?.paymentMethodRequired !== false) {
+    appToast.info(w.paymentRequiredTitle, {
+      description: w.paymentRequiredToast,
+    });
+  }
+}
+
 export function EmbeddedSignupButton({
   appId,
   className,
@@ -66,6 +88,9 @@ export function EmbeddedSignupButton({
   const [launching, setLaunching] = useState(false);
   const signupMetaRef = useRef<{ wabaId?: string; phoneNumberId?: string }>({});
 
+  const graphVersion = config?.graphApiVersion?.replace(/^v/, '') || '25.0';
+  const sdkVersion = graphVersion.startsWith('v') ? graphVersion : `v${graphVersion}`;
+
   const initSdk = useCallback(() => {
     if (!config?.appId || !window.FB) return;
     window.FB.init({
@@ -73,10 +98,10 @@ export function EmbeddedSignupButton({
       cookie: true,
       xfbml: true,
       autoLogAppEvents: true,
-      version: 'v25.0',
+      version: sdkVersion,
     });
     setSdkReady(true);
-  }, [config?.appId]);
+  }, [config?.appId, sdkVersion]);
 
   useEffect(() => {
     if (window.FB && config?.appId) initSdk();
@@ -90,7 +115,11 @@ export function EmbeddedSignupButton({
           typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (payload?.type !== 'WA_EMBEDDED_SIGNUP') return;
 
-        if (payload.event === 'FINISH' || payload.event === 'FINISH_ONLY_WABA') {
+        if (
+          payload.event === 'FINISH' ||
+          payload.event === 'FINISH_ONLY_WABA' ||
+          payload.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+        ) {
           signupMetaRef.current = {
             wabaId: payload.data?.waba_id,
             phoneNumberId: payload.data?.phone_number_id,
@@ -126,16 +155,22 @@ export function EmbeddedSignupButton({
           return;
         }
 
-        const { wabaId: signupWabaId } = signupMetaRef.current;
+        const { wabaId: signupWabaId, phoneNumberId: signupPhoneNumberId } =
+          signupMetaRef.current;
         const wabaId = isAddPhone
           ? existingWabaId ?? signupWabaId
           : signupWabaId ?? existingWabaId;
 
         connectMutation.mutate(
-          { code, wabaId },
           {
-            onSuccess: () => {
+            code,
+            wabaId,
+            phoneNumberId: signupPhoneNumberId,
+          },
+          {
+            onSuccess: (account) => {
               appToast.success(isAddPhone ? w.addPhoneSuccess : w.connected);
+              notifyOnboarding(account, w);
               setLaunching(false);
             },
             onError: (err) => {

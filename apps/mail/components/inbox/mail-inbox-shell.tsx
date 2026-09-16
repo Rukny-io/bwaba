@@ -89,11 +89,12 @@ function demoRows(folder: InboxFolderId): InboxMessageRow[] {
     archive: "ARCHIVE",
     trash: "TRASH",
   } as const;
-  return MOCK_MESSAGES.filter((message) =>
-    folder === "starred"
-      ? message.starred
-      : message.folder === folder,
-  ).map((message) => ({
+  const incoming = new Set(["inbox", "promotions", "social"]);
+  return MOCK_MESSAGES.filter((message) => {
+    if (folder === "starred") return message.starred;
+    if (folder === "inbox") return incoming.has(message.folder);
+    return message.folder === folder;
+  }).map((message) => ({
     id: message.id,
     from: message.from,
     fromEmail: message.fromEmail,
@@ -111,16 +112,27 @@ function demoRows(folder: InboxFolderId): InboxMessageRow[] {
 }
 
 function demoCounts(): Record<InboxFolderId, number> {
+  const incoming = (message: (typeof MOCK_MESSAGES)[number]) =>
+    message.folder === "inbox" ||
+    message.folder === "promotions" ||
+    message.folder === "social";
   return {
-    inbox: MOCK_MESSAGES.filter((message) => message.folder === "inbox" && message.unread).length,
+    inbox: MOCK_MESSAGES.filter(
+      (message) => incoming(message) && message.unread,
+    ).length,
     starred: MOCK_MESSAGES.filter((message) => message.starred).length,
     scheduled: 0,
     sent: MOCK_MESSAGES.filter((message) => message.folder === "sent").length,
-    drafts: MOCK_MESSAGES.filter((message) => message.folder === "drafts").length,
-    promotions: MOCK_MESSAGES.filter((message) => message.folder === "promotions").length,
-    social: MOCK_MESSAGES.filter((message) => message.folder === "social").length,
+    drafts: MOCK_MESSAGES.filter((message) => message.folder === "drafts")
+      .length,
+    promotions: MOCK_MESSAGES.filter(
+      (message) => message.folder === "promotions",
+    ).length,
+    social: MOCK_MESSAGES.filter((message) => message.folder === "social")
+      .length,
     spam: MOCK_MESSAGES.filter((message) => message.folder === "spam").length,
-    archive: MOCK_MESSAGES.filter((message) => message.folder === "archive").length,
+    archive: MOCK_MESSAGES.filter((message) => message.folder === "archive")
+      .length,
     trash: MOCK_MESSAGES.filter((message) => message.folder === "trash").length,
   };
 }
@@ -375,6 +387,31 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
             );
           } catch {
             setLoginPreferredId(wantId);
+          }
+        }
+        // Owner / assignee: open the only SSO-eligible seat without a login form.
+        if (!unlocked) {
+          const ssoBoxes = boxes.filter(
+            (box) => box.status === "ACTIVE" && box.canSsoUnlock,
+          );
+          const autoId =
+            (wantId && ssoBoxes.some((box) => box.id === wantId)
+              ? wantId
+              : null) ?? (ssoBoxes.length === 1 ? ssoBoxes[0].id : null);
+          if (autoId) {
+            try {
+              const selectedBox = await selectMailMailbox(id, autoId);
+              unlocked = selectedBox;
+              setMailboxes((prev) =>
+                prev.some((box) => box.id === selectedBox.id)
+                  ? prev.map((box) =>
+                      box.id === selectedBox.id ? selectedBox : box,
+                    )
+                  : [...prev, selectedBox],
+              );
+            } catch {
+              setLoginPreferredId(autoId);
+            }
           }
         }
         if (cancelled) return;
@@ -924,13 +961,13 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
       className={cn(
         "relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden dark:bg-[var(--background)]",
         mobileShowReader && selectedMessage
-          ? "max-md:bg-[#eef0f3] bg-white"
+          ? "max-md:bg-[#f5f5f5] bg-white"
           : "bg-white",
       )}
     >
       <header
         className={cn(
-          "relative z-20 flex shrink-0 items-center gap-2 border-b border-[var(--separator)] px-3 py-2.5 sm:gap-3 sm:px-4",
+          "relative z-20 flex shrink-0 items-center gap-3 border-b border-[var(--separator)] px-3 py-2.5 sm:gap-4 sm:px-5",
           mobileShowReader && selectedMessage ? "max-md:hidden" : "",
         )}
       >
@@ -941,29 +978,29 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
           <Image
             src="/rukny-logo.svg"
             alt=""
-            width={28}
-            height={28}
+            width={26}
+            height={26}
             className="shrink-0 dark:brightness-0 dark:invert"
             priority
           />
-          <span className="hidden truncate text-[15px] font-semibold tracking-tight text-[var(--foreground)] md:inline">
+          <span className="hidden truncate text-[14px] font-semibold tracking-[-0.02em] text-[var(--foreground)] md:inline">
             Rukny Mail
           </span>
         </Link>
 
         {/* Desktop / large tablet search */}
-        <label className="mx-auto hidden h-10 w-full max-w-xl items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 transition-[box-shadow] focus-within:shadow-[0_0_0_3px_var(--brand-blue-soft)] md:flex">
+        <label className="mx-auto hidden h-10 w-full max-w-lg items-center gap-2.5 rounded-full bg-[var(--surface-secondary)] px-4 transition-[box-shadow,background-color] focus-within:bg-[var(--surface-secondary)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--foreground)_8%,transparent)] md:flex">
           <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search in mail"
-            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
           />
         </label>
 
         {/* Mobile actions: search expands over this cluster */}
-        <div className="relative ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5 md:ml-0 md:flex-none md:gap-1">
+        <div className="relative ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5 md:ml-0 md:flex-none md:gap-1.5">
           <div
             className={cn(
               "absolute inset-y-0 left-0 right-0 z-20 flex items-center md:hidden",
@@ -973,14 +1010,14 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
                 : "pointer-events-none translate-x-3 scale-95 opacity-0",
             )}
           >
-            <label className="flex h-10 w-full items-center gap-2 rounded-full bg-[var(--surface-secondary)] pl-3.5 pr-1.5 shadow-sm">
+            <label className="flex h-10 w-full items-center gap-2 rounded-full bg-[var(--surface-secondary)] pl-3.5 pr-1.5">
               <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
               <input
                 ref={searchInputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search in mail"
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
               />
               <button
                 type="button"
@@ -998,7 +1035,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
             aria-label="Search"
             onClick={() => setSearchOpen(true)}
             className={cn(
-              "inline-flex size-10 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] md:hidden",
+              "inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] md:hidden",
               searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
@@ -1009,7 +1046,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
             type="button"
             onClick={onCompose}
             className={cn(
-              "inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] transition-[opacity,transform] active:scale-[0.98] lg:hidden",
+              "inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--primary)] px-3.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-[opacity,transform] active:scale-[0.98] lg:hidden",
               searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
@@ -1021,7 +1058,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
             href={settingsHref}
             aria-label="Settings"
             className={cn(
-              "inline-flex size-10 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] sm:size-9",
+              "inline-flex size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]",
               searchOpen ? "max-md:pointer-events-none max-md:opacity-0" : "opacity-100",
             )}
           >

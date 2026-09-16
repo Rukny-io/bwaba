@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, Matches, Length } from 'class-validator';
 
 export class ConnectWabaDto {
   @IsString()
@@ -9,5 +9,16 @@ export class ConnectWabaDto {
 
   @IsOptional()
   @IsString()
-  wabaId?: string; // اختياري — إن كان المطوّر يعرفه مسبقاً
+  wabaId?: string; // من WA_EMBEDDED_SIGNUP session event
+
+  @IsOptional()
+  @IsString()
+  phoneNumberId?: string; // من WA_EMBEDDED_SIGNUP session event
+
+  /** Optional 6-digit two-step PIN. If omitted, the server generates one and returns it once. */
+  @IsOptional()
+  @IsString()
+  @Length(6, 6)
+  @Matches(/^\d{6}$/)
+  pin?: string;
 }

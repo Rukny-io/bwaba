@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "coreyhaines31-marketingskills/marketing-skills": {
+      "enabled": true
+    }
+  }
+}

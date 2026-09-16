@@ -242,16 +242,60 @@ export class MetaWebhookService {
   }
 
   private async handleAccountUpdate(wabaId: string, value: any): Promise<void> {
-    const account = await this.findAccountByWabaId(wabaId);
-    if (!account) return;
+    // Embedded Signup may send owner_business_id / waba_id inside the payload
+    // before our DB row exists under entry.id — resolve both.
+    const payloadWabaId = value?.waba_info?.waba_id || value?.waba_id || wabaId;
+    const account = await this.findAccountByWabaId(payloadWabaId);
 
     try {
-      const event = value?.event;
+      const event = String(value?.event || '').toUpperCase();
+      const ownerBusinessId =
+        value?.owner_business_id ||
+        value?.waba_info?.owner_business_id ||
+        null;
 
-      if (event === 'DISABLED' || event === 'FLAGGED') {
+      if (!account) {
+        this.logger.debug(
+          `account_update for unknown WABA ${payloadWabaId}: ${event}`,
+        );
+        return;
+      }
+
+      if (
+        event === 'DISABLED' ||
+        event === 'ACCOUNT_VIOLATION' ||
+        event === 'ACCOUNT_DELETED'
+      ) {
         await this.prisma.developerWhatsappAccount.update({
           where: { id: account.id },
-          data: { status: event === 'DISABLED' ? 'SUSPENDED' : 'ACTIVE' },
+          data: { status: 'SUSPENDED' },
+        });
+      } else if (event === 'PARTNER_REMOVED') {
+        await this.prisma.developerWhatsappAccount.update({
+          where: { id: account.id },
+          data: {
+            status: 'DISCONNECTED',
+            disconnectedAt: new Date(),
+            accessTokenEncrypted: null,
+            webhookSubscribed: false,
+          },
+        });
+      } else if (
+        event === 'PARTNER_ADDED' ||
+        event === 'PARTNER_APP_INSTALLED' ||
+        event === 'FLAGGED'
+      ) {
+        await this.prisma.developerWhatsappAccount.update({
+          where: { id: account.id },
+          data: {
+            status: 'ACTIVE',
+            ...(ownerBusinessId ? { businessId: String(ownerBusinessId) } : {}),
+          },
+        });
+      } else if (ownerBusinessId && !account.businessId) {
+        await this.prisma.developerWhatsappAccount.update({
+          where: { id: account.id },
+          data: { businessId: String(ownerBusinessId) },
         });
       }
 
@@ -260,8 +304,9 @@ export class MetaWebhookService {
         'account.update',
         {
           accountId: account.id,
-          wabaId,
+          wabaId: payloadWabaId,
           event,
+          ownerBusinessId,
           details: value,
         },
         account.developerAppId,

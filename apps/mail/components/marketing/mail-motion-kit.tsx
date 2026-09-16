@@ -140,7 +140,7 @@ export function MailSpotlight({
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const opacity = useMotionValue(0);
-  const spotlight = useMotionTemplate`radial-gradient(420px circle at ${x}px ${y}px, rgba(2,121,126,0.14), transparent 55%)`;
+  const spotlight = useMotionTemplate`radial-gradient(420px circle at ${x}px ${y}px, rgba(17,17,17,0.14), transparent 55%)`;
 
   if (reduceMotion) {
     return <div className={className}>{children}</div>;

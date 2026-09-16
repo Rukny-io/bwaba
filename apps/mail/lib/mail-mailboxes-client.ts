@@ -10,6 +10,9 @@ export type MailMailboxView = {
   avatarUrl: string | null;
   hasPassword: boolean;
   totpEnabled: boolean;
+  assignedUserId?: string | null;
+  /** True when the current Rukny user may open this seat without mailbox password. */
+  canSsoUnlock?: boolean;
   storageUsedBytes: number;
   status: "ACTIVE" | "DISABLED" | "DELETED";
   createdAt: string;

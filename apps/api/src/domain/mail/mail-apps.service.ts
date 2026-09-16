@@ -12,6 +12,7 @@ import {
   MailDomainStatus,
   MailDomainTrustStatus,
   MailDomainVerificationRequestStatus,
+  InvitationStatus,
   Prisma,
 } from '@prisma/client';
 import { randomInt } from 'crypto';
@@ -30,6 +31,7 @@ import {
 } from './dto/mail-app.dto';
 import { MAIL_APP_ID_PATTERN } from './mail-app-id.util';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
+import { MailAppAccessService } from './mail-app-access.service';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
@@ -46,6 +48,7 @@ export class MailAppsService {
     private readonly whatsappBusiness: WhatsAppBusinessService,
     private readonly configService: ConfigService,
     private readonly subscriptions: MailSubscriptionsService,
+    private readonly access: MailAppAccessService,
   ) {}
 
   private isDevOtpBypass(): boolean {
@@ -115,13 +118,18 @@ export class MailAppsService {
       status: string;
       mailboxCount: number;
     } | null,
+    opts?: {
+      membershipRole?: string;
+      isOwner?: boolean;
+      slotIndexOverride?: number;
+    },
   ) {
     const active =
       subscription && subscription.status === 'ACTIVE' ? subscription : null;
     return {
       id: app.id,
       appId: app.appId,
-      slotIndex: app.slotIndex,
+      slotIndex: opts?.slotIndexOverride ?? app.slotIndex,
       name: app.name,
       contactEmail: app.contactEmail,
       appType: app.appType,
@@ -135,6 +143,8 @@ export class MailAppsService {
       domainVerifiedAt: app.domainVerifiedAt?.toISOString() ?? null,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
+      membershipRole: opts?.membershipRole ?? 'OWNER',
+      isOwner: opts?.isOwner ?? true,
       subscription: active
         ? {
             plan: active.plan,
@@ -260,26 +270,84 @@ export class MailAppsService {
   }
 
   async listApps(userId: string) {
-    const apps = await this.prisma.mailApp.findMany({
-      where: { userId, status: MailAppStatus.ACTIVE },
-      include: { subscription: true },
-      orderBy: { slotIndex: 'asc' },
-    });
-    return {
-      apps: apps.map((app) => this.toView(app, app.subscription)),
-    };
+    const [owned, memberships] = await Promise.all([
+      this.prisma.mailApp.findMany({
+        where: { userId, status: MailAppStatus.ACTIVE },
+        include: { subscription: true },
+        orderBy: { slotIndex: 'asc' },
+      }),
+      this.prisma.mailAppMember.findMany({
+        where: {
+          userId,
+          status: InvitationStatus.ACCEPTED,
+          mailApp: { status: MailAppStatus.ACTIVE },
+          slotIndex: { not: null },
+        },
+        include: {
+          mailApp: { include: { subscription: true } },
+        },
+        orderBy: { slotIndex: 'asc' },
+      }),
+    ]);
+
+    const apps = [
+      ...owned.map((app) =>
+        this.toView(app, app.subscription, {
+          membershipRole: 'OWNER',
+          isOwner: true,
+        }),
+      ),
+      ...memberships.map((m) =>
+        this.toView(m.mailApp, m.mailApp.subscription, {
+          membershipRole: m.role,
+          isOwner: false,
+          slotIndexOverride: m.slotIndex ?? undefined,
+        }),
+      ),
+    ].sort((a, b) => a.slotIndex - b.slotIndex);
+
+    return { apps };
   }
 
   async getApp(userId: string, appId: string) {
     if (!MAIL_APP_ID_PATTERN.test(appId)) {
       throw new BadRequestException('Invalid Mail app id.');
     }
+    const access = await this.access.requireAccess(userId, appId);
     const app = await this.prisma.mailApp.findFirst({
-      where: { userId, appId, status: MailAppStatus.ACTIVE },
+      where: { id: access.app.id, status: MailAppStatus.ACTIVE },
       include: { subscription: true },
     });
     if (!app) throw new NotFoundException('Mail app not found.');
-    return { app: this.toView(app, app.subscription) };
+
+    let slotIndexOverride: number | undefined;
+    let membershipRole = 'OWNER';
+    if (!access.isOwner) {
+      membershipRole = String(access.role);
+      const membership = await this.prisma.mailAppMember.findUnique({
+        where: {
+          mailAppId_userId: { mailAppId: app.id, userId },
+        },
+      });
+      if (membership?.slotIndex != null) {
+        slotIndexOverride = membership.slotIndex;
+      } else {
+        // Assigned-only access without accepted membership row slot — allocate temp view slot.
+        const ownedMax = await this.prisma.mailApp.aggregate({
+          where: { userId },
+          _max: { slotIndex: true },
+        });
+        slotIndexOverride = (ownedMax._max.slotIndex ?? -1) + 1;
+      }
+    }
+
+    return {
+      app: this.toView(app, app.subscription, {
+        membershipRole,
+        isOwner: access.isOwner,
+        slotIndexOverride,
+      }),
+    };
   }
 
   private async allocateSlotIndex(userId: string): Promise<number> {
@@ -354,6 +422,7 @@ export class MailAppsService {
   }
 
   async updateApp(userId: string, appId: string, dto: UpdateMailAppDto) {
+    await this.access.requireOwner(userId, appId);
     const { app: previous } = await this.getApp(userId, appId);
 
     const primaryDomain =
@@ -436,7 +505,7 @@ export class MailAppsService {
   }
 
   async archiveApp(userId: string, appId: string) {
-    await this.getApp(userId, appId);
+    await this.access.requireOwner(userId, appId);
     const app = await this.prisma.mailApp.update({
       where: { appId },
       data: { status: MailAppStatus.ARCHIVED },

@@ -138,9 +138,11 @@ export function MailSidebar({
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        {footer.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} />
-        ))}
+        {footer.length > 0
+          ? footer.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} />
+            ))
+          : null}
         <Dropdown>
           <Dropdown.Trigger
             aria-label="Profile"

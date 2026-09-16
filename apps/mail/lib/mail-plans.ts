@@ -11,6 +11,8 @@ export type MailPlanId = "starter" | "standard" | "premium";
 
 export type MailPlanLimits = {
   mailboxesIncluded: number;
+  /** Invited console members (excludes owner). Starter = 0. */
+  consoleMembersIncluded: number;
   storageGbPerMailbox: number;
   forwardingRules: number;
   emailAliases: number;
@@ -74,6 +76,7 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     popular: false,
     limits: {
       mailboxesIncluded: 1,
+      consoleMembersIncluded: 0,
       storageGbPerMailbox: 5,
       forwardingRules: 5,
       emailAliases: 10,
@@ -96,6 +99,7 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     popular: true,
     limits: {
       mailboxesIncluded: 3,
+      consoleMembersIncluded: 5,
       storageGbPerMailbox: 20,
       forwardingRules: 20,
       emailAliases: 50,
@@ -118,6 +122,7 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     popular: false,
     limits: {
       mailboxesIncluded: 5,
+      consoleMembersIncluded: 15,
       storageGbPerMailbox: 30,
       forwardingRules: 50,
       emailAliases: MAIL_UNLIMITED,

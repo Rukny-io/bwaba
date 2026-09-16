@@ -11,12 +11,12 @@ interface AuthShellProps {
 
 export function AuthShell({ children, className = "" }: AuthShellProps) {
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#fbfbfc] font-sans text-[#1c1917]">
-      <header className="relative z-10 border-b border-[#e7e5e4]">
+    <div className="relative flex min-h-screen flex-col bg-[#fafafa] font-sans text-[#111111]">
+      <header className="relative z-10 border-b border-[#e8e8e8]">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center px-4 sm:px-8">
           <Link
             href="/"
-            className="flex items-center gap-2.5 text-[15px] font-bold tracking-[-0.02em] text-[#1c1917] transition-opacity hover:opacity-80"
+            className="flex items-center gap-2.5 text-[15px] font-bold tracking-[-0.02em] text-[#111111] transition-opacity hover:opacity-80"
           >
             <Image src="/rukny-logo.svg" alt="" width={28} height={28} priority />
             Rukny Mail

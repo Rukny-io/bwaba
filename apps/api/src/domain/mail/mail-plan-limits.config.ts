@@ -4,6 +4,8 @@ export const MAIL_UNLIMITED = Number.MAX_SAFE_INTEGER;
 
 export type MailPlanLimits = {
   mailboxesIncluded: number;
+  /** Invited console members (excludes workspace owner). Starter = 0. */
+  consoleMembersIncluded: number;
   storageGbPerMailbox: number;
   forwardingRules: number;
   emailAliases: number;
@@ -65,6 +67,7 @@ export function mailPlanHighlights(plan: MailPlanDefinition): string[] {
 export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
   STARTER: {
     mailboxesIncluded: 1,
+    consoleMembersIncluded: 0,
     storageGbPerMailbox: 5,
     forwardingRules: 5,
     emailAliases: 10,
@@ -78,6 +81,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
   },
   STANDARD: {
     mailboxesIncluded: 3,
+    consoleMembersIncluded: 5,
     storageGbPerMailbox: 20,
     forwardingRules: 20,
     emailAliases: 50,
@@ -91,6 +95,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
   },
   PREMIUM: {
     mailboxesIncluded: 5,
+    consoleMembersIncluded: 15,
     storageGbPerMailbox: 30,
     forwardingRules: 50,
     emailAliases: MAIL_UNLIMITED,

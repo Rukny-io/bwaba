@@ -53,6 +53,11 @@ export function MailAppCard({ app, href, active }: MailAppCardProps) {
             {app.primaryDomain}
           </span>
         ) : null}
+        {app.isOwner === false ? (
+          <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">
+            {app.membershipRole || "Member"}
+          </span>
+        ) : null}
         {active ? (
           <span className="rounded-full bg-[color-mix(in_srgb,var(--primary)_15%,var(--background))] px-2.5 py-0.5 text-[10px] font-medium text-[var(--primary)]">
             Current

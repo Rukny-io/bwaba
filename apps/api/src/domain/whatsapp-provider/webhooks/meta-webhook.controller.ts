@@ -64,15 +64,20 @@ export class MetaWebhookController {
       throw new ForbiddenException('Missing raw body');
     }
 
+    if (!appSecret) {
+      throw new ForbiddenException('Webhook secret not configured');
+    }
+
     const expectedSignature =
       'sha256=' +
       crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
+    const provided = Buffer.from(signature);
+    const expected = Buffer.from(expectedSignature);
+
     if (
-      !crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature),
-      )
+      provided.length !== expected.length ||
+      !crypto.timingSafeEqual(provided, expected)
     ) {
       throw new ForbiddenException('Invalid signature');
     }

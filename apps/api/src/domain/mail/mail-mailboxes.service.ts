@@ -4,15 +4,25 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MailAppStatus, MailMailboxStatus, Prisma } from '@prisma/client';
+import {
+  InvitationStatus,
+  MailAppMemberRole,
+  MailMailboxStatus,
+  Prisma,
+} from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { generateSecret, generateURI, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import {
+  MailAppAccessService,
+  type MailAppAccess,
+} from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
+  AssignMailMailboxDto,
   ChangeMailMailboxPasswordDto,
   ConfirmMailMailbox2faDto,
   CreateMailMailboxDto,
@@ -45,6 +55,7 @@ export class MailMailboxesService {
     private readonly subscriptions: MailSubscriptionsService,
     private readonly storage: StorageService,
     private readonly mailboxSessions: MailMailboxSessionService,
+    private readonly access: MailAppAccessService,
   ) {}
 
   private normalizeLocalPart(raw: string) {
@@ -98,20 +109,24 @@ export class MailMailboxesService {
     return `/api/media/${cleaned}`;
   }
 
-  private toView(row: {
-    id: string;
-    localPart: string;
-    domain: string;
-    displayName: string | null;
-    avatarKey?: string | null;
-    passwordHash: string | null;
-    totpEnabled: boolean;
-    storageUsedBytes?: bigint | number;
-    status: MailMailboxStatus;
-    createdAt: Date;
-    updatedAt: Date;
-    mailApp: { appId: string };
-  }) {
+  private toView(
+    row: {
+      id: string;
+      localPart: string;
+      domain: string;
+      displayName: string | null;
+      avatarKey?: string | null;
+      passwordHash: string | null;
+      totpEnabled: boolean;
+      assignedUserId?: string | null;
+      storageUsedBytes?: bigint | number;
+      status: MailMailboxStatus;
+      createdAt: Date;
+      updatedAt: Date;
+      mailApp: { appId: string };
+    },
+    opts?: { canSsoUnlock?: boolean },
+  ) {
     const used =
       typeof row.storageUsedBytes === 'bigint'
         ? Number(row.storageUsedBytes)
@@ -126,6 +141,8 @@ export class MailMailboxesService {
       avatarUrl: this.mediaUrl(row.avatarKey),
       hasPassword: Boolean(row.passwordHash),
       totpEnabled: row.totpEnabled,
+      assignedUserId: row.assignedUserId ?? null,
+      canSsoUnlock: Boolean(opts?.canSsoUnlock),
       storageUsedBytes: Number.isFinite(used) ? used : 0,
       status: row.status,
       createdAt: row.createdAt,
@@ -133,26 +150,28 @@ export class MailMailboxesService {
     };
   }
 
-  private async requireOwnedApp(userId: string, appId: string) {
-    const app = await this.prisma.mailApp.findFirst({
-      where: { appId, userId, status: MailAppStatus.ACTIVE },
-    });
-    if (!app) {
-      throw new NotFoundException('Mail app not found.');
+  private async requireManageAccess(userId: string, appId: string) {
+    const access = await this.access.requireAccess(userId, appId);
+    if (!this.access.canManageMailboxes(access)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_MANAGE_REQUIRED',
+        message: 'You cannot manage mailboxes in this workspace.',
+      });
     }
-    return app;
+    return access;
   }
 
-  private async requireOwnedMailbox(
+  private async requireManagedMailbox(
     userId: string,
     appId: string,
     mailboxId: string,
   ) {
-    const app = await this.requireOwnedApp(userId, appId);
+    const access = await this.requireManageAccess(userId, appId);
     const existing = await this.prisma.mailMailbox.findFirst({
       where: {
         id: mailboxId,
-        mailAppId: app.id,
+        mailAppId: access.app.id,
         status: { not: MailMailboxStatus.DELETED },
       },
       include: { mailApp: { select: { appId: true } } },
@@ -160,24 +179,42 @@ export class MailMailboxesService {
     if (!existing) {
       throw new NotFoundException('Mailbox not found.');
     }
-    return existing;
+    return { access, mailbox: existing };
+  }
+
+  private viewForUser(
+    userId: string,
+    access: MailAppAccess,
+    row: Parameters<MailMailboxesService['toView']>[0],
+  ) {
+    return this.toView(row, {
+      canSsoUnlock: this.access.canSsoSelectForUser(userId, access, {
+        assignedUserId: row.assignedUserId ?? null,
+      }),
+    });
   }
 
   async list(userId: string, appId: string) {
-    const app = await this.requireOwnedApp(userId, appId);
+    const access = await this.access.requireAccess(userId, appId);
+    const where: Prisma.MailMailboxWhereInput = {
+      mailAppId: access.app.id,
+      status: { not: MailMailboxStatus.DELETED },
+    };
+    if (!access.isOwner && access.role !== MailAppMemberRole.ADMIN) {
+      where.assignedUserId = userId;
+    }
     const rows = await this.prisma.mailMailbox.findMany({
-      where: {
-        mailAppId: app.id,
-        status: { not: MailMailboxStatus.DELETED },
-      },
+      where,
       include: { mailApp: { select: { appId: true } } },
       orderBy: { createdAt: 'asc' },
     });
-    return { mailboxes: rows.map((row) => this.toView(row)) };
+    return {
+      mailboxes: rows.map((row) => this.viewForUser(userId, access, row)),
+    };
   }
 
   async create(userId: string, appId: string, dto: CreateMailMailboxDto) {
-    const app = await this.requireOwnedApp(userId, appId);
+    const { app } = await this.requireManageAccess(userId, appId);
     const domain = app.primaryDomain
       ? this.normalizeDomain(app.primaryDomain)
       : null;
@@ -234,11 +271,14 @@ export class MailMailboxesService {
           passwordHash,
           totpEnabled: false,
           totpSecret: null,
+          // New seats default to the creator for Rukny SSO unlock.
+          assignedUserId: userId,
           status: MailMailboxStatus.ACTIVE,
         },
         include: { mailApp: { select: { appId: true } } },
       });
-      return { mailbox: this.toView(created) };
+      const access = await this.access.requireAccess(userId, appId);
+      return { mailbox: this.viewForUser(userId, access, created) };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -258,7 +298,11 @@ export class MailMailboxesService {
     mailboxId: string,
     dto: UpdateMailMailboxDto,
   ) {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
 
     const data: Prisma.MailMailboxUpdateInput = {};
     if (dto.displayName !== undefined) {
@@ -297,7 +341,56 @@ export class MailMailboxesService {
       await this.mailboxSessions.revokeMailbox(existing.id);
     }
 
-    return { mailbox: this.toView(updated) };
+    return { mailbox: this.viewForUser(userId, access, updated) };
+  }
+
+  async assign(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    dto: AssignMailMailboxDto,
+  ) {
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
+    if (!access.isOwner && access.role !== MailAppMemberRole.ADMIN) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_ASSIGN_FORBIDDEN',
+        message: 'Only owners or admins can assign mailboxes.',
+      });
+    }
+
+    let assignedUserId: string | null = null;
+    if (dto.userId) {
+      if (dto.userId === access.app.userId) {
+        assignedUserId = dto.userId;
+      } else {
+        const member = await this.prisma.mailAppMember.findUnique({
+          where: {
+            mailAppId_userId: {
+              mailAppId: access.app.id,
+              userId: dto.userId,
+            },
+          },
+        });
+        if (member?.status !== InvitationStatus.ACCEPTED) {
+          throw new BadRequestException(
+            'Assign only to the owner or an accepted team member.',
+          );
+        }
+        assignedUserId = dto.userId;
+      }
+    }
+
+    const updated = await this.prisma.mailMailbox.update({
+      where: { id: existing.id },
+      data: { assignedUserId },
+      include: { mailApp: { select: { appId: true } } },
+    });
+    return { mailbox: this.viewForUser(userId, access, updated) };
   }
 
   async changePassword(
@@ -306,7 +399,11 @@ export class MailMailboxesService {
     mailboxId: string,
     dto: ChangeMailMailboxPasswordDto,
   ) {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
     this.assertPassword(dto.password);
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const updated = await this.prisma.mailMailbox.update({
@@ -315,7 +412,7 @@ export class MailMailboxesService {
       include: { mailApp: { select: { appId: true } } },
     });
     await this.mailboxSessions.revokeMailbox(existing.id);
-    return { mailbox: this.toView(updated) };
+    return { mailbox: this.viewForUser(userId, access, updated) };
   }
 
   async set2fa(
@@ -323,8 +420,15 @@ export class MailMailboxesService {
     appId: string,
     mailboxId: string,
     dto: SetMailMailbox2faDto,
-  ): Promise<{ mailbox: ReturnType<MailMailboxesService['toView']>; setup?: MailMailboxTotpSetup }> {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+  ): Promise<{
+    mailbox: ReturnType<MailMailboxesService['toView']>;
+    setup?: MailMailboxTotpSetup;
+  }> {
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
     const address = `${existing.localPart}@${existing.domain}`;
 
     if (!dto.enabled) {
@@ -334,7 +438,7 @@ export class MailMailboxesService {
         include: { mailApp: { select: { appId: true } } },
       });
       await this.mailboxSessions.revokeMailbox(existing.id);
-      return { mailbox: this.toView(updated) };
+      return { mailbox: this.viewForUser(userId, access, updated) };
     }
 
     if (existing.totpEnabled && this.isUsableTotpSecret(existing.totpSecret)) {
@@ -353,7 +457,7 @@ export class MailMailboxesService {
     });
 
     return {
-      mailbox: this.toView(updated),
+      mailbox: this.viewForUser(userId, access, updated),
       setup: await this.totpSetupPayload(address, secret),
     };
   }
@@ -364,7 +468,11 @@ export class MailMailboxesService {
     mailboxId: string,
     dto: ConfirmMailMailbox2faDto,
   ) {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
     if (!existing.totpSecret || !this.isUsableTotpSecret(existing.totpSecret)) {
       throw new BadRequestException('Start two-factor setup first.');
     }
@@ -381,11 +489,11 @@ export class MailMailboxesService {
       data: { totpEnabled: true },
       include: { mailApp: { select: { appId: true } } },
     });
-    return { mailbox: this.toView(updated) };
+    return { mailbox: this.viewForUser(userId, access, updated) };
   }
 
   async unlock(userId: string, appId: string, dto: UnlockMailMailboxDto) {
-    const app = await this.requireOwnedApp(userId, appId);
+    const access = await this.access.requireAccess(userId, appId);
     const address = dto.address.trim().toLowerCase();
     const at = address.lastIndexOf('@');
     if (at < 1) {
@@ -396,7 +504,7 @@ export class MailMailboxesService {
 
     const mailbox = await this.prisma.mailMailbox.findFirst({
       where: {
-        mailAppId: app.id,
+        mailAppId: access.app.id,
         localPart,
         domain,
         status: MailMailboxStatus.ACTIVE,
@@ -405,6 +513,15 @@ export class MailMailboxesService {
     });
 
     if (!mailbox?.passwordHash) {
+      throwMailboxLoginFailed('Email or password is incorrect.');
+    }
+
+    // Non-admins may only unlock their assigned seat (or any with password if owner/admin).
+    if (
+      !access.isOwner &&
+      access.role !== MailAppMemberRole.ADMIN &&
+      mailbox.assignedUserId !== userId
+    ) {
       throwMailboxLoginFailed('Email or password is incorrect.');
     }
 
@@ -429,7 +546,7 @@ export class MailMailboxesService {
       );
     }
 
-    const view = this.toView(mailbox);
+    const view = this.viewForUser(userId, access, mailbox);
     const token = await this.mailboxSessions.create({
       userId,
       appId,
@@ -445,7 +562,7 @@ export class MailMailboxesService {
   }
 
   async session(userId: string, appId: string, token: string | undefined) {
-    await this.requireOwnedApp(userId, appId);
+    const access = await this.access.requireAccess(userId, appId);
     const session = await this.mailboxSessions.read(token);
     if (
       !session ||
@@ -455,23 +572,37 @@ export class MailMailboxesService {
       return { mailbox: null };
     }
     try {
-      const mailbox = await this.requireOwnedMailbox(
-        userId,
-        appId,
-        session.mailboxId,
-      );
-      if (mailbox.status !== MailMailboxStatus.ACTIVE) {
+      const mailbox = await this.prisma.mailMailbox.findFirst({
+        where: {
+          id: session.mailboxId,
+          mailAppId: access.app.id,
+          status: { not: MailMailboxStatus.DELETED },
+        },
+        include: { mailApp: { select: { appId: true } } },
+      });
+      if (!mailbox || mailbox.status !== MailMailboxStatus.ACTIVE) {
         return { mailbox: null };
       }
-      return { mailbox: this.toView(mailbox) };
+      return { mailbox: this.viewForUser(userId, access, mailbox) };
     } catch {
       return { mailbox: null };
     }
   }
 
-  /** App owner opens a mailbox in webmail without the mailbox password. */
+  /** Open webmail via Rukny SSO (no mailbox password). */
   async select(userId: string, appId: string, mailboxId: string) {
-    const mailbox = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const access = await this.access.requireAccess(userId, appId);
+    const mailbox = await this.prisma.mailMailbox.findFirst({
+      where: {
+        id: mailboxId,
+        mailAppId: access.app.id,
+        status: { not: MailMailboxStatus.DELETED },
+      },
+      include: { mailApp: { select: { appId: true } } },
+    });
+    if (!mailbox) {
+      throw new NotFoundException('Mailbox not found.');
+    }
     if (mailbox.status !== MailMailboxStatus.ACTIVE) {
       throw new ForbiddenException({
         statusCode: 403,
@@ -479,7 +610,14 @@ export class MailMailboxesService {
         message: 'This mailbox is disabled.',
       });
     }
-    const view = this.toView(mailbox);
+    if (!this.access.canSsoSelectForUser(userId, access, mailbox)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAILBOX_SSO_FORBIDDEN',
+        message: 'This mailbox is not assigned to your account.',
+      });
+    }
+    const view = this.viewForUser(userId, access, mailbox);
     const token = await this.mailboxSessions.create({
       userId,
       appId,
@@ -498,9 +636,13 @@ export class MailMailboxesService {
     if (!file) {
       throw new BadRequestException('No file uploaded.');
     }
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
-    const key = await this.storage.uploadMailMailboxAvatar(
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
       userId,
+      appId,
+      mailboxId,
+    );
+    const key = await this.storage.uploadMailMailboxAvatar(
+      access.app.userId,
       appId,
       existing.id,
       file,
@@ -510,24 +652,32 @@ export class MailMailboxesService {
       data: { avatarKey: key },
       include: { mailApp: { select: { appId: true } } },
     });
-    return { mailbox: this.toView(updated) };
+    return { mailbox: this.viewForUser(userId, access, updated) };
   }
 
   async removeAvatar(userId: string, appId: string, mailboxId: string) {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
-    await this.storage.deleteMailMailboxAvatar(userId, existing.id);
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
+    await this.storage.deleteMailMailboxAvatar(access.app.userId, existing.id);
     const updated = await this.prisma.mailMailbox.update({
       where: { id: existing.id },
       data: { avatarKey: null },
       include: { mailApp: { select: { appId: true } } },
     });
-    return { mailbox: this.toView(updated) };
+    return { mailbox: this.viewForUser(userId, access, updated) };
   }
 
   async remove(userId: string, appId: string, mailboxId: string) {
-    const existing = await this.requireOwnedMailbox(userId, appId, mailboxId);
+    const { access, mailbox: existing } = await this.requireManagedMailbox(
+      userId,
+      appId,
+      mailboxId,
+    );
     await this.storage
-      .deleteMailMailboxAvatar(userId, existing.id)
+      .deleteMailMailboxAvatar(access.app.userId, existing.id)
       .catch(() => undefined);
     await this.prisma.mailCatchAll.deleteMany({
       where: { mailboxId: existing.id },

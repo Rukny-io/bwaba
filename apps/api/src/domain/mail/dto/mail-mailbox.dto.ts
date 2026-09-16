@@ -69,6 +69,18 @@ export class UpdateMailMailboxDto {
   status?: 'ACTIVE' | 'DISABLED';
 }
 
+export class AssignMailMailboxDto {
+  @ApiPropertyOptional({
+    description:
+      'Rukny user id to assign for SSO unlock. Null or omit to clear.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  userId?: string | null;
+}
+
 export class ChangeMailMailboxPasswordDto {
   @ApiProperty({ description: 'New mailbox password', minLength: 8 })
   @IsString()

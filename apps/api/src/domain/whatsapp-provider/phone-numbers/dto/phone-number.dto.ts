@@ -1,8 +1,10 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, Length, Matches } from 'class-validator';
 
 export class RegisterPhoneDto {
   @IsString()
-  pin: string; // 6-digit PIN for registration
+  @Length(6, 6)
+  @Matches(/^\d{6}$/)
+  pin: string; // 6-digit two-step verification PIN (set by you)
 
   @IsOptional()
   @IsString()

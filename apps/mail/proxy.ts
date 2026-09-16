@@ -66,6 +66,7 @@ const SLOTTED_PRODUCT_PREFIXES = [
   "/settings",
   "/profile",
   "/developers",
+  "/team",
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {

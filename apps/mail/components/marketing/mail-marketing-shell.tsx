@@ -9,25 +9,29 @@ export function MailMarketingShell({
   signedIn,
   children,
   plainBackground = false,
+  smoothScroll = true,
 }: {
   signedIn: boolean;
   children: React.ReactNode;
   plainBackground?: boolean;
+  /** Lenis breaks sticky docs sidebars — turn off on /documents. */
+  smoothScroll?: boolean;
 }) {
-  return (
-    <MailSmoothScroll>
-      <div
-        className={cn(
-          "mail-marketing relative isolate min-h-dvh bg-[#f7faf9] text-[#041f22]",
-          plainBackground && "bg-[#f7faf9]",
-        )}
-      >
-        <div className="relative z-0 min-h-dvh">
-          <MailHomeHeader signedIn={signedIn} />
-          {children}
-          <MailMarketingFooter signedIn={signedIn} />
-        </div>
+  const body = (
+    <div
+      className={cn(
+        "mail-marketing relative isolate min-h-dvh bg-[#fafafa] text-[#111111]",
+        plainBackground && "bg-[#fafafa]",
+      )}
+    >
+      <div className="relative z-0 min-h-dvh">
+        <MailHomeHeader signedIn={signedIn} />
+        {children}
+        <MailMarketingFooter signedIn={signedIn} />
       </div>
-    </MailSmoothScroll>
+    </div>
   );
+
+  if (!smoothScroll) return body;
+  return <MailSmoothScroll>{body}</MailSmoothScroll>;
 }

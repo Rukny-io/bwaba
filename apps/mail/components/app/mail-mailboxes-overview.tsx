@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Camera, Check, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
+import { Camera, Check, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
 import { Checkbox, cn, Dropdown, Input, Label, TextField } from "@heroui/react";
 import type { MailDomainSetup } from "@/lib/mail-domain";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
@@ -29,6 +29,11 @@ import {
   type MailPendingPlanRequest,
   type MailSubscriptionView,
 } from "@/lib/mail-subscription-client";
+import {
+  assignMailMailbox,
+  listMailTeam,
+  type MailTeamRoster,
+} from "@/lib/mail-team-client";
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -199,11 +204,32 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const [avatarUploadingId, setAvatarUploadingId] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const avatarTargetIdRef = useRef<string | null>(null);
+  const [team, setTeam] = useState<MailTeamRoster | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const refreshMailboxes = useCallback(async (id: string) => {
     const list = await listMailMailboxes(id);
     setMailboxes(list);
   }, []);
+
+  const assigneeOptions = useMemo(() => {
+    if (!team) return [] as { id: string; label: string }[];
+    const rows: { id: string; label: string }[] = [];
+    if (team.owner) {
+      rows.push({
+        id: team.owner.id,
+        label: `${team.owner.name || team.owner.email} (Owner)`,
+      });
+    }
+    for (const member of team.members) {
+      if (member.status !== "ACCEPTED") continue;
+      rows.push({
+        id: member.user.id,
+        label: member.user.name || member.user.email,
+      });
+    }
+    return rows;
+  }, [team]);
 
   useEffect(() => {
     const id = readMailAppIdFromDocument();
@@ -249,6 +275,12 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
       setLoadingBoxes(true);
       try {
         await refreshMailboxes(appId);
+        try {
+          const roster = await listMailTeam(appId);
+          if (!cancelled) setTeam(roster);
+        } catch {
+          if (!cancelled) setTeam(null);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Could not load mailboxes.");
@@ -269,6 +301,21 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const storageQuotaBytes = subscription?.storageQuotaBytesPerMailbox ?? 0;
   const canCreate = Boolean(appId && subscription && activeCount < seatLimit);
   const hasActivePlan = Boolean(subscription);
+  const canAssign = Boolean(team?.canManage && assigneeOptions.length > 0);
+
+  async function onAssignMailbox(mailboxId: string, userId: string) {
+    if (!appId || assigningId) return;
+    setAssigningId(mailboxId);
+    setError("");
+    try {
+      await assignMailMailbox(appId, mailboxId, userId || null);
+      await refreshMailboxes(appId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not assign mailbox.");
+    } finally {
+      setAssigningId(null);
+    }
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -564,21 +611,20 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         className="min-w-0 rounded-2xl bg-[var(--surface)] p-4 sm:p-6"
       >
         {!loadingSub && !hasActivePlan ? (
-          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
-                {setup.domain}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                Choose a plan to start using email.
-              </p>
-            </div>
-            <Link
-              href="/billing"
-              className="inline-flex h-10 w-full shrink-0 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:w-auto sm:rounded-lg"
-            >
-              Choose a plan
-            </Link>
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
+              {setup.domain}
+            </h2>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              No active plan yet. See{" "}
+              <Link
+                href="/pricing"
+                className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+              >
+                pricing
+              </Link>{" "}
+              on the website to get started.
+            </p>
           </div>
         ) : (
           <>
@@ -602,26 +648,18 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   </p>
                 </div>
               </div>
-              <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setLimitsOpen((open) => !open)}
-                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:flex-none"
-                  aria-expanded={limitsOpen}
-                >
-                  View limits
-                  <ChevronDown
-                    className={cn("size-4 transition-transform", limitsOpen && "rotate-180")}
-                    aria-hidden
-                  />
-                </button>
-                <Link
-                  href="/billing"
-                  className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[var(--background)] sm:h-9 sm:flex-none sm:rounded-lg"
-                >
-                  Manage plan
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={() => setLimitsOpen((open) => !open)}
+                className="inline-flex w-full items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:w-auto"
+                aria-expanded={limitsOpen}
+              >
+                View limits
+                <ChevronDown
+                  className={cn("size-4 transition-transform", limitsOpen && "rotate-180")}
+                  aria-hidden
+                />
+              </button>
             </div>
 
             {limitsOpen && limits ? (
@@ -684,30 +722,13 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       ? "…"
                       : `${Math.max(0, seatsLeft)}/${seatLimit || "—"}`}
                   </span>
-                  {" · "}
-                  <Link
-                    href="/billing"
-                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-                  >
-                    Buy more mailboxes
-                  </Link>
                 </>
               ) : (
                 "Complete these steps to create your first address."
               )}
             </p>
           </div>
-          {hasActivePlan ? (
-            createButton
-          ) : (
-            <Link
-              href="/billing"
-              className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1.5 self-start rounded-lg bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)]"
-            >
-              Choose a plan
-              <ArrowRight className="size-3.5" aria-hidden />
-            </Link>
-          )}
+          {hasActivePlan ? createButton : null}
         </div>
 
         {error ? (
@@ -860,24 +881,22 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                   <Inbox className="size-5" aria-hidden />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-[var(--foreground)]">
-                  Start with your email plan
+                  Finish setup
                 </h3>
                 <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  Your domain is ready to connect. Select a plan, publish its DNS records,
-                  then create addresses for your team.
+                  Publish DNS for your domain, then create addresses for your team.
+                  Plans are on the{" "}
+                  <Link
+                    href="/pricing"
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    pricing page
+                  </Link>
+                  .
                 </p>
                 <ol className="mt-6 space-y-3">
                   <li className="flex items-start gap-3 text-sm">
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)]">1</span>
-                    <div>
-                      <p className="font-medium text-[var(--foreground)]">Choose an email plan</p>
-                      <Link href="/billing" className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
-                        View plans and request access
-                      </Link>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">2</span>
                     <div>
                       <p className="font-medium text-[var(--foreground)]">Configure domain DNS</p>
                       <Link href={href("/domain")} className="text-[var(--muted-foreground)] underline-offset-2 hover:underline">
@@ -947,6 +966,28 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       quotaBytes={storageQuotaBytes}
                     />
                   </div>
+                  {canAssign ? (
+                    <div className="mt-3">
+                      <label className="mb-1 block text-[11px] font-medium text-[var(--muted-foreground)]">
+                        SSO assignee
+                      </label>
+                      <select
+                        value={box.assignedUserId ?? ""}
+                        disabled={assigningId === box.id}
+                        onChange={(e) =>
+                          void onAssignMailbox(box.id, e.target.value)
+                        }
+                        className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--field-background)] px-2 text-xs"
+                      >
+                        <option value="">Unassigned</option>
+                        {assigneeOptions.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                   <Link
                     href={mailInboxHref(slot, box.id)}
                     target="_blank"
@@ -966,6 +1007,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                     <th className="px-5 py-3 font-medium sm:px-6">Mailbox</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Usage</th>
+                    {canAssign ? (
+                      <th className="px-4 py-3 font-medium">SSO assignee</th>
+                    ) : null}
                     <th className="px-5 py-3 text-right font-medium sm:px-6">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -1015,6 +1059,25 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                           />
                         </div>
                       </td>
+                      {canAssign ? (
+                        <td className="px-4 py-4 align-middle">
+                          <select
+                            value={box.assignedUserId ?? ""}
+                            disabled={assigningId === box.id}
+                            onChange={(e) =>
+                              void onAssignMailbox(box.id, e.target.value)
+                            }
+                            className="h-8 max-w-[180px] rounded-lg border border-[var(--border)] bg-[var(--field-background)] px-2 text-xs"
+                          >
+                            <option value="">Unassigned</option>
+                            {assigneeOptions.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      ) : null}
                       <td className="px-5 py-4 align-middle sm:px-6">
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           <Link

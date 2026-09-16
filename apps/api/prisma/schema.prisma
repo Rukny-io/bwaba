@@ -110,6 +110,9 @@ model User {
   mailDomainVerificationRequests MailDomainVerificationRequest[] @relation("mail_domain_verification_request_owner")
   mailDomainReviews              MailDomainVerificationRequest[] @relation("mail_domain_verification_request_reviewer")
   mailAppsDomainReviewed         MailApp[]                       @relation("mail_app_domain_reviewer")
+  mailAppMemberships             MailAppMember[]                 @relation("mail_app_member")
+  mailAppInvitationsSent         MailAppMember[]                 @relation("mail_app_inviter")
+  mailMailboxesAssigned          MailMailbox[]                   @relation("mail_mailbox_assignee")
 
   // Developer Portal relations
   developerApps             DeveloperApp[]
@@ -3454,6 +3457,14 @@ enum MailAppType {
   CONSUMER
 }
 
+/// Console roles for a Mail workspace (owner is MailApp.userId, not a row).
+enum MailAppMemberRole {
+  ADMIN
+  BILLING
+  MEMBER
+  VIEWER
+}
+
 /// Cached domain verification for HQ filters (DKIM tokens stay in Mail Redis)
 enum MailDomainStatus {
   NONE
@@ -3529,6 +3540,7 @@ model MailApp {
   user                       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
   domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
   mailboxes                  MailMailbox[]
+  members                    MailAppMember[]
   subscription               MailSubscription?
   catchAll                   MailCatchAll?
   autoReplies                MailAutoReply[]
@@ -3544,6 +3556,33 @@ model MailApp {
   @@index([domainReviewedById])
   @@index([createdAt])
   @@map("mail_apps")
+}
+
+/// Invited Rukny users who can open the Mail console / SSO into assigned mailboxes.
+model MailAppMember {
+  id          String             @id @default(uuid())
+  mailAppId   String
+  userId      String
+  role        MailAppMemberRole  @default(MEMBER)
+  status      InvitationStatus   @default(PENDING)
+  invitedBy   String
+  invitedAt   DateTime           @default(now())
+  acceptedAt  DateTime?
+  /// Per-user URL slot (/uN) allocated when the invitation is accepted.
+  slotIndex   Int?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  user    User    @relation("mail_app_member", fields: [userId], references: [id], onDelete: Cascade)
+  inviter User    @relation("mail_app_inviter", fields: [invitedBy], references: [id], onDelete: Restrict)
+
+  @@unique([mailAppId, userId])
+  @@index([mailAppId])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, slotIndex])
+  @@map("mail_app_members")
 }
 
 /// Auditable request/decision history for Rukny's administrative domain trust.
@@ -3624,21 +3663,25 @@ model MailMailbox {
   /// Optional mailbox-level TOTP 2FA
   totpEnabled      Boolean           @default(false)
   totpSecret       String?
+  /// Rukny user who may open this mailbox via SSO (no mailbox password).
+  assignedUserId   String?
   /// UTF-8 body bytes stored in this mailbox (send + inbound)
   storageUsedBytes BigInt            @default(0)
   status           MailMailboxStatus @default(ACTIVE)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  mailApp    MailApp         @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
-  messages   MailMessage[]
-  catchAlls  MailCatchAll[]
-  autoReply  MailAutoReply?
-  aliases    MailAlias[]
-  forwarders MailForwarder[]
+  mailApp      MailApp         @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  assignedUser User?           @relation("mail_mailbox_assignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages     MailMessage[]
+  catchAlls    MailCatchAll[]
+  autoReply    MailAutoReply?
+  aliases      MailAlias[]
+  forwarders   MailForwarder[]
 
   @@unique([domain, localPart])
   @@index([mailAppId])
+  @@index([assignedUserId])
   @@index([status])
   @@index([createdAt])
   @@map("mail_mailboxes")

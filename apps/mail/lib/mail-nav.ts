@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AtSign,
-  CreditCard,
   Forward,
   Globe,
   Inbox,
@@ -10,6 +9,7 @@ import {
   ReplyAll,
   ScrollText,
   Smartphone,
+  Users,
 } from "lucide-react";
 
 export type MailNavItem = {
@@ -22,6 +22,7 @@ export type MailNavItem = {
 export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/inbox", icon: Inbox, label: "Inbox", exact: true },
   { href: "/app", icon: LayoutGrid, label: "Mailboxes", exact: true },
+  { href: "/team", icon: Users, label: "Team", exact: true },
   { href: "/forwarders", icon: Forward, label: "Forwarders", exact: true },
   { href: "/aliases", icon: AtSign, label: "Email Alias", exact: true },
   { href: "/catch-all", icon: Mails, label: "Catch-all email", exact: true },
@@ -42,12 +43,11 @@ export const MAIL_HEADER_NAV: { href: string; label: string; exact?: boolean }[]
   { href: "/inbox", label: "Inbox", exact: true },
   { href: "/settings", label: "Settings", exact: true },
   { href: "/apps", label: "Workspaces", exact: true },
-  { href: "/tutorials", label: "Tutorials", exact: true },
+  { href: "/documents", label: "Documents", exact: true },
 ];
 
-export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [
-  { href: "/billing", icon: CreditCard, label: "Pricing", exact: true },
-];
+/** Pricing lives on the marketing site (/pricing), not in the console. */
+export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [];
 
 export function isNavItemActive(
   pathname: string,

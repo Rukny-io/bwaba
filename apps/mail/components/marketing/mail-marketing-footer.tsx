@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
+  resolveAccountsUrl,
   resolveDeveloperUrl,
   resolveFormsUrl,
 } from "@rukny/auth/client/env-urls";
@@ -23,13 +24,13 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h3 className="mb-5 text-sm font-semibold text-[#041f22]">{title}</h3>
-      <ul className="space-y-3">
+      <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#888888]">
+        {title}
+      </h3>
+      <ul className="space-y-2">
         {links.map((link) => {
           const className =
-            "text-sm text-[#4a5c5a] transition-colors hover:text-[#041f22]";
-          const isMail = link.href.startsWith("mailto:");
-
+            "text-[13px] text-[#666666] transition-colors hover:text-[#111111]";
           if (link.external) {
             return (
               <li key={`${title}-${link.label}`}>
@@ -44,8 +45,7 @@ function FooterColumn({
               </li>
             );
           }
-
-          if (isMail) {
+          if (link.href.startsWith("mailto:")) {
             return (
               <li key={`${title}-${link.label}`}>
                 <a href={link.href} className={className}>
@@ -54,7 +54,6 @@ function FooterColumn({
               </li>
             );
           }
-
           return (
             <li key={`${title}-${link.label}`}>
               <Link href={link.href} className={className}>
@@ -71,35 +70,27 @@ function FooterColumn({
 export function MailMarketingFooter({ signedIn }: { signedIn: boolean }) {
   const developer = resolveDeveloperUrl();
   const forms = resolveFormsUrl();
+  const accounts = resolveAccountsUrl();
 
   const columns: { title: string; links: FooterLink[] }[] = [
     {
-      title: "Products",
+      title: "Product",
       links: [
-        { label: "Mailboxes", href: "/" },
+        { label: "Getting started", href: "/getting-started" },
+        { label: "Pricing", href: "/pricing" },
+        { label: "Documents", href: "/documents" },
+        { label: "FAQs", href: "/faqs" },
+      ],
+    },
+    {
+      title: "Rukny",
+      links: [
         { label: "Forms", href: forms, external: true },
         {
           label: "Email API",
           href: `${developer}/documentation/email-api`,
           external: true,
         },
-        { label: "Marketing emails", href: "/pricing/estimate" },
-      ],
-    },
-    {
-      title: "Resources",
-      links: [
-        { label: "Getting started", href: "/getting-started" },
-        { label: "Tutorials", href: "/tutorials" },
-        { label: "FAQs", href: "/faqs" },
-        { label: "Features", href: "/#features" },
-      ],
-    },
-    {
-      title: "Pricing",
-      links: [
-        { label: "Plans", href: "/pricing" },
-        { label: "Cost calculator", href: "/pricing/estimate" },
         {
           label: signedIn ? "Open console" : "Sign in",
           href: signedIn ? "/apps" : "/login",
@@ -107,61 +98,69 @@ export function MailMarketingFooter({ signedIn }: { signedIn: boolean }) {
       ],
     },
     {
-      title: "Company",
+      title: "Legal",
       links: [
-        { label: "Privacy", href: "/privacy" },
-        { label: "Terms", href: "/terms" },
+        {
+          label: "Privacy",
+          href: `${accounts}/privacy`,
+          external: true,
+        },
+        {
+          label: "Terms",
+          href: `${accounts}/terms`,
+          external: true,
+        },
         { label: "support@rukny.io", href: "mailto:support@rukny.io" },
       ],
     },
   ];
 
   return (
-    <footer className="border-t border-[#d7ebea] bg-[#eef5f4]">
+    <footer className="border-t border-[#e8e8e8] bg-[#fafafa]">
       <div className={L.container}>
-        <div className="relative border-x border-[#d7ebea] px-4 pt-16 sm:px-8 sm:pt-24">
-          <div className="flex flex-col gap-12 pb-14 sm:pb-16 lg:flex-row lg:justify-between lg:gap-16">
-            <div className="max-w-xs shrink-0">
-              <Link href="/" className="inline-flex items-center gap-2.5">
-                <Image src="/rukny-logo.svg" alt="" width={28} height={28} />
-                <span className="text-lg font-bold tracking-tight text-[#041f22]">
-                  Rukny
-                </span>
-              </Link>
-              <p className="mt-5 text-sm leading-relaxed text-[#4a5c5a]">
-                Business email on a domain you own — mailboxes, routing, and
-                webmail in one console.
-              </p>
-            </div>
-
-            <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-6">
-              {columns.map((column) => (
-                <FooterColumn
-                  key={column.title}
-                  title={column.title}
-                  links={column.links}
-                />
-              ))}
-            </div>
+        <div className="flex flex-col gap-10 py-10 sm:py-12 lg:flex-row lg:justify-between lg:gap-14">
+          <div className="max-w-[16rem] shrink-0">
+            <Link href="/" className="inline-flex items-center gap-2">
+              <Image src="/rukny-logo.svg" alt="" width={22} height={22} />
+              <span className="text-[15px] font-bold tracking-tight text-[#111111]">
+                Rukny Mail
+              </span>
+            </Link>
+            <p className="mt-3 text-[13px] leading-relaxed text-[#666666]">
+              Business email on a domain you own.
+            </p>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-[#d7ebea] py-5 text-xs text-[#7a908e] sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} Rukny. All rights reserved.</p>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link
-                href="/privacy"
-                className="transition-colors hover:text-[#041f22]"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="transition-colors hover:text-[#041f22]"
-              >
-                Terms
-              </Link>
-              <span>Rukny Mail</span>
-            </div>
+          <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-8 sm:grid-cols-3 sm:gap-x-10">
+            {columns.map((column) => (
+              <FooterColumn
+                key={column.title}
+                title={column.title}
+                links={column.links}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-[#e8e8e8] py-4 text-[11px] text-[#888888] sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Rukny</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <a
+              href={`${accounts}/privacy`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[#111111]"
+            >
+              Privacy
+            </a>
+            <a
+              href={`${accounts}/terms`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[#111111]"
+            >
+              Terms
+            </a>
           </div>
         </div>
       </div>

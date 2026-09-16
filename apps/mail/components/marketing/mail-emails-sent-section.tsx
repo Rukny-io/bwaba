@@ -13,13 +13,13 @@ export function MailEmailsSentSection({ emailsSent }: { emailsSent: number }) {
 
   return (
     <div
-      className="flex items-center justify-center px-5 py-10 sm:px-8 sm:py-12"
-      aria-label="Emails sent"
+      className="flex items-center justify-center px-2 pt-3"
+      aria-label={`${emailsSent.toLocaleString()} emails delivered`}
     >
       <AnimateNumber
         value={value}
         duration={900}
-        className="text-5xl font-bold tracking-[-0.04em] text-[#062c30] sm:text-6xl md:text-7xl"
+        className="text-5xl font-bold tracking-[-0.045em] text-[#111111] sm:text-6xl md:text-7xl"
       />
     </div>
   );

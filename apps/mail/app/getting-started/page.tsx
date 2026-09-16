@@ -6,7 +6,7 @@ import { getCurrentMailUser } from "@/lib/current-user";
 export const metadata: Metadata = {
   title: "Getting Started — Rukny Mail",
   description:
-    "Three beats from a Rukny account to live mail on your domain.",
+    "Sign in, connect your domain, and send as you@yourdomain with Rukny Mail.",
 };
 
 export default async function GettingStartedPage() {

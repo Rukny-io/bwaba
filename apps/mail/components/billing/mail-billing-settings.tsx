@@ -161,8 +161,8 @@ export function MailPlanSettingsSection() {
         </>
       ) : (
         <p className="text-sm text-[var(--muted-foreground)]">
-          No paid plan on this workspace. Starter starts after DNS is verified. Request
-          Standard or Premium from Pricing so an admin can activate extra seats.
+          No paid plan on this workspace. Starter starts after DNS is verified. See
+          pricing on the website to request Standard or Premium.
         </p>
       )}
 
@@ -175,7 +175,7 @@ export function MailPlanSettingsSection() {
       ) : null}
 
       <div className="flex justify-end">
-        <Button size="sm" onPress={() => router.push("/billing")}>
+        <Button size="sm" onPress={() => router.push("/pricing")}>
           {active ? "Change plan" : "Request a plan"}
         </Button>
       </div>

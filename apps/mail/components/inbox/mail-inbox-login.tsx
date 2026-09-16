@@ -5,7 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Input, InputOTP, Label, TextField } from "@heroui/react";
 import type { MailMailboxView } from "@/lib/mail-mailboxes-client";
-import { unlockMailMailbox } from "@/lib/mail-mailbox-session-client";
+import {
+  selectMailMailbox,
+  unlockMailMailbox,
+} from "@/lib/mail-mailbox-session-client";
 
 type Props = {
   appId: string;
@@ -22,18 +25,33 @@ export function MailInboxLogin({
   preferredMailboxId,
   onUnlocked,
 }: Props) {
-  const signInBoxes = useMemo(
-    () =>
-      mailboxes.filter(
-        (box) => box.status === "ACTIVE" && box.hasPassword,
-      ),
+  const activeBoxes = useMemo(
+    () => mailboxes.filter((box) => box.status === "ACTIVE"),
     [mailboxes],
   );
 
+  const ssoBoxes = useMemo(
+    () => activeBoxes.filter((box) => box.canSsoUnlock),
+    [activeBoxes],
+  );
+
+  const passwordBoxes = useMemo(
+    () => activeBoxes.filter((box) => box.hasPassword),
+    [activeBoxes],
+  );
+
+  const [mode, setMode] = useState<"sso" | "password">(
+    () => (ssoBoxes.length > 0 ? "sso" : "password"),
+  );
+  const [ssoMailboxId, setSsoMailboxId] = useState(() => {
+    const preferred = ssoBoxes.find((box) => box.id === preferredMailboxId);
+    if (preferred) return preferred.id;
+    return ssoBoxes.length === 1 ? ssoBoxes[0].id : "";
+  });
   const [address, setAddress] = useState(() => {
-    const preferred = signInBoxes.find((box) => box.id === preferredMailboxId);
+    const preferred = passwordBoxes.find((box) => box.id === preferredMailboxId);
     if (preferred) return preferred.address;
-    return signInBoxes.length === 1 ? signInBoxes[0].address : "";
+    return passwordBoxes.length === 1 ? passwordBoxes[0].address : "";
   });
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -41,7 +59,29 @@ export function MailInboxLogin({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSsoSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!appId || busy || !ssoMailboxId) {
+      setError("Select a mailbox to open.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const mailbox = await selectMailMailbox(appId, ssoMailboxId);
+      onUnlocked(mailbox);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not open this mailbox with your Rukny account.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!appId || busy) return;
     const nextAddress = address.trim().toLowerCase();
@@ -77,6 +117,9 @@ export function MailInboxLogin({
     }
   }
 
+  const showSso = ssoBoxes.length > 0 && mode === "sso" && !needsTotp;
+  const showPasswordToggle = ssoBoxes.length > 0 && passwordBoxes.length > 0;
+
   return (
     <div className="flex h-dvh flex-col bg-white dark:bg-[var(--background)]">
       <header className="flex shrink-0 items-center gap-2.5 px-5 py-3.5">
@@ -100,22 +143,64 @@ export function MailInboxLogin({
 
       <div className="flex flex-1 items-center justify-center px-6 pb-16">
         <form
-          onSubmit={(e) => void onSubmit(e)}
+          onSubmit={(e) =>
+            void (showSso ? onSsoSubmit(e) : onPasswordSubmit(e))
+          }
           className="w-full max-w-[400px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8"
         >
           <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-            {needsTotp ? "Two-factor authentication" : "Sign in to webmail"}
+            {needsTotp
+              ? "Two-factor authentication"
+              : showSso
+                ? "Open webmail"
+                : "Sign in to webmail"}
           </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted-foreground)]">
             {needsTotp
               ? `Enter the 6-digit code for ${address}.`
-              : "Use the mailbox address and password you created for this workspace."}
+              : showSso
+                ? "Continue with your Rukny account — no mailbox password needed."
+                : "Use the mailbox address and password you created for this workspace."}
           </p>
 
-          {signInBoxes.length === 0 ? (
+          {activeBoxes.length === 0 ? (
             <p className="mt-5 text-sm text-[var(--danger)]" role="alert">
-              This app has no mailbox with a password yet. Create one first.
+              This app has no active mailbox yet. Create one first.
             </p>
+          ) : showSso ? (
+            <div className="mt-5 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="sso-mailbox"
+                  className="text-xs font-medium text-[var(--muted-foreground)]"
+                >
+                  Mailbox
+                </Label>
+                {ssoBoxes.length > 1 ? (
+                  <select
+                    id="sso-mailbox"
+                    value={ssoMailboxId}
+                    onChange={(e) => setSsoMailboxId(e.target.value)}
+                    required
+                    className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                  >
+                    <option value="">Select a mailbox</option>
+                    {ssoBoxes.map((box) => (
+                      <option key={box.id} value={box.id}>
+                        {box.address}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p
+                    id="sso-mailbox"
+                    className="flex h-11 items-center rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 text-sm text-[var(--foreground)]"
+                  >
+                    {ssoBoxes[0]?.address}
+                  </p>
+                )}
+              </div>
+            </div>
           ) : needsTotp ? (
             <div className="mt-6 flex justify-center" dir="ltr">
               <InputOTP
@@ -137,6 +222,11 @@ export function MailInboxLogin({
                 </InputOTP.Group>
               </InputOTP>
             </div>
+          ) : passwordBoxes.length === 0 ? (
+            <p className="mt-5 text-sm text-[var(--danger)]" role="alert">
+              No mailbox password is set, and SSO is not available for your
+              account on these seats.
+            </p>
           ) : (
             <div className="mt-5 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
@@ -146,7 +236,7 @@ export function MailInboxLogin({
                 >
                   Mailbox address
                 </Label>
-                {signInBoxes.length > 1 ? (
+                {passwordBoxes.length > 1 ? (
                   <select
                     id="mailbox-address"
                     value={address}
@@ -155,7 +245,7 @@ export function MailInboxLogin({
                     className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
                   >
                     <option value="">Select a mailbox</option>
-                    {signInBoxes.map((box) => (
+                    {passwordBoxes.map((box) => (
                       <option key={box.id} value={box.address}>
                         {box.address}
                       </option>
@@ -193,21 +283,28 @@ export function MailInboxLogin({
             </p>
           ) : null}
 
-          {signInBoxes.length > 0 ? (
+          {activeBoxes.length > 0 && (showSso || passwordBoxes.length > 0) ? (
             <button
               type="submit"
               disabled={
                 busy ||
-                (!needsTotp && (!address.trim() || !password)) ||
+                (showSso && !ssoMailboxId) ||
+                (!showSso &&
+                  !needsTotp &&
+                  (!address.trim() || !password)) ||
                 (needsTotp && totp.length !== 6)
               }
               className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-full bg-[var(--foreground)] text-sm font-semibold text-[var(--background)] disabled:opacity-50"
             >
               {busy
-                ? "Signing in…"
+                ? showSso
+                  ? "Opening…"
+                  : "Signing in…"
                 : needsTotp
                   ? "Verify code"
-                  : "Sign in"}
+                  : showSso
+                    ? "Continue with Rukny"
+                    : "Sign in"}
             </button>
           ) : null}
 
@@ -223,6 +320,19 @@ export function MailInboxLogin({
             >
               Back
             </button>
+          ) : showPasswordToggle ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === "sso" ? "password" : "sso");
+                setError("");
+              }}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-medium text-[var(--muted-foreground)] hover:bg-[rgba(15,23,42,0.06)]"
+            >
+              {mode === "sso"
+                ? "Use mailbox password instead"
+                : "Continue with Rukny instead"}
+            </button>
           ) : (
             <Link
               href={appHref}
@@ -231,6 +341,15 @@ export function MailInboxLogin({
               Manage mailboxes
             </Link>
           )}
+
+          {showPasswordToggle ? (
+            <Link
+              href={appHref}
+              className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-medium text-[var(--muted-foreground)] hover:bg-[rgba(15,23,42,0.06)]"
+            >
+              Manage mailboxes
+            </Link>
+          ) : null}
         </form>
       </div>
     </div>

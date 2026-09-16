@@ -130,7 +130,7 @@ export function MailPricingPage() {
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-10">
       <header className="max-w-2xl">
-        <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]">
+        <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#666666]">
           Billing
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[var(--foreground)]">
@@ -313,7 +313,7 @@ export function MailPricingPage() {
                     "relative inline-flex h-11 w-full items-center justify-center px-4 text-sm font-medium transition-[color,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
                     isCurrent
                       ? "border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)]"
-                      : "border border-[#062c30] bg-[#062c30] text-white group-hover:border-[#1c1917] group-hover:bg-[#1c1917]",
+                      : "border border-[#111111] bg-[#111111] text-white group-hover:border-[#111111] group-hover:bg-[#111111]",
                   )}
                 >
                   {busy

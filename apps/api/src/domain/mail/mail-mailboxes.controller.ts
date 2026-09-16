@@ -40,6 +40,7 @@ import {
   ChangeMailMailboxPasswordDto,
   ConfirmMailMailbox2faDto,
   CreateMailMailboxDto,
+  AssignMailMailboxDto,
   SetMailMailbox2faDto,
   UnlockMailMailboxDto,
   UpdateMailMailboxDto,
@@ -124,7 +125,8 @@ export class MailMailboxesController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Open this mailbox in webmail as the Mail app owner',
+    summary:
+      'Open this mailbox in webmail via Rukny SSO (owner, admin, or assignee)',
   })
   async select(
     @CurrentUser() user: AuthenticatedUser,
@@ -135,6 +137,20 @@ export class MailMailboxesController {
     const result = await this.mailboxes.select(user.id, appId, mailboxId);
     setMailboxSessionCookie(res, result.token);
     return { mailbox: result.mailbox };
+  }
+
+  @Post(':mailboxId/assign')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Assign a mailbox to a team member for SSO unlock',
+  })
+  assign(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('mailboxId') mailboxId: string,
+    @Body() dto: AssignMailMailboxDto,
+  ) {
+    return this.mailboxes.assign(user.id, appId, mailboxId, dto);
   }
 
   @Patch(':mailboxId')

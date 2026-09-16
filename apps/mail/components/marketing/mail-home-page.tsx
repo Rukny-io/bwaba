@@ -1,426 +1,328 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Forward,
-  KeyRound,
-  Mails,
-  Send,
-  ShieldCheck,
-  Users,
-  Zap,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
 import {
   MailDnsArchitectureSection,
-  MailResourcesSection,
   MailSecurityBand,
+  MailResourcesSection,
 } from "@/components/marketing/mail-home-bands";
+import { MailEmailsSentSection } from "@/components/marketing/mail-emails-sent-section";
 import { MailMarketingShell } from "@/components/marketing/mail-marketing-shell";
-import {
-  MailClipReveal,
-  MailCountUp,
-  MailMagnetic,
-  MailParallaxFrame,
-  MailSplitWords,
-  MailSpotlight,
-} from "@/components/marketing/mail-motion-kit";
-import { MailProductivitySection } from "@/components/marketing/mail-productivity-section";
-import { MailProvidersMarquee } from "@/components/marketing/mail-providers-marquee";
+import { MailMagnetic } from "@/components/marketing/mail-motion-kit";
 import {
   MailHeroMotion,
   MailReveal,
   MailRevealItem,
   MailStagger,
 } from "@/components/marketing/mail-reveal";
-import { MailWebmailPreview } from "@/components/marketing/mail-webmail-preview";
-import {
-  formatMailIqD,
-  listMailPlans,
-  mailPlanHighlights,
-} from "@/lib/mail-plans";
+import { MailHeroSignal } from "@/components/marketing/mail-hero-signal";
+import { MailHeroPanorama } from "@/components/marketing/mail-hero-panorama";
+import { MailProductivitySection } from "@/components/marketing/mail-productivity-section";
+import { formatMailIqD, listMailPlans } from "@/lib/mail-plans";
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
-const BENEFITS = [
+const STEPS = [
   {
-    icon: Send,
-    title: "Send at scale",
-    body: "Outbound mail is delivered through Amazon SES, so transactional and team mail can grow without running your own SMTP fleet.",
+    n: "01",
+    title: "Workspace + domain",
+    body: "Sign in, create a workspace, connect a domain you own.",
   },
   {
-    icon: ShieldCheck,
-    title: "Authenticated from day one",
-    body: "SPF, Easy DKIM, DMARC, and a custom MAIL FROM keep your From address aligned with your brand.",
-  },
-  {
-    icon: Mails,
-    title: "One console for routing",
-    body: "Mailboxes, aliases, forwarders, catch-all, and automatic replies — without a separate admin panel per tool.",
-  },
-  {
-    icon: KeyRound,
-    title: "Mailbox sign-in",
-    body: "Each mailbox has its own password. Optional TOTP is enrolled with a QR code before it is required.",
-  },
-] as const;
-
-const USE_CASES = [
-  {
-    icon: Zap,
-    title: "Transactional messages",
-    body: "Order updates, password mail, and product notices from addresses such as you@yourdomain.",
-  },
-  {
-    icon: Users,
-    title: "Team inboxes",
-    body: "Give people real addresses, webmail, and optional 2FA. Seats and storage stay on that workspace.",
-  },
-  {
-    icon: Forward,
-    title: "Routing without extra servers",
-    body: "Forwarders, aliases, and catch-all keep mail flowing while you grow.",
-  },
-] as const;
-
-const CONNECT_STEPS = [
-  {
-    step: "01",
-    title: "Create a workspace",
-    body: "Sign in with Rukny, create a workspace, then verify DNS. Starter starts after DNS.",
-  },
-  {
-    step: "02",
-    title: "Add your domain",
-    body: "Connect a domain you own. You send as you@yourdomain.",
-  },
-  {
-    step: "03",
+    n: "02",
     title: "Publish DNS",
-    body: "Copy the records from the console. Keep them DNS-only.",
+    body: "SPF, DKIM, DMARC, and MAIL FROM from the console.",
   },
   {
-    step: "04",
-    title: "Send from webmail",
-    body: "Set a mailbox password, optionally turn on 2FA, then send.",
+    n: "03",
+    title: "Send as yourself",
+    body: "Mailboxes, team SSO, aliases, and forwarders — one place.",
   },
 ] as const;
 
-const SIGNAL_STATS = [
-  { value: 99, suffix: ".9%", label: "Delivery focus" },
-  { value: 1, suffix: " console", label: "Mailboxes + routing" },
-  { value: 3, suffix: " auth layers", label: "SPF · DKIM · DMARC" },
-] as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function MailHomePage({
   signedIn,
+  emailsSent = 0,
 }: {
   signedIn: boolean;
   emailsSent?: number;
 }) {
   const primaryHref = signedIn ? "/apps" : "/login";
-  const primaryLabel = signedIn ? "Open console" : "Start Building";
-  const plans = listMailPlans();
+  const primaryLabel = signedIn ? "Open console" : "Get started";
+  const popular = listMailPlans().find((p) => p.popular) ?? listMailPlans()[1];
+  const reduceMotion = useReducedMotion();
 
   return (
-    <MailMarketingShell signedIn={signedIn} plainBackground>
+    <MailMarketingShell signedIn={signedIn}>
       <main className="overflow-x-clip">
-        <section id="overview" className="relative border-b border-[#d7ebea]">
-          <div className={L.container}>
-            <div className="relative grid grid-cols-1 items-start gap-10 py-12 md:gap-12 md:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
-              <div className="max-w-screen-sm space-y-8">
+        {/* Hero — one composition: brand, line, CTA, dominant visual */}
+        <section
+          className="relative isolate min-h-[100svh] overflow-hidden bg-[#0a0a0a] text-white"
+          aria-labelledby="mail-hero-brand"
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_72%_42%,rgba(180,210,255,0.11),transparent_58%)]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_12%_78%,rgba(255,255,255,0.05),transparent_55%)]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent"
+          />
+
+          <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-5xl flex-col justify-center px-5 pb-16 pt-[72px] sm:px-6 md:max-w-7xl md:pb-20 md:pt-14">
+            <div className="grid items-center gap-10 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] md:gap-6 lg:gap-10">
+              <div className="relative z-10 w-full max-w-xl lg:pl-6">
                 <MailHeroMotion>
-                  <p className={L.heroBadge}>Rukny Mail</p>
+                  <h1
+                    id="mail-hero-brand"
+                    className="text-[2.75rem] font-bold leading-[0.92] tracking-[-0.05em] text-white sm:text-5xl md:text-[3.75rem] lg:text-[4.35rem]"
+                  >
+                    Rukny Mail
+                  </h1>
                 </MailHeroMotion>
-                <MailSplitWords
-                  text="Business email on your domain"
-                  className={L.heroTitle}
-                  delay={0.06}
-                />
-                <MailHeroMotion delay={0.28}>
-                  <p className={L.heroLead}>
-                    Create mailboxes, authenticate DNS, and send from webmail. You
-                    keep the domain.
+
+                <MailHeroMotion delay={0.1}>
+                  <p className="mt-4 max-w-md text-balance text-[1.1rem] font-medium leading-snug tracking-[-0.025em] text-white/90 sm:mt-5 sm:text-[1.4rem]">
+                    Business email on your domain
                   </p>
                 </MailHeroMotion>
-                <MailHeroMotion delay={0.36}>
-                  <div className="flex flex-wrap gap-2">
-                    <MailMagnetic strength={14}>
-                      <MailFrameLink href={primaryHref}>{primaryLabel}</MailFrameLink>
-                    </MailMagnetic>
+
+                <MailHeroMotion delay={0.18}>
+                  <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#a3a3a3] sm:text-base">
+                    Mailboxes, DNS auth, and webmail — you keep{" "}
+                    <span className="font-medium text-white">
+                      you@yourdomain
+                    </span>
+                    .
+                  </p>
+                </MailHeroMotion>
+
+                <MailHeroMotion delay={0.26}>
+                  <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9">
                     <MailMagnetic strength={10}>
-                      <MailFrameLink href="/getting-started" variant="ghost">
-                        Getting started
-                      </MailFrameLink>
+                      <Link
+                        href={primaryHref}
+                        className="inline-flex h-11 min-w-[9rem] items-center justify-center bg-white px-5 text-[14px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#e8e8e8]"
+                      >
+                        {primaryLabel}
+                      </Link>
                     </MailMagnetic>
+                    <Link
+                      href="/documents"
+                      className="inline-flex h-11 items-center gap-1.5 px-2 text-[14px] font-medium text-[#a3a3a3] transition-colors hover:text-white sm:px-3"
+                    >
+                      Documents
+                      <ArrowRight className="size-3.5" aria-hidden />
+                    </Link>
                   </div>
                 </MailHeroMotion>
               </div>
 
-              <MailHeroMotion delay={0.22} className="hidden min-w-0 lg:block">
-                <MailParallaxFrame>
-                  <MailWebmailPreview />
-                </MailParallaxFrame>
-              </MailHeroMotion>
+              <div className="relative mx-auto w-full max-w-[28rem] md:max-w-none">
+                <MailHeroMotion delay={0.14} className="relative">
+                  <MailHeroSignal />
+
+                  {/* Product accent — one float, not a sticker cluster */}
+                  <motion.div
+                    className="pointer-events-none absolute -bottom-1 -right-1 z-20 w-[5.75rem] sm:bottom-1 sm:right-2 sm:w-[7rem] md:-bottom-3 md:right-4 md:w-[8rem]"
+                    initial={
+                      reduceMotion ? false : { opacity: 0, y: 16, rotate: -6 }
+                    }
+                    animate={
+                      reduceMotion
+                        ? undefined
+                        : {
+                            opacity: 1,
+                            y: [0, -7, 0],
+                            rotate: [-3.5, -1.5, -3.5],
+                          }
+                    }
+                    transition={
+                      reduceMotion
+                        ? undefined
+                        : {
+                            opacity: { duration: 0.75, delay: 0.35, ease: EASE },
+                            y: {
+                              duration: 5.2,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: 0.5,
+                            },
+                            rotate: {
+                              duration: 5.2,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: 0.5,
+                            },
+                          }
+                    }
+                  >
+                    <Image
+                      src="/illustrations/hero-envelope-3d.png"
+                      alt=""
+                      width={200}
+                      height={200}
+                      className="h-auto w-full drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+                      priority
+                    />
+                  </motion.div>
+                </MailHeroMotion>
+              </div>
             </div>
           </div>
-
-          <MailHeroMotion delay={0.3} className="border-t border-[#d7ebea] lg:hidden">
-            <div className="mx-auto max-w-6xl">
-              <MailWebmailPreview fullBleed />
-            </div>
-          </MailHeroMotion>
         </section>
 
-        <MailProvidersMarquee />
+        <MailHeroPanorama />
 
-        <section className="border-b border-[#d7ebea] bg-[#eef5f4]">
-          <div className={L.container}>
-            <MailStagger
-              className="grid border-x border-[#d7ebea] sm:grid-cols-3"
-              stagger={0.1}
-            >
-              {SIGNAL_STATS.map((stat) => (
-                <MailRevealItem
-                  key={stat.label}
-                  className="border-b border-[#d7ebea] bg-[#eef5f4] px-5 py-8 sm:border-b-0 sm:border-e sm:last:border-e-0 sm:px-8"
-                >
-                  <p className="text-3xl font-bold tracking-tight text-[#062c30] sm:text-4xl">
-                    <MailCountUp value={stat.value} suffix={stat.suffix} />
+        {emailsSent > 0 ? (
+          <section
+            className="border-t border-[#e8e8e8] bg-white"
+            aria-labelledby="emails-sent-heading"
+          >
+            <div className={L.container}>
+              <div className="flex flex-col items-center py-10 sm:py-12">
+                <MailReveal>
+                  <p
+                    id="emails-sent-heading"
+                    className="text-center text-[11px] font-semibold tracking-[0.18em] text-[#888888] uppercase"
+                  >
+                    Emails delivered
                   </p>
-                  <p className="mt-2 text-sm text-[#4a5c5a]">{stat.label}</p>
-                </MailRevealItem>
-              ))}
-            </MailStagger>
+                </MailReveal>
+                <MailEmailsSentSection emailsSent={emailsSent} />
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* How it works */}
+        <section
+          id="connect"
+          className="scroll-mt-24 border-t border-[#e8e8e8] bg-[#fafafa]"
+          aria-labelledby="connect-heading"
+        >
+          <div className={L.container}>
+            <div className="py-14 md:py-20">
+              <MailReveal>
+                <h2
+                  id="connect-heading"
+                  className="text-[1.5rem] font-bold tracking-[-0.035em] text-[#111111] sm:text-[1.85rem]"
+                >
+                  Three steps to send as yourself
+                </h2>
+              </MailReveal>
+              <MailStagger
+                as="ol"
+                className="mt-10 grid gap-10 sm:grid-cols-3 sm:gap-8"
+                stagger={0.08}
+              >
+                {STEPS.map((step) => (
+                  <MailRevealItem key={step.n} as="li" className="relative">
+                    <p className="font-mono text-[11px] tracking-[0.18em] text-[#888888]">
+                      {step.n}
+                    </p>
+                    <h3 className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-[#111111]">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-[14px] leading-relaxed text-[#666666]">
+                      {step.body}
+                    </p>
+                  </MailRevealItem>
+                ))}
+              </MailStagger>
+            </div>
           </div>
         </section>
 
-        <section id="features" className={L.section} aria-labelledby="features-heading">
-          <div className={L.container}>
-            <MailReveal>
-              <p className={L.eyebrow}>Why Rukny Mail</p>
-              <MailClipReveal>
-                <h2 id="features-heading" className={L.sectionTitle}>
-                  Outbound, inbound, and the mailbox your team uses
-                </h2>
-              </MailClipReveal>
-              <p className={L.sectionLead}>
-                A cloud email stack for businesses that already own a domain:
-                delivery, DNS you publish, and a console for people and routing.
-              </p>
-            </MailReveal>
+        <MailProductivitySection />
 
-            <MailStagger
-              as="ul"
-              className={`mt-10 ${L.gridFrame} sm:grid-cols-2`}
-              stagger={0.09}
-            >
-              {BENEFITS.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <MailRevealItem key={item.title} as="li" className="contents">
-                    <MailSpotlight
-                      className={`flex h-full gap-4 ${L.cellPaper} transition-colors duration-300 hover:bg-[#eef5f4]`}
-                    >
-                      <span className="flex size-10 shrink-0 items-center justify-center border border-[#d7ebea] bg-[#eef5f4] text-[#062c30] sm:size-11">
-                        <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="mb-1 font-mono text-[10px] tracking-wide text-[#1aabb2]">
-                          {String(index + 1).padStart(2, "0")}
-                        </p>
-                        <h3 className="text-[15px] font-semibold text-[#041f22] sm:text-base">
-                          {item.title}
-                        </h3>
-                        <p className="mt-1.5 text-[13px] leading-[1.75] text-[#4a5c5a] sm:text-[14px]">
-                          {item.body}
-                        </p>
-                      </div>
-                    </MailSpotlight>
-                  </MailRevealItem>
-                );
-              })}
-            </MailStagger>
+        {/* Trust — prose band, no feature cards */}
+        <section
+          id="features"
+          className="scroll-mt-24 border-t border-[#e8e8e8] bg-[#111111]"
+          aria-labelledby="trust-heading"
+        >
+          <div className={L.container}>
+            <div className="grid gap-8 py-14 md:grid-cols-[1.15fr_0.85fr] md:items-end md:gap-20 md:py-20">
+              <MailReveal>
+                <h2
+                  id="trust-heading"
+                  className="text-[1.5rem] font-bold leading-snug tracking-[-0.035em] text-white sm:text-[1.85rem]"
+                >
+                  Authenticated outbound. Team console. One workspace per
+                  domain.
+                </h2>
+              </MailReveal>
+              <MailReveal delay={0.08}>
+                <p className="text-[15px] leading-relaxed text-[#a3a3a3]">
+                  Delivery through Amazon SES. SPF, Easy DKIM, and DMARC from
+                  day one. Invite teammates, assign mailboxes, open webmail
+                  with Rukny SSO — seats stay on that workspace.
+                </p>
+              </MailReveal>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing teaser */}
+        <section
+          id="pricing"
+          className="scroll-mt-24 border-t border-[#e8e8e8] bg-white"
+          aria-labelledby="pricing-heading"
+        >
+          <div className={L.container}>
+            <div className="flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between md:py-16">
+              <MailReveal>
+                <h2
+                  id="pricing-heading"
+                  className="text-[1.35rem] font-bold tracking-[-0.03em] text-[#111111] sm:text-[1.6rem]"
+                >
+                  From {formatMailIqD(popular.priceMonthly)}
+                  <span className="font-medium text-[#888888]">/mo</span>
+                </h2>
+                <p className="mt-2 text-[14px] text-[#666666]">
+                  {popular.name} for small teams — billed per workspace in IQD.
+                </p>
+              </MailReveal>
+              <MailReveal delay={0.06}>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#111111] transition-colors hover:opacity-70"
+                >
+                  Compare plans
+                  <ArrowRight className="size-3.5" aria-hidden />
+                </Link>
+              </MailReveal>
+            </div>
           </div>
         </section>
 
         <MailDnsArchitectureSection />
-
-        <MailProductivitySection />
-
         <MailSecurityBand />
-
-        <section id="connect" className={L.sectionMist}>
-          <div className={L.container}>
-            <MailReveal>
-              <p className={L.eyebrow}>Connect</p>
-              <MailSplitWords
-                as="h2"
-                mode="scroll"
-                text="Link your domain, then send as yourself"
-                className={L.sectionTitle}
-                delay={0.05}
-              />
-              <p className={L.sectionLead}>
-                Connect a domain you own. DNS records appear in the console after
-                you add the domain.
-              </p>
-            </MailReveal>
-            <MailStagger
-              as="ol"
-              className={`mt-10 ${L.gridFrame} sm:grid-cols-2 lg:grid-cols-4`}
-              stagger={0.07}
-            >
-              {CONNECT_STEPS.map((item, index) => (
-                <MailRevealItem
-                  key={item.step}
-                  as="li"
-                  className={`relative ${L.cellPaper}`}
-                >
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-0 top-0 h-[2px] origin-left bg-[#02797E]"
-                    style={{
-                      transform: `scaleX(${(index + 1) / CONNECT_STEPS.length})`,
-                    }}
-                  />
-                  <p className="font-mono text-[10px] tracking-wide text-[#1aabb2]">
-                    {item.step}
-                  </p>
-                  <h3 className="mt-2 text-[15px] font-semibold text-[#041f22]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1.5 text-[13px] leading-[1.75] text-[#4a5c5a]">
-                    {item.body}
-                  </p>
-                </MailRevealItem>
-              ))}
-            </MailStagger>
-          </div>
-        </section>
-
-        <section id="use-cases" className={L.section}>
-          <div className={L.container}>
-            <MailReveal>
-              <p className={L.eyebrow}>Use cases</p>
-              <h2 className={L.sectionTitle}>Built for the mail you already send</h2>
-            </MailReveal>
-            <MailStagger
-              className={`mt-10 ${L.gridFrame} md:grid-cols-3`}
-              stagger={0.08}
-            >
-              {USE_CASES.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <MailRevealItem key={item.title} as="article" className="contents">
-                    <MailSpotlight
-                      className={`${L.cellPaper} transition-colors duration-300 hover:bg-[#eef5f4]`}
-                    >
-                      <span className="flex size-10 items-center justify-center border border-[#d7ebea] bg-[#eef5f4] text-[#062c30]">
-                        <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
-                      </span>
-                      <h3 className="mt-4 text-[15px] font-semibold text-[#041f22] sm:text-base">
-                        {item.title}
-                      </h3>
-                      <p className="mt-1.5 text-[13px] leading-[1.75] text-[#4a5c5a] sm:text-[14px]">
-                        {item.body}
-                      </p>
-                    </MailSpotlight>
-                  </MailRevealItem>
-                );
-              })}
-            </MailStagger>
-          </div>
-        </section>
-
         <MailResourcesSection />
 
-        <section id="pricing" className={L.section}>
+        {/* Close */}
+        <section className="border-t border-[#e8e8e8] bg-[#f5f5f5]">
           <div className={L.container}>
-            <MailReveal>
-              <p className={L.eyebrow}>Pricing</p>
-              <h2 className={L.sectionTitle}>
-                Plans per workspace, billed monthly in IQD
-              </h2>
-              <p className={L.sectionLead}>
-                Each workspace has its own subscription. Starter starts after DNS is verified;
-                Standard and Premium are requested in the console.
-              </p>
-            </MailReveal>
-            <MailStagger
-              className={`mt-10 ${L.gridFrame} md:grid-cols-3`}
-              stagger={0.08}
-            >
-              {plans.map((plan) => (
-                <MailRevealItem key={plan.id} as="article" className="contents">
-                  <MailSpotlight
-                    className={`flex h-full flex-col ${L.cellPaper} transition-shadow duration-300 hover:shadow-[0_20px_50px_-36px_rgba(4,31,34,0.45)]`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-[15px] font-semibold text-[#041f22] sm:text-base">
-                        {plan.name}
-                      </h3>
-                      {plan.popular ? (
-                        <span className="border border-[#d7ebea] bg-[#eef5f4] px-2.5 py-0.5 text-[11px] font-semibold text-[#02797E]">
-                          Popular
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-sm text-[#4a5c5a]">{plan.bestFor}</p>
-                    <p className="mt-4 text-2xl font-bold tracking-tight text-[#041f22]">
-                      {formatMailIqD(plan.priceMonthly)}
-                      <span className="text-sm font-medium text-[#a8a29e]">/mo</span>
-                    </p>
-                    <ul className="mt-4 flex flex-1 flex-col gap-2 text-sm text-[#4a5c5a]">
-                      {mailPlanHighlights(plan).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </MailSpotlight>
-                </MailRevealItem>
-              ))}
-            </MailStagger>
-            <MailReveal delay={0.1}>
-              <Link
-                href="/pricing"
-                className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-[#062c30] transition-colors hover:text-[#041f22]"
-              >
-                Full pricing and plan requests
-                <ArrowRight className="size-4" aria-hidden />
-              </Link>
-            </MailReveal>
-          </div>
-        </section>
-
-        <section className="border-t border-[#062c30]">
-          <div className="mail-mkt-band-ink px-4 py-16 sm:px-8 sm:py-20 md:py-24">
-            <div className={L.container}>
+            <div className="flex flex-col items-start gap-6 py-14 md:flex-row md:items-center md:justify-between md:py-16">
               <MailReveal>
-                <div className="mx-auto max-w-2xl text-center">
-                  <p className={L.eyebrowOnInk}>Get started</p>
-                  <MailSplitWords
-                    as="h2"
-                    mode="scroll"
-                    text="Ready to send as yourself?"
-                    className="mt-2 text-[1.5rem] font-bold leading-[1.2] tracking-[-0.03em] text-white sm:text-[2rem]"
-                  />
-                  <p className="mx-auto mt-4 max-w-xl text-[15px] leading-[1.7] text-[#a8c5c3] sm:text-base">
-                    Sign in, connect your domain, and open webmail when DNS is ready.
-                  </p>
-                  <div className="mt-8 flex flex-wrap justify-center gap-2">
-                    <MailMagnetic>
-                      <MailFrameLink href={primaryHref}>{primaryLabel}</MailFrameLink>
-                    </MailMagnetic>
-                    <MailMagnetic strength={10}>
-                      <Link
-                        href="/getting-started"
-                        className="mail-frame-cta mail-frame-cta--ghost group relative inline-flex items-center justify-center gap-2 border border-white/25 bg-transparent px-5 py-2.5 text-[15px] font-medium text-white transition-colors hover:border-white/50 hover:bg-white/5"
-                      >
-                        Getting started
-                      </Link>
-                    </MailMagnetic>
-                  </div>
-                </div>
+                <p className="text-[1.35rem] font-bold tracking-[-0.03em] text-[#111111] sm:text-[1.6rem]">
+                  Ready to send as yourself?
+                </p>
+              </MailReveal>
+              <MailReveal delay={0.06}>
+                <MailMagnetic>
+                  <MailFrameLink href={primaryHref}>{primaryLabel}</MailFrameLink>
+                </MailMagnetic>
               </MailReveal>
             </div>
           </div>

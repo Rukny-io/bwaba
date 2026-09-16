@@ -23,7 +23,7 @@ export function MailWebmailPreview({
   return (
     <motion.div
       className={cn(
-        "overflow-hidden border border-[#e7e5e4] bg-white shadow-[0_24px_60px_-40px_rgba(6,44,48,0.35)]",
+        "overflow-hidden border border-[#e8e8e8] bg-white shadow-[0_24px_60px_-40px_rgba(17,17,17,0.35)]",
         fullBleed ? "border-x-0 sm:border-x" : "",
         className,
       )}
@@ -34,16 +34,16 @@ export function MailWebmailPreview({
       transition={{ duration: 0.85, ease: EASE }}
       style={{ transformPerspective: 1200 }}
     >
-      <div className="flex items-center gap-2 border-b border-[#e7e5e4] bg-[#f2f3f6] px-4 py-3">
-        <span className="size-2.5 rounded-full bg-[#e7e5e4]" />
-        <span className="size-2.5 rounded-full bg-[#e7e5e4]" />
-        <span className="size-2.5 rounded-full bg-[#e7e5e4]" />
-        <p className="ml-2 truncate text-[11px] font-medium text-[#a8a29e]">
+      <div className="flex items-center gap-2 border-b border-[#e8e8e8] bg-[#f5f5f5] px-4 py-3">
+        <span className="size-2.5 rounded-full bg-[#e8e8e8]" />
+        <span className="size-2.5 rounded-full bg-[#e8e8e8]" />
+        <span className="size-2.5 rounded-full bg-[#e8e8e8]" />
+        <p className="ml-2 truncate text-[11px] font-medium text-[#999999]">
           you@yourdomain.com
         </p>
         {!reduceMotion ? (
           <motion.span
-            className="ms-auto size-1.5 rounded-full bg-[#02797E]"
+            className="ms-auto size-1.5 rounded-full bg-[#666666]"
             animate={{ opacity: [0.35, 1, 0.35] }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -51,8 +51,8 @@ export function MailWebmailPreview({
       </div>
 
       <div className="grid sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)]">
-        <div className="border-b border-[#e7e5e4] p-3 sm:border-b-0 sm:border-r">
-          <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8a29e]">
+        <div className="border-b border-[#e8e8e8] p-3 sm:border-b-0 sm:border-r">
+          <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#999999]">
             Inbox
           </p>
           <motion.div
@@ -87,15 +87,15 @@ export function MailWebmailPreview({
                 }
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[13px] font-semibold text-[#1c1917]">
+                  <p className="text-[13px] font-semibold text-[#111111]">
                     {row.from}
                     {row.unread ? (
-                      <span className="ms-1.5 inline-block size-1.5 rounded-full bg-[#02797E] align-middle" />
+                      <span className="ms-1.5 inline-block size-1.5 rounded-full bg-[#666666] align-middle" />
                     ) : null}
                   </p>
-                  <p className="text-[10px] text-[#a8a29e]">{row.time}</p>
+                  <p className="text-[10px] text-[#999999]">{row.time}</p>
                 </div>
-                <p className="mt-0.5 truncate text-[12px] text-[#57534e]">
+                <p className="mt-0.5 truncate text-[12px] text-[#666666]">
                   {row.subject}
                 </p>
               </motion.div>
@@ -104,35 +104,35 @@ export function MailWebmailPreview({
         </div>
 
         <div className="p-4 sm:p-5">
-          <p className="text-[11px] font-medium text-[#a8a29e]">From Noura</p>
-          <p className="mt-1 text-[15px] font-semibold text-[#1c1917]">Q3 invoice</p>
+          <p className="text-[11px] font-medium text-[#999999]">From Noura</p>
+          <p className="mt-1 text-[15px] font-semibold text-[#111111]">Q3 invoice</p>
           <TypeLine
             text="Please send the signed invoice today. I attached last month’s PDF for reference."
             reduceMotion={Boolean(reduceMotion)}
           />
           <motion.div
-            className="mt-5 border border-[#e7e5e4] bg-[#f2f3f6] p-3"
+            className="mt-5 border border-[#e8e8e8] bg-[#f5f5f5] p-3"
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 1.1, duration: 0.55, ease: EASE }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#02797E]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666666]">
               Agentic Mail
             </p>
-            <p className="mt-1.5 text-[13px] leading-snug text-[#57534e]">
+            <p className="mt-1.5 text-[13px] leading-snug text-[#666666]">
               Here’s a clear reply with the invoice attached and a send time
               for this afternoon.
             </p>
             {!reduceMotion ? (
               <motion.div
-                className="mt-3 h-1 overflow-hidden bg-[#e7e5e4]"
+                className="mt-3 h-1 overflow-hidden bg-[#e8e8e8]"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
               >
                 <motion.div
-                  className="h-full origin-left bg-[#02797E]"
+                  className="h-full origin-left bg-[#666666]"
                   initial={{ scaleX: 0 }}
                   whileInView={{ scaleX: 1 }}
                   viewport={{ once: true }}
@@ -156,12 +156,12 @@ function TypeLine({
 }) {
   if (reduceMotion) {
     return (
-      <p className="mt-3 text-[13px] leading-[1.7] text-[#57534e]">{text}</p>
+      <p className="mt-3 text-[13px] leading-[1.7] text-[#666666]">{text}</p>
     );
   }
 
   return (
-    <p className="mt-3 min-h-[4.2em] text-[13px] leading-[1.7] text-[#57534e]">
+    <p className="mt-3 min-h-[4.2em] text-[13px] leading-[1.7] text-[#666666]">
       <motion.span
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -183,7 +183,7 @@ function TypeLine({
       </motion.span>
       <motion.span
         aria-hidden
-        className="ms-0.5 inline-block h-[0.95em] w-[2px] translate-y-[2px] bg-[#02797E] align-baseline"
+        className="ms-0.5 inline-block h-[0.95em] w-[2px] translate-y-[2px] bg-[#666666] align-baseline"
         animate={{ opacity: [1, 0, 1] }}
         transition={{ duration: 0.9, repeat: Infinity }}
       />

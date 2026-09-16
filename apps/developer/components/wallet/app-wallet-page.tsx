@@ -51,6 +51,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
   const { data: masterWallet, isLoading: masterLoading } = useMasterWallet();
   const { data: appWallet, isLoading: appLoading } = useAppWallet(publicAppId);
   const allocateMutation = useAllocateAppWallet(publicAppId);
+  const isOwner = useIsWorkspaceOwner();
 
   const [amount, setAmount] = useState('');
 
@@ -85,6 +86,12 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
     }
   }, [allocateMutation, masterWallet?.balance, numericAmount, w]);
 
+  const canTransfer =
+    isOwner &&
+    !allocateMutation.isPending &&
+    numericAmount > 0 &&
+    amount.length > 0;
+
   if (masterLoading || appLoading || !masterWallet || !appWallet) {
     return (
       <div className="dashboard-section-stack">
@@ -105,12 +112,6 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
 
   const progressWidth = Math.max(appShare, appWallet.balance > 0 ? 6 : 0);
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
-  const isOwner = useIsWorkspaceOwner();
-  const canTransfer =
-    isOwner &&
-    !allocateMutation.isPending &&
-    numericAmount > 0 &&
-    amount.length > 0;
 
   return (
     <div className="dashboard-section-stack">

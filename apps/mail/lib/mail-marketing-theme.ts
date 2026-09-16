@@ -1,61 +1,58 @@
 export const mailBrand = {
-  /** Deep ink — hero accents, dark bands */
-  deep: "#041f22",
-  brand: "#062c30",
-  teal: "#02797E",
-  /** Brighter lagoon for highlights on dark */
-  lagoon: "#1aabb2",
-  text: "#1c1917",
-  muted: "#57534e",
-  tertiary: "#a8a29e",
-  border: "#e7e5e4",
-  canvas: "#f7faf9",
+  deep: "#111111",
+  brand: "#111111",
+  teal: "#111111",
+  lagoon: "#666666",
+  text: "#111111",
+  muted: "#666666",
+  tertiary: "#999999",
+  border: "#e8e8e8",
+  canvas: "#fafafa",
   paper: "#ffffff",
-  surface: "#eef5f4",
-  soft: "#e3f0ef",
-  mist: "#d7ebea",
-  /** Dark-mode primary (console) */
-  brandDark: "#3d9ea3",
-  tealDark: "#4db5b9",
-  canvasDark: "#0b1213",
-  surfaceDark: "#121a1b",
+  surface: "#f5f5f5",
+  soft: "#f5f5f5",
+  mist: "#e8e8e8",
+  brandDark: "#f5f5f5",
+  tealDark: "#a3a3a3",
+  canvasDark: "#0a0a0a",
+  surfaceDark: "#171717",
 } as const;
 
 export const mailMarketingLayout = {
   container: "mail-mkt-container relative mx-auto w-full max-w-6xl px-4 sm:px-8",
-  heroPad: "px-4 pb-10 pt-10 sm:px-8 sm:pb-14 sm:pt-14 md:pt-16",
+  heroPad: "px-4 pb-8 pt-8 sm:px-8 sm:pb-12 sm:pt-12",
   heroBadge:
-    "text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]",
+    "text-xs font-medium uppercase tracking-[1.8px] text-[#666666]",
   heroTitle:
-    "text-balance text-[2rem] font-bold leading-[1.1] tracking-[-0.03em] text-[#041f22] sm:text-5xl md:text-[3.5rem] lg:text-[4rem]",
+    "text-balance text-[2rem] font-bold leading-[1.05] tracking-[-0.04em] text-[#111111] sm:text-5xl md:text-[3.25rem]",
   heroLead:
-    "max-w-xl text-[15px] leading-[1.6] text-[#4a5c5a] sm:text-base md:text-lg",
+    "max-w-xl text-[14px] leading-[1.6] text-[#666666] sm:text-[15px]",
   section:
-    "scroll-mt-24 border-t border-[#d7ebea] px-4 py-16 sm:px-8 sm:py-20 md:py-24",
+    "scroll-mt-24 border-t border-[#e8e8e8] px-4 py-12 sm:px-8 sm:py-16",
   sectionMist:
-    "scroll-mt-24 border-t border-[#d7ebea] bg-[#eef5f4] px-4 py-16 sm:px-8 sm:py-20 md:py-24",
+    "scroll-mt-24 border-t border-[#e8e8e8] bg-[#f5f5f5] px-4 py-12 sm:px-8 sm:py-16",
   sectionInk:
-    "scroll-mt-24 border-t border-[#062c30] bg-[#041f22] px-4 py-16 text-[#f5f5f4] sm:px-8 sm:py-20 md:py-24",
+    "scroll-mt-24 border-t border-[#111111] bg-[#111111] px-4 py-12 text-[#f5f5f5] sm:px-8 sm:py-16",
   eyebrow:
-    "mb-3 text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]",
+    "mb-3 text-xs font-medium uppercase tracking-[1.8px] text-[#666666]",
   eyebrowOnInk:
-    "mb-3 text-xs font-medium uppercase tracking-[1.8px] text-[#1aabb2]",
+    "mb-3 text-xs font-medium uppercase tracking-[1.8px] text-[#a3a3a3]",
   sectionTitle:
-    "text-[1.75rem] font-bold leading-[1.15] tracking-[-0.03em] text-[#041f22] sm:text-3xl md:text-[2.5rem]",
+    "text-[1.75rem] font-bold leading-[1.15] tracking-[-0.03em] text-[#111111] sm:text-3xl md:text-[2.5rem]",
   sectionTitleOnInk:
     "text-[1.75rem] font-bold leading-[1.15] tracking-[-0.03em] text-white sm:text-3xl md:text-[2.5rem]",
   sectionLead:
-    "mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#4a5c5a] sm:text-base",
+    "mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#666666] sm:text-base",
   sectionLeadOnInk:
-    "mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#a8c5c3] sm:text-base",
+    "mt-4 max-w-2xl text-[15px] leading-[1.7] text-[#a3a3a3] sm:text-base",
   btnPrimary:
-    "mail-frame-cta mail-frame-cta--primary inline-flex items-center justify-center gap-2 border border-[#062c30] bg-[#062c30] px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-white transition-colors duration-200 hover:border-[#041f22] hover:bg-[#041f22]",
+    "mail-frame-cta mail-frame-cta--primary inline-flex items-center justify-center gap-2 border border-[#111111] bg-[#111111] px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-white transition-colors duration-200 hover:border-[#000000] hover:bg-[#000000]",
   btnGhost:
-    "mail-frame-cta mail-frame-cta--ghost inline-flex items-center justify-center gap-2 border border-[#d7ebea] bg-transparent px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-[#4a5c5a] transition-colors duration-200 hover:border-[#062c30]/30 hover:text-[#041f22]",
+    "mail-frame-cta mail-frame-cta--ghost inline-flex items-center justify-center gap-2 border border-[#e8e8e8] bg-transparent px-5 py-2.5 text-[15px] font-medium leading-[1.4] text-[#666666] transition-colors duration-200 hover:border-[#111111]/30 hover:text-[#111111]",
   btnNav:
-    "mail-frame-cta mail-frame-cta--primary inline-flex h-9 items-center justify-center border border-[#062c30] bg-[#062c30] px-4 text-[13px] font-medium text-white transition-colors duration-200 hover:border-[#041f22] hover:bg-[#041f22]",
-  gridFrame: "grid gap-px overflow-hidden border border-[#d7ebea] bg-[#d7ebea]",
-  cell: "bg-[#f7faf9] p-5 sm:p-6",
+    "mail-frame-cta mail-frame-cta--primary inline-flex h-9 items-center justify-center border border-[#111111] bg-[#111111] px-4 text-[13px] font-medium text-white transition-colors duration-200 hover:border-[#000000] hover:bg-[#000000]",
+  gridFrame: "grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8]",
+  cell: "bg-[#fafafa] p-5 sm:p-6",
   cellPaper: "bg-white p-5 sm:p-6",
-  panel: "border border-[#d7ebea] bg-white",
+  panel: "border border-[#e8e8e8] bg-white",
 } as const;

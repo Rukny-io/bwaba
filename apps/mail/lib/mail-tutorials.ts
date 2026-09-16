@@ -264,7 +264,7 @@ export const MAIL_TUTORIAL_GUIDES: MailTutorialGuide[] = [
       "Each mail workspace gets a stable slot: /u0, /u1, and so on.",
       "Bookmarks to /u0/inbox always open the same workspace after sign-in.",
       "Open Workspaces to switch between mail apps you own or were invited to.",
-      "Tutorials and pricing stay at public URLs without a slot prefix.",
+      "Documents and pricing stay at public URLs without a slot prefix.",
     ],
     links: [
       { label: "Workspaces", href: "/apps" },

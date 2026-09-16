@@ -76,8 +76,17 @@ export function useWhatsappMutations(appId: string) {
   };
 
   const connectMutation = useMutation({
-    mutationFn: ({ code, wabaId }: { code: string; wabaId?: string }) =>
-      connectWhatsappAccount(appId, code, wabaId),
+    mutationFn: ({
+      code,
+      wabaId,
+      phoneNumberId,
+      pin,
+    }: {
+      code: string;
+      wabaId?: string;
+      phoneNumberId?: string;
+      pin?: string;
+    }) => connectWhatsappAccount(appId, code, { wabaId, phoneNumberId, pin }),
     onSuccess: invalidate,
   });
 

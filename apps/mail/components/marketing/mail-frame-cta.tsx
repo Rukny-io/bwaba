@@ -10,9 +10,9 @@ const MotionLink = motion.create(Link);
 
 const variantClass: Record<FrameCtaVariant, string> = {
   primary:
-    "border border-[#062c30] bg-[#062c30] text-white group-hover:border-[#1c1917] group-hover:bg-[#1c1917] group-focus-visible:border-[#1c1917] group-focus-visible:bg-[#1c1917]",
+    "border border-[#111111] bg-[#111111] text-white group-hover:border-[#111111] group-hover:bg-[#111111] group-focus-visible:border-[#111111] group-focus-visible:bg-[#111111]",
   ghost:
-    "border border-[#e7e5e4] bg-transparent text-[#57534e] group-hover:border-[#1c1917]/30 group-hover:text-[#1c1917] group-focus-visible:border-[#1c1917]/30 group-focus-visible:text-[#1c1917]",
+    "border border-[#e8e8e8] bg-transparent text-[#666666] group-hover:border-[#111111]/30 group-hover:text-[#111111] group-focus-visible:border-[#111111]/30 group-focus-visible:text-[#111111]",
 };
 
 const TICK_EASE = [0.22, 1, 0.36, 1] as const;

@@ -215,6 +215,38 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
         />
       </DashboardGrid>
 
+      {activeAccount.onboarding?.paymentMethodRequired !== false ? (
+        <div className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_28%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-4 sm:px-5">
+          <p className="text-[13px] leading-relaxed text-[var(--foreground)]">
+            {w.paymentRequiredBanner}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={
+                activeAccount.onboarding?.paymentHelpUrl ||
+                'https://www.facebook.com/business/help/488291839463771'
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className={whatsappBtnSecondary}
+            >
+              {w.paymentHelpCta}
+            </a>
+            <a
+              href={
+                activeAccount.onboarding?.whatsappManagerUrl ||
+                'https://business.facebook.com/wa/manage/home/'
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className={whatsappBtnSecondary}
+            >
+              {w.paymentManagerCta}
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       {phoneCount === 0 ? (
         <div className="space-y-3">
           <p className="rounded-2xl bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-3 text-[13px] leading-relaxed text-[var(--warning)] sm:px-5">

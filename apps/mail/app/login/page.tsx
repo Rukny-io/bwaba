@@ -66,15 +66,15 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <div className="w-full border border-[#e7e5e4] bg-white p-6 sm:p-8">
+      <div className="w-full border border-[#e8e8e8] bg-white p-6 sm:p-8">
         <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#02797E]">
+          <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#666666]">
             Rukny Mail
           </p>
-          <h1 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-[#1c1917]">
+          <h1 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-[#111111]">
             Welcome to Mail
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
+          <p className="mt-2 text-sm leading-relaxed text-[#666666]">
             {sessionFlag === "expired"
               ? "Your session expired. Sign in to continue."
               : sessionFlag === "invalid"

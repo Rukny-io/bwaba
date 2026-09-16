@@ -53,19 +53,19 @@ export function MailProvidersMarquee() {
 
   return (
     <section
-      className="border-b border-[#d7ebea]"
+      className="border-b border-[#e8e8e8]"
       aria-label={providerNames}
     >
       <div className={L.container}>
-        <div className="mail-marquee-shell border-x border-[#d7ebea] bg-[#f7faf9] bg-[radial-gradient(circle,_#b9d4d2_0.55px,_transparent_0.55px)] bg-[length:4.75px_4.75px]">
+        <div className="mail-marquee-shell border-x border-[#e8e8e8] bg-[#fafafa] bg-[radial-gradient(circle,_#b9d4d2_0.55px,_transparent_0.55px)] bg-[length:4.75px_4.75px]">
           <div className="relative overflow-hidden" dir="ltr">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#f7faf9] to-transparent sm:w-16"
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#fafafa] to-transparent sm:w-16"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#f7faf9] to-transparent sm:w-16"
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#fafafa] to-transparent sm:w-16"
             />
 
             <div className="mail-marquee-track" aria-hidden>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 import { cn } from "@heroui/react";
 import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
+import { MailAnimatedIqD } from "@/components/marketing/mail-animated-iqd";
 import {
   estimateAllPlans,
   estimateMailMonthlyCost,
@@ -89,12 +90,12 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
 
   return (
     <main className="overflow-x-clip">
-      <section className="border-b border-[#e7e5e4]">
+      <section className="border-b border-[#e8e8e8]">
         <div className={L.container}>
           <div className="space-y-6 py-10 md:py-14 max-w-3xl">
             <Link
               href="/pricing"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#57534e] transition-colors hover:text-[#1c1917]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#666666] transition-colors hover:text-[#111111]"
             >
               <ArrowLeft className="size-4" aria-hidden />
               Pricing
@@ -110,29 +111,29 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
         </div>
       </section>
 
-      <section className="border-b border-[#e7e5e4] py-8">
+      <section className="border-b border-[#e8e8e8] py-8">
         <div className={L.container}>
-          <div className="grid gap-px overflow-hidden border border-[#e7e5e4] bg-[#e7e5e4] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8] sm:grid-cols-2 lg:grid-cols-4">
             {MAIL_ESTIMATE_RATE_CARD.map((row) => (
               <button
                 key={row.emails}
                 type="button"
                 onClick={() => setMonthlyOutbound(row.emails)}
-                className="bg-white px-4 py-4 text-left transition-colors hover:bg-[#f2f3f6]"
+                className="bg-white px-4 py-4 text-left transition-colors hover:bg-[#f5f5f5]"
               >
-                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#a8a29e]">
+                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#999999]">
                   {row.label}
                 </p>
-                <p className="mt-2 text-xl font-bold tracking-tight text-[#1c1917]">
+                <p className="mt-2 text-xl font-bold tracking-tight text-[#111111]">
                   {formatEstimateIqD(estimateRawVolumeCost(row.emails))}
                 </p>
-                <p className="mt-1 text-xs text-[#57534e]">
+                <p className="mt-1 text-xs text-[#666666]">
                   Overage only · before plan included
                 </p>
               </button>
             ))}
           </div>
-          <p className="mt-4 text-xs text-[#a8a29e]">
+          <p className="mt-4 text-xs text-[#999999]">
             Overage brackets:{" "}
             {MAIL_ESTIMATE_OVERAGE_BRACKETS.map((b, i) => {
               const prev = i === 0 ? 0 : MAIL_ESTIMATE_OVERAGE_BRACKETS[i - 1].upToEmails;
@@ -150,12 +151,12 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
         </div>
       </section>
 
-      <section className="border-b border-[#e7e5e4] py-10 sm:py-14">
+      <section className="border-b border-[#e8e8e8] py-10 sm:py-14">
         <div className={L.container}>
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-10">
             <div className="space-y-8">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#02797E]">
+                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#666666]">
                   Monthly outbound
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -169,8 +170,8 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                         className={cn(
                           "min-h-9 border px-3.5 py-2 text-xs font-medium transition-colors sm:text-sm",
                           active
-                            ? "border-[#062c30] bg-[#062c30] text-white"
-                            : "border-[#e7e5e4] bg-white text-[#57534e] hover:border-[#1c1917]/25 hover:text-[#1c1917]",
+                            ? "border-[#111111] bg-[#111111] text-white"
+                            : "border-[#e8e8e8] bg-white text-[#666666] hover:border-[#111111]/25 hover:text-[#111111]",
                         )}
                       >
                         {preset.label}
@@ -182,7 +183,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                   <div className="flex items-end justify-between gap-3">
                     <label
                       htmlFor="outbound-range"
-                      className="text-sm font-medium text-[#1c1917]"
+                      className="text-sm font-medium text-[#111111]"
                     >
                       Outbound emails / month
                     </label>
@@ -204,7 +205,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                           ),
                         )
                       }
-                      className="w-28 border border-[#e7e5e4] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#1c1917] outline-none focus:border-[#062c30]"
+                      className="w-28 border border-[#e8e8e8] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#111111] outline-none focus:border-[#111111]"
                     />
                   </div>
                   <input
@@ -219,7 +220,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     }
                     className="mail-estimate-range w-full"
                   />
-                  <p className="text-xs text-[#a8a29e]">
+                  <p className="text-xs text-[#999999]">
                     {formatCount(MAIL_ESTIMATE_OUTBOUND_MIN)} –{" "}
                     {formatCount(MAIL_ESTIMATE_OUTBOUND_MAX)} emails
                   </p>
@@ -230,7 +231,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                 <div className="flex items-end justify-between gap-3">
                   <label
                     htmlFor="mailbox-range"
-                    className="text-sm font-medium text-[#1c1917]"
+                    className="text-sm font-medium text-[#111111]"
                   >
                     Mailboxes
                   </label>
@@ -250,7 +251,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                         ),
                       )
                     }
-                    className="w-20 border border-[#e7e5e4] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#1c1917] outline-none focus:border-[#062c30]"
+                    className="w-20 border border-[#e8e8e8] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#111111] outline-none focus:border-[#111111]"
                   />
                 </div>
                 <input
@@ -263,25 +264,25 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                   onChange={(e) => setMailboxes(Number(e.target.value))}
                   className="mail-estimate-range mt-3 w-full"
                 />
-                <p className="mt-2 text-xs text-[#a8a29e]">
+                <p className="mt-2 text-xs text-[#999999]">
                   Slider up to 100; type up to {MAIL_ESTIMATE_MAILBOX_MAX} seats
                 </p>
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-[#1c1917]">Plan</p>
-                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[#57534e]">
+                  <p className="text-sm font-medium text-[#111111]">Plan</p>
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[#666666]">
                     <input
                       type="checkbox"
                       checked={autoRecommend}
                       onChange={(e) => setAutoRecommend(e.target.checked)}
-                      className="size-3.5 accent-[#062c30]"
+                      className="size-3.5 accent-[#111111]"
                     />
                     Auto-recommend
                   </label>
                 </div>
-                <div className="mt-3 grid gap-px overflow-hidden border border-[#e7e5e4] bg-[#e7e5e4] sm:grid-cols-3">
+                <div className="mt-3 grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8] sm:grid-cols-3">
                   {plans.map((plan) => {
                     const active = planId === plan.id;
                     const isRec = recommended === plan.id;
@@ -296,21 +297,21 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                         className={cn(
                           "bg-white px-4 py-4 text-left transition-colors",
                           active
-                            ? "ring-1 ring-inset ring-[#062c30]"
-                            : "hover:bg-[#f2f3f6]",
+                            ? "ring-1 ring-inset ring-[#111111]"
+                            : "hover:bg-[#f5f5f5]",
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-[#1c1917]">
+                          <span className="text-sm font-semibold text-[#111111]">
                             {plan.name}
                           </span>
                           {isRec ? (
-                            <span className="text-[10px] font-semibold uppercase tracking-[1px] text-[#02797E]">
+                            <span className="text-[10px] font-semibold uppercase tracking-[1px] text-[#666666]">
                               Best
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-1 text-xs text-[#57534e]">
+                        <p className="mt-1 text-xs text-[#666666]">
                           {formatCount(MAIL_ESTIMATE_INCLUDED_OUTBOUND[plan.id])}{" "}
                           emails included
                         </p>
@@ -321,10 +322,10 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
               </div>
 
               <div>
-                <p className="text-sm font-medium text-[#1c1917]">
+                <p className="text-sm font-medium text-[#111111]">
                   Features that affect recommendation
                 </p>
-                <ul className="mt-3 space-y-2 border border-[#e7e5e4] bg-white p-4">
+                <ul className="mt-3 space-y-2 border border-[#e8e8e8] bg-white p-4">
                   {(
                     [
                       {
@@ -355,13 +356,13 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                               [item.key]: e.target.checked,
                             }))
                           }
-                          className="mt-1 size-3.5 accent-[#062c30]"
+                          className="mt-1 size-3.5 accent-[#111111]"
                         />
                         <span>
-                          <span className="block text-sm font-medium text-[#1c1917]">
+                          <span className="block text-sm font-medium text-[#111111]">
                             {item.label}
                           </span>
-                          <span className="text-xs text-[#a8a29e]">
+                          <span className="text-xs text-[#999999]">
                             {item.hint}
                           </span>
                         </span>
@@ -369,7 +370,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-[#a8a29e]">
+                <p className="mt-2 text-xs text-[#999999]">
                   Agentic Mail, webmail, anti-spam, and mailbox 2FA are included
                   on every plan.
                 </p>
@@ -377,18 +378,20 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
             </div>
 
             <aside className="lg:sticky lg:top-20">
-              <div className="border border-[#e7e5e4] bg-white">
-                <div className="border-b border-[#e7e5e4] px-5 py-5 sm:px-6">
-                  <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#02797E]">
+              <div className="border border-[#e8e8e8] bg-white">
+                <div className="border-b border-[#e8e8e8] px-5 py-5 sm:px-6">
+                  <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#666666]">
                     Estimated monthly
                   </p>
-                  <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#1c1917] sm:text-4xl">
-                    {formatEstimateIqD(estimate.totalMonthly)}
-                    <span className="text-base font-medium text-[#a8a29e]">
-                      /mo
-                    </span>
+                  <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#111111] sm:text-4xl">
+                    <MailAnimatedIqD
+                      value={estimate.totalMonthly}
+                      size="hero"
+                      suffix="/mo"
+                      suffixClassName="ms-0.5 text-base font-medium text-[#999999]"
+                    />
                   </p>
-                  <p className="mt-2 text-sm text-[#57534e]">
+                  <p className="mt-2 text-sm text-[#666666]">
                     {estimate.planName} · {formatCount(estimate.mailboxes)}{" "}
                     mailbox
                     {estimate.mailboxes === 1 ? "" : "es"} ·{" "}
@@ -396,73 +399,82 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                   </p>
                 </div>
 
-                <dl className="space-y-3 border-b border-[#e7e5e4] px-5 py-5 text-sm sm:px-6">
+                <dl className="space-y-3 border-b border-[#e8e8e8] px-5 py-5 text-sm sm:px-6">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-[#57534e]">Base plan</dt>
-                    <dd className="font-medium tabular-nums text-[#1c1917]">
-                      {formatEstimateIqD(estimate.basePlanCost)}
+                    <dt className="text-[#666666]">Base plan</dt>
+                    <dd className="font-medium tabular-nums text-[#111111]">
+                      <MailAnimatedIqD value={estimate.basePlanCost} delay={0.04} />
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-[#57534e]">
+                    <dt className="text-[#666666]">
                       Extra seats
                       {estimate.extraMailboxes > 0
                         ? ` (${estimate.extraMailboxes} × ${formatEstimateIqD(estimate.extraMailboxUnit)})`
                         : ""}
                     </dt>
-                    <dd className="font-medium tabular-nums text-[#1c1917]">
-                      {formatEstimateIqD(estimate.extraSeatsCost)}
+                    <dd className="font-medium tabular-nums text-[#111111]">
+                      <MailAnimatedIqD
+                        value={estimate.extraSeatsCost}
+                        delay={0.08}
+                      />
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-[#57534e]">
+                    <dt className="text-[#666666]">
                       Outbound overage
                       {estimate.billableEmails > 0
                         ? ` (${formatCount(estimate.billableEmails)} above ${formatCount(estimate.includedOutbound)} included)`
                         : ` (within ${formatCount(estimate.includedOutbound)} included)`}
                     </dt>
-                    <dd className="font-medium tabular-nums text-[#1c1917]">
-                      {formatEstimateIqD(estimate.volumeCost)}
+                    <dd className="font-medium tabular-nums text-[#111111]">
+                      <MailAnimatedIqD value={estimate.volumeCost} delay={0.12} />
                     </dd>
                   </div>
                   {estimate.billableEmails > 0 &&
                   estimate.costPerThousandBillable != null ? (
-                    <div className="flex justify-between gap-4 border-t border-[#e7e5e4] pt-3">
-                      <dt className="text-[#57534e]">
+                    <div className="flex justify-between gap-4 border-t border-[#e8e8e8] pt-3">
+                      <dt className="text-[#666666]">
                         Overage rate / 1,000 emails
                       </dt>
-                      <dd className="font-medium tabular-nums text-[#1c1917]">
-                        {formatEstimateIqD(estimate.costPerThousandBillable)}
+                      <dd className="font-medium tabular-nums text-[#111111]">
+                        <MailAnimatedIqD
+                          value={estimate.costPerThousandBillable}
+                          delay={0.16}
+                        />
                       </dd>
                     </div>
                   ) : (
-                    <div className="flex justify-between gap-4 border-t border-[#e7e5e4] pt-3">
-                      <dt className="text-[#57534e]">Outbound volume</dt>
-                      <dd className="font-medium text-[#1c1917]">
+                    <div className="flex justify-between gap-4 border-t border-[#e8e8e8] pt-3">
+                      <dt className="text-[#666666]">Outbound volume</dt>
+                      <dd className="font-medium text-[#111111]">
                         Included in plan
                       </dd>
                     </div>
                   )}
                   {estimate.effectiveCostPerThousand != null ? (
                     <div className="flex justify-between gap-4 text-xs">
-                      <dt className="text-[#a8a29e]">
+                      <dt className="text-[#999999]">
                         Blended (plan + volume) / 1,000
                       </dt>
-                      <dd className="tabular-nums text-[#a8a29e]">
-                        {formatEstimateIqD(estimate.effectiveCostPerThousand)}
+                      <dd className="tabular-nums text-[#999999]">
+                        <MailAnimatedIqD
+                          value={estimate.effectiveCostPerThousand}
+                          delay={0.2}
+                        />
                       </dd>
                     </div>
                   ) : null}
                 </dl>
 
-                <ul className="space-y-2 border-b border-[#e7e5e4] px-5 py-5 sm:px-6">
+                <ul className="space-y-2 border-b border-[#e8e8e8] px-5 py-5 sm:px-6">
                   {estimate.highlights.map((item) => (
                     <li
                       key={item}
-                      className="flex gap-2 text-sm text-[#57534e]"
+                      className="flex gap-2 text-sm text-[#666666]"
                     >
                       <Check
-                        className="mt-0.5 size-4 shrink-0 text-[#062c30]"
+                        className="mt-0.5 size-4 shrink-0 text-[#111111]"
                         strokeWidth={2.4}
                         aria-hidden
                       />
@@ -481,11 +493,11 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                 </div>
               </div>
 
-              <div className="mt-4 border border-[#e7e5e4] bg-[#fbfbfc]">
-                <p className="border-b border-[#e7e5e4] px-4 py-3 text-xs font-medium uppercase tracking-[1.2px] text-[#a8a29e]">
+              <div className="mt-4 border border-[#e8e8e8] bg-[#fafafa]">
+                <p className="border-b border-[#e8e8e8] px-4 py-3 text-xs font-medium uppercase tracking-[1.2px] text-[#999999]">
                   Same inputs · all plans
                 </p>
-                <ul className="divide-y divide-[#e7e5e4]">
+                <ul className="divide-y divide-[#e8e8e8]">
                   {allEstimates.map((row) => (
                     <li
                       key={row.planId}
@@ -496,7 +508,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     >
                       <button
                         type="button"
-                        className="font-medium text-[#1c1917] hover:text-[#062c30]"
+                        className="font-medium text-[#111111] hover:text-[#111111]"
                         onClick={() => {
                           setAutoRecommend(false);
                           setPlanId(row.planId);
@@ -504,8 +516,11 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                       >
                         {row.planName}
                       </button>
-                      <span className="tabular-nums text-[#57534e]">
-                        {formatEstimateIqD(row.totalMonthly)}/mo
+                      <span className="tabular-nums text-[#666666]">
+                        <MailAnimatedIqD
+                          value={row.totalMonthly}
+                          suffix="/mo"
+                        />
                       </span>
                     </li>
                   ))}
@@ -518,7 +533,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
 
       <section className="py-10 sm:py-12">
         <div className={L.container}>
-          <p className="max-w-3xl text-xs leading-relaxed text-[#a8a29e]">
+          <p className="max-w-3xl text-xs leading-relaxed text-[#999999]">
             Disclaimer: This calculator is illustrative for planning only — not
             a quote or binding offer. Seat pricing matches current Mail plans.
             Outbound volume rates are an estimate catalog and may change when

@@ -18,7 +18,9 @@ export class MetaApiService {
 
   constructor(private configService: ConfigService) {
     this.graphUrl = 'https://graph.facebook.com';
-    this.apiVersion = 'v21.0';
+    // Keep Graph API aligned with the Embedded Signup JS SDK (v25.x).
+    this.apiVersion =
+      this.configService.get('WHATSAPP_GRAPH_API_VERSION', 'v25.0') || 'v25.0';
     this.appId = this.configService.get('WHATSAPP_APP_ID', '');
     this.appSecret = this.configService.get('WHATSAPP_APP_SECRET', '');
   }
@@ -135,10 +137,19 @@ export class MetaApiService {
     const response = await client.get(`/${wabaId}`, {
       params: {
         fields:
-          'id,name,currency,timezone_id,message_template_namespace,account_review_status',
+          'id,name,currency,timezone_id,message_template_namespace,account_review_status,owner_business_info{id,name}',
       },
     });
     return response.data;
+  }
+
+  /**
+   * Meta Business Portfolio ID that owns the WABA (not the WABA id itself).
+   */
+  extractOwnerBusinessId(wabaInfo: {
+    owner_business_info?: { id?: string };
+  }): string | null {
+    return wabaInfo?.owner_business_info?.id || null;
   }
 
   /**

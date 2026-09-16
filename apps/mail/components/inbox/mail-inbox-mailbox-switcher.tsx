@@ -34,19 +34,19 @@ export function MailInboxMailboxSwitcher({
         className={cn(
           "outline-none disabled:opacity-60",
           isSidebar
-            ? "flex w-full items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-left hover:bg-[var(--surface-secondary)]"
-            : "flex items-center gap-2 rounded-full p-0.5 pe-2.5 hover:bg-[var(--surface-secondary)]",
+            ? "flex w-full items-center gap-2 rounded-2xl bg-[var(--surface-secondary)]/80 px-2.5 py-2 text-left hover:bg-[var(--surface-secondary)]"
+            : "flex items-center gap-2 rounded-full py-0.5 pe-2 ps-0.5 transition-colors hover:bg-[var(--surface-secondary)]",
         )}
       >
         <MailPersonAvatar
           name={selected?.displayName || selected?.localPart || "RM"}
           email={selected?.address}
           avatarUrl={selected?.avatarUrl}
-          className="size-9"
-          textClassName="text-xs"
+          className="size-8"
+          textClassName="text-[11px]"
         />
-        <span className={cn("min-w-0 flex-1", isSidebar ? "block" : "hidden md:block")}>
-          <span className="block truncate text-[13px] font-semibold text-[var(--foreground)]">
+        <span className={cn("min-w-0 flex-1", isSidebar ? "block" : "hidden lg:block")}>
+          <span className="block truncate text-[13px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
             {selected?.displayName || selected?.localPart || "Mailbox"}
           </span>
           <span className="block truncate text-[11px] text-[var(--muted-foreground)]">
@@ -56,14 +56,14 @@ export function MailInboxMailboxSwitcher({
         <ChevronDown
           className={cn(
             "size-3.5 shrink-0 text-[var(--muted-foreground)]",
-            isSidebar ? "block" : "hidden md:block",
+            isSidebar ? "block" : "hidden lg:block",
           )}
           aria-hidden
         />
       </Dropdown.Trigger>
       <Dropdown.Popover
         placement={isSidebar ? "top start" : "bottom end"}
-        className="min-w-[18rem] overflow-hidden rounded-2xl"
+        className="min-w-[18rem] overflow-hidden rounded-2xl border-0 shadow-[0_16px_48px_-24px_rgba(17,17,17,0.45)]"
       >
         <Dropdown.Menu
           onAction={(key) => {

@@ -20,11 +20,17 @@ export async function getEmbeddedSignupConfig(): Promise<EmbeddedSignupConfig> {
 export async function connectWhatsappAccount(
   appId: string,
   code: string,
-  wabaId?: string,
+  options?: { wabaId?: string; phoneNumberId?: string; pin?: string },
 ): Promise<WhatsappAccountSummary> {
   const { data } = await api.post<WhatsappAccountSummary>(
     '/developer/whatsapp/connect',
-    { appId, code, wabaId },
+    {
+      appId,
+      code,
+      wabaId: options?.wabaId,
+      phoneNumberId: options?.phoneNumberId,
+      pin: options?.pin,
+    },
   );
   return data;
 }

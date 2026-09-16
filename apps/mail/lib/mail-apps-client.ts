@@ -18,6 +18,9 @@ export type MailApp = {
   domainCheckedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** OWNER for owned workspaces; otherwise the console role. */
+  membershipRole?: string;
+  isOwner?: boolean;
   subscription: {
     plan: string;
     status: string;

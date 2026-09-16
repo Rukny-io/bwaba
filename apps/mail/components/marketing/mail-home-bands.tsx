@@ -1,15 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpen,
-  Fingerprint,
-  Globe2,
-  Lock,
-  Route,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   MailClipReveal,
   MailMagnetic,
@@ -24,17 +16,17 @@ import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
 const DNS_LAYERS = [
   {
-    icon: Globe2,
+    n: "01",
     title: "Your domain",
     body: "you@yourbrand.com — never a shared @rukny.io address.",
   },
   {
-    icon: ShieldCheck,
+    n: "02",
     title: "Auth records",
     body: "SPF, Easy DKIM, DMARC, and custom MAIL FROM from the console.",
   },
   {
-    icon: Route,
+    n: "03",
     title: "Routing",
     body: "Mailboxes, aliases, forwarders, and catch-all in one place.",
   },
@@ -42,17 +34,14 @@ const DNS_LAYERS = [
 
 const SECURITY = [
   {
-    icon: Lock,
     title: "Mailbox passwords",
     body: "Each mailbox has its own credential — revoke without touching the workspace.",
   },
   {
-    icon: Fingerprint,
     title: "Optional TOTP",
     body: "Enroll 2FA with a QR code before you require it for a mailbox.",
   },
   {
-    icon: ShieldCheck,
     title: "Aligned sending",
     body: "Domain authentication keeps From aligned so messages look like you.",
   },
@@ -65,9 +54,9 @@ const RESOURCES = [
     body: "Connect DNS and send as yourself.",
   },
   {
-    href: "/tutorials",
-    title: "Tutorials",
-    body: "Step-by-step setup guides.",
+    href: "/documents",
+    title: "Documents",
+    body: "Guides for DNS, mailboxes, and routing.",
   },
   {
     href: "/faqs",
@@ -83,46 +72,44 @@ const RESOURCES = [
 
 export function MailDnsArchitectureSection() {
   return (
-    <section id="architecture" className={L.section} aria-labelledby="architecture-heading">
+    <section
+      id="architecture"
+      className="scroll-mt-24 border-t border-[#e8e8e8] bg-white"
+      aria-labelledby="architecture-heading"
+    >
       <div className={L.container}>
-        <div className="mail-mkt-dns-grid border border-[#d7ebea]">
-          <div className="border-b border-[#d7ebea] bg-white/80 px-5 py-10 backdrop-blur-[2px] sm:px-8 sm:py-14">
-            <MailReveal>
-              <p className={L.eyebrow}>Architecture</p>
-              <MailClipReveal>
-                <h2 id="architecture-heading" className={L.sectionTitle}>
-                  Domain first. Auth built in. Routing next.
-                </h2>
-              </MailClipReveal>
-              <p className={L.sectionLead}>
-                Rukny Mail is layered around a domain you already own — not a
-                free inbox you outgrow.
-              </p>
-            </MailReveal>
-          </div>
-          <MailStagger className="grid md:grid-cols-3" stagger={0.1}>
-            {DNS_LAYERS.map((layer, index) => {
-              const Icon = layer.icon;
-              return (
-                <MailRevealItem
-                  key={layer.title}
-                  className="relative border-t border-[#d7ebea] bg-white/90 p-6 sm:p-8 md:border-t-0 md:border-s md:first:border-s-0"
-                >
-                  <span className="font-mono text-[11px] tracking-[0.2em] text-[#1aabb2]">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="mt-5 flex size-11 items-center justify-center border border-[#d7ebea] bg-[#eef5f4] text-[#062c30]">
-                    <Icon className="size-5" strokeWidth={1.6} aria-hidden />
-                  </span>
-                  <h3 className="mt-5 text-lg font-semibold text-[#041f22]">
-                    {layer.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4a5c5a]">
-                    {layer.body}
-                  </p>
-                </MailRevealItem>
-              );
-            })}
+        <div className="py-14 md:py-20">
+          <MailReveal>
+            <p className={L.eyebrow}>Architecture</p>
+            <MailClipReveal>
+              <h2 id="architecture-heading" className={L.sectionTitle}>
+                Domain first. Auth built in. Routing next.
+              </h2>
+            </MailClipReveal>
+            <p className={L.sectionLead}>
+              Rukny Mail is layered around a domain you already own — not a free
+              inbox you outgrow.
+            </p>
+          </MailReveal>
+
+          <MailStagger
+            as="ol"
+            className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8"
+            stagger={0.09}
+          >
+            {DNS_LAYERS.map((layer) => (
+              <MailRevealItem key={layer.title} as="li">
+                <p className="font-mono text-[11px] tracking-[0.18em] text-[#888888]">
+                  {layer.n}
+                </p>
+                <h3 className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-[#111111]">
+                  {layer.title}
+                </h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#666666]">
+                  {layer.body}
+                </p>
+              </MailRevealItem>
+            ))}
           </MailStagger>
         </div>
       </div>
@@ -153,28 +140,20 @@ export function MailSecurityBand() {
         </MailReveal>
 
         <MailStagger
-          className="mt-12 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3"
+          as="ul"
+          className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8"
           stagger={0.09}
         >
-          {SECURITY.map((item) => {
-            const Icon = item.icon;
-            return (
-              <MailRevealItem
-                key={item.title}
-                className="bg-[#062c30]/55 p-6 backdrop-blur-sm sm:p-8"
-              >
-                <span className="flex size-10 items-center justify-center border border-white/15 bg-white/5 text-[#1aabb2]">
-                  <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
-                </span>
-                <h3 className="mt-5 text-[15px] font-semibold text-white sm:text-base">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#a8c5c3]">
-                  {item.body}
-                </p>
-              </MailRevealItem>
-            );
-          })}
+          {SECURITY.map((item) => (
+            <MailRevealItem key={item.title} as="li">
+              <h3 className="text-[15px] font-semibold text-white sm:text-base">
+                {item.title}
+              </h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#a3a3a3]">
+                {item.body}
+              </p>
+            </MailRevealItem>
+          ))}
         </MailStagger>
       </div>
     </section>
@@ -183,7 +162,11 @@ export function MailSecurityBand() {
 
 export function MailResourcesSection() {
   return (
-    <section id="resources" className={L.sectionMist} aria-labelledby="resources-heading">
+    <section
+      id="resources"
+      className={L.sectionMist}
+      aria-labelledby="resources-heading"
+    >
       <div className={L.container}>
         <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <MailReveal>
@@ -194,17 +177,17 @@ export function MailResourcesSection() {
           </MailReveal>
           <MailReveal delay={0.08}>
             <Link
-              href="/tutorials"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#062c30] transition-colors hover:text-[#041f22]"
+              href="/documents"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#111111] transition-opacity hover:opacity-70"
             >
-              Browse tutorials
+              Browse documents
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </MailReveal>
         </div>
 
         <MailStagger
-          className={`mt-10 ${L.gridFrame} sm:grid-cols-2 lg:grid-cols-4`}
+          className="mt-10 grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8] sm:grid-cols-2 lg:grid-cols-4"
           stagger={0.07}
         >
           {RESOURCES.map((item) => (
@@ -212,20 +195,15 @@ export function MailResourcesSection() {
               <MailMagnetic strength={8} className="block h-full">
                 <Link
                   href={item.href}
-                  className={`group flex h-full flex-col ${L.cellPaper} transition-colors duration-300 hover:bg-[#eef5f4]`}
+                  className="group flex h-full flex-col bg-white p-5 transition-colors duration-300 hover:bg-[#f5f5f5] sm:p-6"
                 >
-                  <BookOpen
-                    className="size-4 text-[#02797E] transition-transform duration-300 group-hover:translate-x-0.5"
-                    strokeWidth={1.8}
-                    aria-hidden
-                  />
-                  <h3 className="mt-4 text-[15px] font-semibold text-[#041f22]">
+                  <h3 className="text-[15px] font-semibold text-[#111111]">
                     {item.title}
                   </h3>
-                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-[#4a5c5a]">
+                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-[#666666]">
                     {item.body}
                   </p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#02797E]">
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#666666]">
                     Open
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>

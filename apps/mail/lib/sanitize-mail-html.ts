@@ -145,7 +145,7 @@ export function buildSandboxedMailDocument(
   rawHtml: string,
   options: { allowRemoteImages?: boolean } = {},
 ): string {
-  const allowRemoteImages = options.allowRemoteImages === true;
+  const allowRemoteImages = options.allowRemoteImages !== false;
   const { styles, body } = extractParts(rawHtml, allowRemoteImages);
   const imageSources = allowRemoteImages
     ? "img-src data: blob: cid: https: http:;"

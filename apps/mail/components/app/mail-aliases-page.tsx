@@ -294,7 +294,7 @@ export function MailAliasesPage() {
                   This workspace needs an active plan before you can add aliases.
                 </Alert.Description>
               </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/billing")}>
+              <Button size="sm" onPress={() => router.push("/pricing")}>
                 View plans
               </Button>
             </Alert>
@@ -308,7 +308,7 @@ export function MailAliasesPage() {
                   Remove one from this mailbox or upgrade for more.
                 </Alert.Description>
               </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/billing")}>
+              <Button size="sm" onPress={() => router.push("/pricing")}>
                 Upgrade
               </Button>
             </Alert>

@@ -6,7 +6,7 @@ import { getMailPublicStats } from "@/lib/mail-public-stats";
 export const metadata: Metadata = {
   title: "Rukny Mail — Business email on your domain",
   description:
-    "Create mailboxes on your domain, authenticate DNS, and send through Amazon SES. Webmail, aliases, forwarders, and catch-all in one console.",
+    "Mailboxes on your domain, DNS authentication, and webmail. Team console, aliases, and Amazon SES delivery.",
 };
 
 export default async function HomePage() {

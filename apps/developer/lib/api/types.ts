@@ -188,14 +188,35 @@ export interface AllocateWalletResult {
   appBalance: number;
 }
 
+export interface WhatsappAccountOnboarding {
+  webhookSubscribed?: boolean;
+  paymentMethodRequired?: boolean;
+  paymentHelpUrl?: string;
+  whatsappManagerUrl?: string;
+  nextSteps?: string[];
+}
+
+export interface WhatsappPhoneRegistrationPin {
+  phoneNumberId: string;
+  phoneId?: string;
+  displayPhoneNumber?: string | null;
+  pin: string;
+  registered: boolean;
+  alreadyRegistered?: boolean;
+  error?: string;
+}
+
 export interface WhatsappAccountSummary {
   id: string;
   status: string;
   wabaId?: string;
+  businessId?: string | null;
   verifiedName?: string;
   businessName?: string | null;
   connectedAt?: string | null;
   phoneNumbers?: WhatsappPhoneSummary[];
+  onboarding?: WhatsappAccountOnboarding;
+  registrationPins?: WhatsappPhoneRegistrationPin[];
 }
 
 export interface WhatsappPhoneSummary {
@@ -229,6 +250,9 @@ export interface WhatsappTemplate {
 export interface EmbeddedSignupConfig {
   appId: string;
   configId: string;
+  graphApiVersion?: string;
+  paymentHelpUrl?: string;
+  whatsappManagerUrl?: string;
 }
 
 export interface MessageLogEntry {

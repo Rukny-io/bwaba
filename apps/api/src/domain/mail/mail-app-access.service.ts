@@ -105,6 +105,20 @@ export class MailAppAccessService {
     );
   }
 
+  /** Owner, admin, or billing: view plan and open activation tickets. */
+  canManageBilling(access: MailAppAccess): boolean {
+    return (
+      access.isOwner ||
+      access.role === MailAppMemberRole.ADMIN ||
+      access.role === MailAppMemberRole.BILLING
+    );
+  }
+
+  /** Owner or admin: domain DNS / BIMI console actions. */
+  canManageDomain(access: MailAppAccess): boolean {
+    return access.isOwner || access.role === MailAppMemberRole.ADMIN;
+  }
+
   /** Owner / admin: any mailbox. Others: only mailboxes assigned to them. */
   canSsoSelectForUser(
     userId: string,

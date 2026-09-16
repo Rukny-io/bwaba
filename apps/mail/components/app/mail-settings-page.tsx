@@ -118,8 +118,10 @@ export function MailSettingsPage() {
     [mailboxes],
   );
 
+  const canEditApp = Boolean(app?.isOwner);
   const dirty = Boolean(
     app &&
+      canEditApp &&
       (name.trim() !== app.name ||
         contactEmail.trim().toLowerCase() !== (app.contactEmail || "").toLowerCase() ||
         description.trim() !== (app.description || "")),
@@ -127,6 +129,7 @@ export function MailSettingsPage() {
 
   const canSave =
     Boolean(appId) &&
+    canEditApp &&
     !saving &&
     dirty &&
     name.trim().length >= 2 &&
@@ -221,10 +224,25 @@ export function MailSettingsPage() {
                   This name appears in the app picker. Category cannot be changed.
                 </p>
               </div>
-              <Chip size="sm" variant="soft">
-                {app?.appType === "CONSUMER" ? "Consumer" : "Business"}
-              </Chip>
+              <div className="flex flex-wrap items-center gap-2">
+                {app?.isOwner === false ? (
+                  <Chip size="sm" variant="soft" color="warning">
+                    {app.membershipRole || "Member"}
+                  </Chip>
+                ) : null}
+                <Chip size="sm" variant="soft">
+                  {app?.appType === "CONSUMER" ? "Consumer" : "Business"}
+                </Chip>
+              </div>
             </div>
+
+            {!canEditApp ? (
+              <MailNotice
+                status="default"
+                title="View only"
+                description="Only the workspace owner can edit app details or archive this workspace."
+              />
+            ) : null}
 
             <TextField
               isRequired
@@ -232,7 +250,7 @@ export function MailSettingsPage() {
               className="gap-1.5"
               value={name}
               onChange={setName}
-              isDisabled={saving}
+              isDisabled={saving || !canEditApp}
               maxLength={80}
             >
               <Label className="text-sm font-medium text-[var(--foreground)]">
@@ -248,7 +266,7 @@ export function MailSettingsPage() {
               className="gap-1.5"
               value={contactEmail}
               onChange={(value) => setContactEmail(value.trim())}
-              isDisabled={saving}
+              isDisabled={saving || !canEditApp}
             >
               <Label className="text-sm font-medium text-[var(--foreground)]">
                 Official contact email
@@ -269,7 +287,7 @@ export function MailSettingsPage() {
               className="gap-1.5"
               value={description}
               onChange={setDescription}
-              isDisabled={saving}
+              isDisabled={saving || !canEditApp}
               maxLength={280}
             >
               <Label className="text-sm font-medium text-[var(--foreground)]">
@@ -328,14 +346,17 @@ export function MailSettingsPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button size="sm" isDisabled={!canSave} onPress={() => void onSave()}>
-                {saving ? "Saving…" : "Save app details"}
-              </Button>
+              {canEditApp ? (
+                <Button size="sm" isDisabled={!canSave} onPress={() => void onSave()}>
+                  {saving ? "Saving…" : "Save app details"}
+                </Button>
+              ) : null}
             </div>
           </div>
 
           <MailPlanSettingsSection />
 
+          {canEditApp ? (
           <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-[var(--foreground)]">Danger zone</h2>
@@ -354,6 +375,7 @@ export function MailSettingsPage() {
               </Button>
             </div>
           </div>
+          ) : null}
         </>
       )}
     </section>

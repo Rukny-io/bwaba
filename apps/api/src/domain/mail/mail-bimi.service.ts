@@ -24,6 +24,7 @@ import { RedisService } from '../../core/cache/redis.service';
 import { safeFetch } from '../../core/common/utils/ssrf-guard';
 import { S3Service } from '../../shared/services/s3.service';
 import { MailFeatureFlags } from './mail-feature-flags';
+import { MailAppAccessService } from './mail-app-access.service';
 
 const POSITIVE_TTL_SECONDS = 24 * 60 * 60;
 const NEGATIVE_TTL_SECONDS = 60 * 60;
@@ -429,6 +430,7 @@ export class MailBimiService {
     private readonly s3: S3Service,
     private readonly config: ConfigService,
     private readonly flags: MailFeatureFlags,
+    private readonly access: MailAppAccessService,
   ) {}
 
   async setupStatus(userId: string, publicAppId: string) {
@@ -700,15 +702,18 @@ export class MailBimiService {
   }
 
   private async requireOwnedApp(userId: string, publicAppId: string) {
-    const app = await this.prisma.mailApp.findUnique({
-      where: { appId: publicAppId },
-      select: { userId: true, primaryDomain: true },
-    });
-    if (!app) throw new NotFoundException('Mail app not found.');
-    if (app.userId !== userId) {
-      throw new ForbiddenException('You do not own this Mail app.');
+    const access = await this.access.requireAccess(userId, publicAppId);
+    if (!this.access.canManageDomain(access)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_DOMAIN_REQUIRED',
+        message: 'Only the owner or admin can manage BIMI for this workspace.',
+      });
     }
-    return app;
+    return {
+      userId: access.app.userId,
+      primaryDomain: access.app.primaryDomain,
+    };
   }
 
   private customerLogoPrefix(publicAppId: string) {

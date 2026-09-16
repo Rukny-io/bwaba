@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
   buildBimiDnsRecord,
@@ -88,6 +89,7 @@ export function MailBimiSetupPanel({
     "upload" | "delete" | "upload-cert" | "delete-cert" | "recheck" | null
   >(null);
   const [error, setError] = useState("");
+  const [forbidden, setForbidden] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,14 +106,22 @@ export function MailBimiSetupPanel({
       }
       try {
         const next = await getBimiSetupStatus(appId);
-        if (!cancelled) setStatus(next);
+        if (!cancelled) {
+          setStatus(next);
+          setForbidden(false);
+          setError("");
+        }
       } catch (loadError) {
         if (!cancelled) {
-          setError(
+          const message =
             loadError instanceof Error
               ? loadError.message
-              : "Could not load BIMI status.",
-          );
+              : "Could not load BIMI status.";
+          const denied =
+            /owner|admin|do not own|MAIL_DOMAIN/i.test(message) ||
+            message.toLowerCase().includes("forbidden");
+          setForbidden(denied);
+          setError(denied ? "" : message);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -326,7 +336,7 @@ export function MailBimiSetupPanel({
           <button
             type="button"
             onClick={() => void recheck()}
-            disabled={loading || action !== null}
+            disabled={loading || action !== null || forbidden}
             className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--foreground)]/5 px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--foreground)]/10 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             <RefreshCw
@@ -336,6 +346,15 @@ export function MailBimiSetupPanel({
             {action === "recheck" ? "Checking…" : "Check status"}
           </button>
         </div>
+        {forbidden ? (
+          <div className="mt-3">
+            <MailNotice
+              status="default"
+              title="BIMI managed by owner"
+              description="Only the workspace owner or admin can upload the BIMI logo and certificate."
+            />
+          </div>
+        ) : null}
         {error ? (
           <p
             className="mt-3 flex items-start gap-2 text-sm text-[var(--danger)]"
@@ -355,7 +374,7 @@ export function MailBimiSetupPanel({
           <RefreshCw className="size-4 animate-spin" aria-hidden />
           Loading BIMI setup…
         </div>
-      ) : status ? (
+      ) : forbidden ? null : status ? (
         <div className="mt-7 grid gap-8 xl:grid-cols-[minmax(0,0.85fr)_minmax(360px,1.15fr)]">
           <div className="min-w-0 space-y-7">
             <div className="grid gap-4 sm:grid-cols-[132px_minmax(0,1fr)]">

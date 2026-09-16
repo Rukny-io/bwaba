@@ -63,6 +63,7 @@ export function MailPlanSettingsSection() {
   );
   const [appName, setAppName] = useState<string | null>(null);
   const [needsApp, setNeedsApp] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -90,6 +91,7 @@ export function MailPlanSettingsSection() {
     setAppName(current.app?.name ?? null);
     setSubscription(current.subscription);
     setPendingRequest(current.pendingRequest);
+    setCanManageBilling(Boolean(current.canManageBilling));
 
     const preferred =
       nextPlans.find((plan) => plan.id === "standard") ??
@@ -134,7 +136,12 @@ export function MailPlanSettingsSection() {
   const monthlyTotal = selectedPlan
     ? mailPlanMonthlyTotal(selectedPlan.id, clampedSeats)
     : 0;
-  const requestLocked = needsApp || Boolean(pendingRequest) || busy || !selectedPlan;
+  const requestLocked =
+    needsApp ||
+    !canManageBilling ||
+    Boolean(pendingRequest) ||
+    busy ||
+    !selectedPlan;
 
   function onSelectPlan(planId: MailPlanId) {
     const plan = plans.find((entry) => entry.id === planId);
@@ -287,7 +294,7 @@ export function MailPlanSettingsSection() {
         />
       ) : null}
 
-      {!needsApp && plans.length > 0 ? (
+      {!needsApp && canManageBilling && plans.length > 0 ? (
         <div className="flex min-w-0 flex-col gap-4 rounded-xl bg-[var(--surface-secondary)] p-4">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--foreground)]">
@@ -419,6 +426,14 @@ export function MailPlanSettingsSection() {
             </Button>
           </div>
         </div>
+      ) : null}
+
+      {!needsApp && !canManageBilling && !loading ? (
+        <MailNotice
+          status="default"
+          title="Billing managed by owner"
+          description="Ask the workspace owner, admin, or billing contact to request or change the plan."
+        />
       ) : null}
 
       <div className="flex justify-end">

@@ -46,6 +46,9 @@ export type MailAppSubscriptionSnapshot = {
   subscription: MailSubscriptionView | null;
   pendingRequest: MailPendingPlanRequest | null;
   needsApp: boolean;
+  canManageBilling?: boolean;
+  isOwner?: boolean;
+  role?: string;
 };
 
 type PlansResponse = {
@@ -142,6 +145,9 @@ export async function fetchMailSubscription(
     app?: MailAppSubscriptionSnapshot["app"];
     subscription?: MailSubscriptionView | null;
     pendingRequest?: MailPendingPlanRequest | null;
+    canManageBilling?: boolean;
+    isOwner?: boolean;
+    role?: string;
   }>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load subscription."));
@@ -152,6 +158,9 @@ export async function fetchMailSubscription(
     subscription: sub ? normalizeSubscription(sub) : null,
     pendingRequest: data.pendingRequest ?? null,
     needsApp: false,
+    canManageBilling: Boolean(data.canManageBilling),
+    isOwner: Boolean(data.isOwner),
+    role: typeof data.role === "string" ? data.role : undefined,
   };
 }
 

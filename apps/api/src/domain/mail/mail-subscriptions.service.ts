@@ -18,6 +18,7 @@ import {
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
 import { SupportTicketsService } from '../support-tickets/support-tickets.service';
+import { MailAppAccessService } from './mail-app-access.service';
 import {
   MAIL_PLAN_DEFINITIONS,
   MAIL_PLAN_LIMITS,
@@ -74,6 +75,7 @@ export class MailSubscriptionsService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly supportTickets: SupportTicketsService,
+    private readonly access: MailAppAccessService,
   ) {}
 
   getPlansOverview() {
@@ -101,13 +103,23 @@ export class MailSubscriptionsService {
   }
 
   async getOwnedAppSubscription(userId: string, publicAppId: string) {
-    const app = await this.requireOwnedApp(userId, publicAppId);
+    const access = await this.access.requireAccess(userId, publicAppId);
+    const app = {
+      id: access.app.id,
+      appId: access.app.appId,
+      userId: access.app.userId,
+      name: access.app.name,
+      primaryDomain: access.app.primaryDomain,
+    } satisfies MailAppRow;
     const { subscription } = await this.getSubscriptionForApp(app.id);
-    const pendingRequest = await this.findPendingRequest(userId, app.appId);
+    const pendingRequest = await this.findPendingRequest(app.appId);
     return {
       app: this.toAppView(app),
       subscription,
       pendingRequest,
+      canManageBilling: this.access.canManageBilling(access),
+      isOwner: access.isOwner,
+      role: access.role,
       cardPayments: { available: false, status: 'coming_soon' as const },
     };
   }
@@ -148,9 +160,9 @@ export class MailSubscriptionsService {
     plan: MailPlan,
     mailboxCount: number,
   ) {
-    const app = await this.requireOwnedApp(userId, publicAppId);
+    const { app } = await this.requireBillingApp(userId, publicAppId);
     const seats = this.normalizeSeats(mailboxCount);
-    const existing = await this.findPendingRequest(userId, app.appId);
+    const existing = await this.findPendingRequest(app.appId);
     if (existing) {
       return {
         alreadyPending: true,
@@ -466,11 +478,6 @@ export class MailSubscriptionsService {
     if (!ticket) {
       throw new NotFoundException('Support ticket not found.');
     }
-    if (ticket.userId !== app.userId) {
-      throw new ForbiddenException(
-        'This ticket does not belong to the Mail app owner.',
-      );
-    }
     if (ticket.category !== SupportTicketCategory.BILLING) {
       throw new BadRequestException('Ticket is not a billing request.');
     }
@@ -478,22 +485,21 @@ export class MailSubscriptionsService {
     if (context.kind !== 'mail_subscription') {
       throw new BadRequestException('Ticket is not a Mail plan request.');
     }
-    if (context.mailAppId && context.mailAppId !== app.appId) {
+    if (context.mailAppId !== app.appId) {
       throw new BadRequestException(
         'Ticket is for a different Mail app.',
       );
     }
   }
 
-  private async findPendingRequest(userId: string, publicAppId: string) {
+  private async findPendingRequest(publicAppId: string) {
     const tickets = await this.prisma.supportTicket.findMany({
       where: {
-        userId,
         category: SupportTicketCategory.BILLING,
         status: { in: OPEN_TICKET_STATUSES },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 100,
     });
 
     for (const ticket of tickets) {
@@ -522,12 +528,25 @@ export class MailSubscriptionsService {
     return null;
   }
 
-  private async requireOwnedApp(userId: string, publicAppId: string) {
-    const app = await this.requireAppByPublicId(publicAppId);
-    if (app.userId !== userId) {
-      throw new NotFoundException('Mail app not found.');
+  private async requireBillingApp(userId: string, publicAppId: string) {
+    const access = await this.access.requireAccess(userId, publicAppId);
+    if (!this.access.canManageBilling(access)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_BILLING_REQUIRED',
+        message: 'Only the owner, admin, or billing role can manage this plan.',
+      });
     }
-    return app;
+    return {
+      access,
+      app: {
+        id: access.app.id,
+        appId: access.app.appId,
+        userId: access.app.userId,
+        name: access.app.name,
+        primaryDomain: access.app.primaryDomain,
+      } satisfies MailAppRow,
+    };
   }
 
   private async requireAppByPublicId(publicAppId: string): Promise<MailAppRow> {

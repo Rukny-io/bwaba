@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
   Button,
   Chip,
   Skeleton,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { formatMailAliasLimit, formatMailIqD } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
@@ -96,13 +96,11 @@ export function MailPlanSettingsSection() {
           <Skeleton className="h-16 w-full rounded-xl" />
         </div>
       ) : error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Plan</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Could not load plan"
+          description={error}
+        />
       ) : needsApp ? (
         <p className="text-sm text-[var(--muted-foreground)]">
           Open a workspace to see its subscription.

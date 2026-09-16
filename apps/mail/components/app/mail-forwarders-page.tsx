@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Forward, Trash2 } from "lucide-react";
 import {
-  Alert,
   Button,
   Chip,
   Description,
@@ -16,6 +15,7 @@ import {
   Switch,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
@@ -246,13 +246,12 @@ export function MailForwardersPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Forwarders</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {loading ? (
@@ -279,31 +278,25 @@ export function MailForwardersPage() {
       ) : (
         <>
           {needsPlan ? (
-            <Alert status="warning" className="items-center">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Plan required</Alert.Title>
-                <Alert.Description>
-                  This workspace needs an active plan before you can add forwarders.
-                </Alert.Description>
-              </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
-                View plans
-              </Button>
-            </Alert>
+            <MailNotice
+              status="warning"
+              title="Plan required"
+              description="This workspace needs an active plan before you can add forwarders."
+              action={{
+                label: "View plans",
+                onPress: () => router.push("/pricing"),
+              }}
+            />
           ) : atLimit ? (
-            <Alert status="warning" className="items-center">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Forwarding limit reached</Alert.Title>
-                <Alert.Description>
-                  This plan includes {limit} forwarding rules. Remove one or upgrade for more.
-                </Alert.Description>
-              </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
-                Upgrade
-              </Button>
-            </Alert>
+            <MailNotice
+              status="warning"
+              title="Forwarding limit reached"
+              description={`This plan includes ${limit} forwarding rules. Remove one or upgrade for more.`}
+              action={{
+                label: "Upgrade",
+                onPress: () => router.push("/pricing"),
+              }}
+            />
           ) : null}
 
           <div className="flex min-w-0 flex-col gap-5 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">

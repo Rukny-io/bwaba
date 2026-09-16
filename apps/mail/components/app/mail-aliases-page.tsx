@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AtSign, ChevronDown, Trash2 } from "lucide-react";
 import {
-  Alert,
   Button,
   Chip,
   Description,
@@ -16,6 +15,7 @@ import {
   Switch,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { formatMailAliasLimit, isMailUnlimited } from "@/lib/mail-plans";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
@@ -253,13 +253,12 @@ export function MailAliasesPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Email Alias</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {loading ? (
@@ -286,32 +285,25 @@ export function MailAliasesPage() {
       ) : (
         <>
           {needsPlan ? (
-            <Alert status="warning" className="items-center">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Plan required</Alert.Title>
-                <Alert.Description>
-                  This workspace needs an active plan before you can add aliases.
-                </Alert.Description>
-              </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
-                View plans
-              </Button>
-            </Alert>
+            <MailNotice
+              status="warning"
+              title="Plan required"
+              description="This workspace needs an active plan before you can add aliases."
+              action={{
+                label: "View plans",
+                onPress: () => router.push("/pricing"),
+              }}
+            />
           ) : atLimit ? (
-            <Alert status="warning" className="items-center">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Alias limit reached</Alert.Title>
-                <Alert.Description>
-                  This plan includes {formatMailAliasLimit(limit)} aliases per mailbox.
-                  Remove one from this mailbox or upgrade for more.
-                </Alert.Description>
-              </Alert.Content>
-              <Button size="sm" onPress={() => router.push("/pricing")}>
-                Upgrade
-              </Button>
-            </Alert>
+            <MailNotice
+              status="warning"
+              title="Alias limit reached"
+              description={`This plan includes ${formatMailAliasLimit(limit)} aliases per mailbox. Remove one from this mailbox or upgrade for more.`}
+              action={{
+                label: "Upgrade",
+                onPress: () => router.push("/pricing"),
+              }}
+            />
           ) : null}
 
           <div className="flex min-w-0 flex-col gap-5 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">

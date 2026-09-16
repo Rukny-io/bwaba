@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
 import {
-  Alert,
   Chip,
   Dropdown,
   EmptyState,
@@ -12,6 +11,7 @@ import {
   Skeleton,
   cn,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import {
   listMailMailboxes,
@@ -323,13 +323,12 @@ export function MailEmailLogsPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Could not load logs</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Could not load logs"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       <section

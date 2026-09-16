@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronDown, Copy, Smartphone } from "lucide-react";
 import {
-  Alert,
   Button,
   Chip,
   Description,
@@ -15,6 +14,7 @@ import {
   Skeleton,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { getMailApp } from "@/lib/mail-apps-client";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
@@ -216,25 +216,19 @@ export function MailDevicesPage() {
         </Chip>
       </div>
 
-      <Alert status="warning">
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Title>Not live yet</Alert.Title>
-          <Alert.Description>
-            These hosts are not accepting connections. Mail still works in the Rukny Inbox.
-            Use this page to review the setup before launch.
-          </Alert.Description>
-        </Alert.Content>
-      </Alert>
+      <MailNotice
+        status="warning"
+        title="Not live yet"
+        description="These hosts are not accepting connections. Mail still works in the Rukny Inbox. Use this page to review the setup before launch."
+      />
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Connect apps & devices</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {loading ? (

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { parseDate, type DateValue } from "@internationalized/date";
 import { ChevronDown, ReplyAll } from "lucide-react";
 import {
-  Alert,
   Button,
   Calendar,
   Chip,
@@ -22,6 +21,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
@@ -369,28 +369,24 @@ export function MailAutoReplyPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Automatic Reply</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {!loading && !allowed ? (
-        <Alert status="warning" className="items-center">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Standard or Premium</Alert.Title>
-            <Alert.Description>
-              You can save a draft, but automatic replies send only on Standard or Premium.
-            </Alert.Description>
-          </Alert.Content>
-          <Button size="sm" onPress={() => router.push("/pricing")}>
-            Upgrade
-          </Button>
-        </Alert>
+        <MailNotice
+          status="warning"
+          title="Standard or Premium"
+          description="You can save a draft, but automatic replies send only on Standard or Premium."
+          action={{
+            label: "Upgrade",
+            onPress: () => router.push("/pricing"),
+          }}
+        />
       ) : null}
 
       {loading ? (

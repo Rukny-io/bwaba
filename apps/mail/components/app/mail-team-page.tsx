@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, UserPlus, Users } from "lucide-react";
 import {
-  Alert,
   AlertDialog,
   Avatar,
   Button,
@@ -18,6 +17,7 @@ import {
   Skeleton,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { resolveAvatarUrl } from "@/lib/media-url";
 import {
@@ -140,6 +140,7 @@ export function MailTeamPage() {
   const [roster, setRoster] = useState<MailTeamRoster | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<MailTeamRole>("MEMBER");
   const [busy, setBusy] = useState(false);
@@ -194,13 +195,16 @@ export function MailTeamPage() {
     if (!appId || busy || !email.trim()) return;
     setBusy(true);
     setError("");
+    setSuccess("");
     try {
+      const invited = email.trim();
       await inviteMailTeamMember(appId, {
-        email: email.trim(),
+        email: invited,
         role,
       });
       setEmail("");
       setRole("MEMBER");
+      setSuccess(`Invite sent to ${invited}.`);
       await load(appId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not invite.");
@@ -213,8 +217,10 @@ export function MailTeamPage() {
     if (!appId || busyId) return;
     setBusyId(memberId);
     setError("");
+    setSuccess("");
     try {
       await updateMailTeamMember(appId, memberId, nextRole);
+      setSuccess("Role updated.");
       await load(appId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update role.");
@@ -227,8 +233,10 @@ export function MailTeamPage() {
     if (!appId || busyId) return;
     setBusyId(memberId);
     setError("");
+    setSuccess("");
     try {
       await removeMailTeamMember(appId, memberId);
+      setSuccess("Teammate removed.");
       await load(appId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove.");
@@ -275,13 +283,21 @@ export function MailTeamPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Team</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
+      ) : null}
+
+      {success ? (
+        <MailNotice
+          status="success"
+          title="Done"
+          description={success}
+          onDismiss={() => setSuccess("")}
+        />
       ) : null}
 
       {loading || !roster ? (
@@ -327,18 +343,27 @@ export function MailTeamPage() {
             </div>
 
             {needsUpgrade ? (
-              <Alert status="warning" className="items-center">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Invites locked</Alert.Title>
-                  <Alert.Description>
-                    Upgrade on the pricing page to invite teammates.
-                  </Alert.Description>
-                </Alert.Content>
-                <Button size="sm" onPress={() => router.push("/pricing")}>
-                  View plans
-                </Button>
-              </Alert>
+              <MailNotice
+                status="warning"
+                title="Invites locked"
+                description="Upgrade to Standard or Premium to invite teammates and assign console seats."
+                action={{
+                  label: "View plans",
+                  onPress: () => router.push("/pricing"),
+                }}
+              />
+            ) : null}
+
+            {atSeatLimit ? (
+              <MailNotice
+                status="warning"
+                title="All seats in use"
+                description={`This plan includes ${roster.consoleMembersIncluded} console seats. Remove someone or upgrade for more.`}
+                action={{
+                  label: "Upgrade",
+                  onPress: () => router.push("/pricing"),
+                }}
+              />
             ) : null}
           </div>
 

@@ -95,6 +95,72 @@ function MailboxStatusDot({ status }: { status: MailMailboxView["status"] }) {
   );
 }
 
+const UNASSIGNED_KEY = "__unassigned__";
+
+function AssigneeDropdown({
+  value,
+  options,
+  onChange,
+  disabled,
+  size = "md",
+}: {
+  value: string;
+  options: { id: string; label: string }[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  size?: "sm" | "md";
+}) {
+  const selectedLabel =
+    options.find((option) => option.id === value)?.label ?? "Unassigned";
+  const selectedKey = value || UNASSIGNED_KEY;
+
+  return (
+    <Dropdown>
+      <Dropdown.Trigger
+        aria-label="SSO assignee"
+        isDisabled={disabled}
+        className={
+          size === "sm"
+            ? "inline-flex h-8 w-full max-w-[180px] min-w-0 items-center justify-between gap-1.5 rounded-lg bg-[var(--field-background)] px-2.5 text-start text-xs font-medium text-[var(--foreground)] outline-none"
+            : "inline-flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[var(--field-background)] px-3 text-start text-xs font-medium text-[var(--foreground)] outline-none"
+        }
+      >
+        <span className="min-w-0 truncate">{selectedLabel}</span>
+        <ChevronDown className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
+      </Dropdown.Trigger>
+      <Dropdown.Popover
+        placement="bottom start"
+        className="min-w-[14rem] overflow-hidden rounded-2xl"
+      >
+        <Dropdown.Menu
+          selectedKeys={new Set([selectedKey])}
+          selectionMode="single"
+          onSelectionChange={(keys) => {
+            if (keys === "all") return;
+            const next = [...keys][0];
+            if (next == null) return;
+            const id = String(next);
+            onChange(id === UNASSIGNED_KEY ? "" : id);
+          }}
+        >
+          <Dropdown.Section>
+            <Dropdown.Item id={UNASSIGNED_KEY} textValue="Unassigned">
+              <Dropdown.ItemIndicator />
+              <Label>Unassigned</Label>
+            </Dropdown.Item>
+            {options.map((option) => (
+              <Dropdown.Item key={option.id} id={option.id} textValue={option.label}>
+                <Dropdown.ItemIndicator />
+                <Label>{option.label}</Label>
+              </Dropdown.Item>
+            ))}
+          </Dropdown.Section>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
+  );
+}
+
 function MailboxActionMenu({
   box,
   deletingId,
@@ -971,21 +1037,12 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       <label className="mb-1 block text-[11px] font-medium text-[var(--muted-foreground)]">
                         SSO assignee
                       </label>
-                      <select
+                      <AssigneeDropdown
                         value={box.assignedUserId ?? ""}
+                        options={assigneeOptions}
                         disabled={assigningId === box.id}
-                        onChange={(e) =>
-                          void onAssignMailbox(box.id, e.target.value)
-                        }
-                        className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--field-background)] px-2 text-xs"
-                      >
-                        <option value="">Unassigned</option>
-                        {assigneeOptions.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(next) => void onAssignMailbox(box.id, next)}
+                      />
                     </div>
                   ) : null}
                   <Link
@@ -1061,21 +1118,13 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       </td>
                       {canAssign ? (
                         <td className="px-4 py-4 align-middle">
-                          <select
+                          <AssigneeDropdown
+                            size="sm"
                             value={box.assignedUserId ?? ""}
+                            options={assigneeOptions}
                             disabled={assigningId === box.id}
-                            onChange={(e) =>
-                              void onAssignMailbox(box.id, e.target.value)
-                            }
-                            className="h-8 max-w-[180px] rounded-lg border border-[var(--border)] bg-[var(--field-background)] px-2 text-xs"
-                          >
-                            <option value="">Unassigned</option>
-                            {assigneeOptions.map((opt) => (
-                              <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(next) => void onAssignMailbox(box.id, next)}
+                          />
                         </td>
                       ) : null}
                       <td className="px-5 py-4 align-middle sm:px-6">

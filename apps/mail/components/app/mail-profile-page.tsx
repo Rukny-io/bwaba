@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import { resolveAccountsUrl } from "@rukny/auth/client/env-urls";
 import { Monitor, Moon, Sun } from "lucide-react";
 import {
-  Alert,
   Button,
   Link,
   Skeleton,
   ToggleButton,
   ToggleButtonGroup,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { fetchCurrentUser, type AuthUser } from "@/lib/api/auth";
 import { useMailTheme } from "@/components/theme-sync";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
@@ -75,13 +75,12 @@ export function MailProfilePage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Profile</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {loading ? (

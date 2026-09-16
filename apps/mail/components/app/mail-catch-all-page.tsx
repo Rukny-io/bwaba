@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Mails } from "lucide-react";
 import {
-  Alert,
   Button,
   Chip,
   Description,
@@ -14,6 +13,7 @@ import {
   Skeleton,
   Switch,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
@@ -192,13 +192,12 @@ export function MailCatchAllPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Catch-all</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {loading ? (

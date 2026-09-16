@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Alert,
   Button,
   Chip,
   Description,
@@ -13,6 +12,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
+import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument, clearMailAppIdCookie } from "@/lib/mail-app-id";
 import {
   archiveMailApp,
@@ -188,23 +188,21 @@ export function MailSettingsPage() {
       </div>
 
       {error ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Settings</Alert.Title>
-            <Alert.Description>{error}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="danger"
+          title="Something went wrong"
+          description={error}
+          onDismiss={() => setError("")}
+        />
       ) : null}
 
       {saved && !error ? (
-        <Alert status="success">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Saved</Alert.Title>
-            <Alert.Description>App details were updated.</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <MailNotice
+          status="success"
+          title="Saved"
+          description="App details were updated."
+          onDismiss={() => setSaved(false)}
+        />
       ) : null}
 
       {loading ? (

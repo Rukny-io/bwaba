@@ -118,11 +118,11 @@ export function MailWebmailPreview({
             transition={{ delay: 1.1, duration: 0.55, ease: EASE }}
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666666]">
-              Agentic Mail
+              Suggested reply
             </p>
             <p className="mt-1.5 text-[13px] leading-snug text-[#666666]">
-              Here’s a clear reply with the invoice attached and a send time
-              for this afternoon.
+              Here’s a clear reply with the invoice attached — ready to send
+              this afternoon.
             </p>
             {!reduceMotion ? (
               <motion.div

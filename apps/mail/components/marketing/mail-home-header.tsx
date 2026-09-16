@@ -6,13 +6,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
+  BookOpen,
   ChevronDown,
-  FileText,
-  HelpCircle,
-  Mail,
+  CircleHelp,
+  ClipboardList,
+  Code2,
+  Inbox,
   Menu,
-  Sparkles,
+  Rocket,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@heroui/react";
 import {
@@ -25,7 +28,7 @@ type NavItem = {
   title: string;
   description: string;
   external?: boolean;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: LucideIcon;
 };
 
 function productItems(): NavItem[] {
@@ -35,22 +38,22 @@ function productItems(): NavItem[] {
     {
       href: "/",
       title: "Mailboxes",
-      description: "Business email on your domain",
-      icon: Mail,
+      description: "Email for your team on your domain",
+      icon: Inbox,
     },
     {
       href: forms,
       title: "Forms",
-      description: "Build and embed forms",
+      description: "Collect responses and grow your list",
       external: true,
-      icon: FileText,
+      icon: ClipboardList,
     },
     {
       href: `${developer}/documentation/email-api`,
       title: "Email API",
-      description: "Transactional send for apps",
+      description: "Send mail from your own apps",
       external: true,
-      icon: Sparkles,
+      icon: Code2,
     },
   ];
 }
@@ -59,20 +62,20 @@ const RESOURCE_ITEMS: NavItem[] = [
   {
     href: "/getting-started",
     title: "Getting started",
-    description: "Connect DNS and send",
-    icon: Sparkles,
+    description: "Go live with your first domain",
+    icon: Rocket,
   },
   {
     href: "/documents",
     title: "Documents",
-    description: "Guides and setup docs",
-    icon: FileText,
+    description: "Guides for setup and your team",
+    icon: BookOpen,
   },
   {
     href: "/faqs",
     title: "FAQs",
-    description: "Short answers",
-    icon: HelpCircle,
+    description: "Quick answers to common questions",
+    icon: CircleHelp,
   },
 ];
 
@@ -85,22 +88,25 @@ function NavCard({
 }) {
   const Icon = item.icon;
   const className =
-    "group/item flex gap-3 px-3.5 py-3 transition-colors hover:bg-[#f5f5f5] focus:bg-[#f5f5f5] focus:outline-none";
+    "group/item flex items-start gap-3.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f5] focus:bg-[#f5f5f5] focus:outline-none";
   const body = (
     <>
       {Icon ? (
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center border border-[#e8e8e8] bg-white text-[#111111] transition-colors group-hover/item:border-[#111111]">
-          <Icon className="size-3.5" />
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f5] text-[#111111] transition-colors group-hover/item:bg-white group-hover/item:shadow-[0_0_0_1px_rgba(17,17,17,0.06)]">
+          <Icon className="size-[18px]" strokeWidth={1.6} absoluteStrokeWidth />
         </span>
       ) : null}
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[#111111]">
+      <span className="min-w-0 flex-1 pt-0.5">
+        <span className="flex items-center gap-1.5 text-[14px] font-semibold tracking-[-0.01em] text-[#111111]">
           {item.title}
           {item.external ? (
-            <ArrowUpRight className="size-3.5 text-[#999999]" aria-hidden />
+            <ArrowUpRight
+              className="size-3.5 text-[#bbbbbb] transition-colors group-hover/item:text-[#666666]"
+              aria-hidden
+            />
           ) : null}
         </span>
-        <span className="mt-0.5 block text-[12.5px] leading-snug text-[#666666]">
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-[#777777]">
           {item.description}
         </span>
       </span>
@@ -173,14 +179,14 @@ function DesktopMenu({
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "inline-flex h-9 items-center gap-1 px-3 text-[14px] font-medium transition-colors",
+          "inline-flex h-9 items-center gap-1 rounded-full px-3 text-[14px] font-medium transition-colors",
           ink
             ? active || open
-              ? "text-white"
-              : "text-white/70 hover:text-white"
+              ? "bg-white/10 text-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
             : active || open
-              ? "text-[#111111]"
-              : "text-[#555555] hover:text-[#111111]",
+              ? "bg-[#f5f5f5] text-[#111111]"
+              : "text-[#555555] hover:bg-[#f5f5f5] hover:text-[#111111]",
         )}
       >
         {label}
@@ -197,19 +203,14 @@ function DesktopMenu({
         id={menuId}
         role="menu"
         className={cn(
-          "absolute left-0 top-full z-50 w-[20rem] pt-2 transition-[opacity,transform] duration-150",
+          "absolute left-0 top-full z-50 w-[22rem] pt-2 transition-[opacity,transform] duration-150",
           open
             ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-1 opacity-0",
+            : "pointer-events-none -translate-y-1.5 opacity-0",
         )}
       >
-        <div className="overflow-hidden border border-[#e8e8e8] bg-white shadow-[0_20px_50px_-28px_rgba(17,17,17,0.45)]">
-          <div className="border-b border-[#e8e8e8] px-3.5 py-2.5">
-            <p className="text-[11px] font-semibold tracking-[0.12em] text-[#888888] uppercase">
-              {label}
-            </p>
-          </div>
-          <div className="flex flex-col py-1">
+        <div className="overflow-hidden rounded-2xl bg-white p-2 shadow-[0_24px_60px_-28px_rgba(17,17,17,0.35),0_0_0_1px_rgba(17,17,17,0.06)]">
+          <div className="flex flex-col gap-0.5">
             {items.map((item) => (
               <NavCard
                 key={item.href + item.title}

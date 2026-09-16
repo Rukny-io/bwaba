@@ -17,33 +17,33 @@ import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 const DNS_LAYERS = [
   {
     n: "01",
-    title: "Your domain",
-    body: "you@yourbrand.com — never a shared @rukny.io address.",
+    title: "Your brand address",
+    body: "you@yourbrand.com — never a shared free inbox that looks unprofessional.",
   },
   {
     n: "02",
-    title: "Auth records",
-    body: "SPF, Easy DKIM, DMARC, and custom MAIL FROM from the console.",
+    title: "Trusted delivery",
+    body: "We walk you through setup so clients actually receive your mail.",
   },
   {
     n: "03",
-    title: "Routing",
-    body: "Mailboxes, aliases, forwarders, and catch-all in one place.",
+    title: "Team inboxes",
+    body: "Create addresses, nicknames, and forwards in one place — no extra tools.",
   },
 ] as const;
 
 const SECURITY = [
   {
-    title: "Mailbox passwords",
-    body: "Each mailbox has its own credential — revoke without touching the workspace.",
+    title: "Separate passwords",
+    body: "Every inbox has its own login. Lock one person out without affecting the rest.",
   },
   {
-    title: "Optional TOTP",
-    body: "Enroll 2FA with a QR code before you require it for a mailbox.",
+    title: "Extra protection",
+    body: "Turn on two-step verification when you’re ready — optional, per mailbox.",
   },
   {
-    title: "Aligned sending",
-    body: "Domain authentication keeps From aligned so messages look like you.",
+    title: "Looks like you",
+    body: "Mail leaves as your company name and domain, so people trust the sender.",
   },
 ] as const;
 
@@ -51,22 +51,22 @@ const RESOURCES = [
   {
     href: "/getting-started",
     title: "Getting started",
-    body: "Connect DNS and send as yourself.",
+    body: "Connect your domain and send your first message.",
   },
   {
     href: "/documents",
     title: "Documents",
-    body: "Guides for DNS, mailboxes, and routing.",
+    body: "Simple guides for setup, inboxes, and your team.",
   },
   {
     href: "/faqs",
     title: "FAQs",
-    body: "Short answers, no manual.",
+    body: "Short answers to common questions.",
   },
   {
     href: "/pricing/estimate",
     title: "Cost calculator",
-    body: "Estimate seats and outbound volume.",
+    body: "See what seats and sending volume might cost.",
   },
 ] as const;
 
@@ -80,15 +80,15 @@ export function MailDnsArchitectureSection() {
       <div className={L.container}>
         <div className="py-14 md:py-20">
           <MailReveal>
-            <p className={L.eyebrow}>Architecture</p>
+            <p className={L.eyebrow}>How it fits together</p>
             <MailClipReveal>
               <h2 id="architecture-heading" className={L.sectionTitle}>
-                Domain first. Auth built in. Routing next.
+                Your domain. Trusted sending. Room for the team.
               </h2>
             </MailClipReveal>
             <p className={L.sectionLead}>
-              Rukny Mail is layered around a domain you already own — not a free
-              inbox you outgrow.
+              Built around the domain you already own — not a free inbox you’ll
+              outgrow next year.
             </p>
           </MailReveal>
 
@@ -130,12 +130,12 @@ export function MailSecurityBand() {
           <MailSplitWords
             as="h2"
             mode="scroll"
-            text="Credentials and auth that match business mail"
+            text="Keep control of every inbox"
             className={L.sectionTitleOnInk}
           />
           <p className={L.sectionLeadOnInk}>
-            Keep control at the mailbox and at the domain — without bolting on
-            another vendor for every layer.
+            Protect each mailbox on its own — without stacking another tool for
+            every layer.
           </p>
         </MailReveal>
 
@@ -172,7 +172,7 @@ export function MailResourcesSection() {
           <MailReveal>
             <p className={L.eyebrow}>Resources</p>
             <h2 id="resources-heading" className={L.sectionTitle}>
-              Learn the path, then open the console
+              Learn the basics, then open your workspace
             </h2>
           </MailReveal>
           <MailReveal delay={0.08}>

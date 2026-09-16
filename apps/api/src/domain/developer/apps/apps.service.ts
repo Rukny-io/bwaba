@@ -62,8 +62,8 @@ export class AppsService {
   ) {}
 
   private isDevOtpBypass(): boolean {
-    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
-    if (nodeEnv === 'production') return false;
+    // Honored whenever set — keep false in real production env files.
+    // Local docker-compose sets NODE_ENV=production, so do not gate on NODE_ENV.
     return this.configService.get<string>('WHATSAPP_OTP_DEV_BYPASS') === 'true';
   }
 

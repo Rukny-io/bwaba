@@ -10,9 +10,9 @@ import { MailWebmailPreview } from "@/components/marketing/mail-webmail-preview"
 import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 
 const POINTS = [
-  "Manage mail from any device with secure webmail — send as you@yourdomain.",
-  "Multiply your output with Agentic Mail for faster, smarter drafts.",
-  "Fix routing before it costs you: aliases, forwarders, and catch-all in one console.",
+  "Open mail from any phone or laptop — always as you@yourdomain.",
+  "Draft faster with smart suggestions when you’re stuck on a reply.",
+  "Share nicknames and forwards with your team without juggling tools.",
 ] as const;
 
 export function MailProductivitySection() {
@@ -25,9 +25,9 @@ export function MailProductivitySection() {
       <div className={L.container}>
         <div className="grid items-center gap-12 py-14 lg:grid-cols-2 lg:gap-16 lg:py-20">
           <MailReveal className="lg:order-2">
-            <p className={L.eyebrow}>Productive</p>
+            <p className={L.eyebrow}>Everyday mail</p>
             <h2 id="productivity-heading" className={L.sectionTitle}>
-              Webmail that stays on your domain
+              Read and reply from your own domain
             </h2>
             <MailStagger
               as="ul"

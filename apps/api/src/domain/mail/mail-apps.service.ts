@@ -52,8 +52,8 @@ export class MailAppsService {
   ) {}
 
   private isDevOtpBypass(): boolean {
-    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
-    if (nodeEnv === 'production') return false;
+    // Honored whenever set — keep false in real production env files.
+    // Local docker-compose sets NODE_ENV=production, so do not gate on NODE_ENV.
     return this.configService.get<string>('WHATSAPP_OTP_DEV_BYPASS') === 'true';
   }
 
@@ -193,7 +193,15 @@ export class MailAppsService {
     } else {
       const sendError = await this.sendWhatsAppOtp(phoneNumber, code);
       if (sendError) {
-        throw new BadRequestException(sendError);
+        const opaque =
+          !sendError.trim() ||
+          /^unknown error$/i.test(sendError.trim()) ||
+          /^request failed with status code \d+$/i.test(sendError.trim());
+        throw new BadRequestException(
+          opaque
+            ? 'فشل إرسال رمز التحقق عبر WhatsApp. تحقق من WHATSAPP_BUSINESS_TOKEN و WHATSAPP_PHONE_NUMBER_ID وقالب rukny_otp_cart في Meta.'
+            : sendError,
+        );
       }
     }
 

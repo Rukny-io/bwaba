@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
 import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
 import {
   MailDnsArchitectureSection,
@@ -28,22 +26,20 @@ import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
 const STEPS = [
   {
     n: "01",
-    title: "Workspace + domain",
-    body: "Sign in, create a workspace, connect a domain you own.",
+    title: "Add your domain",
+    body: "Create a workspace and connect the website address you already own.",
   },
   {
     n: "02",
-    title: "Publish DNS",
-    body: "SPF, DKIM, DMARC, and MAIL FROM from the console.",
+    title: "Follow the checklist",
+    body: "We show you exactly what to copy — so mail arrives as your brand, not spam.",
   },
   {
     n: "03",
-    title: "Send as yourself",
-    body: "Mailboxes, team SSO, aliases, and forwarders — one place.",
+    title: "Invite your team",
+    body: "Give everyone an address on your domain, then send and receive like normal.",
   },
 ] as const;
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function MailHomePage({
   signedIn,
@@ -55,7 +51,6 @@ export function MailHomePage({
   const primaryHref = signedIn ? "/apps" : "/login";
   const primaryLabel = signedIn ? "Open console" : "Get started";
   const popular = listMailPlans().find((p) => p.popular) ?? listMailPlans()[1];
-  const reduceMotion = useReducedMotion();
 
   return (
     <MailMarketingShell signedIn={signedIn}>
@@ -98,11 +93,12 @@ export function MailHomePage({
 
                 <MailHeroMotion delay={0.18}>
                   <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#a3a3a3] sm:text-base">
-                    Mailboxes, DNS auth, and webmail — you keep{" "}
+                    Give your team real addresses like{" "}
                     <span className="font-medium text-white">
                       you@yourdomain
                     </span>
-                    .
+                    {" "}
+                    — professional, private, and ready to send.
                   </p>
                 </MailHeroMotion>
 
@@ -128,53 +124,8 @@ export function MailHomePage({
               </div>
 
               <div className="relative mx-auto w-full max-w-[28rem] md:max-w-none">
-                <MailHeroMotion delay={0.14} className="relative">
+                <MailHeroMotion delay={0.14}>
                   <MailHeroSignal />
-
-                  {/* Product accent — one float, not a sticker cluster */}
-                  <motion.div
-                    className="pointer-events-none absolute -bottom-1 -right-1 z-20 w-[5.75rem] sm:bottom-1 sm:right-2 sm:w-[7rem] md:-bottom-3 md:right-4 md:w-[8rem]"
-                    initial={
-                      reduceMotion ? false : { opacity: 0, y: 16, rotate: -6 }
-                    }
-                    animate={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            opacity: 1,
-                            y: [0, -7, 0],
-                            rotate: [-3.5, -1.5, -3.5],
-                          }
-                    }
-                    transition={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            opacity: { duration: 0.75, delay: 0.35, ease: EASE },
-                            y: {
-                              duration: 5.2,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: 0.5,
-                            },
-                            rotate: {
-                              duration: 5.2,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: 0.5,
-                            },
-                          }
-                    }
-                  >
-                    <Image
-                      src="/illustrations/hero-envelope-3d.png"
-                      alt=""
-                      width={200}
-                      height={200}
-                      className="h-auto w-full drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
-                      priority
-                    />
-                  </motion.div>
                 </MailHeroMotion>
               </div>
             </div>
@@ -217,7 +168,7 @@ export function MailHomePage({
                   id="connect-heading"
                   className="text-[1.5rem] font-bold tracking-[-0.035em] text-[#111111] sm:text-[1.85rem]"
                 >
-                  Three steps to send as yourself
+                  Up and sending in three steps
                 </h2>
               </MailReveal>
               <MailStagger
@@ -258,15 +209,15 @@ export function MailHomePage({
                   id="trust-heading"
                   className="text-[1.5rem] font-bold leading-snug tracking-[-0.035em] text-white sm:text-[1.85rem]"
                 >
-                  Authenticated outbound. Team console. One workspace per
-                  domain.
+                  Look like a real business. Run mail with your team. Stay on
+                  your domain.
                 </h2>
               </MailReveal>
               <MailReveal delay={0.08}>
                 <p className="text-[15px] leading-relaxed text-[#a3a3a3]">
-                  Delivery through Amazon SES. SPF, Easy DKIM, and DMARC from
-                  day one. Invite teammates, assign mailboxes, open webmail
-                  with Rukny SSO — seats stay on that workspace.
+                  Messages leave as your brand — not a shared address. Invite
+                  people, hand out inboxes, and open mail from the browser.
+                  Everything stays under one workspace you control.
                 </p>
               </MailReveal>
             </div>
@@ -290,7 +241,8 @@ export function MailHomePage({
                   <span className="font-medium text-[#888888]">/mo</span>
                 </h2>
                 <p className="mt-2 text-[14px] text-[#666666]">
-                  {popular.name} for small teams — billed per workspace in IQD.
+                  {popular.name} for small teams — simple monthly billing in
+                  IQD.
                 </p>
               </MailReveal>
               <MailReveal delay={0.06}>

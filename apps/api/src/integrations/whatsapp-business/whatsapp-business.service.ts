@@ -60,7 +60,7 @@ export class WhatsAppBusinessService implements OnModuleInit {
     );
     this.authTemplateLanguage = this.configService.get<string>(
       'WHATSAPP_AUTH_TEMPLATE_LANGUAGE',
-      'ar',
+      'en',
     );
 
     this.enabled = !!(accessToken && this.phoneNumberId);
@@ -112,17 +112,8 @@ export class WhatsAppBusinessService implements OnModuleInit {
     type?: string,
   ): string {
     const msg = (rawMessage || '').toLowerCase();
-    const isAuth =
-      type === 'OAuthException' ||
-      msg.includes('authorization') ||
-      msg.includes('access token') ||
-      msg.includes('permission') ||
-      code === 190;
 
-    if (isAuth || code === 190) {
-      return 'توكن WhatsApp غير مصرّح لهذا الرقم أو منتهٍ. أنشئ System User Token بصلاحيات whatsapp_business_messaging و whatsapp_business_management على نفس الـ WABA المرتبط بـ WHATSAPP_PHONE_NUMBER_ID، ثم حدّث WHATSAPP_BUSINESS_TOKEN.';
-    }
-
+    // Template / parameter codes often arrive as type=OAuthException — check them first.
     switch (code) {
       case 100:
         return 'معامل غير صالح من Meta (غالباً phone number id أو اسم/لغة القالب). تحقق من WHATSAPP_PHONE_NUMBER_ID و WHATSAPP_AUTH_TEMPLATE_NAME و WHATSAPP_AUTH_TEMPLATE_LANGUAGE.';
@@ -133,21 +124,39 @@ export class WhatsAppBusinessService implements OnModuleInit {
       case 132012:
       case 132015:
       case 132016:
-        return 'القالب غير موجود أو غير معتمد أو لغة القالب خاطئة. تحقق من WHATSAPP_AUTH_TEMPLATE_NAME و WHATSAPP_AUTH_TEMPLATE_LANGUAGE في WhatsApp Manager.';
+        return msg.includes('does not exist in')
+          ? `لغة قالب WhatsApp غير مطابقة. التفاصيل: ${rawMessage}. اضبط WHATSAPP_AUTH_TEMPLATE_LANGUAGE لتطابق اللغة المعتمدة في WhatsApp Manager (لـ rukny_otp_cart عادة en).`
+          : 'القالب غير موجود أو غير معتمد أو لغة القالب خاطئة. تحقق من WHATSAPP_AUTH_TEMPLATE_NAME و WHATSAPP_AUTH_TEMPLATE_LANGUAGE في WhatsApp Manager.';
       case 131026:
         return 'تعذّر التسليم إلى هذا الرقم. تأكد من صحة الرقم مع رمز الدولة.';
-      default: {
-        const cleaned = (rawMessage || '').trim();
-        if (
-          !cleaned ||
-          /^unknown error$/i.test(cleaned) ||
-          /^request failed with status code \d+$/i.test(cleaned)
-        ) {
-          return 'فشل الاتصال بـ Meta WhatsApp. تحقق من التوكن والقالب واتصال الشبكة، أو فعّل WHATSAPP_OTP_DEV_BYPASS للتطوير المحلي.';
-        }
-        return cleaned;
-      }
+      default:
+        break;
     }
+
+    const isAuth =
+      code === 190 ||
+      msg.includes('authorization') ||
+      msg.includes('access token') ||
+      msg.includes('permission') ||
+      (type === 'OAuthException' &&
+        (msg.includes('token') ||
+          msg.includes('oauth') ||
+          msg.includes('permission') ||
+          msg.includes('session has expired')));
+
+    if (isAuth) {
+      return 'توكن WhatsApp غير مصرّح لهذا الرقم أو منتهٍ. أنشئ System User Token بصلاحيات whatsapp_business_messaging و whatsapp_business_management على نفس الـ WABA المرتبط بـ WHATSAPP_PHONE_NUMBER_ID، ثم حدّث WHATSAPP_BUSINESS_TOKEN.';
+    }
+
+    const cleaned = (rawMessage || '').trim();
+    if (
+      !cleaned ||
+      /^unknown error$/i.test(cleaned) ||
+      /^request failed with status code \d+$/i.test(cleaned)
+    ) {
+      return 'فشل الاتصال بـ Meta WhatsApp. تحقق من التوكن والقالب واتصال الشبكة، أو فعّل WHATSAPP_OTP_DEV_BYPASS للتطوير المحلي.';
+    }
+    return cleaned;
   }
 
   /**
@@ -165,7 +174,7 @@ export class WhatsAppBusinessService implements OnModuleInit {
 
     try {
       this.logger.log(
-        `📤 Sending WhatsApp Business OTP to ${this.maskPhone(formatted)}`,
+        `📤 Sending WhatsApp Business OTP to ${this.maskPhone(formatted)} (template=${this.authTemplateName}/${this.authTemplateLanguage})`,
       );
 
       const response = await this.client.post(
@@ -237,9 +246,16 @@ export class WhatsAppBusinessService implements OnModuleInit {
         (typeof errorData?.error_user_title === 'string' &&
           errorData.error_user_title) ||
         undefined;
+      const errorDetails =
+        errorData?.error_data &&
+        typeof errorData.error_data === 'object' &&
+        typeof (errorData.error_data as { details?: unknown }).details ===
+          'string'
+          ? (errorData.error_data as { details: string }).details
+          : undefined;
 
       this.logger.error(
-        `❌ WhatsApp Business OTP failed: ${errorMessage} (http: ${axiosError.response?.status ?? 'n/a'}, axios: ${axiosError.code || 'n/a'}, code: ${errorCode ?? 'n/a'}, type: ${errorType || 'n/a'}, subcode: ${errorSubcode || 'n/a'}${errorUserMsg ? `, user: ${errorUserMsg}` : ''})`,
+        `❌ WhatsApp Business OTP failed: ${errorMessage} (http: ${axiosError.response?.status ?? 'n/a'}, axios: ${axiosError.code || 'n/a'}, code: ${errorCode ?? 'n/a'}, type: ${errorType || 'n/a'}, subcode: ${errorSubcode || 'n/a'}${errorUserMsg ? `, user: ${errorUserMsg}` : ''}${errorDetails ? `, details: ${errorDetails}` : ''})`,
       );
       if (axiosError.response?.data) {
         this.logger.error(
@@ -249,7 +265,7 @@ export class WhatsAppBusinessService implements OnModuleInit {
 
       const userMessage = this.mapMetaError(
         typeof errorCode === 'number' ? errorCode : undefined,
-        errorMessage,
+        errorDetails || errorMessage,
         errorType,
       );
 

@@ -1,15 +1,18 @@
-# 🎯 نطاق MVP — Rukny Workspace
+# 🎯 نطاق MVP — Rukny Mail (Workspace سابقاً)
 
-> **آخر تحديث:** 2026-06-21  
-> **الهدف:** إطلاق أصغر نسخة قابلة للاستخدام — **ربط دومين + 3 صناديق + Inbox/Compose**  
-> **المدة المستهدفة:** 8–10 أسابيع  
-> **مرتبط بـ:** [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md) · [WORKSPACE_DATABASE_SCHEMA.md](./WORKSPACE_DATABASE_SCHEMA.md) · [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md)
+> **آخر تحديث:** 2026-09-17  
+> **الهدف الأصلي:** إطلاق أصغر نسخة قابلة للاستخدام — **ربط دومين + صناديق + Inbox/Compose**  
+> **الحالة:** نطاق MVP **مُنجَز وتجاوزه المنتج** في الكود — التفاصيل في [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md)  
+> **التطبيق الحالي:** `apps/mail` → `mail.rukny.io`  
+> **مرتبط بـ:** [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md) · [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md) · [WORKSPACE_DATABASE_SCHEMA.md](./WORKSPACE_DATABASE_SCHEMA.md) · [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md)
 
 ---
 
 ## 1) ملخص MVP في جملة واحدة
 
-المستخدم يربط **دومينه الموجود**، ينشئ حتى **3 صناديق بريد**، يستقبل ويرسل رسائل من **واجهة Inbox/Compose** داخل `workspace.rukny.io`.
+المستخدم يربط **دومينه الموجود**، ينشئ صناديق بريد حسب الخطة، يستقبل ويرسل رسائل من **واجهة Inbox/Compose** داخل `mail.rukny.io`.
+
+> **ملاحظة (2026-09):** المسارات والأسماء أدناه تعكس خطة يونيو 2026. التنفيذ الفعلي يستخدم `MailApp` / `/inbox` / `/domain` وغيرها — راجع AUDIT.
 
 ---
 
@@ -203,16 +206,33 @@ POST   /workspace/webhooks/ses         → SNS bounce/complaint/inbound
 
 ---
 
-## 8) ما تم إنجازه (2026-06-21)
+## 8) ما تم إنجازه
+
+### تحديث 2026-09-17 (حالة الكود)
 
 | البند | الحالة |
 |-------|--------|
 | وثائق MVP / DB / Pricing / SES | ✅ |
+| تطبيق `apps/mail` (كان Workspace shell) | ✅ منتج كامل تقريباً |
+| Backend `apps/api/src/domain/mail` | ✅ منفَّذ |
+| Prisma نماذج `Mail*` | ✅ في schema |
+| Inbox + Compose + Reply | ✅ |
+| Aliases / Forwarders / Catch-all / Auto-reply / Team | ✅ (تجاوزت نطاق MVP الأصلي) |
+| HQ إدارة Mail | ✅ |
+| SES Production | 🟡 تشغيلي — راجع WORKSPACE_SES_SETUP + AUDIT |
+| دفع بطاقة ذاتي | ⏳ Coming soon — تفعيل عبر HQ |
+| نسبة إكمال المنتج الأساسي | **~85–90%** — [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md) |
+
+### أرشيف (2026-06-21)
+
+| البند | الحالة آنذاك |
+|-------|--------------|
+| وثائق MVP / DB / Pricing / SES | ✅ |
 | `WorkspaceDashboardShell` + مسارات placeholder | ✅ |
 | Backend API | ⏳ لم يبدأ |
 | Prisma migration | ⏳ موثّق فقط |
-| SES Production | ⏳ يدوي — انظر WORKSPACE_SES_SETUP |
+| SES Production | ⏳ يدوي |
 
 ---
 
-*عند اكتمال كل بند في §8، حدّث هذا المستند وافتح `WORKSPACE_AUDIT_AND_PLAN.md` (لاحقاً) بنمط Forms.*
+*مرجع الحالة النشط: [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md).*

@@ -1,10 +1,13 @@
-# Rukny Workspace — Implementation Roadmap (Phases)
+# Rukny Mail (Workspace) — Implementation Roadmap (Phases)
 
-> **Last updated:** 2026-06-21  
+> **Last updated:** 2026-09-17  
 > **AWS Region (fixed for Mail/SES):** `eu-north-1` (Stockholm)  
 > **Product:** Multi-tenant business email for **every** Rukny subscriber — not Rukny’s domain only  
-> **App:** `workspace.rukny.io` · **API:** `apps/api/src/workspace/`  
+> **App:** `mail.rukny.io` (`apps/mail`) · **API:** `apps/api/src/domain/mail/`  
+> **Status snapshot (authoritative):** [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md)  
 > **Related:** [WORKSPACE_MVP_SCOPE.md](./WORKSPACE_MVP_SCOPE.md) · [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md) · [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md)
+
+> **Note:** Phase body text below was written for the June 2026 plan (`apps/workspace`). Paths and provider choices may differ from the shipped code (SES + `Mail*` models). Use the status table + AUDIT for “what exists now.”
 
 ---
 
@@ -32,21 +35,21 @@ Rukny Platform
 
 ## Phase overview
 
-| Phase | Name | Duration | Status |
-|-------|------|----------|--------|
-| **0** | AWS SES & production access                | 1–3 weeks | ⏳ Not started |
-| **1** | AWS inbound/outbound plumbing              | 2 weeks   | ⏳             |
-| **2** | Database & domain/mailbox API              | 2 weeks   | ⏳             |
-| **3** | Outbound email (send)                      | 2 weeks   | ⏳             |
-| **4** | Inbound email (receive)                    | 2 weeks   | ⏳             |
-| **5** | Frontend MVP (Inbox + Compose)             | 2–3 weeks | 🟡 Shell only  |
-| **6** | Team & shared mailboxes                    | 3–4 weeks | ⏳             |
-| **7** | Rukny cross-product integration            | 3–4 weeks | ⏳             |
-| **8** | Automation & productivity                  | 4 weeks | ⏳ |
-| **9** | Growth & monetization extras               | 4+ weeks | ⏳ |
+| Phase | Name | Duration | Status (2026-09) |
+|-------|------|----------|------------------|
+| **0** | AWS SES & production access                | 1–3 weeks | 🟡 Code ready; confirm per AWS account |
+| **1** | AWS inbound/outbound plumbing              | 2 weeks   | ✅ |
+| **2** | Database & domain/mailbox API              | 2 weeks   | ✅ |
+| **3** | Outbound email (send)                      | 2 weeks   | ✅ |
+| **4** | Inbound email (receive)                    | 2 weeks   | ✅ |
+| **5** | Frontend MVP (Inbox + Compose)             | 2–3 weeks | ✅ |
+| **6** | Team & shared mailboxes                    | 3–4 weeks | ✅ |
+| **7** | Rukny cross-product integration            | 3–4 weeks | 🟡 Partial (SSO, HQ) |
+| **8** | Automation & productivity                  | 4 weeks | 🟡 Rules ✅ · Workflows/AI UI ❌ |
+| **9** | Growth & monetization extras               | 4+ weeks | 🟡 Pricing/docs ✅ · card pay ❌ |
 | **10** | Enterprise scale                          | Ongoing | ⏳ |
 
-**MVP launch = Phases 0–5 complete** (~10–12 weeks from backend start).
+**MVP launch = Phases 0–5** → **done in codebase** (~88% product core). See [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md).
 
 ---
 
@@ -573,13 +576,19 @@ Phase 6   Phase 7   Phase 8
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 0 | ⏳ Not started | Submit SES production request |
-| 1 | ⏳ | — |
-| 2 | ⏳ | Schema documented only |
-| 3 | ⏳ | — |
-| 4 | ⏳ | — |
-| 5 | 🟡 Partial | Dashboard shell + placeholder pages |
-| 6–10 | ⏳ | Planned |
+| 0 | 🟡 | SES integration in code; verify Production Access operationally |
+| 1 | ✅ | Inbound + SES webhooks + MIME utils |
+| 2 | ✅ | `Mail*` Prisma models + mail APIs |
+| 3 | ✅ | Outbound send via `MailSesService` |
+| 4 | ✅ | `mail-inbound.service` + classifier |
+| 5 | ✅ | Real Inbox/Compose in `apps/mail` |
+| 6 | ✅ | Team members + mailbox assignment |
+| 7 | 🟡 | Accounts SSO + HQ; deeper product links later |
+| 8 | 🟡 | Auto-reply/forwarders/aliases/catch-all shipped; `/workflows` `/ai` Coming Soon |
+| 9 | 🟡 | Marketing/pricing live; self-serve card payment Coming Soon |
+| 10 | ⏳ | Planned |
+
+**Overall:** Mail core **~85–90%** · full vision **~70–75%** — details in [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md).
 
 ---
 
@@ -587,11 +596,11 @@ Phase 6   Phase 7   Phase 8
 
 When a phase completes:
 
-1. Update the status table above.
-2. Check off items in [WORKSPACE_MVP_SCOPE.md](./WORKSPACE_MVP_SCOPE.md) §4 (Phases 0–5).
-3. Update [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md) §10 for Phase 0.
-4. Add `WORKSPACE_AUDIT_AND_PLAN.md` (Forms-style audit) after Phase 5 launch.
+1. Update the status table above **and** [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md).
+2. Check off items in [WORKSPACE_MVP_SCOPE.md](./WORKSPACE_MVP_SCOPE.md) §4 / §8.
+3. Update [WORKSPACE_SES_SETUP.md](./WORKSPACE_SES_SETUP.md) for production access evidence.
+4. Keep [WORKSPACE_INDEX.md](./WORKSPACE_INDEX.md) pointing at the active status doc.
 
 ---
 
-*This document is the authoritative phase breakdown. Pricing limits: [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md). Technical AWS detail: [aws_workspace_strategy.md](./aws_workspace_strategy.md).*
+*Phase narrative is historical planning. **Authoritative completion %:** [MAIL_AUDIT_AND_STATUS.md](./MAIL_AUDIT_AND_STATUS.md). Pricing: code `mail-plan-limits.config.ts` + [WORKSPACE_PRICING.md](./WORKSPACE_PRICING.md). AWS: [aws_workspace_strategy.md](./aws_workspace_strategy.md).*

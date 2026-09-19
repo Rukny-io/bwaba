@@ -4,7 +4,7 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 
 export const EMAIL_API_TRIAL_QUOTA = 1_000;
 export const EMAIL_API_STARTER_MONTHLY_QUOTA = 10_000;
-export const EMAIL_API_STARTER_MONTHLY_PRICE_IQD = 15_000;
+export const EMAIL_API_STARTER_MONTHLY_PRICE_IQD = 6_000;
 
 export type EmailQuotaReservation = 'trial' | 'monthly';
 

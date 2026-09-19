@@ -69,15 +69,15 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
   return (
     <div className="dashboard-section-stack" dir="ltr">
       <header className="space-y-2 text-center">
-        <p className="text-xs font-medium tracking-wide text-[var(--primary)] uppercase">
+        <p className="text-xs font-medium tracking-wide text-[var(--muted-foreground)] uppercase">
           Mail workspaces
         </p>
-        <h1 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
           {isEmpty && invitations.length === 0
             ? "Set up your mail"
             : "Your workspaces"}
         </h1>
-        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
+        <p className="mx-auto max-w-md text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
           {isEmpty && invitations.length === 0
             ? "One workspace per domain — mailboxes, DNS, and its own plan."
             : "Owned and invited workspaces appear here. Open one or add another."}
@@ -166,7 +166,7 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
 
           <Link
             href="/apps/creation"
-            className="dashboard-card group flex min-h-[120px] flex-col items-center justify-center gap-2 border-2 border-dashed border-transparent p-5 transition-colors hover:bg-[var(--surface-secondary)]"
+            className="dashboard-card group flex min-h-[120px] flex-col items-center justify-center gap-2 border border-dashed border-[var(--border)] p-5 transition-colors hover:bg-[var(--surface-secondary)]"
           >
             <span className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] transition-colors group-hover:bg-[var(--primary)] group-hover:text-[var(--primary-foreground)]">
               <Plus className="size-5" />

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AtSign,
+  Code2,
   Forward,
   Globe,
   Inbox,
@@ -32,6 +33,7 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
   { href: "/domain", icon: Globe, label: "Domain settings", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
+  { href: "/developers", icon: Code2, label: "Developers", exact: true },
 ];
 
 /** Built, but hidden from the sidebar until IMAP/SMTP is ready to publish. */

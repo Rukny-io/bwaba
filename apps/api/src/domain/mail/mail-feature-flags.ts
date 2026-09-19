@@ -6,6 +6,7 @@ export const MAIL_FEATURE_ENV = {
   showBimiLogos: 'MAIL_BIMI_LOGOS_ENABLED',
   ruknyVerification: 'MAIL_RUKNY_DOMAIN_VERIFICATION_ENABLED',
   outboundBimi: 'MAIL_OUTBOUND_BIMI_ENABLED',
+  bodyEncryption: 'MAIL_BODY_ENCRYPTION_ENABLED',
 } as const;
 
 @Injectable()
@@ -26,6 +27,15 @@ export class MailFeatureFlags {
 
   outboundBimi(): boolean {
     return this.enabled(MAIL_FEATURE_ENV.outboundBimi);
+  }
+
+  /** Defaults OFF in all environments until explicitly enabled. */
+  bodyEncryptionEnabled(): boolean {
+    const configured = this.config
+      .get<string>(MAIL_FEATURE_ENV.bodyEncryption)
+      ?.trim()
+      .toLowerCase();
+    return configured === 'true' || configured === '1';
   }
 
   requireRuknyVerification(): void {

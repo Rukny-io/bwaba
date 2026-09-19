@@ -21,6 +21,9 @@ describe('MailMessagesService sender identity view', () => {
     {} as never,
     {} as never,
     flags as never,
+    {} as never,
+    {} as never,
+    {} as never,
   );
   const row = {
     id: 'message-1',
@@ -123,6 +126,13 @@ describe('MailMessagesService sender identity view', () => {
     const view = (service as any).toView(row, identity);
     expect(view.fromAvatarUrl).toBeNull();
     expect(view.verificationType).toBeNull();
+  });
+
+  it('omits message bodies from list view when requested', () => {
+    const view = (service as any).toView(row, identity, { omitBodies: true });
+    expect(view.bodyText).toBeNull();
+    expect(view.bodyHtml).toBeNull();
+    expect(view.preview).toBe('Body');
   });
 
   it('does not emit a Rukny badge while verification rollout is disabled', () => {

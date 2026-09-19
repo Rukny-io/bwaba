@@ -29,6 +29,13 @@ import {
   utf8StorageBytes,
 } from './mail-storage.util';
 import { MailFeatureFlags } from './mail-feature-flags';
+import { MailBodyCryptoService } from './crypto/mail-body-crypto.service';
+import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
+import {
+  toBuffer,
+  toPrismaBytes,
+  type MailMessageBodyRow,
+} from './crypto/mail-body-crypto.types';
 
 type SenderIdentity = {
   domain: string;
@@ -49,7 +56,37 @@ export class MailMessagesService {
     private readonly mailboxSessions: MailMailboxSessionService,
     private readonly flags: MailFeatureFlags,
     private readonly access: MailAppAccessService,
+    private readonly bodyCrypto: MailBodyCryptoService,
+    private readonly bodyEncryption: MailBodyEncryptionPolicy,
   ) {}
+
+  private asBodyRow(row: {
+    id: string;
+    mailboxId: string;
+    messageId: string | null;
+    bodyText: string | null;
+    bodyHtml: string | null;
+    bodyCryptoStatus: MailMessageBodyRow['bodyCryptoStatus'];
+    bodyCryptoVersion: number | null;
+    bodyKmsKeyId: string | null;
+    bodyEncryptedDek: Uint8Array | Buffer | null;
+    bodyTextCiphertext: Uint8Array | Buffer | null;
+    bodyHtmlCiphertext: Uint8Array | Buffer | null;
+  }): MailMessageBodyRow {
+    return {
+      id: row.id,
+      mailboxId: row.mailboxId,
+      messageId: row.messageId,
+      bodyText: row.bodyText,
+      bodyHtml: row.bodyHtml,
+      bodyCryptoStatus: row.bodyCryptoStatus,
+      bodyCryptoVersion: row.bodyCryptoVersion,
+      bodyKmsKeyId: row.bodyKmsKeyId,
+      bodyEncryptedDek: toBuffer(row.bodyEncryptedDek),
+      bodyTextCiphertext: toBuffer(row.bodyTextCiphertext),
+      bodyHtmlCiphertext: toBuffer(row.bodyHtmlCiphertext),
+    };
+  }
 
   private snippetFrom(text: string | undefined, html: string | undefined) {
     const raw = (text || html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -114,6 +151,11 @@ export class MailMessagesService {
       mailbox?: { avatarKey: string | null } | null;
     },
     senderIdentity?: SenderIdentity,
+    options?: {
+      bodyText?: string | null;
+      bodyHtml?: string | null;
+      omitBodies?: boolean;
+    },
   ) {
     const authenticationPassed =
       row.dmarcVerdict === MailAuthenticationVerdict.PASS;
@@ -180,8 +222,12 @@ export class MailMessagesService {
       cc: row.ccAddresses,
       bcc: row.bccAddresses,
       subject: row.subject,
-      bodyText: row.bodyText,
-      bodyHtml: row.bodyHtml,
+      bodyText: options?.omitBodies
+        ? null
+        : (options?.bodyText ?? row.bodyText),
+      bodyHtml: options?.omitBodies
+        ? null
+        : (options?.bodyHtml ?? row.bodyHtml),
       preview: row.snippet,
       unread: !row.isRead,
       starred: row.isStarred,
@@ -298,6 +344,7 @@ export class MailMessagesService {
         this.toView(
           row,
           row.senderDomain ? identities.get(row.senderDomain) : undefined,
+          { omitBodies: true },
         ),
       ),
       nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
@@ -493,9 +540,14 @@ export class MailMessagesService {
     }
 
     const identities = await this.loadSenderIdentities([row.senderDomain]);
+    const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(row));
     return this.toView(
       row,
       row.senderDomain ? identities.get(row.senderDomain) : undefined,
+      {
+        bodyText: bodies.bodyText,
+        bodyHtml: bodies.bodyHtml,
+      },
     );
   }
 
@@ -619,7 +671,11 @@ export class MailMessagesService {
       });
     }
 
-    return this.toView(updated);
+    const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(row));
+    return this.toView(updated, undefined, {
+      bodyText: bodies.bodyText,
+      bodyHtml: bodies.bodyHtml,
+    });
   }
 
   async remove(
@@ -645,10 +701,11 @@ export class MailMessagesService {
       mailboxId: row.mailboxId,
     });
 
+    const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(row));
     await decrementMailboxStorage(
       this.prisma,
       row.mailboxId,
-      utf8StorageBytes(row.bodyText, row.bodyHtml),
+      utf8StorageBytes(bodies.bodyText, bodies.bodyHtml),
     );
     await this.prisma.mailMessage.delete({ where: { id: row.id } });
 
@@ -734,6 +791,18 @@ export class MailMessagesService {
     const outboundHtml = bodyHtml?.trim() || undefined;
     const snippet = this.snippetFrom(plainText || undefined, outboundHtml);
 
+    const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
+      mailbox.mailAppId,
+    );
+    const bodyFields = await this.bodyCrypto.buildCreateFields({
+      encryptionEnabled,
+      mailboxId: mailbox.id,
+      messageId: messageIdHeader,
+      bodyText: plainText || null,
+      bodyHtml: outboundHtml ?? null,
+      dualWritePlaintext: true,
+    });
+
     const queued = await this.prisma.mailMessage.create({
       data: {
         mailboxId: mailbox.id,
@@ -752,8 +821,14 @@ export class MailMessagesService {
         bccAddresses: bcc,
         replyTo: fromAddress,
         subject: dto.subject.trim(),
-        bodyText: plainText || null,
-        bodyHtml: outboundHtml ?? null,
+        bodyText: bodyFields.bodyText,
+        bodyHtml: bodyFields.bodyHtml,
+        bodyCryptoStatus: bodyFields.bodyCryptoStatus,
+        bodyCryptoVersion: bodyFields.bodyCryptoVersion,
+        bodyKmsKeyId: bodyFields.bodyKmsKeyId,
+        bodyEncryptedDek: toPrismaBytes(bodyFields.bodyEncryptedDek),
+        bodyTextCiphertext: toPrismaBytes(bodyFields.bodyTextCiphertext),
+        bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
         snippet,
         isRead: true,
       },
@@ -799,10 +874,14 @@ export class MailMessagesService {
         direction: 'OUTBOUND',
       });
 
-      return this.toView({
-        ...sent,
-        mailbox: { avatarKey: mailbox.avatarKey },
-      });
+      return this.toView(
+        {
+          ...sent,
+          mailbox: { avatarKey: mailbox.avatarKey },
+        },
+        undefined,
+        { bodyText: plainText || null, bodyHtml: outboundHtml ?? null },
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Send failed.';

@@ -25,31 +25,36 @@ export function DocumentationArticle({
   const product = getDocumentationProduct(productId);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:gap-12 lg:py-12">
-      <DocsSidebar productId={productId} />
-      <article className="min-w-0 flex-1">
-        <header className="mb-10 max-w-3xl">
-          <p className="eyebrow-label">
-            {product?.title ?? 'Documentation'}
-          </p>
-          <h1 className="mt-3 text-[2rem] font-bold tracking-tight text-[var(--foreground)] sm:text-[2.5rem] sm:leading-[1.15]">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-4 text-base leading-7 text-[var(--muted-foreground)] sm:text-[17px] sm:leading-8">
-              {description}
+    <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-8 sm:px-6 sm:pt-10 lg:pb-16">
+      <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[16rem_minmax(0,1fr)_13rem] xl:gap-12">
+        <DocsSidebar productId={productId} />
+
+        <article className="min-w-0">
+          <header className="mb-8 max-w-2xl sm:mb-10">
+            <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+              {product?.title ?? 'Documentation'}
             </p>
-          ) : null}
-        </header>
-        <div className="max-w-3xl space-y-12 text-[15px] leading-7 text-[var(--foreground)] sm:text-base sm:leading-8">
-          {children}
-        </div>
-      </article>
-      {toc?.length ? (
-        <DocsOnThisPage items={toc} />
-      ) : (
-        <div className="hidden w-44 shrink-0 xl:block" />
-      )}
+            <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.25rem] sm:leading-[1.15]">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-3 text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
+                {description}
+              </p>
+            ) : null}
+          </header>
+
+          <div className="max-w-2xl space-y-10 text-[15px] leading-7 text-[var(--foreground)] sm:space-y-12 sm:text-base sm:leading-8">
+            {children}
+          </div>
+        </article>
+
+        {toc?.length ? (
+          <DocsOnThisPage items={toc} />
+        ) : (
+          <div className="hidden xl:block" />
+        )}
+      </div>
     </div>
   );
 }
@@ -64,8 +69,8 @@ export function DocSection({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-28">
-      <h2 className="text-[1.35rem] font-semibold tracking-tight text-[var(--foreground)]">
+    <section id={id} className="scroll-mt-24">
+      <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[1.35rem]">
         {title}
       </h2>
       <div className="mt-4 space-y-4 text-[var(--muted-foreground)]">{children}</div>

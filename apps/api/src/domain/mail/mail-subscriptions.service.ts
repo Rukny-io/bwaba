@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +13,8 @@ import {
   MailMailboxStatus,
   MailPlan,
   PaymentStatus,
+  SecurityAction,
+  SecurityStatus,
   SupportTicketCategory,
   SupportTicketStatus,
   SubscriptionStatus,
@@ -18,6 +22,7 @@ import {
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { RedisService } from '../../core/cache/redis.service';
 import { SupportTicketsService } from '../support-tickets/support-tickets.service';
+import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import {
   MAIL_PLAN_DEFINITIONS,
@@ -36,6 +41,12 @@ const OPEN_TICKET_STATUSES: SupportTicketStatus[] = [
   SupportTicketStatus.IN_PROGRESS,
   SupportTicketStatus.WAITING_ON_USER,
 ];
+
+/** Max plan-request attempts per user+app within the window. */
+const PLAN_REQUEST_LIMIT_PER_APP = 5;
+/** Max plan-request attempts per user across all apps within the window. */
+const PLAN_REQUEST_LIMIT_PER_USER = 10;
+const PLAN_REQUEST_WINDOW_SECONDS = 60 * 60;
 
 type MailAppRow = {
   id: string;
@@ -76,6 +87,7 @@ export class MailSubscriptionsService {
     private readonly redis: RedisService,
     private readonly supportTickets: SupportTicketsService,
     private readonly access: MailAppAccessService,
+    private readonly securityLogs: SecurityLogService,
   ) {}
 
   getPlansOverview() {
@@ -160,10 +172,19 @@ export class MailSubscriptionsService {
     plan: MailPlan,
     mailboxCount: number,
   ) {
-    const { app } = await this.requireBillingApp(userId, publicAppId);
+    const { app, access } = await this.requireBillingApp(userId, publicAppId);
+    await this.assertPlanRequestRateLimit(userId, app.appId);
+
     const seats = this.normalizeSeats(mailboxCount);
     const existing = await this.findPendingRequest(app.appId);
     if (existing) {
+      await this.auditPlanRequest(userId, app, {
+        outcome: 'already_pending',
+        plan,
+        mailboxCount: seats,
+        ticketNumber: existing.ticketNumber,
+        role: String(access.role),
+      });
       return {
         alreadyPending: true,
         ticket: existing,
@@ -204,6 +225,16 @@ export class MailSubscriptionsService {
         mailboxCount: seats,
         monthlyTotal,
       },
+    });
+
+    await this.auditPlanRequest(userId, app, {
+      outcome: 'created',
+      plan,
+      mailboxCount: seats,
+      ticketNumber: ticket.number,
+      ticketId: ticket.id,
+      monthlyTotal,
+      role: String(access.role),
     });
 
     return {
@@ -286,6 +317,24 @@ export class MailSubscriptionsService {
       adminId,
       ticketId: ticketId ?? null,
     });
+
+    await this.securityLogs
+      .createLog({
+        userId: adminId,
+        action: SecurityAction.SECURITY_SETTINGS_CHANGED,
+        status: SecurityStatus.SUCCESS,
+        description: `Mail plan activated for ${app.name}`,
+        metadata: {
+          event: 'MAIL_SUBSCRIPTION_ACTIVATED',
+          mailAppId: app.appId,
+          mailAppName: app.name,
+          plan,
+          mailboxCount: seats,
+          billingCycle,
+          ticketId: ticketId ?? null,
+        },
+      })
+      .catch(() => {});
 
     if (ticketId) {
       const ticket = await this.prisma.supportTicket.findUnique({
@@ -493,39 +542,103 @@ export class MailSubscriptionsService {
   }
 
   private async findPendingRequest(publicAppId: string) {
-    const tickets = await this.prisma.supportTicket.findMany({
+    const ticket = await this.prisma.supportTicket.findFirst({
       where: {
         category: SupportTicketCategory.BILLING,
         status: { in: OPEN_TICKET_STATUSES },
+        AND: [
+          { context: { path: ['kind'], equals: 'mail_subscription' } },
+          { context: { path: ['mailAppId'], equals: publicAppId } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
     });
 
-    for (const ticket of tickets) {
-      const context = this.asRecord(ticket.context);
-      if (
-        context.kind === 'mail_subscription' &&
-        context.mailAppId === publicAppId
-      ) {
-        const plan =
-          typeof context.mailPlan === 'string' ? context.mailPlan : null;
-        const mailboxCount =
-          typeof context.mailboxCount === 'number' ? context.mailboxCount : 1;
-        return {
-          ticketId: ticket.id,
-          ticketNumber: ticket.number,
-          plan,
-          mailboxCount,
-          monthlyTotal:
-            typeof context.monthlyTotal === 'number'
-              ? context.monthlyTotal
-              : null,
-          createdAt: ticket.createdAt.toISOString(),
-        };
-      }
+    if (!ticket) return null;
+
+    const context = this.asRecord(ticket.context);
+    const plan = typeof context.mailPlan === 'string' ? context.mailPlan : null;
+    const mailboxCount =
+      typeof context.mailboxCount === 'number' ? context.mailboxCount : 1;
+    return {
+      ticketId: ticket.id,
+      ticketNumber: ticket.number,
+      plan,
+      mailboxCount,
+      monthlyTotal:
+        typeof context.monthlyTotal === 'number' ? context.monthlyTotal : null,
+      createdAt: ticket.createdAt.toISOString(),
+    };
+  }
+
+  private async assertPlanRequestRateLimit(userId: string, publicAppId: string) {
+    const appKey = `mail:sub-request:app:${userId}:${publicAppId}`;
+    const userKey = `mail:sub-request:user:${userId}`;
+
+    const [appCount, userCount] = await Promise.all([
+      this.redis.incr(appKey),
+      this.redis.incr(userKey),
+    ]);
+
+    if (appCount === 1) {
+      await this.redis.expire(appKey, PLAN_REQUEST_WINDOW_SECONDS).catch(() => {});
     }
-    return null;
+    if (userCount === 1) {
+      await this.redis.expire(userKey, PLAN_REQUEST_WINDOW_SECONDS).catch(() => {});
+    }
+
+    if (
+      appCount > PLAN_REQUEST_LIMIT_PER_APP ||
+      userCount > PLAN_REQUEST_LIMIT_PER_USER
+    ) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          code: 'MAIL_PLAN_REQUEST_RATE_LIMITED',
+          message:
+            'Too many plan requests. Please wait before submitting another request.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  private async auditPlanRequest(
+    userId: string,
+    app: MailAppRow,
+    meta: {
+      outcome: 'created' | 'already_pending';
+      plan: MailPlan;
+      mailboxCount: number;
+      ticketNumber: string;
+      ticketId?: string;
+      monthlyTotal?: number;
+      role: string;
+    },
+  ) {
+    await this.securityLogs
+      .createLog({
+        userId,
+        action: SecurityAction.SECURITY_SETTINGS_CHANGED,
+        status: SecurityStatus.SUCCESS,
+        description:
+          meta.outcome === 'created'
+            ? `Mail plan request created for ${app.name}`
+            : `Mail plan request already pending for ${app.name}`,
+        metadata: {
+          event: 'MAIL_SUBSCRIPTION_REQUEST',
+          outcome: meta.outcome,
+          mailAppId: app.appId,
+          mailAppName: app.name,
+          plan: meta.plan,
+          mailboxCount: meta.mailboxCount,
+          ticketNumber: meta.ticketNumber,
+          ticketId: meta.ticketId ?? null,
+          monthlyTotal: meta.monthlyTotal ?? null,
+          role: meta.role,
+        },
+      })
+      .catch(() => {});
   }
 
   private async requireBillingApp(userId: string, publicAppId: string) {

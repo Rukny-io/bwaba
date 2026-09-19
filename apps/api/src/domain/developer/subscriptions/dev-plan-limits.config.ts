@@ -65,10 +65,10 @@ export const DEVELOPER_PLAN_LIMITS: Record<DeveloperPlanTier, DeveloperPlanLimit
     },
   };
 
-/** أسعار Pro بالدينار العراقي */
+/** أسعار Pro بالدينار العراقي — موحّدة مع طبقة Mail Premium */
 export const DEVELOPER_PRO_PRICING = {
-  monthly: 43_500,
-  yearly: 435_000,
+  monthly: 10_000,
+  yearly: 100_000,
 } as const;
 
 export function normalizeDeveloperPlan(plan: string | null | undefined): DeveloperPlanTier {

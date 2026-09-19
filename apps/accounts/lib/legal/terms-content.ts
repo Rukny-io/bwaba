@@ -1,13 +1,27 @@
+/**
+ * شروط الاستخدام — ركني (Rukny.io)
+ *
+ * ملاحظة للمطور (لا تُعرض للمستخدم):
+ * 1) القانون الحاكم مضبوط على «المملكة العربية السعودية» — راجع محامياً محلياً إن كان التأسيس/المقر في دولة أخرى
+ *    (خصوصاً مع تسعير IQD). غيّر الدولة وقانون النزاعات قبل الإنتاج إن لزم.
+ * 2) سقف المسؤولية = المبالغ المدفوعة خلال 12 شهراً — شائع في SaaS؛ قد يقيّده القانون المحلي لعقود المستهلك.
+ * 3) الاسترداد: الصياغة حذرة (لا استرداد تلقائي بعد التفعيل إلا ما يفرضه القانون أو نوافق عليه كتابةً).
+ * 4) ركني ميل: المحتوى يُعالَج عبر بنية سحابية (S3 / Redis / قواعد تشغيل) — لا تدّعِ «لا نخزّن البريد» إن وُجدت
+ *    نسخ تشغيلية لازمة للخدمة؛ الصياغة القانونية تفرق الملكية عن التخزين التشغيلي.
+ * 5) مدة الاحتفاظ بعد الحذف: 30 يوماً — طابقها مع مسار الحذف الفعلي في المنتج/البنية.
+ */
 import {
   Ban,
   Blocks,
   ClipboardList,
   Code2,
+  CreditCard,
   FileText,
   Globe,
   Key,
   Layers,
   Mail,
+  Mails,
   RefreshCw,
   Scale,
   ShieldCheck,
@@ -17,25 +31,17 @@ import type { LegalDocumentContent } from "./types"
 export const termsContentAr: LegalDocumentContent = {
   title: "شروط الاستخدام",
   description:
-    "توضّح هذه الوثيقة القواعد المنظّمة لاستخدامك لمنصة ركني (Rukny.io) بأكملها: الحسابات، تطبيق النماذج (Forms)، بوابة المطورين (Developer)، وأي منتجات أو خدمات مرتبطة بحسابك الموحّد.",
-  lastUpdated: "يوليو 2026",
+    "تنظّم هذه الشروط علاقتك التعاقدية مع ركني (Rukny.io) عند استخدام الحسابات الموحّدة، والنماذج، وركني ميل، وبوابة المطورين، وأي خدمة مرتبطة بحسابك. باستخدامك للمنصة فإنك توافق على هذه الشروط وعلى سياسة الخصوصية.",
+  lastUpdated: "سبتمبر 2026",
   sections: [
     {
-      id: "intro",
-      title: "مقدمة",
-      icon: FileText,
-      paragraphs: [
-        "تنظّم هذه الشروط علاقتك مع منصة ركني (Rukny.io) عند إنشاء حساب أو تسجيل الدخول أو استخدام أي من تطبيقاتها ومكوناتها، بما في ذلك النماذج وبوابة المطورين.",
-        "باستخدامك للمنصة، فإنك تقرّ بأنك قرأت هذه الشروط وسياسة الخصوصية وفهمتهما. إذا لم توافق عليهما، يُرجى التوقف عن استخدام الخدمة.",
-      ],
-    },
-    {
       id: "acceptance",
-      title: "قبول الشروط ونطاق التطبيق",
+      title: "قبول الشروط",
       icon: Scale,
       paragraphs: [
-        "بإنشائك حسابًا أو تسجيل دخولك أو استمرارك في استخدام ركني، فأنت توافق على هذه الشروط وعلى سياسة الخصوصية وأي سياسات إضافية مرتبطة بالخدمات التي تستخدمها.",
-        "تسري هذه الشروط على جميع طرق الوصول إلى المنصة، بما في ذلك تسجيل الدخول بالبريد الإلكتروني أو الروابط السحرية أو مزودي OAuth (مثل Google وGitHub وLinkedIn وFacebook)، وعلى جميع التطبيقات التي تصل إليها عبر حسابك الموحّد.",
+        "تشكّل هذه الوثيقة اتفاقية ملزمة بينك وبين ركني. يُعد إنشاء حساب، أو تسجيل الدخول، أو استخدام أي منتج من منتجات ركني، أو الاستمرار في الاستخدام بعد إشعار بتحديث الشروط، قبولاً صريحاً لهذه الشروط ولسياسة الخصوصية.",
+        "إذا كنت تستخدم الخدمة نيابةً عن منشأة، فإنك تقرّ بأن لديك صلاحية إلزام تلك المنشأة بهذه الشروط. إن لم توافق، يجب عليك التوقف فوراً عن استخدام الخدمة.",
+        "قد تُضاف شروط خاصة بمنتج معيّن (مثل حدود الخطة في ركني ميل أو بوابة المطورين). عند التعارض، تسري الشروط الخاصة بالمنتج على ذلك المنتج فقط، مع بقاء بقية هذه الشروط نافذة.",
       ],
     },
     {
@@ -43,43 +49,69 @@ export const termsContentAr: LegalDocumentContent = {
       title: "نطاق المنصة والمنتجات",
       icon: Layers,
       paragraphs: [
-        "تشمل منصة ركني مجموعة منتجات مترابطة تعمل تحت هوية وحساب موحّد. قد تخضع بعض الميزات لشروط أو حدود استخدام إضافية داخل كل تطبيق.",
+        "ركني منصة حسابات موحّدة تتيح الوصول إلى منتجات مترابطة. تختلف الميزات والحدود والأسعار حسب المنتج والخطة.",
       ],
       subsections: [
         {
-          title: "الحسابات (Accounts)",
-          text: "خدمة الهوية الموحّدة وإدارة الحساب والأمان والفوترة المشتركة عند توفرها.",
+          title: "الحسابات",
+          text: "الهوية الموحّدة، الملف، الجلسات، الأمان، والفوترة المرتبطة بالحساب عند توفرها.",
         },
         {
           title: "النماذج (Forms)",
-          text: "أداة إنشاء النماذج وجمع الإجابات والتحليلات وإدارة الفرق والمشاركة العامة للنماذج.",
+          text: "إنشاء النماذج، جمع الإجابات، التحليلات، والفرق والمشاركة.",
         },
         {
-          title: "المطورون (Developer)",
-          text: "بوابة إنشاء التطبيقات وإدارة مفاتيح API وOAuth والتكاملات والمنتجات المطوّرة على منصة ركني.",
+          title: "ركني ميل (Rukny Mail)",
+          text: "مساحات عمل بريدية على نطاقك الخاص: صناديق بريد، إعدادات DNS، توجيه، فرق عمل، ويب ميل، وواجهات إرسال مرتبطة بالمنتج عند تفعيلها.",
+        },
+        {
+          title: "بوابة المطورين",
+          text: "التطبيقات، مفاتيح API، التكاملات، وإرسال البريد المعاملات عبر واجهة المطورين عند الاشتراك في ذلك المنتج.",
         },
       ],
     },
     {
       id: "account",
-      title: "الحساب وتسجيل الدخول",
+      title: "الحسابات والأمان",
       icon: Key,
+      paragraphs: [
+        "أنت مسؤول عن دقة بيانات التسجيل وتحديثها، وعن سرية بيانات الدخول الخاصة بك، وعن كل نشاط يتم عبر حسابك ما لم يُثبت أن الوصول غير المصرّح به نتج عن خلل في أنظمتنا.",
+      ],
       subsections: [
         {
-          title: "هوية موحّدة",
-          text: "يوفّر حساب ركني وصولًا موحّدًا وآمنًا إلى منتجات المنصة — بما فيها النماذج وبوابة المطورين — باستخدام بيانات دخول واحدة عبر تطبيق الحسابات.",
+          title: "حماية بيانات الدخول",
+          text: "يجب استخدام كلمة مرور قوية وعدم مشاركتها. عند توفر المصادقة الثنائية (2FA) أو عوامل تحقق إضافية للحساب أو لصناديق البريد، يُنصح بتفعيلها؛ وقد نطلبها لصلاحيات حساسة أو خطط معيّنة.",
         },
         {
-          title: "دقة البيانات",
-          text: "تلتزم بتقديم معلومات صحيحة ومحدّثة عند التسجيل أو إكمال الملف الشخصي، وتحديثها عند تغيّرها.",
+          title: "الإبلاغ عن الاختراق",
+          text: "تلتزم بإبلاغنا دون تأخير معقول عند اشتباهك في وصول غير مصرّح به إلى حسابك أو صناديقك أو مفاتيحك.",
         },
         {
-          title: "أمان الحساب",
-          text: "أنت مسؤول عن حماية بيانات الدخول الخاصة بك، بما في ذلك كلمة المرور وعوامل التحقق الإضافية. يجب إبلاغنا فورًا عند الاشتباه في وصول غير مصرّح به.",
+          title: "الفريق والصلاحيات",
+          text: "إذا دعوت أعضاءً إلى مساحة عمل (مثل ركني ميل)، فأنت مسؤول عن منح الحد الأدنى المناسب من الصلاحيات وعن سلوك من تدعوه ضمن تلك المساحة.",
+        },
+      ],
+    },
+    {
+      id: "mail",
+      title: "ركني ميل — نطاق الخدمة",
+      icon: Mails,
+      paragraphs: [
+        "ركني ميل خدمة بريد على نطاق مخصص (Custom Domain Email). أنت تظل مسؤولاً عن ملكية النطاق وصلاحية نشر سجلات DNS لدى مسجّل النطاق، وعن قانونية عناوين الإرسال والاستقبال ومحتوى المراسلات.",
+        "تعمل الخدمة عبر بنية سحابية ومزوّدي توصيل (بما في ذلك خدمات أمازون السحابية لتوصيل البريد وتخزين الكائنات عند الاقتضاء). قد تتأثر إمكانية الإرسال/الاستقبال بإعدادات DNS، وسمعة النطاق، وسياسات مزوّدي الطرف الثالث، وعوامل خارجة عن سيطرتنا الكاملة.",
+      ],
+      subsections: [
+        {
+          title: "محتوى البريد والملكية",
+          text: "تظل ملكية محتوى رسائلك ومرفقاتك لك (أو لجهة عملك حسب اتفاقك الداخلي). بمنحك استخدام الخدمة، تمنح ركني ترخيصاً محدوداً غير حصري وقابلاً للإلغاء لتشغيل الخدمة فقط: بما في ذلك الاستلام، والنقل، والمعالجة، والتخزين التشغيلي، والعرض في الويب ميل، والنسخ الاحتياطي التشغيلي بالقدر اللازم لتقديم الخدمة وحمايتها. لا يشمل هذا الترخيص بيع المحتوى أو استخدامه لأغراض تسويق.",
         },
         {
-          title: "مسؤولية النشاط",
-          text: "أنت مسؤول عن أي نشاط يتم عبر حسابك في أي من تطبيقات ركني، ما لم تثبت أن الوصول تم دون تفويض منك وبسبب خلل في أنظمتنا.",
+          title: "التخزين التشغيلي",
+          text: "يُعالَج محتوى البريد ويُحفظ ضمن بنية تشغيل الخدمة السحابية (بما في ذلك تخزين الكائنات مثل Amazon S3 للنسخ الواردة الخام عند الاقتضاء، وذاكرة Redis للجلسات والتخزين المؤقت التشغيلي، ومكوّنات قواعد البيانات اللازمة لتشغيل الصندوق والويب ميل). هذا تخزين تشغيلي لتقديم الخدمة، وليس تنازلاً عن ملكيتك للمحتوى.",
+        },
+        {
+          title: "حدود تقنية",
+          text: "تخضع الصناديق والتخزين والمقاعد والميزات لحدود الخطة والمساحات. تجاوز الحدود أو إساءة الاستخدام قد يؤدي إلى تقييد الإرسال أو الاستقبال أو الوصول إلى حين التسوية.",
         },
       ],
     },
@@ -88,74 +120,78 @@ export const termsContentAr: LegalDocumentContent = {
       title: "تطبيق النماذج (Forms)",
       icon: ClipboardList,
       paragraphs: [
-        "عند استخدامك لتطبيق النماذج كمنشئ أو مدير، فأنت مسؤول عن المحتوى الذي تنشره والبيانات التي تجمعها عبر نماذجك.",
+        "عند استخدام النماذج كمنشئ أو مدير، فأنت المسؤول عن قانونية المحتوى وجمع البيانات وموافقات المشاركين عند الاقتضاء.",
       ],
       subsections: [
         {
-          title: "مسؤولية منشئ النموذج",
-          text: "أنت مسؤول عن قانونية النموذج وحق جمع البيانات من المشاركين، وعن الحصول على الموافقات اللازمة عند جمع بيانات شخصية أو حساسة.",
+          title: "مسؤولية المنشئ",
+          text: "تتحمّل مسؤولية ما تنشره في النموذج وما تجمعه من المشاركين، وإبلاغهم عند اللزوم بكيفية استخدام بياناتهم.",
         },
         {
-          title: "المشاركون والإجابات",
-          text: "قد يملأ المشاركون النماذج دون حساب ركني. يجب أن تُعلِم المشاركين بكيفية استخدام بياناتهم عبر سياسة خصوصية خاصة بك عند الحاجة، مع الالتزام بسياسة الخصوصية العامة لركني.",
-        },
-        {
-          title: "المحتوى والمشاركة",
-          text: "يُحظر نشر نماذج تحتوي على محتوى احتيالي أو ضار أو ينتهك حقوق الآخرين. نحتفظ بالحق في تعطيل النماذج أو الحسابات التي تُسيء استخدام الخدمة.",
-        },
-        {
-          title: "الفرق والصلاحيات",
-          text: "عند دعوة أعضاء فريق، فأنت مسؤول عن منحهم صلاحيات مناسبة فقط. نشجّع مراجعة صلاحيات الفريق بانتظام.",
+          title: "المشاركون",
+          text: "قد يملأ المشاركون النماذج دون حساب ركني. تبقى مسؤولية بيانات المشاركين على منشئ النموذج، مع التزامك بسياسة الخصوصية العامة لركني فيما يخص تشغيل المنصة.",
         },
       ],
     },
     {
       id: "developer",
-      title: "بوابة المطورين (Developer)",
+      title: "بوابة المطورين وواجهات البرمجة",
       icon: Code2,
       paragraphs: [
-        "بوابة المطورين مخصّصة لبناء التطبيقات والتكاملات على منصة ركني. يخضع استخدامك لها لضوابط أمنية وحدود استخدام معقولة.",
-      ],
-      subsections: [
-        {
-          title: "التطبيقات ومفاتيح API",
-          text: "أنت مسؤول عن سرية مفاتيح API والرموز السرية وأي بيانات اعتماد مرتبطة بتطبيقاتك. لا تشاركها علنًا ولا تضمّنها في مستودعات عامة.",
-        },
-        {
-          title: "OAuth والتكاملات",
-          text: "عند بناء تطبيق يستخدم تسجيل الدخول عبر ركني، يجب الالتزام بسياسات المنصة وطلب الأذونات الضرورية فقط وشرح استخدام البيانات للمستخدم النهائي.",
-        },
-        {
-          title: "الاستخدام العادل",
-          text: "يُحظر إساءة استخدام واجهات المطورين أو تجاوز حدود الخطة أو محاولة التحايل على قيود الاستخدام أو الأمان.",
-        },
-        {
-          title: "مسؤولية التطبيقات المنشورة",
-          text: "أنت مسؤول عن سلوك تطبيقاتك وتكاملاتك أمام المستخدمين النهائيين، بما في ذلك الامتثال للقوانين المعمول بها وحماية بياناتهم.",
-        },
+        "أنت مسؤول عن سرية مفاتيح API والرموز، وعن طلب الحد الأدنى من الأذونات، وعن سلوك تطبيقاتك تجاه المستخدمين النهائيين. يُحظر تضمين الأسرار في مستودعات عامة أو تجاوز حدود الخطة أو التحايل على قيود الأمان.",
       ],
     },
     {
-      id: "usage",
+      id: "aup",
       title: "الاستخدام المقبول",
       icon: Blocks,
       paragraphs: [
-        "يجب استخدام منصة ركني ومكوناتها للأغراض المشروعة فقط وبما يتوافق مع القوانين المعمول بها ومع سياسات كل تطبيق تستخدمه داخل المنصة.",
+        "يُسمح باستخدام ركني للأغراض المشروعة فقط. دون حصر، يُحظر:",
       ],
       bullets: [
-        "يُحظر إساءة استخدام واجهات البرمجة (APIs) أو تجاوز حدود الاستخدام أو محاولة اختراق الأنظمة.",
-        "يُحظر استخدام الخدمة لإرسال رسائل مزعجة أو محتوى ضار أو انتهاك خصوصية أو حقوق الآخرين.",
-        "يُحظر انتحال هوية شخص آخر أو إنشاء حسابات وهمية بقصد الإضرار أو التحايل.",
-        "يُحظر إعادة بيع أو إعادة توزيع الخدمة أو الوصول إليها خارج الإطار المصرّح به.",
+        "إرسال البريد المزعج (Spam)، أو الحملات غير المرغوب فيها، أو شراء قوائم عناوين دون أساس قانوني واضح.",
+        "التصيّد (Phishing)، أو انتحال الهوية، أو التحايل، أو توزيع برمجيات خبيثة أو روابط ضارة.",
+        "انتهاك خصوصية الغير أو حقوق الملكية الفكرية أو أي نشاط مخالف للقانون المعمول به.",
+        "محاولة اختراق الأنظمة، أو تجاوز حدود الاستخدام، أو تعطيل الخدمة، أو إعادة بيع الوصول دون إذن.",
+        "استخدام ركني ميل أو واجهات الإرسال بطريقة تضر بسمعة البنية أو شبكات التوصيل أو مستخدمي المنصة الآخرين.",
+      ],
+      subsections: [
+        {
+          title: "التعليق الفوري",
+          text: "نحتفظ بالحق في تعليق الحساب أو المساحة أو مفاتيح الإرسال فوراً ودون إشعار مسبق عند الاشتباه المعقول في إخلال جوهري بهذه القواعد، أو نشاط يهدد أمن المنصة أو الغير، مع إمكانية الإنهاء وفق قسم إنهاء الخدمة.",
+        },
       ],
     },
     {
       id: "availability",
-      title: "توفر الخدمة والتحديثات",
+      title: "نطاق الخدمة وحدود الضمان",
       icon: Globe,
       paragraphs: [
-        "نسعى لتوفير خدمة مستقرة وآمنة، لكن لا نضمن تشغيلًا دون انقطاع في جميع الأوقات.",
-        "قد نقوم بإجراء صيانة دورية أو تحديثات أو إضافة ميزات أو تعليق مؤقت لبعض المكونات لتحسين الأمان والأداء. سنبذل جهدًا معقولًا لإشعارك بالتغييرات الجوهرية عند الإمكان.",
+        "تُقدَّم الخدمة «كما هي» و«كما هي متاحة» (As-Is / As-Available) في الحدود التي يسمح بها القانون. نسعى لمعقولية التوافر والأمان، لكننا لا نضمن خلو الخدمة من الأخطاء أو الانقطاع بنسبة 100%، ولا نضمن أن الخدمة ستلبي كل غرض خاص بك دون انقطاع.",
+        "قد نجري صيانة، أو تحديثات، أو تغييرات في الميزات، أو نقيّد وظائف معيّنة لأسباب أمنية أو تشغيلية أو قانونية. نبذل جهداً معقولاً للإشعار بالتغييرات الجوهرية عند الإمكان.",
+        "لا نتحمّل مسؤولية تعطل ناتج عن إعدادات DNS لدى طرف ثالث، أو حظر مزوّدي البريد، أو انقطاع مزوّدي السحابة/التوصيل، أو أحداث قوة قاهرة.",
+      ],
+    },
+    {
+      id: "billing",
+      title: "الفوترة والتجديد والاسترداد",
+      icon: CreditCard,
+      paragraphs: [
+        "تُعرض الأسعار والعملة وحدود الخطة داخل المنتج (وقد تكون بالدينار العراقي IQD أو أي عملة نعلنها). باشتراكك في خطة مدفوعة فإنك توافق على الرسوم المعروضة وقت الطلب أو التجديد.",
+      ],
+      subsections: [
+        {
+          title: "التجديد",
+          text: "ما لم يُذكر خلاف ذلك في واجهة الفوترة، قد تُجدَّد الاشتراكات تلقائياً لنفس المدة عند تفعيل التجديد التلقائي. يمكنك إدارة الإلغاء وفق الخيارات المتاحة قبل نهاية الدورة الحالية.",
+        },
+        {
+          title: "الدفع والتأخر",
+          text: "عدم سداد الرسوم المستحقة قد يؤدي إلى تقييد الميزات المدفوعة أو تعليق المساحة ذات الصلة إلى حين التسوية، مع بقاء التزاماتك عن الفترات السابقة.",
+        },
+        {
+          title: "سياسة الاسترداد",
+          text: "ما لم يفرض القانون خلافاً ذلك أو نوافق كتابةً، لا تُسترد الرسوم المدفوعة عن فترات اشتراك فُعّلت أو استُهلكت. إن وُجد عرض استرداد خاص، يسري وفق شروط ذلك العرض فقط.",
+        },
       ],
     },
     {
@@ -163,27 +199,37 @@ export const termsContentAr: LegalDocumentContent = {
       title: "الملكية الفكرية",
       icon: ShieldCheck,
       paragraphs: [
-        "جميع حقوق المنصة، بما في ذلك البرمجيات والتصاميم والشعارات والمحتوى المملوك لركني، محفوظة للمنصة أو لمرخّصيها.",
-        "لا يمنحك استخدام الخدمة أي حق ملكية في مواد المنصة. يُسمح لك باستخدامها فقط ضمن نطاق هذه الشروط.",
-        "أنت تحتفظ بحقوق المحتوى الذي تنشئه (مثل نماذجك وإجاباتك وتطبيقاتك)، مع منحنا الترخيص التشغيلي اللازم لاستضافة هذا المحتوى وتقديم الخدمة.",
-      ],
-    },
-    {
-      id: "suspension",
-      title: "تعليق وإنهاء الوصول",
-      icon: Ban,
-      paragraphs: [
-        "نحتفظ بالحق في تعليق أو إنهاء حسابك أو تقييد وصولك إلى الخدمة عند الاشتباه في انتهاك هذه الشروط أو إساءة الاستخدام أو لأسباب أمنية أو قانونية.",
-        "يمكنك طلب إغلاق حسابك وفق الإجراءات المتاحة في إعدادات الحساب، مع مراعاة الالتزامات القانونية والتشغيلية المتعلقة بالاحتفاظ بالبيانات.",
+        "تبقى جميع حقوق منصة ركني (البرمجيات، الواجهات، العلامات، والوثائق) ملكاً لركني أو لمرخّصيها. لا يمنحك الاستخدام ملكية فيها، بل ترخيص استخدام محدود وفق هذه الشروط.",
+        "تحتفظ بملكية محتواك (بما في ذلك محتوى البريد والنماذج والتطبيقات التي تنشئها)، مع الترخيص التشغيلي المحدود الممنوح لنا لتشغيل الخدمة كما هو مبيّن في قسم ركني ميل وقسم النماذج.",
       ],
     },
     {
       id: "liability",
-      title: "إخلاء المسؤولية وحدودها",
+      title: "تحديد المسؤولية",
       icon: Scale,
       paragraphs: [
-        "تُقدَّم الخدمة «كما هي» ضمن الحدود التي يسمح بها القانون. لا نضمن خلو الخدمة من الأخطاء أو أنها ستلبي جميع احتياجاتك دون انقطاع.",
-        "في أقصى حد يسمح به القانون المعمول به، لا تتحمل ركني مسؤولية عن الأضرار غير المباشرة أو التبعية الناتجة عن استخدامك للخدمة أو عدم القدرة على استخدامها.",
+        "إلى أقصى حد يسمح به القانون المعمول به: لا تتحمل ركني المسؤولية عن الأضرار غير المباشرة أو التبعية أو الفوات في الأرباح أو فقدان البيانات أو انقطاع الأعمال الناشئة عن استخدام الخدمة أو تعذر استخدامها، حتى لو أُخطرنا بإمكانية وقوعها.",
+        "في جميع الأحوال، لا تتجاوز المسؤولية الإجمالية لركني تجاهك عن أي مطالبات ناشئة عن هذه الشروط أو الخدمة مجموع المبالغ التي دفعتها فعلياً لركني عن الخدمة المعنية خلال الاثني عشر (12) شهراً السابقة مباشرةً لنشوء المطالبة. إن لم تكن هناك مبالغ مدفوعة، تكون المسؤولية محدودة بأقصى قدر يسمح به القانون للحد الأدنى غير القابل للإعفاء.",
+        "لا يُقصد بهذا القسم استبعاد المسؤولية عن الغش أو الإهمال الجسيم أو أي مسؤولية لا يجوز استبعادها قانوناً.",
+      ],
+    },
+    {
+      id: "termination",
+      title: "إنهاء الخدمة ومصير البيانات",
+      icon: Ban,
+      paragraphs: [
+        "يمكنك التوقف عن استخدام الخدمة وطلب إغلاق الحساب أو أرشفة/حذف مساحة عمل وفق الأدوات المتاحة في المنتج.",
+        "يجوز لنا إنهاء أو تعليق الوصول مع إشعار مسبق معقول عند التوقف عن تقديم منتج، أو عند الإخلال بالشروط، أو لأسباب قانونية/أمنية. في حالات الإخلال الجسيم أو الضرر الوشيك، يجوز التعليق الفوري كما في قسم الاستخدام المقبول.",
+        "بعد إغلاق الحساب أو حذف المساحة، نسعى لحذف أو تعطيل الوصول إلى بيانات المحتوى المرتبطة ضمن مدة احتفاظ تشغيلية لا تتجاوز عادةً ثلاثين (30) يوماً، ما لم يلزم الاحتفاظ لفترة أطول للامتثال القانوني أو حل النزاعات أو الأمن، أو ما بقى لدى مزوّدي البنية كنسخ احتياطية دورية تُمحى وفق دوراتهم. تفاصيل المعالجة في سياسة الخصوصية.",
+      ],
+    },
+    {
+      id: "governing-law",
+      title: "القانون الحاكم وحل النزاعات",
+      icon: Globe,
+      paragraphs: [
+        "تخضع هذه الشروط وتُفسَّر وفقاً لأنظمة المملكة العربية السعودية، دون إعمال لقواعد تنازع القوانين التي تؤدي إلى تطبيق قانون دولة أخرى، وذلك في الحدود التي يسمح بها القانون.",
+        "يُسعى أولاً إلى حل أي نزاع ودياً عبر التواصل على support@rukny.io. إن تعذّر الحل الودي، تكون الجهة القضائية المختصة في المملكة العربية السعودية صاحبة الاختصاص، ما لم يفرض قانون حماية المستهلك أو نظام آخر اختصاصاً إلزامياً مختلفاً.",
       ],
     },
     {
@@ -191,16 +237,16 @@ export const termsContentAr: LegalDocumentContent = {
       title: "تعديل الشروط",
       icon: RefreshCw,
       paragraphs: [
-        "قد نحدّث هذه الشروط من وقت لآخر لتعكس تطور المنصة أو المتطلبات القانونية. عند إجراء تغييرات جوهرية، سنبذل جهدًا معقولًا لإشعارك عبر المنصة أو البريد الإلكتروني.",
-        "يُعد استمرارك في استخدام الخدمة بعد نفاذ التعديلات موافقة على الشروط المحدّثة.",
+        "قد نحدّث هذه الشروط لتعكس تطور المنتج أو المتطلبات النظامية. عند التغييرات الجوهرية نبذل جهداً معقولاً للإشعار عبر المنصة أو البريد المرتبط بالحساب.",
+        "استمرارك في الاستخدام بعد سريان التعديل يُعد قبولاً للنسخة المحدّثة. إن لم توافق، يجب التوقف عن الاستخدام وإغلاق الحساب وفق الإجراءات المتاحة.",
       ],
     },
     {
       id: "contact",
-      title: "التواصل والدعم",
+      title: "التواصل",
       icon: Mail,
       paragraphs: [
-        "لأي استفسار حول هذه الشروط أو حسابك، يمكنك التواصل مع فريق الدعم عبر قنوات المساعدة المتاحة داخل حسابك في ركني أو عبر البريد الرسمي للدعم.",
+        "للاستفسارات القانونية أو المتعلقة بهذه الشروط: support@rukny.io، أو عبر قنوات الدعم داخل حسابك.",
       ],
       tocIgnore: true,
     },
@@ -208,192 +254,224 @@ export const termsContentAr: LegalDocumentContent = {
 }
 
 export const termsContentEn: LegalDocumentContent = {
-  title: "Terms of Use",
+  title: "Terms of Service",
   description:
-    "This document explains the rules governing your use of the full Rukny platform (Rukny.io): Accounts, Forms, the Developer portal, and any products or services linked to your unified account.",
-  lastUpdated: "July 2026",
+    "These terms govern your contract with Rukny (Rukny.io) when you use unified accounts, Forms, Rukny Mail, the Developer portal, and related services. By using the platform you agree to these Terms and the Privacy Policy.",
+  lastUpdated: "September 2026",
   sections: [
     {
-      id: "intro",
-      title: "Introduction",
-      icon: FileText,
-      paragraphs: [
-        "These terms govern your relationship with the Rukny platform (Rukny.io) when you create an account, sign in, or use any of its applications and components, including Forms and the Developer portal.",
-        "By using the platform, you confirm that you have read and understood these terms and the Privacy Policy. If you do not agree, please discontinue use of the service.",
-      ],
-    },
-    {
       id: "acceptance",
-      title: "Acceptance and Scope",
+      title: "Acceptance of terms",
       icon: Scale,
       paragraphs: [
-        "By creating an account, signing in, or continuing to use Rukny, you agree to these terms, the Privacy Policy, and any additional policies tied to the services you use.",
-        "These terms apply to all access methods, including email login, magic links, and OAuth providers (such as Google, GitHub, LinkedIn, and Facebook), and to all applications you access through your unified account.",
+        "These Terms are a binding agreement between you and Rukny. Creating an account, signing in, using any Rukny product, or continuing after notice of updated Terms constitutes acceptance of these Terms and the Privacy Policy.",
+        "If you use the service for an organization, you represent that you can bind that organization. If you do not agree, stop using the service immediately.",
+        "Product-specific terms (for example plan limits in Rukny Mail or Developer) may apply. On conflict, product-specific terms control for that product only.",
       ],
     },
     {
       id: "platform",
-      title: "Platform Scope and Products",
+      title: "Platform and products",
       icon: Layers,
       paragraphs: [
-        "The Rukny platform includes interconnected products under a unified identity and account. Some features may have additional terms or usage limits within each application.",
+        "Rukny is a unified-account platform for connected products. Features, limits, and pricing vary by product and plan.",
       ],
       subsections: [
         {
           title: "Accounts",
-          text: "Unified identity, account management, security, and shared billing where available.",
+          text: "Unified identity, profile, sessions, security, and related billing when available.",
         },
         {
           title: "Forms",
-          text: "Form builder, response collection, analytics, team management, and public form sharing.",
+          text: "Form building, responses, analytics, teams, and sharing.",
+        },
+        {
+          title: "Rukny Mail",
+          text: "Custom-domain mail workspaces: mailboxes, DNS setup, routing, teams, webmail, and related sending interfaces when enabled.",
         },
         {
           title: "Developer",
-          text: "Portal for building apps, managing API keys, OAuth, integrations, and products built on Rukny.",
+          text: "Apps, API keys, integrations, and transactional email APIs when subscribed.",
         },
       ],
     },
     {
       id: "account",
-      title: "Account and Sign-in",
+      title: "Accounts and security",
       icon: Key,
+      paragraphs: [
+        "You are responsible for accurate registration data, keeping credentials confidential, and activity on your account unless unauthorized access results from a defect in our systems.",
+      ],
       subsections: [
         {
-          title: "Unified identity",
-          text: "A Rukny account provides secure, unified access to platform products — including Forms and the Developer portal — using a single set of credentials via the accounts application.",
+          title: "Credential protection",
+          text: "Use a strong password and do not share it. Where two-factor authentication (2FA) or extra factors are available for the account or mailboxes, you should enable them; we may require them for sensitive actions or certain plans.",
         },
         {
-          title: "Accurate information",
-          text: "You agree to provide accurate, up-to-date information when registering or completing your profile, and to update it when it changes.",
+          title: "Breach notice",
+          text: "You must notify us without unreasonable delay if you suspect unauthorized access to your account, mailboxes, or keys.",
         },
         {
-          title: "Account security",
-          text: "You are responsible for protecting your sign-in credentials, including passwords and additional verification factors. Notify us immediately if you suspect unauthorized access.",
+          title: "Team access",
+          text: "If you invite members to a workspace (including Rukny Mail), you are responsible for least-privilege roles and for invitees’ conduct in that workspace.",
+        },
+      ],
+    },
+    {
+      id: "mail",
+      title: "Rukny Mail — service scope",
+      icon: Mails,
+      paragraphs: [
+        "Rukny Mail is custom-domain email. You remain responsible for domain ownership, publishing DNS at your registrar, and the lawfulness of addresses and message content.",
+        "The service runs on cloud infrastructure and delivery providers (including Amazon cloud services for mail delivery and object storage where applicable). Deliverability may depend on DNS, domain reputation, third-party policies, and factors outside our full control.",
+      ],
+      subsections: [
+        {
+          title: "Mail content and ownership",
+          text: "You (or your organization under your internal arrangements) retain ownership of message content and attachments. By using the service you grant Rukny a limited, non-exclusive, revocable license solely to operate the service: receive, transmit, process, operationally store, display in webmail, and keep operational backups as needed to provide and protect the service. This license does not include selling content or using it for marketing.",
         },
         {
-          title: "Activity responsibility",
-          text: "You are responsible for activity conducted through your account across Rukny applications, unless you demonstrate access occurred without your authorization due to a failure in our systems.",
+          title: "Operational storage",
+          text: "Mail content is processed and stored in the cloud infrastructure we operate for the service (including object storage such as Amazon S3 for inbound raw copies where applicable, Redis for sessions and operational cache, and database components needed to run mailboxes and webmail). That is operational storage to deliver the product — not a transfer of ownership.",
+        },
+        {
+          title: "Technical limits",
+          text: "Mailboxes, storage, seats, and features follow plan and workspace limits. Exceeding limits or abuse may restrict send, receive, or access until resolved.",
         },
       ],
     },
     {
       id: "forms",
-      title: "Forms Application",
+      title: "Forms",
       icon: ClipboardList,
       paragraphs: [
-        "When you use Forms as a creator or administrator, you are responsible for the content you publish and the data you collect through your forms.",
+        "As a form creator or admin, you are responsible for lawful content, collection, and participant notices/consents when required.",
       ],
       subsections: [
         {
-          title: "Form creator responsibility",
-          text: "You are responsible for the legality of your forms and your right to collect participant data, including obtaining required consents when collecting personal or sensitive data.",
+          title: "Creator responsibility",
+          text: "You are responsible for what your form asks and what you collect, and for informing participants when required.",
         },
         {
-          title: "Participants and responses",
-          text: "Participants may complete forms without a Rukny account. You must inform participants how their data will be used through your own privacy notice when required, while complying with Rukny's general Privacy Policy.",
-        },
-        {
-          title: "Content and sharing",
-          text: "Publishing forms with fraudulent, harmful, or rights-infringing content is prohibited. We may disable forms or accounts that abuse the service.",
-        },
-        {
-          title: "Teams and permissions",
-          text: "When inviting team members, you are responsible for granting appropriate permissions only. We encourage regular review of team access.",
+          title: "Participants",
+          text: "Participants may submit without a Rukny account. Participant data remains primarily the form owner’s responsibility, subject to Rukny’s Privacy Policy for platform operations.",
         },
       ],
     },
     {
       id: "developer",
-      title: "Developer Portal",
+      title: "Developer portal and APIs",
       icon: Code2,
       paragraphs: [
-        "The Developer portal is for building applications and integrations on Rukny. Your use is subject to security controls and reasonable usage limits.",
-      ],
-      subsections: [
-        {
-          title: "Apps and API keys",
-          text: "You are responsible for keeping API keys, secrets, and credentials confidential. Do not share them publicly or commit them to public repositories.",
-        },
-        {
-          title: "OAuth and integrations",
-          text: "When building an app that uses Rukny sign-in, you must follow platform policies, request only necessary permissions, and explain data use to end users.",
-        },
-        {
-          title: "Fair use",
-          text: "Abuse of developer APIs, exceeding plan limits, or attempting to circumvent usage or security restrictions is prohibited.",
-        },
-        {
-          title: "Published app responsibility",
-          text: "You are responsible for your apps' and integrations' behavior toward end users, including legal compliance and protecting their data.",
-        },
+        "You are responsible for API key secrecy, least-privilege scopes, and your apps’ conduct toward end users. Publishing secrets, bypassing plan limits, or circumventing security controls is prohibited.",
       ],
     },
     {
-      id: "usage",
-      title: "Acceptable Use",
+      id: "aup",
+      title: "Acceptable use",
       icon: Blocks,
       paragraphs: [
-        "You must use Rukny and its components only for lawful purposes and in compliance with applicable laws and each application's policies.",
+        "Rukny may only be used for lawful purposes. Without limitation, you must not:",
       ],
       bullets: [
-        "Abuse of APIs, exceeding usage limits, or attempting to compromise systems is prohibited.",
-        "Using the service to send spam, harmful content, or to violate others' privacy or rights is prohibited.",
-        "Impersonation or creating fake accounts to harm or circumvent the platform is prohibited.",
-        "Reselling or redistributing the service or access outside the permitted scope is prohibited.",
+        "Send spam, unsolicited bulk mail, or use purchased lists without a clear lawful basis.",
+        "Engage in phishing, impersonation, fraud, or distribute malware or harmful links.",
+        "Violate others’ privacy or intellectual property, or break applicable law.",
+        "Attempt intrusion, exceed usage limits, disrupt the service, or resell access without permission.",
+        "Use Rukny Mail or sending APIs in ways that harm infrastructure reputation, delivery networks, or other users.",
+      ],
+      subsections: [
+        {
+          title: "Immediate suspension",
+          text: "We may suspend an account, workspace, or sending keys immediately without prior notice on reasonable suspicion of material breach or activity that threatens the platform or others, with termination governed by the termination section.",
+        },
       ],
     },
     {
       id: "availability",
-      title: "Availability and Updates",
+      title: "Service scope and warranty limits",
       icon: Globe,
       paragraphs: [
-        "We strive to provide a stable, secure service but do not guarantee uninterrupted operation at all times.",
-        "We may perform maintenance, release updates, add features, or temporarily suspend components to improve security and performance. We will make reasonable efforts to notify you of material changes when possible.",
+        "The service is provided “as is” and “as available” to the extent permitted by law. We aim for reasonable availability and security, but we do not warrant 100% error-free or uninterrupted service, or that it will meet every particular purpose without interruption.",
+        "We may perform maintenance, updates, feature changes, or restrict functions for security, operational, or legal reasons. We will use reasonable efforts to notify material changes when practicable.",
+        "We are not liable for outages caused by third-party DNS, provider blocking, cloud/delivery provider downtime, or force majeure.",
+      ],
+    },
+    {
+      id: "billing",
+      title: "Billing, renewal, and refunds",
+      icon: CreditCard,
+      paragraphs: [
+        "Prices, currency, and plan limits are shown in-product (including IQD or another currency we announce). Subscribing to a paid plan means you agree to the fees shown at purchase or renewal.",
+      ],
+      subsections: [
+        {
+          title: "Renewal",
+          text: "Unless stated otherwise in billing UI, subscriptions may auto-renew for the same term when auto-renew is enabled. You may cancel under available options before the current term ends.",
+        },
+        {
+          title: "Non-payment",
+          text: "Failure to pay may restrict paid features or suspend the related workspace until settled, without waiving amounts already owed.",
+        },
+        {
+          title: "Refunds",
+          text: "Unless required by law or agreed in writing, fees for activated or consumed subscription periods are non-refundable. Special refund offers apply only on their stated terms.",
+        },
       ],
     },
     {
       id: "ip",
-      title: "Intellectual Property",
+      title: "Intellectual property",
       icon: ShieldCheck,
       paragraphs: [
-        "All platform rights, including software, designs, logos, and Rukny-owned content, remain with the platform or its licensors.",
-        "Use of the service does not grant you ownership of platform materials. You may use them only within the scope of these terms.",
-        "You retain rights to content you create (such as your forms, responses, and apps), while granting us the operational license needed to host that content and provide the service.",
-      ],
-    },
-    {
-      id: "suspension",
-      title: "Suspension and Termination",
-      icon: Ban,
-      paragraphs: [
-        "We may suspend or terminate your account or restrict access if we suspect a breach of these terms, abuse, or for security or legal reasons.",
-        "You may request account closure through available account settings, subject to legal and operational data retention obligations.",
+        "Rukny’s platform (software, UI, marks, documentation) remains owned by Rukny or its licensors. Use grants a limited license only.",
+        "You retain ownership of your content (including mail, forms, and apps you create), subject to the limited operational license described for Mail and Forms.",
       ],
     },
     {
       id: "liability",
-      title: "Disclaimer and Limitation of Liability",
+      title: "Limitation of liability",
       icon: Scale,
       paragraphs: [
-        "The service is provided \"as is\" to the extent permitted by law. We do not warrant error-free operation or that the service will meet every need without interruption.",
-        "To the maximum extent permitted by applicable law, Rukny is not liable for indirect or consequential damages arising from your use of, or inability to use, the service.",
+        "To the maximum extent permitted by law: Rukny is not liable for indirect, consequential, lost profits, data loss, or business interruption arising from use of or inability to use the service, even if advised of the possibility.",
+        "Rukny’s aggregate liability for claims arising from these Terms or the service will not exceed the amounts you actually paid Rukny for the relevant service in the twelve (12) months immediately before the claim arose. If no amounts were paid, liability is limited to the minimum non-excludable amount required by law.",
+        "Nothing in this section excludes liability for fraud, willful misconduct, or liability that cannot be limited by law.",
+      ],
+    },
+    {
+      id: "termination",
+      title: "Termination and data fate",
+      icon: Ban,
+      paragraphs: [
+        "You may stop using the service and request account closure or workspace archive/deletion using in-product tools.",
+        "We may terminate or suspend access with reasonable prior notice when discontinuing a product, for breach, or for legal/security reasons. For material breach or imminent harm, immediate suspension may apply as in Acceptable Use.",
+        "After account closure or workspace deletion, we aim to delete or disable access to related content within an operational retention window that typically does not exceed thirty (30) days, unless longer retention is required for legal compliance, disputes, or security, or residual copies remain in provider backups purged on their cycles. Processing details are in the Privacy Policy.",
+      ],
+    },
+    {
+      id: "governing-law",
+      title: "Governing law and disputes",
+      icon: Globe,
+      paragraphs: [
+        "These Terms are governed by the laws of the Kingdom of Saudi Arabia, excluding conflict-of-law rules that would apply another jurisdiction, to the extent permitted by law.",
+        "Parties should first attempt amicable resolution via support@rukny.io. If unresolved, courts in the Kingdom of Saudi Arabia have jurisdiction, unless mandatory consumer or other law requires a different forum.",
       ],
     },
     {
       id: "updates",
-      title: "Changes to Terms",
+      title: "Changes to these Terms",
       icon: RefreshCw,
       paragraphs: [
-        "We may update these terms from time to time to reflect platform evolution or legal requirements. For material changes, we will make reasonable efforts to notify you via the platform or email.",
-        "Continued use after changes take effect constitutes acceptance of the updated terms.",
+        "We may update these Terms for product or legal changes. For material updates we will use reasonable efforts to notify you in-product or via the account email.",
+        "Continued use after an update takes effect constitutes acceptance. If you disagree, stop using the service and close the account under available procedures.",
       ],
     },
     {
       id: "contact",
-      title: "Contact and Support",
+      title: "Contact",
       icon: Mail,
       paragraphs: [
-        "For questions about these terms or your account, contact support through the help channels available in your Rukny account or via official support email.",
+        "Legal or Terms questions: support@rukny.io, or support channels inside your account.",
       ],
       tocIgnore: true,
     },

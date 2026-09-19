@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Check, ChevronDown } from 'lucide-react';
 import { AnimatedNumber } from './animated-number';
 import {
   CURRENCY,
-  CURRENCY_EN,
+  EMAIL_PRODUCT_PLANS,
+  EMAIL_SECTION_COPY,
   FEATURE_SECTIONS,
   PRICING_FAQS,
   PRICING_PLANS,
@@ -16,61 +18,77 @@ import {
   monthlyEquivalentFromYearly,
   type BillingPeriod,
   type CellValue,
-  type FeatureSection,
   type PlanId,
   type PricingPlan,
 } from '@/lib/pricing-plans';
-
-function CheckIcon({ className, size = 16 }: { className?: string; size?: number }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 20 20"
-      fill="none"
-      className={className}
-      aria-hidden
-    >
-      <path
-        d="M4 10.5L8 14.5L16 6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden
-      className={`shrink-0 text-[var(--muted-foreground)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
- open ? 'rotate-180' : ''
- }`}
-    >
-      <path
-        d="M5 7.5L10 12.5L15 7.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import { cn } from '@/lib/utils';
 
 const PLAN_HREF: Record<PlanId, string> = {
   free: '/login?next=/apps',
   pro: '/login?next=/apps',
 };
+
+function CellValue({ value }: { value: CellValue }) {
+  if (value === true) {
+    return (
+      <span className="inline-flex w-full items-center justify-center">
+        <Check
+          className="size-4 text-[var(--success)]"
+          strokeWidth={2.4}
+          aria-label="Included"
+        />
+      </span>
+    );
+  }
+  if (value === false) {
+    return (
+      <span
+        className="inline-flex w-full items-center justify-center text-[var(--muted-foreground)]/40"
+        aria-label="Not included"
+      >
+        —
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex w-full items-center justify-center text-center text-[13px] font-medium leading-snug text-[var(--foreground)]">
+      {value}
+    </span>
+  );
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <header className="mx-auto max-w-2xl text-center">
+      {eyebrow ? (
+        <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+          {eyebrow}
+        </p>
+      ) : null}
+      <h2
+        className={cn(
+          'text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl',
+          eyebrow && 'mt-2',
+        )}
+      >
+        {title}
+      </h2>
+      {subtitle ? (
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[var(--muted-foreground)] sm:text-[15px]">
+          {subtitle}
+        </p>
+      ) : null}
+    </header>
+  );
+}
 
 function BillingToggle({
   period,
@@ -80,36 +98,43 @@ function BillingToggle({
   onChange: (p: BillingPeriod) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-none border border-[var(--border)] bg-[var(--surface)] p-1">
+    <div
+      className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1"
+      role="group"
+      aria-label="Billing period"
+    >
       <button
         type="button"
         onClick={() => onChange('monthly')}
-        className={`rounded-none px-4 py-1.5 text-sm font-semibold transition-colors ${
- period === 'monthly'
- ? 'bg-[var(--foreground)] text-white'
- : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
- }`}
+        className={cn(
+          'rounded-full px-4 py-1.5 text-sm font-semibold transition-colors',
+          period === 'monthly'
+            ? 'bg-[var(--foreground)] text-[var(--background)]'
+            : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+        )}
       >
-        شهري
+        Monthly
       </button>
       <button
         type="button"
         onClick={() => onChange('yearly')}
-        className={`flex items-center gap-2 rounded-none px-4 py-1.5 text-sm font-semibold transition-colors ${
- period === 'yearly'
- ? 'bg-[var(--foreground)] text-white'
- : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
- }`}
+        className={cn(
+          'flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors',
+          period === 'yearly'
+            ? 'bg-[var(--foreground)] text-[var(--background)]'
+            : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+        )}
       >
-        سنوي
+        Yearly
         <span
-          className={`rounded-none px-2 py-0.5 text-[11px] font-bold ${
- period === 'yearly'
- ? 'bg-white/20 text-white'
- : 'bg-[var(--brand-soft-lime)] text-[var(--success)]'
- }`}
+          className={cn(
+            'rounded-full px-2 py-0.5 text-[11px] font-bold',
+            period === 'yearly'
+              ? 'bg-white/20 text-white'
+              : 'bg-[var(--brand-soft-lime)] text-[var(--success)]',
+          )}
         >
-          وفّر {YEARLY_DISCOUNT_PERCENT}%
+          Save {YEARLY_DISCOUNT_PERCENT}%
         </span>
       </button>
     </div>
@@ -132,78 +157,86 @@ function PlanCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded-none p-5 sm:p-6 ${
- plan.popular
- ? 'bg-[var(--surface)] border-2 border-[var(--primary)]'
- : 'bg-[var(--surface)] border border-[var(--border)]'
- }`}
+      className={cn(
+        'relative flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-6 sm:p-7',
+      )}
     >
-      {plan.badge ? (
-        <span className="absolute -top-3 right-5 rounded-none bg-[var(--primary)] px-3 py-1 text-[11px] font-bold text-[var(--primary-foreground)]">
-          {plan.badge}
-        </span>
-      ) : null}
-
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-lg font-bold text-[var(--foreground)]">{plan.name}</h3>
-        <span className="text-xs font-medium text-[var(--muted-foreground)]" lang="en">
-          {plan.nameEn}
-        </span>
+      <div className="flex min-h-[26px] items-center">
+        {plan.badge ? (
+          <span className="inline-flex rounded-full bg-[var(--primary)] px-2.5 py-1 text-[11px] font-semibold text-[var(--primary-foreground)]">
+            {plan.badge}
+          </span>
+        ) : (
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+            Platform
+          </span>
+        )}
       </div>
 
-      <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+      <h3 className="mt-4 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+        {plan.name}
+      </h3>
+      <p className="mt-2 min-h-[3.5rem] text-sm leading-relaxed text-[var(--muted-foreground)]">
         {plan.description}
       </p>
 
-      <div className="mt-4 flex items-end gap-1.5">
+      <div className="mt-6 flex min-h-[2.75rem] items-end gap-1.5">
         {isFree ? (
-          <span className="text-3xl font-bold text-[var(--foreground)]">مجاناً</span>
+          <span className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">
+            Free
+          </span>
         ) : (
           <>
             <AnimatedNumber
               value={displayPrice}
-              className="text-3xl font-bold text-[var(--foreground)]"
+              className="text-4xl font-semibold tracking-tight text-[var(--foreground)]"
             />
-            <span className="pb-1 text-sm font-medium text-[var(--muted-foreground)]">
-              {CURRENCY} / شهر
+            <span className="pb-1.5 text-sm font-medium text-[var(--muted-foreground)]">
+              {CURRENCY} / mo
             </span>
           </>
         )}
       </div>
 
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+      <p className="mt-1.5 min-h-[1rem] text-xs text-[var(--muted-foreground)]">
         {isFree
-          ? 'بدون بطاقة ائتمان'
+          ? 'No credit card required'
           : period === 'yearly'
-            ? `يُدفع ${formatPrice(plan.priceYearly)} ${CURRENCY} سنوياً`
-            : 'يُدفع شهرياً'}
+            ? `Billed ${formatPrice(plan.priceYearly)} ${CURRENCY} yearly`
+            : 'Billed monthly'}
       </p>
 
       <Link
         href={PLAN_HREF[plan.id]}
-        className={`mt-4 flex h-10 items-center justify-center rounded-none px-5 text-sm font-semibold transition-opacity hover:opacity-90 ${
- plan.popular
- ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
- : 'bg-[var(--foreground)] text-white'
- }`}
+        className={cn(
+          'mt-6 flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-90',
+          plan.popular
+            ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+            : 'bg-[var(--foreground)] text-[var(--background)]',
+        )}
       >
         {plan.ctaLabel}
       </Link>
 
-      <ul className="mt-5 flex flex-col gap-2.5">
+      <ul className="mt-7 flex flex-1 flex-col gap-2.5 border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] pt-6">
         {plan.highlights.map((item, index) => {
           const isHeader = item.endsWith(':');
           return (
             <li
               key={index}
-              className={`flex items-start gap-2.5 text-sm leading-relaxed ${
- isHeader
- ? 'font-semibold text-[var(--foreground)]'
- : 'text-[var(--muted-foreground)]'
- }`}
+              className={cn(
+                'flex items-start gap-2.5 text-sm leading-relaxed',
+                isHeader
+                  ? 'font-semibold text-[var(--foreground)]'
+                  : 'text-[var(--muted-foreground)]',
+              )}
             >
               {isHeader ? null : (
-                <CheckIcon size={16} className="mt-0.5 shrink-0 text-[var(--success)]" />
+                <Check
+                  size={16}
+                  className="mt-0.5 shrink-0 text-[var(--success)]"
+                  strokeWidth={2.4}
+                />
               )}
               <span>{item}</span>
             </li>
@@ -214,316 +247,31 @@ function PlanCard({
   );
 }
 
-function ComparisonCell({ value }: { value: CellValue }) {
-  if (value === true) {
-    return (
-      <span className="inline-flex">
-        <CheckIcon className="text-[var(--success)]" />
-      </span>
-    );
-  }
-  if (value === false) {
-    return <span className="text-[var(--muted-foreground)]/50">—</span>;
-  }
-  return <span className="text-[13px] font-medium text-[var(--foreground)]">{value}</span>;
-}
-
-function ComparisonHeaderCta({ plan }: { plan: PricingPlan }) {
-  const base =
-    'inline-flex h-9 items-center justify-center rounded-none px-4 text-[13px] font-semibold transition-opacity hover:opacity-90';
-  const variant = plan.popular
-    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-    : plan.priceMonthly === 0
-      ? 'border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]'
-      : 'bg-[var(--foreground)] text-white';
-  return (
-    <Link href={PLAN_HREF[plan.id]} className={`${base} ${variant}`}>
-      {plan.ctaLabel}
-    </Link>
-  );
-}
-
-function ComparisonSectionHeader({
-  section,
-  compact = false,
-}: {
-  section: FeatureSection;
-  compact?: boolean;
-}) {
-  return (
-    <div className={`border-b border-[var(--border)] ${compact ? 'py-6' : 'py-9'}`}>
-      <div className="flex items-start gap-2.5">
-        <span className="mt-1.5 inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] bg-[var(--primary)]" />
-        <div className="min-w-0 flex-1">
-          <h4
-            className={`mt-2 font-bold text-[var(--foreground)] ${compact ? 'text-lg' : 'text-xl'}`}
-          >
-            {section.title}
-          </h4>
-          {section.description ? (
-            <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted-foreground)]">
-              {section.description}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PlanTabs({
-  activePlanId,
-  onChange,
-}: {
-  activePlanId: PlanId;
-  onChange: (id: PlanId) => void;
-}) {
-  return (
-    <div
-      className="mb-5 flex flex-wrap gap-2 min-[720px]:hidden"
-      role="tablist"
-      aria-label="اختر الباقة للمقارنة"
-    >
-      {PRICING_PLANS.map((plan) => {
-        const isActive = activePlanId === plan.id;
-        return (
-          <button
-            key={plan.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(plan.id)}
-            className={`rounded-none border px-4 py-2 text-sm font-medium transition-colors ${
- isActive
- ? 'border-[var(--foreground)] bg-[var(--foreground)] text-white'
- : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]'
- }`}
-          >
-            {plan.name}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ComparisonTable() {
-  const [activePlanId, setActivePlanId] = useState<PlanId>('pro');
-  const activePlan = PRICING_PLANS.find((plan) => plan.id === activePlanId)!;
-
-  return (
-    <div className="mt-16 min-[720px]:mt-20">
-      <h3 className="text-center text-2xl font-bold tracking-tight text-[var(--foreground)] min-[720px]:text-3xl">
-        قارن كل الميزات
-      </h3>
-      <p className="mt-2 text-center text-sm text-[var(--muted-foreground)]">
-        كل التفاصيل بين الخطتين في مكان واحد
-      </p>
-
-      <div className="mt-10">
-        <PlanTabs activePlanId={activePlanId} onChange={setActivePlanId} />
-
-        {/* Mobile: single plan column */}
-        <div className="min-[720px]:hidden">
-          <div className="sticky top-16 z-10 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]/95 px-2 py-4 backdrop-blur">
-            <span className="text-base font-bold text-[var(--foreground)]">الميزة</span>
-            <div className="flex flex-col items-end gap-2">
-              <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--foreground)]">
-                {activePlan.name}
-                {activePlan.popular ? (
-                  <span className="rounded-none bg-[var(--primary)]/10 px-1.5 py-0.5 text-[9px] font-bold text-[var(--primary)]">
-                    الأشهر
-                  </span>
-                ) : null}
-              </span>
-              <ComparisonHeaderCta plan={activePlan} />
-            </div>
-          </div>
-
-          {FEATURE_SECTIONS.map((section) => (
-            <div key={section.id}>
-              <ComparisonSectionHeader section={section} compact />
-
-              {section.rows.map((row) => (
-                <div
-                  key={row.label}
-                  className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[var(--border)]/60"
-                >
-                  <div className="px-2 py-4 text-[13px] text-[var(--foreground)]">
-                    {row.label}
-                    {row.hint ? (
-                      <span className="mt-0.5 block text-[11px] text-[var(--muted-foreground)]">
-                        {row.hint}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="px-2 py-4 text-center">
-                    <ComparisonCell value={row.values[activePlanId]} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop: full comparison table */}
-        <div className="hidden min-[720px]:block overflow-x-auto">
-          <div className="min-w-[560px]">
-            <div className="sticky top-16 z-20 grid grid-cols-[1.6fr_repeat(2,1fr)] items-center gap-x-2 border-b border-[var(--border)] bg-[var(--surface)]/95 py-5 backdrop-blur">
-              <div className="px-2 text-base font-bold text-[var(--foreground)]">الميزة</div>
-              {PRICING_PLANS.map((plan) => (
-                <div key={plan.id} className="flex flex-col items-center gap-2 px-2 text-center">
-                  <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--foreground)]">
-                    {plan.name}
-                    {plan.popular ? (
-                      <span className="rounded-none bg-[var(--primary)]/10 px-1.5 py-0.5 text-[9px] font-bold text-[var(--primary)]">
-                        الأشهر
-                      </span>
-                    ) : null}
-                  </span>
-                  <ComparisonHeaderCta plan={plan} />
-                </div>
-              ))}
-            </div>
-
-            {FEATURE_SECTIONS.map((section) => (
-              <div key={section.id}>
-                <div className="border-b border-[var(--border)] py-9">
-                  {section.eyebrow ? (
-                    <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                      {section.eyebrow}
-                    </div>
-                  ) : null}
-                  <h4 className="mt-8 flex items-center gap-2 text-xl font-bold text-[var(--foreground)]">
-                    <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-[var(--primary)]" />
-                    {section.title}
-                  </h4>
-                  {section.description ? (
-                    <p className="mt-1.5 text-sm text-[var(--muted-foreground)]">
-                      {section.description}
-                    </p>
-                  ) : null}
-                </div>
-
-                {section.rows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="grid grid-cols-[1.6fr_repeat(2,1fr)] items-center border-b border-[var(--border)]/60 transition-colors hover:bg-[var(--surface-secondary)]/40"
-                  >
-                    <div className="px-2 py-4 text-[13px] text-[var(--foreground)]">
-                      {row.label}
-                      {row.hint ? (
-                        <span className="mt-0.5 block text-[11px] text-[var(--muted-foreground)]">
-                          {row.hint}
-                        </span>
-                      ) : null}
-                    </div>
-                    {PRICING_PLANS.map((plan) => (
-                      <div key={plan.id} className="px-2 py-4 text-center">
-                        <ComparisonCell value={row.values[plan.id]} />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function UsageRatesBlock() {
-  const accent: Record<(typeof USAGE_RATES)[number]['id'], string> = {
-    authentication: 'bg-[var(--primary)]',
-    utility: 'bg-slate-500',
-    marketing: 'bg-amber-500',
-    service: 'bg-[var(--success)]',
-  };
-
-  return (
-    <div className="mt-12 min-[720px]:mt-16" dir="ltr" lang="en">
-      <div className="text-center">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-          {USAGE_SECTION_COPY.eyebrow}
-        </p>
-        <h3 className="mt-2 text-2xl font-bold tracking-tight text-[var(--foreground)] min-[720px]:text-3xl">
-          {USAGE_SECTION_COPY.title}
-        </h3>
-        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[var(--muted-foreground)]">
-          {USAGE_SECTION_COPY.subtitle}
-        </p>
-      </div>
-
-      <div className="mx-auto mt-6 max-w-[720px] overflow-hidden rounded-none border border-[var(--border)] bg-[var(--surface)] border border-[var(--border)]">
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--border)] min-[520px]:grid-cols-4 min-[520px]:divide-y-0">
-          {USAGE_RATES.map((rate) => (
-            <div
-              key={rate.id}
-              className="relative flex flex-col px-4 py-5 min-[520px]:px-5 min-[520px]:py-6"
-            >
-              <span
-                className={`mb-2.5 inline-flex h-1.5 w-8 rounded-none ${accent[rate.id]}`}
-                aria-hidden
-              />
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--foreground)]">
-                {rate.label}
-              </p>
-              <p className="mt-1 text-[11px] leading-snug text-[var(--muted-foreground)] min-[520px]:text-xs">
-                {rate.description}
-              </p>
-              <div className="mt-4 flex items-baseline gap-1.5">
-                {rate.price === 0 ? (
-                  <span className="text-xl font-bold text-[var(--success)] min-[520px]:text-2xl">
-                    {USAGE_SECTION_COPY.free}
-                  </span>
-                ) : (
-                  <>
-                    <span className="text-xl font-bold tabular-nums text-[var(--foreground)] min-[520px]:text-2xl">
-                      {formatPrice(rate.price)}
-                    </span>
-                    <span className="text-xs font-medium text-[var(--muted-foreground)]">
-                      {CURRENCY_EN}
-                    </span>
-                  </>
-                )}
-              </div>
-              <p className="mt-1 text-[11px] text-[var(--muted-foreground)] min-[520px]:text-xs">
-                {rate.price === 0
-                  ? ('note' in rate ? rate.note : '')
-                  : USAGE_SECTION_COPY.perMessage}
-              </p>
-            </div>
-          ))}
-        </div>
-        <p className="border-t border-[var(--border)] bg-[var(--surface-secondary)]/60 px-5 py-3 text-center text-xs leading-relaxed text-[var(--muted-foreground)]">
-          {USAGE_SECTION_COPY.footnote}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="border-b border-[var(--border)]">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 py-5 text-right"
+        className="flex w-full items-center justify-between gap-4 py-5 text-start"
       >
         <span className="text-[15px] font-semibold text-[var(--foreground)]">
           {question}
         </span>
-        <ChevronIcon open={open} />
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-[var(--muted-foreground)] transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
       </button>
       <div
-        className={`grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
- open ? 'grid-rows-[1fr] pb-5 opacity-100' : 'grid-rows-[0fr] opacity-0'
- }`}
+        className={cn(
+          'grid transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          open ? 'grid-rows-[1fr] pb-5 opacity-100' : 'grid-rows-[0fr] opacity-0',
+        )}
       >
         <div className="overflow-hidden">
           <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
@@ -539,46 +287,248 @@ export function PricingSection() {
   const [period, setPeriod] = useState<BillingPeriod>('monthly');
 
   return (
-    <section
-      id="pricing"
-      className="mx-auto w-full max-w-[960px] scroll-mt-24 px-5 py-14 min-[720px]:px-6 min-[720px]:py-20"
-    >
-      <div className="pricing-fade-up grid place-items-center">
-        <span className="rounded-none border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-1.5 text-sm font-semibold text-[var(--foreground)]">
-          خطط الأسعار
-        </span>
-        <h2 className="mt-4 max-w-[560px] text-center text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] min-[720px]:text-[40px] min-[720px]:leading-[1.12]">
-          ابنِ على WhatsApp API بدون تعقيد
-        </h2>
-        <p className="mt-3 max-w-[520px] text-center text-base leading-relaxed text-[var(--muted-foreground)] min-[720px]:text-lg">
-          ابدأ مجاناً مع حدود واضحة، أو انتقل إلى Pro للإنتاج. الرسائل تُفوتر
-          من محفظة التطبيق حسب الاستخدام الفعلي.
+    <main className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+          Pricing
         </p>
-
-        <div className="mt-6">
+        <h1 className="mt-3 text-[2.25rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl sm:leading-[1.1]">
+          Build without pricing surprises
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[var(--muted-foreground)] sm:text-[17px] sm:leading-8">
+          Start free with clear limits. Upgrade to Pro for production scale.
+          Messages bill from your app wallet by real usage.
+        </p>
+        <div className="mt-8 flex justify-center">
           <BillingToggle period={period} onChange={setPeriod} />
         </div>
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-[720px] grid-cols-1 gap-4 min-[640px]:grid-cols-2 min-[640px]:gap-5">
+      <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-5">
         {PRICING_PLANS.map((plan) => (
           <PlanCard key={plan.id} plan={plan} period={period} />
         ))}
       </div>
 
-      <UsageRatesBlock />
-      <ComparisonTable />
+      {/* WhatsApp usage */}
+      <section className="mt-20 sm:mt-24">
+        <SectionHeader
+          eyebrow={USAGE_SECTION_COPY.eyebrow}
+          title={USAGE_SECTION_COPY.title}
+          subtitle={USAGE_SECTION_COPY.subtitle}
+        />
 
-      <div className="mx-auto mt-12 max-w-[640px] min-[720px]:mt-14">
-        <h3 className="text-center text-xl font-bold tracking-tight text-[var(--foreground)] min-[720px]:text-2xl">
-          الأسئلة الشائعة
-        </h3>
-        <div className="mt-5">
+        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {USAGE_RATES.map((rate) => (
+            <div
+              key={rate.id}
+              className="flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-5"
+            >
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">
+                {rate.label}
+              </p>
+              <p className="mt-1 min-h-[2.25rem] text-[12px] leading-snug text-[var(--muted-foreground)]">
+                {rate.description}
+              </p>
+              <div className="mt-auto pt-5">
+                <div className="flex items-baseline gap-1.5">
+                  {rate.price === 0 ? (
+                    <span className="text-2xl font-semibold text-[var(--success)]">
+                      Free
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-2xl font-semibold tabular-nums text-[var(--foreground)]">
+                        {formatPrice(rate.price)}
+                      </span>
+                      <span className="text-xs font-medium text-[var(--muted-foreground)]">
+                        IQD
+                      </span>
+                    </>
+                  )}
+                </div>
+                <p className="mt-1 min-h-[1rem] text-[12px] text-[var(--muted-foreground)]">
+                  {rate.price === 0
+                    ? 'note' in rate
+                      ? rate.note
+                      : ''
+                    : USAGE_SECTION_COPY.perMessage}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+          {USAGE_SECTION_COPY.footnote}
+        </p>
+      </section>
+
+      {/* Email API */}
+      <section className="mt-20 sm:mt-24">
+        <SectionHeader
+          eyebrow={EMAIL_SECTION_COPY.eyebrow}
+          title={EMAIL_SECTION_COPY.title}
+          subtitle={EMAIL_SECTION_COPY.subtitle}
+        />
+
+        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+          {EMAIL_PRODUCT_PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className="flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-6"
+            >
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">
+                {plan.name}
+              </p>
+              <p className="mt-1 min-h-[2.5rem] text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+                {plan.description}
+              </p>
+              <div className="mt-5 flex items-baseline gap-1.5">
+                <span className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                  {plan.priceLabel}
+                </span>
+                {plan.priceNote ? (
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {plan.priceNote}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[13px] font-medium text-[var(--foreground)]">
+                {plan.volume}
+              </p>
+              <ul className="mt-5 flex flex-1 flex-col gap-2 border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] pt-5">
+                {plan.highlights.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 text-[13px] text-[var(--muted-foreground)]"
+                  >
+                    <Check
+                      size={14}
+                      className="mt-0.5 shrink-0 text-[var(--success)]"
+                      strokeWidth={2.4}
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link
+            href={EMAIL_SECTION_COPY.docsHref}
+            className="text-sm font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
+          >
+            {EMAIL_SECTION_COPY.docsCta}
+          </Link>
+        </div>
+      </section>
+
+      {/* Comparison */}
+      <section className="mt-20 sm:mt-24">
+        <SectionHeader
+          title="Compare plans"
+          subtitle="Free vs Pro side by side."
+        />
+
+        <div className="mx-auto mt-10 max-w-4xl space-y-10 overflow-x-auto">
+          {FEATURE_SECTIONS.map((section) => (
+            <div key={section.id}>
+              <div className="mb-4">
+                <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
+                  {section.title}
+                </h3>
+                {section.description ? (
+                  <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+                    {section.description}
+                  </p>
+                ) : null}
+              </div>
+              <table className="w-full min-w-[32rem] table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[48%]" />
+                  <col className="w-[26%]" />
+                  <col className="w-[26%]" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="py-2.5 pe-4 text-start text-[12px] font-medium text-[var(--muted-foreground)]">
+                      Feature
+                    </th>
+                    {PRICING_PLANS.map((plan) => (
+                      <th
+                        key={plan.id}
+                        className="px-2 py-2.5 text-center text-[13px] font-semibold text-[var(--foreground)]"
+                      >
+                        {plan.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.rows.map((row) => (
+                    <tr key={row.label}>
+                      <td className="py-3 pe-4 align-middle text-start text-[13px] leading-snug text-[var(--muted-foreground)]">
+                        <span className="text-[var(--foreground)]/85">
+                          {row.label}
+                        </span>
+                        {row.hint ? (
+                          <span className="mt-0.5 block text-[11px] leading-snug text-[var(--muted-foreground)]">
+                            {row.hint}
+                          </span>
+                        ) : null}
+                      </td>
+                      {PRICING_PLANS.map((plan) => (
+                        <td
+                          key={plan.id}
+                          className="px-2 py-3 align-middle text-center"
+                        >
+                          <CellValue value={row.values[plan.id]} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="mx-auto mt-20 max-w-2xl sm:mt-24">
+        <SectionHeader title="FAQ" />
+        <div className="mt-6">
           {PRICING_FAQS.map((faq) => (
             <FaqItem key={faq.question} {...faq} />
           ))}
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* CTA */}
+      <section className="mx-auto mt-20 max-w-2xl rounded-2xl bg-[var(--surface-secondary)] px-6 py-10 text-center sm:mt-24 sm:px-10 sm:py-12">
+        <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
+          Ready to build with Rukny?
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
+          Create an app, grab an API key, and send your first message.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/login?next=/apps"
+            className="inline-flex h-10 items-center rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+          >
+            Start Building
+          </Link>
+          <Link
+            href="/documentation"
+            className="inline-flex h-10 items-center rounded-full bg-[var(--surface)] px-5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_85%,var(--foreground)_6%)]"
+          >
+            Browse docs
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

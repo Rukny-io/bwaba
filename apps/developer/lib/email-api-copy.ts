@@ -11,7 +11,7 @@ export const EMAIL_API_COPY = {
 
   overviewTitle: 'Get started',
   overviewDesc:
-    'Email API sends transactional messages from verified, app-authorized senders. Each account receives 1,000 free messages once. Email API Starter is 15,000 IQD/month for 10,000 monthly messages.',
+    'Email API sends transactional messages from verified, app-authorized senders. Each account receives 1,000 free messages once. Email API Starter is 6,000 IQD/month for 10,000 monthly messages.',
   overviewStep1: 'Verify a domain and authorize a sender for this application.',
   overviewStep2: 'Create a scoped API key with email:send.',
   overviewStep3: 'Install @rukny/email or call the REST API with an Idempotency-Key.',

@@ -31,7 +31,7 @@ export function EmailApiSubscriptionCard() {
         <div>
           <h2 className="text-base font-semibold">Email API Starter</h2>
           <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
-            15,000 IQD/month · 10,000 messages each month
+            6,000 IQD/month · 10,000 messages each month
           </p>
         </div>
         <button

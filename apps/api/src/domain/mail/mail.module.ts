@@ -37,6 +37,9 @@ import { MailBimiService } from './mail-bimi.service';
 import { MailDomainVerificationController } from './mail-domain-verification.controller';
 import { MailDomainVerificationService } from './mail-domain-verification.service';
 import { MailFeatureFlags } from './mail-feature-flags';
+import { MailBodyCryptoService } from './crypto/mail-body-crypto.service';
+import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
+import { MailKmsClient } from './crypto/mail-kms.client';
 
 @Module({
   imports: [
@@ -80,6 +83,9 @@ import { MailFeatureFlags } from './mail-feature-flags';
     MailInboundService,
     MailBimiService,
     MailFeatureFlags,
+    MailKmsClient,
+    MailBodyCryptoService,
+    MailBodyEncryptionPolicy,
     MailRealtimeService,
     MailDomainVerificationService,
   ],
@@ -99,6 +105,9 @@ import { MailFeatureFlags } from './mail-feature-flags';
     MailInboundService,
     MailBimiService,
     MailFeatureFlags,
+    MailKmsClient,
+    MailBodyCryptoService,
+    MailBodyEncryptionPolicy,
     MailRealtimeService,
     MailDomainVerificationService,
   ],

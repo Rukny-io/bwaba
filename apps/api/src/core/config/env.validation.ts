@@ -130,6 +130,9 @@ export const envSchema = z.object({
     .enum(['true', 'false', '1', '0'])
     .optional(),
   MAIL_OUTBOUND_BIMI_ENABLED: z.enum(['true', 'false', '1', '0']).optional(),
+  MAIL_BODY_ENCRYPTION_ENABLED: z.enum(['true', 'false', '1', '0']).optional(),
+  MAIL_KMS_KEY_ID: z.string().optional(),
+  MAIL_BODY_ENCRYPTION_DEV_FALLBACK: z.enum(['true', 'false']).optional(),
 
   // Forms geo analytics (mock country for localhost/private IPs)
   GEOIP_MOCK_COUNTRY: z.string().optional(),

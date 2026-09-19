@@ -1,7 +1,7 @@
 /**
  * Developer portal pricing — Free + Pro + product usage.
- * Platform prices align with apps/api DEVELOPER_PRO_PRICING.
- * Email API Starter: 15,000 IQD / month for 10,000 messages.
+ * Platform prices align with apps/api DEVELOPER_PRO_PRICING (10,000 / 100,000 IQD).
+ * Email API Starter: 6,000 IQD / month for 10,000 messages.
  */
 
 export type PlanId = 'free' | 'pro';
@@ -53,8 +53,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     popular: true,
     description:
       'Open ceilings for apps and keys. Same usage billing for messages — with higher performance and priority support.',
-    priceMonthly: 43_500,
-    priceYearly: 435_000,
+    priceMonthly: 10_000,
+    priceYearly: 100_000,
     ctaLabel: 'Subscribe to Pro',
     highlights: [
       'Everything in Free, plus:',
@@ -162,7 +162,7 @@ export const FEATURE_SECTIONS: FeatureSection[] = [
       },
       {
         label: 'Email API Starter',
-        hint: '15,000 IQD / month',
+        hint: '6,000 IQD / month',
         values: { free: '10,000 messages / month', pro: '10,000 messages / month' },
       },
       {
@@ -284,7 +284,7 @@ export const EMAIL_PRODUCT_PLANS = [
     id: 'email-starter',
     name: 'Email API Starter',
     nameEn: 'Starter',
-    priceLabel: '15,000',
+    priceLabel: '6,000',
     priceNote: `${CURRENCY} / month`,
     volume: '10,000 messages / month',
     description: 'Fixed monthly allowance for transactional email in production.',
@@ -321,7 +321,7 @@ export const PRICING_FAQS = [
   {
     question: 'How is Email API priced?',
     answer:
-      'Every account gets 1,000 free messages once. After that you can request Email API Starter for 15,000 IQD per month for 10,000 messages per cycle. Unlimited sending is not available in the MVP.',
+      'Every account gets 1,000 free messages once. After that you can request Email API Starter for 6,000 IQD per month for 10,000 messages per cycle. Unlimited sending is not available in the MVP.',
   },
   {
     question: 'Do I need Pro to use Email API?',

@@ -36,6 +36,9 @@ import {
   normalizeSenderDomain,
   normalizeSesVerdict,
 } from './mail-bimi.service';
+import { MailBodyCryptoService } from './crypto/mail-body-crypto.service';
+import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
+import { toPrismaBytes } from './crypto/mail-body-crypto.types';
 
 type SesReceiptAction = {
   type?: string;
@@ -82,6 +85,8 @@ export class MailInboundService {
     private readonly autoReply: MailAutoReplyService,
     private readonly forwarder: MailForwarderService,
     private readonly bimi: MailBimiService,
+    private readonly bodyCrypto: MailBodyCryptoService,
+    private readonly bodyEncryption: MailBodyEncryptionPolicy,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -497,6 +502,18 @@ export class MailInboundService {
     const bodyHtml =
       typeof input.parsed.html === 'string' ? input.parsed.html : null;
 
+    const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
+      mailbox.mailAppId,
+    );
+    const bodyFields = await this.bodyCrypto.buildCreateFields({
+      encryptionEnabled,
+      mailboxId: mailbox.id,
+      messageId,
+      bodyText,
+      bodyHtml,
+      dualWritePlaintext: true,
+    });
+
     const inReplyTo = this.normalizeMessageId(
       Array.isArray(input.parsed.inReplyTo)
         ? input.parsed.inReplyTo[0]
@@ -538,8 +555,14 @@ export class MailInboundService {
           ccAddresses: this.addressesFrom(input.parsed.cc),
           bccAddresses: [],
           subject: input.parsed.subject?.trim() || '(no subject)',
-          bodyText,
-          bodyHtml,
+          bodyText: bodyFields.bodyText,
+          bodyHtml: bodyFields.bodyHtml,
+          bodyCryptoStatus: bodyFields.bodyCryptoStatus,
+          bodyCryptoVersion: bodyFields.bodyCryptoVersion,
+          bodyKmsKeyId: bodyFields.bodyKmsKeyId,
+          bodyEncryptedDek: toPrismaBytes(bodyFields.bodyEncryptedDek),
+          bodyTextCiphertext: toPrismaBytes(bodyFields.bodyTextCiphertext),
+          bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
           snippet: this.snippetFrom(bodyText, bodyHtml),
           isRead: false,
           sesMessageId: input.sesMessageId,

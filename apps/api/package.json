@@ -27,9 +27,19 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "e2e:seed": "ts-node test/e2e-seed.ts",
     "db:seed": "ts-node prisma/seed.ts",
-    "cleanup:sessions": "ts-node src/scripts/cleanup-sessions.ts"
+    "cleanup:sessions": "ts-node src/scripts/cleanup-sessions.ts",
+    "mail:body-encryption:migrate": "ts-node src/scripts/mail-body-encryption-migrate.ts",
+    "mail:body-encryption:null-plaintext": "ts-node src/scripts/mail-body-encryption-null-plaintext.ts",
+    "mail:body-encryption:scan": "ts-node src/scripts/mail-body-encryption-scan.ts",
+    "mail:body-encryption:kms-verify": "ts-node src/scripts/mail-body-encryption-kms-verify.ts",
+    "mail:body-encryption:pilot": "ts-node src/scripts/mail-body-encryption-pilot.ts",
+    "mail:body-encryption:staging-validate": "ts-node src/scripts/mail-body-encryption-staging-validate.ts",
+    "mail:body-encryption:gate": "bash scripts/run-mail-encryption-gate.sh",
+    "mail:body-encryption:pilot-seed": "ts-node src/scripts/mail-body-encryption-pilot-seed.ts",
+    "mail:body-encryption:provision-kms": "ts-node src/scripts/provision-mail-body-kms-node.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-kms": "^3.1136.0",
     "@aws-sdk/client-s3": "^3.958.0",
     "@aws-sdk/client-sesv2": "^3.1115.0",
     "@aws-sdk/s3-request-presigner": "^3.958.0",

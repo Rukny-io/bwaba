@@ -3,16 +3,15 @@
 import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { motion, useReducedMotion } from "motion/react"
 import { useLocale, useTranslations } from "next-intl"
 import { useRouter } from "next/navigation"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { DynamicIslandTOC } from "@/components/ui/dynamic-island-toc"
-import { LegalDesktopToc } from "@/components/legal/legal-desktop-toc"
 import { LegalSectionBlock } from "@/components/legal/legal-section"
+import {
+  LegalSidebar,
+  type LegalNavGroup,
+} from "@/components/legal/legal-sidebar"
 import type { LegalDocumentContent } from "@/lib/legal/types"
 import { switchLocale } from "@/lib/switch-locale"
-import { cn } from "@/lib/utils"
 
 type LegalPageKind = "terms" | "privacy"
 
@@ -38,188 +37,226 @@ const RELATED: Record<
   },
 }
 
+function buildNavGroups(
+  kind: LegalPageKind,
+  content: LegalDocumentContent,
+  isEn: boolean,
+): LegalNavGroup[] {
+  const byId = new Map(content.sections.map((section) => [section.id, section]))
+
+  const pick = (ids: string[]) =>
+    ids
+      .map((id) => byId.get(id))
+      .filter((section): section is NonNullable<typeof section> => Boolean(section))
+      .filter((section) => !section.tocIgnore)
+      .map((section) => ({ id: section.id, label: section.title }))
+
+  if (kind === "privacy") {
+    return [
+      {
+        label: isEn ? "Overview" : "نظرة عامة",
+        items: pick(["intro", "collection"]),
+      },
+      {
+        label: isEn ? "Products" : "المنتجات",
+        items: pick(["mail-data", "forms-data", "developer-data"]),
+      },
+      {
+        label: isEn ? "Use & sharing" : "الاستخدام والمشاركة",
+        items: pick(["usage", "sharing", "retention", "security"]),
+      },
+      {
+        label: isEn ? "Your control" : "حقوقك",
+        items: pick([
+          "rights",
+          "cookies",
+          "oauth",
+          "international",
+          "children",
+          "changes",
+          "contact",
+        ]),
+      },
+    ].filter((group) => group.items.length > 0)
+  }
+
+  return [
+    {
+      label: isEn ? "Basics" : "الأساسيات",
+      items: pick(["acceptance", "platform", "account"]),
+    },
+    {
+      label: isEn ? "Products" : "المنتجات",
+      items: pick(["mail", "forms", "developer"]),
+    },
+    {
+      label: isEn ? "Rules & billing" : "القواعد والفوترة",
+      items: pick(["aup", "availability", "billing", "ip", "liability"]),
+    },
+    {
+      label: isEn ? "End & law" : "الإنهاء والقانون",
+      items: pick(["termination", "governing-law", "updates", "contact"]),
+    },
+  ].filter((group) => group.items.length > 0)
+}
+
 export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
   const locale = useLocale()
   const router = useRouter()
   const t = useTranslations("Auth")
   const isEn = locale === "en"
   const content = isEn ? contentEn : contentAr
-  const dir = isEn ? "ltr" : "rtl"
   const related = RELATED[kind]
-  const reduceMotion = useReducedMotion()
+  const productTitle = content.title
 
-  const tocItems = useMemo(
-    () =>
-      content.sections.map((section, index) => ({
-        id: section.id,
-        title: section.title,
-        number: index + 1,
-      })),
-    [content.sections],
+  const navGroups = useMemo(
+    () => buildNavGroups(kind, content, isEn),
+    [kind, content, isEn],
   )
 
-  const toggleLocale = () => {
-    switchLocale(locale, router)
-  }
-
-  const fadeIn = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 12 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.4, ease: "easeOut" as const },
-      }
-
-  const sectionFade = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 10 },
-        whileInView: { opacity: 1, y: 0 },
-        viewport: { once: true, margin: "-60px" },
-        transition: { duration: 0.35, ease: "easeOut" as const },
-      }
-
   return (
-    <div className="relative min-h-dvh bg-background text-foreground" dir={dir}>
-      {/* Mobile floating TOC — desktop uses the sticky sidebar instead */}
-      <div className="lg:hidden">
-        <DynamicIslandTOC />
-      </div>
-
-      <header className="sticky top-0 z-20 border-b border-border/40 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3.5 sm:px-6 lg:max-w-6xl">
-          <Link href="/login" className="flex items-center gap-2.5">
-            <Image
-              src="/rukny-logo.svg"
-              alt="Rukny"
-              width={28}
-              height={28}
-              className="size-7"
-              priority
-            />
-            <span className="text-sm font-medium tracking-tight text-foreground/90 sm:text-base">
-              {t("auth_brand")}
+    <div
+      className="legal-docs-shell flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)]"
+      dir={isEn ? "ltr" : "rtl"}
+      lang={isEn ? "en" : "ar"}
+    >
+      <header
+        dir="ltr"
+        className="sticky top-0 z-40 border-b border-[color-mix(in_srgb,var(--border)_70%,transparent)] bg-[var(--background)]/85 backdrop-blur-md"
+      >
+        <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-5 sm:h-[3.75rem] sm:px-6 lg:max-w-6xl">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+            <Link
+              href={kind === "privacy" ? "/privacy" : "/terms"}
+              className="flex min-w-0 items-center gap-2 sm:gap-2.5"
+            >
+              <Image
+                src="/rukny-logo.svg"
+                alt="Rukny"
+                width={28}
+                height={28}
+                className="size-7 shrink-0 dark:brightness-0 dark:invert"
+                priority
+              />
+              <span className="truncate text-sm font-medium tracking-tight text-[var(--foreground)]/90 sm:text-base">
+                Rukny Legal
+              </span>
+            </Link>
+            <span className="hidden text-[13px] text-[var(--muted-foreground)] sm:inline">
+              /
             </span>
-          </Link>
+            <div className="hidden items-center gap-3 sm:flex">
+              <Link
+                href="/privacy"
+                className={
+                  kind === "privacy"
+                    ? "text-[13px] font-medium text-[var(--foreground)]"
+                    : "text-[13px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--primary)]"
+                }
+              >
+                {isEn ? "Privacy" : "الخصوصية"}
+              </Link>
+              <Link
+                href="/terms"
+                className={
+                  kind === "terms"
+                    ? "text-[13px] font-medium text-[var(--foreground)]"
+                    : "text-[13px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--primary)]"
+                }
+              >
+                {isEn ? "Terms" : "الشروط"}
+              </Link>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-1">
-            <ThemeToggle
-              labelLight={t("theme_light")}
-              labelDark={t("theme_dark")}
-            />
+          <nav className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
-              onClick={toggleLocale}
-              className="flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              onClick={() => switchLocale(locale, router)}
+              className="hidden h-9 items-center px-2.5 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] sm:inline-flex"
               aria-label={t("language")}
             >
-              <svg
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                />
-              </svg>
-              <span>{t("language")}</span>
+              {t("language")}
             </button>
-          </div>
+            <Link
+              href="/login"
+              className="inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-3 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-colors hover:opacity-90 sm:h-9 sm:text-[13px]"
+            >
+              {isEn ? "Sign in" : "تسجيل الدخول"}
+            </Link>
+          </nav>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14 lg:max-w-6xl lg:pb-20">
-        <motion.div {...fadeIn}>
-          {/* Document title — centered on desktop like Cloudflare */}
-          <header className="mb-10 border-b border-border/50 pb-8 text-start sm:mb-12 sm:pb-10 lg:mb-14 lg:border-0 lg:pb-0 lg:text-center">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground lg:hidden">
-              {isEn ? "Legal" : "قانوني"}
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl sm:leading-tight lg:mt-0 lg:text-[2.5rem]">
-              {content.title}
-            </h1>
-            <p className="mt-3 text-sm text-muted-foreground sm:text-[15px]">
-              {isEn
-                ? `This document is effective as of ${content.lastUpdated}.`
-                : `تسري هذه الوثيقة اعتبارًا من ${content.lastUpdated}.`}
-            </p>
-          </header>
-
-          <div className="lg:grid lg:grid-cols-[minmax(13rem,17rem)_minmax(0,1fr)] lg:items-start lg:gap-12 xl:gap-16">
-            <LegalDesktopToc
-              items={tocItems}
+      <div className="flex-1">
+        <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-8 sm:px-6 sm:pt-10 lg:pb-16">
+          <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10 xl:gap-12">
+            <LegalSidebar
+              productTitle={productTitle}
+              groups={navGroups}
               isEn={isEn}
-              className="hidden lg:block"
             />
 
-            <article className={cn(isEn ? "text-left" : "text-right")}>
-              <p className="mb-10 max-w-2xl text-[15px] leading-7 text-muted-foreground sm:text-base sm:leading-8 lg:mb-12">
-                {content.description}{" "}
-                {isEn ? (
-                  <>
-                    See also our{" "}
-                    <Link
-                      href={related.href}
-                      className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
-                    >
-                      {related.labelEn}
-                    </Link>
-                    .
-                  </>
-                ) : (
-                  <>
-                    راجع أيضًا{" "}
-                    <Link
-                      href={related.href}
-                      className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
-                    >
-                      {related.labelAr}
-                    </Link>
-                    .
-                  </>
-                )}
-              </p>
-
-              <div className="space-y-10 sm:space-y-12">
-                {content.sections.map((section, index) => (
-                  <motion.div key={section.id} {...sectionFade}>
-                    <LegalSectionBlock
-                      section={section}
-                      index={index}
-                      isEn={isEn}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-
-              <footer className="mt-14 border-t border-border/50 pt-8">
-                <p className="text-sm text-muted-foreground">
-                  {isEn ? "Related:" : "ذات صلة:"}{" "}
+            <article className="min-w-0">
+              <header className="mb-8 max-w-2xl sm:mb-10">
+                <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+                  {isEn ? "Legal" : "القانوني"}
+                </p>
+                <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.25rem] sm:leading-[1.15]">
+                  {content.title}
+                </h1>
+                <p className="mt-3 text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
+                  {content.description}
+                </p>
+                <p className="mt-3 text-[13px] text-[var(--muted-foreground)]">
+                  {isEn
+                    ? `Updated ${content.lastUpdated}. See also `
+                    : `آخر تحديث ${content.lastUpdated}. راجع أيضًا `}
                   <Link
                     href={related.href}
-                    className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+                    className="font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
                   >
                     {isEn ? related.labelEn : related.labelAr}
                   </Link>
+                  .
                 </p>
-                <p className="mt-4">
-                  <Link
-                    href="/login"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {isEn ? "← Back to sign in" : "العودة لتسجيل الدخول ←"}
-                  </Link>
-                </p>
-              </footer>
+              </header>
+
+              <div className="max-w-2xl space-y-10 text-[15px] leading-7 text-[var(--foreground)] sm:space-y-12 sm:text-base sm:leading-8">
+                {content.sections.map((section) => (
+                  <LegalSectionBlock key={section.id} section={section} />
+                ))}
+              </div>
             </article>
           </div>
-        </motion.div>
-      </main>
+        </div>
+      </div>
+
+      <footer dir="ltr" className="mt-auto border-t border-[var(--border)]">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-5 py-8 text-[13px] text-[var(--muted-foreground)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:max-w-6xl">
+          <p>© {new Date().getFullYear()} Rukny</p>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-[var(--foreground)]"
+            >
+              {isEn ? "Privacy" : "الخصوصية"}
+            </Link>
+            <Link
+              href="/terms"
+              className="transition-colors hover:text-[var(--foreground)]"
+            >
+              {isEn ? "Terms" : "الشروط"}
+            </Link>
+            <Link
+              href="/login"
+              className="transition-colors hover:text-[var(--foreground)]"
+            >
+              {isEn ? "Sign in" : "تسجيل الدخول"}
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

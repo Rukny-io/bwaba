@@ -7,15 +7,20 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { RolesGuard } from '../../core/common/guards/roles.guard';
+import { Roles } from '../../core/common/decorators/auth/roles.decorator';
 import { RateLimitingService } from './rate-limiting.service';
 
 /**
  * 🎛️ Rate Limiting Controller
  *
- * إدارة تحديد معدل الطلبات
+ * إدارة تحديد معدل الطلبات — admin only
  */
 @Controller('admin/rate-limiting')
-// @UseGuards(AdminGuard) // يجب إضافة حارس للمشرفين
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class RateLimitingController {
   constructor(private readonly rateLimitingService: RateLimitingService) {}
 

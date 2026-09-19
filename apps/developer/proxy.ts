@@ -2,13 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { LAST_APP_COOKIE } from '@/lib/app-routes';
 import { isValidAppId } from '@/lib/api/types';
-import { applyPreviewAccessGate } from '@rukny/auth/edge/preview-access';
 import { resolveClientNext } from '@/lib/auth-redirect';
 import { checkDeveloperAuth } from '@/lib/middleware-auth';
 
+/** Portal surfaces that always require a signed-in session. */
 const PROTECTED_PREFIXES = ['/apps', '/settings'];
+
+/** Auth entry points (guests OK; signed-in users are redirected away). */
 const AUTH_PAGES = ['/login', '/callback'];
-const PUBLIC_PREFIXES = ['/check-email', '/documentation', '/pricing'];
+
+/**
+ * Explicit public marketing / docs allowlist.
+ * Anything else (except `/` for guests and `/unavailable`) requires auth.
+ */
+const PUBLIC_PREFIXES = [
+  '/check-email',
+  '/documentation',
+  '/pricing',
+];
 
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
   const path = pathname.toLowerCase();
@@ -35,6 +46,23 @@ function rememberLastApp(
   return response;
 }
 
+function redirectToLogin(
+  request: NextRequest,
+  auth: { tokenExpired?: boolean },
+  fallbackNext = '/apps',
+): NextResponse {
+  const loginUrl = new URL('/login', request.url);
+  const nextTarget = resolveClientNext(
+    request.nextUrl.pathname + request.nextUrl.search,
+    fallbackNext,
+  );
+  loginUrl.searchParams.set('next', nextTarget);
+  if (auth.tokenExpired) {
+    loginUrl.searchParams.set('session', 'expired');
+  }
+  return NextResponse.redirect(loginUrl);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -46,11 +74,7 @@ export async function proxy(request: NextRequest) {
     return rememberLastApp(request, NextResponse.next());
   }
 
-  const previewGate = applyPreviewAccessGate(request);
-  if (previewGate) {
-    return rememberLastApp(request, previewGate);
-  }
-
+  // Next route handlers / BFF under this app — not a public HTML surface.
   if (pathname.startsWith('/api')) {
     return rememberLastApp(request, NextResponse.next());
   }
@@ -63,55 +87,58 @@ export async function proxy(request: NextRequest) {
   const isProtected = matchesPrefix(pathname, PROTECTED_PREFIXES);
   const isAuthPage = matchesPrefix(pathname, AUTH_PAGES);
 
+  // Public marketing landing for guests; console home for signed-in users.
   if (pathname === '/') {
-    const target = auth.isAuthenticated ? '/apps' : '/login';
-    return rememberLastApp(
-      request,
-      NextResponse.redirect(new URL(target, request.url)),
-    );
-  }
-
-  if (isProtected && !auth.isAuthenticated) {
-    const loginUrl = new URL('/login', request.url);
-    const nextTarget = resolveClientNext(
-      request.nextUrl.pathname + request.nextUrl.search,
-      '/apps',
-    );
-    loginUrl.searchParams.set('next', nextTarget);
-    if (auth.tokenExpired) {
-      loginUrl.searchParams.set('session', 'expired');
+    if (auth.isAuthenticated) {
+      return rememberLastApp(
+        request,
+        NextResponse.redirect(new URL('/apps', request.url)),
+      );
     }
-    return rememberLastApp(request, NextResponse.redirect(loginUrl));
+    return rememberLastApp(request, NextResponse.next());
   }
 
-  if (isAuthPage && auth.isAuthenticated && auth.user && pathname !== '/callback') {
-    const session = request.nextUrl.searchParams.get('session');
-    const nextParam = request.nextUrl.searchParams.get('next');
-    const target = resolveClientNext(nextParam, '/apps');
+  if (isAuthPage) {
+    if (auth.isAuthenticated && auth.user && pathname !== '/callback') {
+      const session = request.nextUrl.searchParams.get('session');
+      const nextParam = request.nextUrl.searchParams.get('next');
+      const target = resolveClientNext(nextParam, '/apps');
 
-    if (session === 'expired' || session === 'invalid') {
-      if (auth.tokenExpired) {
-        const response = NextResponse.next();
-        for (const name of [
-          'access_token',
-          'refresh_token',
-          '__Secure-access_token',
-          '__Secure-refresh_token',
-        ]) {
-          response.cookies.delete(name);
+      if (session === 'expired' || session === 'invalid') {
+        if (auth.tokenExpired) {
+          const response = NextResponse.next();
+          for (const name of [
+            'access_token',
+            'refresh_token',
+            '__Secure-access_token',
+            '__Secure-refresh_token',
+          ]) {
+            response.cookies.delete(name);
+          }
+          return rememberLastApp(request, response);
         }
-        return rememberLastApp(request, response);
+        return rememberLastApp(request, NextResponse.next());
       }
-      // JWT still decodes at the edge but the API rejected the session — show login.
-      return rememberLastApp(request, NextResponse.next());
-    }
 
-    return rememberLastApp(
-      request,
-      NextResponse.redirect(new URL(target, request.url)),
-    );
+      return rememberLastApp(
+        request,
+        NextResponse.redirect(new URL(target, request.url)),
+      );
+    }
+    return rememberLastApp(request, NextResponse.next());
   }
 
+  // Deny-by-default: portal prefixes and any unknown path require a session.
+  if (!auth.isAuthenticated) {
+    return rememberLastApp(request, redirectToLogin(request, auth));
+  }
+
+  if (isProtected) {
+    return rememberLastApp(request, NextResponse.next());
+  }
+
+  // Signed-in user on an unrecognized path — still allow Next to render
+  // (avoids breaking future authenticated pages), but guests never reach here.
   return rememberLastApp(request, NextResponse.next());
 }
 

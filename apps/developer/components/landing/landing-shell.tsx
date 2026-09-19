@@ -43,7 +43,7 @@ export function LandingAnnouncement({ locale = 'ar' }: { locale?: LandingLocale 
 
   return (
     <div className="border-b border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)]">
-      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-center px-5 py-2.5 text-center text-xs font-medium tracking-wide min-[720px]:px-8">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-center px-5 py-2.5 text-center text-xs font-medium tracking-wide sm:px-6">
         {t.announcement}
       </div>
     </div>
@@ -54,42 +54,42 @@ export function LandingHeader({ locale = 'ar' }: { locale?: LandingLocale }) {
   const t = COPY[locale];
 
   return (
-    <header className="border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto flex h-[73px] w-full max-w-[1280px] items-center justify-between gap-3 px-5 min-[720px]:px-8">
+    <header className="sticky top-0 z-40 border-b border-[color-mix(in_srgb,var(--border)_70%,transparent)] bg-[var(--background)]/85 backdrop-blur-md">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-5 sm:h-[3.75rem] sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
           <Image
             src="/rukny-logo.svg"
             alt="Rukny"
             width={28}
             height={28}
-            className="shrink-0 dark:brightness-0 dark:invert"
+            className="size-7 shrink-0 dark:brightness-0 dark:invert"
           />
-          <span className="truncate text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+          <span className="truncate text-sm font-medium tracking-tight text-[var(--foreground)]/90 sm:text-base">
             Rukny
           </span>
         </Link>
         <nav className="flex shrink-0 items-center gap-1">
           <Link
             href="/documentation"
-            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)] min-[720px]:inline-flex"
+            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] sm:inline-flex"
           >
             {t.docs}
           </Link>
           <Link
             href="/pricing"
-            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)] min-[720px]:inline-flex"
+            className="hidden h-9 items-center px-3 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] sm:inline-flex"
           >
             {t.pricing}
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-9 items-center px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)]"
+            className="inline-flex h-9 items-center px-3 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
           >
             {t.login}
           </Link>
           <Link
             href="/login?next=/apps"
-            className="ms-1 inline-flex h-9 items-center bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--brand-blue-hover)]"
+            className="ms-1 inline-flex h-9 items-center rounded-full bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--brand-blue-hover)]"
           >
             {t.start}
           </Link>
@@ -104,7 +104,7 @@ export function LandingFooter({ locale = 'ar' }: { locale?: LandingLocale }) {
 
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto grid w-full max-w-[1280px] gap-10 px-5 py-16 min-[720px]:grid-cols-4 min-[720px]:px-8">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-16 sm:px-6 min-[720px]:grid-cols-4">
         <div className="min-[720px]:col-span-1">
           <div className="flex items-center gap-2.5">
             <Image
@@ -183,7 +183,7 @@ export function LandingFooter({ locale = 'ar' }: { locale?: LandingLocale }) {
         </div>
       </div>
       <div className="border-t border-[var(--border)]">
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-5 py-6 text-sm text-[var(--muted-foreground)] min-[720px]:px-8">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 text-sm text-[var(--muted-foreground)] sm:px-6">
           <p>
             © {new Date().getFullYear()} Rukny — {t.footerBrand}
           </p>

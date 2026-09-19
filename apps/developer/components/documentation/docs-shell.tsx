@@ -5,21 +5,21 @@ import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 
 export function DocumentationHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto flex h-[73px] w-full max-w-[1280px] items-center justify-between gap-4 px-5 min-[720px]:px-8">
-        <div className="flex min-w-0 items-center gap-3.5">
+    <header className="sticky top-0 z-40 border-b border-[color-mix(in_srgb,var(--border)_70%,transparent)] bg-[var(--background)]/85 backdrop-blur-md">
+      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-5 sm:h-[3.75rem] sm:px-6 lg:max-w-6xl">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
           <Link
             href={DOCUMENTATION_BASE}
-            className="flex min-w-0 items-center gap-2.5"
+            className="flex min-w-0 items-center gap-2 sm:gap-2.5"
           >
             <Image
               src="/rukny-logo.svg"
               alt="Rukny"
-              width={26}
-              height={26}
-              className="shrink-0 dark:brightness-0 dark:invert"
+              width={28}
+              height={28}
+              className="size-7 shrink-0 dark:brightness-0 dark:invert"
             />
-            <span className="truncate text-sm font-semibold tracking-tight">
+            <span className="truncate text-sm font-medium tracking-tight text-[var(--foreground)]/90 sm:text-base">
               Rukny Docs
             </span>
           </Link>
@@ -50,7 +50,7 @@ export function DocumentationHeader() {
           </Link>
           <Link
             href="/login?next=/apps"
-            className="inline-flex h-9 items-center bg-[var(--primary)] px-3 text-[13px] font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--brand-blue-hover)]"
+            className="inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-3 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--brand-blue-hover)] sm:h-9 sm:text-[13px]"
           >
             Dashboard
           </Link>
@@ -63,7 +63,7 @@ export function DocumentationHeader() {
 export function DocumentationFooter() {
   return (
     <footer className="mt-auto border-t border-[var(--border)]">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-5 py-8 text-[13px] text-[var(--muted-foreground)] sm:flex-row sm:items-center sm:justify-between min-[720px]:px-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-5 py-8 text-[13px] text-[var(--muted-foreground)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:max-w-6xl">
         <p>© {new Date().getFullYear()} Rukny</p>
         <div className="flex flex-wrap gap-4">
           <Link

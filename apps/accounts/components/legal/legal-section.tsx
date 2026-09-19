@@ -2,35 +2,27 @@ import type { LegalSection } from "@/lib/legal/types"
 
 interface LegalSectionBlockProps {
   section: LegalSection
-  index: number
-  isEn: boolean
 }
 
-export function LegalSectionBlock({
-  section,
-  index,
-}: LegalSectionBlockProps) {
-  const number = index + 1
-
+export function LegalSectionBlock({ section }: LegalSectionBlockProps) {
   return (
     <section
       id={section.id}
-      className="scroll-mt-28"
+      className="scroll-mt-24"
       {...(section.tocIgnore ? { "data-toc-ignore": true } : {})}
     >
       <h2
-        data-toc-title={`${number}. ${section.title}`}
-        className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+        data-toc-title={section.title}
+        className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[1.35rem]"
       >
-        <span className="text-muted-foreground">{number}.</span>{" "}
         {section.title}
       </h2>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 space-y-4 text-[var(--muted-foreground)]">
         {section.paragraphs?.map((text) => (
           <p
             key={text}
-            className="text-[15px] leading-7 text-muted-foreground sm:text-base sm:leading-8"
+            className="text-[15px] leading-7 sm:text-base sm:leading-8"
           >
             {text}
           </p>
@@ -40,10 +32,10 @@ export function LegalSectionBlock({
           <div className="space-y-5 pt-1">
             {section.subsections.map((sub) => (
               <div key={sub.title}>
-                <h3 className="mb-1.5 text-base font-semibold text-foreground">
+                <h3 className="mb-1.5 pt-1 text-[15px] font-semibold text-[var(--foreground)]">
                   {sub.title}
                 </h3>
-                <p className="text-[15px] leading-7 text-muted-foreground sm:text-base sm:leading-8">
+                <p className="text-[15px] leading-7 sm:text-base sm:leading-8">
                   {sub.text}
                 </p>
               </div>
@@ -52,7 +44,7 @@ export function LegalSectionBlock({
         ) : null}
 
         {section.bullets && section.bullets.length > 0 ? (
-          <ul className="list-disc space-y-2.5 ps-5 text-[15px] leading-7 text-muted-foreground sm:text-base sm:leading-8">
+          <ul className="list-disc space-y-2.5 ps-5 text-[15px] leading-7 sm:text-base sm:leading-8">
             {section.bullets.map((item) => (
               <li key={item}>{item}</li>
             ))}

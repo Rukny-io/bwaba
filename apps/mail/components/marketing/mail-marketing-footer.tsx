@@ -87,6 +87,11 @@ export function MailMarketingFooter({ signedIn }: { signedIn: boolean }) {
       links: [
         { label: "Forms", href: forms, external: true },
         {
+          label: "Developers",
+          href: developer,
+          external: true,
+        },
+        {
           label: "Email API",
           href: `${developer}/documentation/email-api`,
           external: true,

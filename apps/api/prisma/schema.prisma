@@ -3534,6 +3534,8 @@ model MailApp {
   domainVerifiedAt   DateTime?
   domainReviewedById String?
   domainTrustReason  String?
+  /// When true (and MAIL_BODY_ENCRYPTION_ENABLED), new mail bodies are envelope-encrypted.
+  bodyEncryptionEnabled Boolean           @default(false)
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
@@ -3804,6 +3806,12 @@ enum MailMessageStatus {
   RECEIVED
 }
 
+enum MailBodyCryptoStatus {
+  NONE
+  MIGRATING
+  ENCRYPTED
+}
+
 /// Stored mail message (outbound via SES; inbound later via receipt rules)
 model MailMessage {
   id        String  @id @default(uuid())
@@ -3835,6 +3843,12 @@ model MailMessage {
   subject  String  @default("")
   bodyText String? @db.Text
   bodyHtml String? @db.Text
+  bodyCryptoStatus   MailBodyCryptoStatus @default(NONE)
+  bodyCryptoVersion  Int?
+  bodyKmsKeyId       String?
+  bodyEncryptedDek   Bytes?
+  bodyTextCiphertext Bytes?
+  bodyHtmlCiphertext Bytes?
   snippet  String?
 
   isRead    Boolean @default(false)
@@ -3859,6 +3873,7 @@ model MailMessage {
   @@index([userId])
   @@index([sesMessageId])
   @@index([senderDomain])
+  @@index([bodyCryptoStatus])
   @@map("mail_messages")
 }
 

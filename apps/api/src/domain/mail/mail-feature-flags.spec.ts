@@ -14,11 +14,23 @@ describe('MailFeatureFlags', () => {
     expect(subject.showBimiLogos()).toBe(false);
     expect(subject.ruknyVerification()).toBe(false);
     expect(subject.outboundBimi()).toBe(false);
+    expect(subject.bodyEncryptionEnabled()).toBe(false);
   });
 
   it('defaults staged features on for local development and tests', () => {
     expect(flags({ NODE_ENV: 'development' }).resolveBimi()).toBe(true);
     expect(flags({ NODE_ENV: 'test' }).outboundBimi()).toBe(true);
+    expect(flags({ NODE_ENV: 'development' }).bodyEncryptionEnabled()).toBe(
+      false,
+    );
+  });
+
+  it('enables body encryption only when explicitly configured', () => {
+    const subject = flags({
+      NODE_ENV: 'production',
+      MAIL_BODY_ENCRYPTION_ENABLED: 'true',
+    });
+    expect(subject.bodyEncryptionEnabled()).toBe(true);
   });
 
   it('honors explicit rollout values and fails closed at guarded endpoints', () => {

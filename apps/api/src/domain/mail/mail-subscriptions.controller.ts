@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/common/guards/roles.guard';
 import { Roles } from '../../core/common/decorators/auth/roles.decorator';
@@ -49,6 +50,7 @@ export class MailSubscriptionsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 8, ttl: 900_000 } })
   @Post('apps/:appId/subscription/request')
   @ApiOperation({
     summary:

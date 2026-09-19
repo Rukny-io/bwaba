@@ -704,3 +704,302 @@ body {
   border: none;
   box-shadow: none;
 }
+
+/* ── Marketing (Mail-aligned) ── */
+.dev-mkt-container {
+  position: relative;
+}
+
+.dev-frame-cta {
+  position: relative;
+}
+
+.dev-frame-ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dev-frame-tick {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  color: #111111;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.dev-frame-tick::before,
+.dev-frame-tick::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.dev-frame-tick::before {
+  width: 7px;
+  height: 1px;
+}
+
+.dev-frame-tick::after {
+  width: 1px;
+  height: 7px;
+}
+
+.dev-frame-cta:hover .dev-frame-tick,
+.dev-frame-cta:focus-visible .dev-frame-tick,
+.dev-frame-cta:focus-within .dev-frame-tick {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dev-frame-tick {
+    transition:
+      transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.3s ease;
+  }
+
+  .dev-frame-cta:hover .dev-frame-tick--static.dev-frame-tick--tl,
+  .dev-frame-cta:focus-visible .dev-frame-tick--static.dev-frame-tick--tl,
+  .dev-frame-cta:focus-within .dev-frame-tick--static.dev-frame-tick--tl {
+    transform: translate(5px, 5px);
+  }
+  .dev-frame-cta:hover .dev-frame-tick--static.dev-frame-tick--tr,
+  .dev-frame-cta:focus-visible .dev-frame-tick--static.dev-frame-tick--tr,
+  .dev-frame-cta:focus-within .dev-frame-tick--static.dev-frame-tick--tr {
+    transform: translate(-5px, 5px);
+  }
+  .dev-frame-cta:hover .dev-frame-tick--static.dev-frame-tick--bl,
+  .dev-frame-cta:focus-visible .dev-frame-tick--static.dev-frame-tick--bl,
+  .dev-frame-cta:focus-within .dev-frame-tick--static.dev-frame-tick--bl {
+    transform: translate(5px, -5px);
+  }
+  .dev-frame-cta:hover .dev-frame-tick--static.dev-frame-tick--br,
+  .dev-frame-cta:focus-visible .dev-frame-tick--static.dev-frame-tick--br,
+  .dev-frame-cta:focus-within .dev-frame-tick--static.dev-frame-tick--br {
+    transform: translate(-5px, -5px);
+  }
+}
+
+.dev-frame-tick--tl {
+  top: 0;
+  left: 0;
+}
+.dev-frame-tick--tl::before {
+  top: 0;
+  left: 0;
+}
+.dev-frame-tick--tl::after {
+  top: 0;
+  left: 0;
+}
+
+.dev-frame-tick--tr {
+  top: 0;
+  right: 0;
+}
+.dev-frame-tick--tr::before {
+  top: 0;
+  right: 0;
+}
+.dev-frame-tick--tr::after {
+  top: 0;
+  right: 0;
+}
+
+.dev-frame-tick--bl {
+  bottom: 0;
+  left: 0;
+}
+.dev-frame-tick--bl::before {
+  bottom: 0;
+  left: 0;
+}
+.dev-frame-tick--bl::after {
+  bottom: 0;
+  left: 0;
+}
+
+.dev-frame-tick--br {
+  bottom: 0;
+  right: 0;
+}
+.dev-frame-tick--br::before {
+  bottom: 0;
+  right: 0;
+}
+.dev-frame-tick--br::after {
+  bottom: 0;
+  right: 0;
+}
+
+.dev-frame-tick--static.dev-frame-tick--tl {
+  transform: translate(-1px, -1px);
+}
+.dev-frame-tick--static.dev-frame-tick--tr {
+  transform: translate(1px, -1px);
+}
+.dev-frame-tick--static.dev-frame-tick--bl {
+  transform: translate(-1px, 1px);
+}
+.dev-frame-tick--static.dev-frame-tick--br {
+  transform: translate(1px, 1px);
+}
+
+.dev-hero-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dev-hero-enter {
+    animation: devHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .dev-hero-enter-delayed {
+    animation: devHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  .dev-hero-enter-late {
+    animation: devHeroEnter 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+  }
+}
+
+@keyframes devHeroEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scroll reveals */
+.dev-reveal {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dev-reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--dev-reveal-delay, 0s);
+  }
+
+  .dev-reveal.dev-reveal--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .dev-stagger-item {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.25s ease;
+    transition-delay: calc(
+      var(--dev-stagger-index, 0) * var(--dev-stagger-step, 0.08s)
+    );
+  }
+
+  .dev-stagger--visible .dev-stagger-item {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .dev-split-word {
+    animation: devSplitWord 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--dev-split-delay, 0s);
+  }
+}
+
+@keyframes devSplitWord {
+  from {
+    opacity: 0;
+    transform: translateY(110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pricing card / cell hover */
+.dev-pricing-card {
+  transition: background-color 0.25s ease;
+}
+
+.dev-pricing-card:hover {
+  background-color: #f5f5f5;
+}
+
+.dev-usage-cell {
+  transition:
+    background-color 0.25s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dev-usage-cell:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+.dev-faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+}
+
+.dev-faq-panel--open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.dev-faq-panel > div {
+  overflow: hidden;
+}
+
+.dev-faq-chevron {
+  display: inline-flex;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dev-faq-chevron--open {
+  transform: rotate(45deg);
+}
+
+.dev-billing-pill {
+  position: relative;
+  overflow: hidden;
+}
+
+.dev-billing-pill button {
+  position: relative;
+  z-index: 1;
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.dev-cta-panel {
+  transition:
+    box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+}
+
+.dev-cta-panel:hover {
+  border-color: #111111;
+  box-shadow: 0 16px 40px -28px rgba(17, 17, 17, 0.35);
+}

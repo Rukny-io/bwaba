@@ -36,7 +36,7 @@ export default function EmailApiQuotasPage() {
             [
               'Email API Starter',
               '10,000 / month',
-              '15,000 IQD per month — request from the portal',
+              '6,000 IQD per month — request from the portal',
             ],
           ]}
         />

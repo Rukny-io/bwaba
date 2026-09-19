@@ -29,6 +29,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { S3Service } from '../../services/s3.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -435,6 +436,7 @@ export class FormsUploadController {
     return { ok: true, confirmed: keys.length };
   }
 
+  @Public()
   @Post('public/:slug/upload/session')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -447,6 +449,7 @@ export class FormsUploadController {
     return this.publicUpload.createSession(slug, this.getClientIp(req));
   }
 
+  @Public()
   @Post('public/:slug/upload/presign')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
@@ -490,6 +493,7 @@ export class FormsUploadController {
   }
 
   /** @deprecated Use POST public/:slug/upload/session + presign instead */
+  @Public()
   @Post('public/:slug/upload')
   @ApiOperation({
     summary: '[Deprecated] Disk upload removed — use session + presign',

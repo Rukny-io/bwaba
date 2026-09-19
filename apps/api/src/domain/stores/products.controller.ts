@@ -31,7 +31,11 @@ import { ProductsService } from './products.service';
 import { ProductsUploadService } from './products-upload.service';
 import { CreateProductDto, ProductStatus } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import {
+  JwtAuthGuard,
+  OptionalJwtAuthGuard,
+} from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { PlanGuard } from '../../core/common/guards/plan.guard';
 import { CheckLimit } from '../../core/common/decorators/auth/plan.decorator';
 import { WorkspaceGuard } from '../workspace/workspace.guard';
@@ -111,6 +115,8 @@ export class ProductsController {
     return this.productsService.getProductStats(ws.ownerId);
   }
 
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product retrieved successfully' })
@@ -120,6 +126,7 @@ export class ProductsController {
     return this.productsService.findOne(id, userId);
   }
 
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get product by slug' })
   @ApiResponse({ status: 200, description: 'Product retrieved successfully' })

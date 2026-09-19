@@ -58,6 +58,7 @@ import {
   RequirePlan,
 } from '../../core/common/decorators/auth/plan.decorator';
 import { OptionalUserId } from '../../core/common/decorators/auth/optional-user.decorator';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { SubmitContentLengthGuard } from './guards/submit-content-length.guard';
 import { parsePageLimit } from './utils/forms-pagination.util';
 import { getClientIp } from './utils/client-ip.util';
@@ -104,6 +105,7 @@ export class FormsController {
    * Returns the detected country, city, IP, and resolution source.
    * Safe to expose: contains no user data, just geo probe info.
    */
+  @Public()
   @Get('public/geo-check')
   @SkipThrottle()
   @ApiOperation({
@@ -147,6 +149,7 @@ export class FormsController {
     return Array.isArray(raw) ? raw[0] : raw;
   }
 
+  @Public()
   @Get('public/user/:username')
   @SkipThrottle()
   @ApiOperation({ summary: 'Get published forms by username (public)' })
@@ -160,6 +163,7 @@ export class FormsController {
     );
   }
 
+  @Public()
   @Get('public/:slug/embed-policy')
   @SkipThrottle()
   @ApiOperation({
@@ -175,6 +179,7 @@ export class FormsController {
     return policy;
   }
 
+  @Public()
   @Get('public/:slug')
   @SkipThrottle()
   @ApiOperation({ summary: 'Get form by slug (public)' })
@@ -193,6 +198,7 @@ export class FormsController {
     });
   }
 
+  @Public()
   @Post('public/:slug/view')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
@@ -208,6 +214,7 @@ export class FormsController {
     return this.forms.trackPublicFormView(slug, buildTrackContext(req));
   }
 
+  @Public()
   @Post('public/:slug/submit')
   @UseGuards(SubmitContentLengthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -236,6 +243,7 @@ export class FormsController {
     );
   }
 
+  @Public()
   @Post('public/:slug/verify-email/send')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -248,6 +256,7 @@ export class FormsController {
     return this.emailVerification.sendCode(form.id, dto.fieldId, dto.email);
   }
 
+  @Public()
   @Post('public/:slug/verify-email/confirm')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -260,6 +269,7 @@ export class FormsController {
     return this.emailVerification.verifyCode(form.id, dto.email, dto.code);
   }
 
+  @Public()
   @Post('public/:slug/verify-phone/send')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -272,6 +282,7 @@ export class FormsController {
     return this.phoneVerification.sendCode(form.id, dto.fieldId, dto.phone);
   }
 
+  @Public()
   @Post('public/:slug/verify-phone/confirm')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -287,6 +298,7 @@ export class FormsController {
   // ==================== AUTHENTICATED ENDPOINTS ====================
 
   @Post()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -302,6 +314,7 @@ export class FormsController {
 
   @Get()
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -331,6 +344,7 @@ export class FormsController {
 
   @Get('analytics/overview')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:analytics:read')
   @RequireScopes('forms:read')
@@ -348,6 +362,7 @@ export class FormsController {
 
   @Get('integrations/overview')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -461,6 +476,7 @@ export class FormsController {
 
   @Get(':id')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -475,6 +491,7 @@ export class FormsController {
   }
 
   @Put(':id')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -490,6 +507,7 @@ export class FormsController {
   }
 
   @Put(':id/status')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -506,6 +524,7 @@ export class FormsController {
 
   @Post(':id/delete')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -530,6 +549,7 @@ export class FormsController {
 
   @Delete(':id')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Public()
   @UseGuards(JwtOrApiKeyGuard)
   @RequireScopes('forms:write')
   @ApiBearerAuth()
@@ -547,6 +567,7 @@ export class FormsController {
 
   @Post(':id/restore')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -566,6 +587,7 @@ export class FormsController {
   }
 
   @Post(':id/duplicate')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -581,6 +603,7 @@ export class FormsController {
 
   @Get(':id/developer-embed')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -600,6 +623,7 @@ export class FormsController {
 
   @Get(':id/developer-embed/link-targets')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -616,6 +640,7 @@ export class FormsController {
   }
 
   @Post(':id/developer-embed/link')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -638,6 +663,7 @@ export class FormsController {
   }
 
   @Get(':id/webhook-deliveries')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:webhooks')
@@ -658,6 +684,7 @@ export class FormsController {
   }
 
   @Post(':id/webhooks/test')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:webhooks')
@@ -672,6 +699,7 @@ export class FormsController {
   }
 
   @Post(':id/webhooks/regenerate-secret')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:webhooks')
@@ -686,6 +714,7 @@ export class FormsController {
   }
 
   @Post(':id/submit')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, SubmitContentLengthGuard)
   @RequireScopes('forms:write')
   @ApiBearerAuth()
@@ -705,6 +734,7 @@ export class FormsController {
 
   @Get(':id/submissions')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:submissions:read')
   @RequireScopes('forms:read')
@@ -733,6 +763,7 @@ export class FormsController {
 
   @Get(':id/submissions/summary')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:submissions:read')
   @RequireScopes('forms:read')
@@ -748,6 +779,7 @@ export class FormsController {
 
   @Get(':id/submissions/field-response-counts')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:submissions:read')
   @RequireScopes('forms:read')
@@ -762,6 +794,7 @@ export class FormsController {
   }
 
   @Delete(':id/submissions/:submissionId')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:submissions:write')
   @RequireScopes('forms:write')
@@ -778,6 +811,7 @@ export class FormsController {
 
   @Get(':id/steps')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:read')
   @RequireScopes('forms:read')
@@ -793,6 +827,7 @@ export class FormsController {
   }
 
   @Put(':id/steps')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -809,6 +844,7 @@ export class FormsController {
   }
 
   @Post(':id/analytics/share')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('forms:write')
   @RequireScopes('forms:write')
@@ -824,6 +860,7 @@ export class FormsController {
 
   @Get(':id/analytics')
   @SkipThrottle()
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:analytics:read')
   @RequireScopes('forms:read')
@@ -842,6 +879,7 @@ export class FormsController {
   }
 
   @Get(':id/export/orphaned')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:export:read')
   @RequireScopes('forms:read')
@@ -865,6 +903,7 @@ export class FormsController {
   }
 
   @Get(':id/export')
+  @Public()
   @UseGuards(JwtOrApiKeyGuard, WorkspaceGuard, PlanGuard)
   @RequiresWorkspacePermission('forms:export:read')
   @RequireScopes('forms:read')

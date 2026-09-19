@@ -402,7 +402,7 @@ export class StoresService {
         user: {
           select: {
             id: true,
-            email: true,
+            // Never expose account email on public store-by-id reads
             profile: {
               select: {
                 name: true,

@@ -9,11 +9,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { ApiKeyAuthGuard } from '../../developer/api-keys/guards/api-key-auth.guard';
 import { RequireScopes } from '../../developer/api-keys/decorators/require-scopes.decorator';
 import { TemplatesService } from './templates.service';
 import { CreateTemplateDto } from './dto/template.dto';
 
+@Public()
 @ApiTags('WhatsApp API - Templates')
 @ApiHeader({ name: 'X-API-Key', required: true })
 @UseGuards(ApiKeyAuthGuard)

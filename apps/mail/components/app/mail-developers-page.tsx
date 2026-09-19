@@ -162,9 +162,13 @@ export function MailDevelopersPage() {
           </div>
           <Button
             size="sm"
-            href={`${developer}/documentation/email-api`}
-            target="_blank"
-            rel="noopener noreferrer"
+            onPress={() =>
+              window.open(
+                `${developer}/documentation/email-api`,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
           >
             Open Email API docs
             <ArrowUpRight className="size-3.5" aria-hidden />
@@ -201,9 +205,9 @@ export function MailDevelopersPage() {
           <Button
             size="sm"
             variant="secondary"
-            href={developer}
-            target="_blank"
-            rel="noopener noreferrer"
+            onPress={() =>
+              window.open(developer, "_blank", "noopener,noreferrer")
+            }
           >
             Developers home
             <ArrowUpRight className="size-3.5" aria-hidden />
@@ -211,9 +215,13 @@ export function MailDevelopersPage() {
           <Button
             size="sm"
             variant="ghost"
-            href={`${developer}/pricing`}
-            target="_blank"
-            rel="noopener noreferrer"
+            onPress={() =>
+              window.open(
+                `${developer}/pricing`,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
           >
             Email API pricing
           </Button>

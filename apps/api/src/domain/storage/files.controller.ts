@@ -10,6 +10,7 @@ import {
   VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { S3Service } from '../../shared/services/s3.service';
 
 // Regex patterns for validation
@@ -18,6 +19,15 @@ const UUID_REGEX =
 const SAFE_FILENAME_REGEX = /^[a-zA-Z0-9_-]+\.(webp|jpg|jpeg|png|gif)$/i;
 // Safe path segment: alphanumeric, hyphens, underscores, dots (no ..)
 const SAFE_PATH_SEGMENT = /^[a-zA-Z0-9_.-]+$/;
+const PUBLIC_MEDIA_EXTENSIONS = new Set([
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'webp',
+  'svg',
+  'mp4',
+]);
 
 /**
  * Files Controller - Serves S3 assets via presigned URL redirects
@@ -26,6 +36,7 @@ const SAFE_PATH_SEGMENT = /^[a-zA-Z0-9_.-]+$/;
  * without the /v1 version prefix. This allows raw S3 keys stored in the database
  * to be resolved to presigned URLs without breaking existing data.
  */
+@Public()
 @Controller({ version: VERSION_NEUTRAL })
 export class FilesController {
   private readonly bucket = process.env.S3_BUCKET || 'rukny-storage';
@@ -79,8 +90,14 @@ export class FilesController {
       'stores/',
       'wallpapers/',
     ];
-    if (!allowedPrefixes.some((prefix) => rawPath.startsWith(prefix))) {
+    if (!allowedPrefixes.some((allowed) => rawPath.startsWith(allowed))) {
       throw new BadRequestException('Invalid media path');
+    }
+
+    // Public proxy: images/video only — block documents and other private types
+    const ext = rawPath.split('.').pop()?.toLowerCase() || '';
+    if (!PUBLIC_MEDIA_EXTENSIONS.has(ext)) {
+      throw new BadRequestException('Unsupported media type');
     }
 
     try {
@@ -90,8 +107,6 @@ export class FilesController {
         throw new NotFoundException('Media not found');
       }
 
-      // Determine content type from extension
-      const ext = rawPath.split('.').pop()?.toLowerCase();
       const contentTypes: Record<string, string> = {
         jpg: 'image/jpeg',
         jpeg: 'image/jpeg',
@@ -100,19 +115,25 @@ export class FilesController {
         webp: 'image/webp',
         svg: 'image/svg+xml',
         mp4: 'video/mp4',
-        pdf: 'application/pdf',
       };
-      const contentType = contentTypes[ext || ''] || 'application/octet-stream';
+      const contentType = contentTypes[ext] || 'application/octet-stream';
 
       res.set({
         'Content-Type': contentType,
         'Content-Length': data.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
       });
 
       return res.send(data);
     } catch (error: any) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
       this.logger.warn(`Media not found: ${rawPath} - ${error?.message}`);
       throw new NotFoundException('Media not found');
     }

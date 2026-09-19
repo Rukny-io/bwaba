@@ -27,6 +27,7 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { UpdateStoreAnalyticsDto } from './dto/update-store-analytics.dto';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { WorkspaceGuard } from '../workspace/workspace.guard';
 import { RequiresWorkspacePermission } from '../workspace/workspace-permission-key';
 import { ActiveWorkspace } from '../workspace/active-workspace.decorator';
@@ -94,6 +95,7 @@ export class StoresController {
     return this.storesService.getWeeklySales(ws.ownerId);
   }
 
+  @Public()
   @Get('check-slug/:slug')
   @ApiOperation({ summary: 'Check if store slug is available' })
   @ApiResponse({ status: 200, description: 'Slug is taken' })
@@ -102,6 +104,7 @@ export class StoresController {
     return this.storesService.checkSlugAvailability(slug);
   }
 
+  @Public()
   @Get('categories')
   @ApiOperation({ summary: 'Get store categories' })
   @ApiResponse({
@@ -112,6 +115,7 @@ export class StoresController {
     return this.storesService.getStoreCategories();
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get store by ID' })
   @ApiResponse({ status: 200, description: 'Store retrieved successfully' })
@@ -120,6 +124,7 @@ export class StoresController {
     return this.storesService.findOne(id);
   }
 
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get store by slug' })
   @ApiResponse({ status: 200, description: 'Store retrieved successfully' })

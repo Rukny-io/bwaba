@@ -144,6 +144,7 @@ export class ProfilesService {
     if (username) {
       await this.cacheManager.invalidate(`profile:username:${username}`);
       await this.cacheManager.invalidate(`profile:username:v2:${username}`);
+      await this.cacheManager.invalidate(`profile:username:v3:${username}`);
     }
   }
 
@@ -273,131 +274,142 @@ export class ProfilesService {
    * ⚡ Performance: Cached for 5 minutes
    */
   async findByUsername(username: string, requesterId?: string) {
-    const cacheKey = `profile:username:v2:${username}`;
+    // Cache only the public (non-owner) view so owner PII cannot poison shared cache
+    const cacheKey = `profile:username:v3:${username}`;
 
-    return this.cacheManager.wrap(cacheKey, 300, async () => {
-      const profile = await this.prisma.profile.findUnique({
-        where: { username },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              phone: true,
-              phoneNumber: true,
-              bannerUrls: true,
-              isRuknyVerified: true,
-              verifiedDisplayName: true,
-              verifiedCategory: true,
-              verificationLevel: true,
+    const publicProfile = await this.cacheManager.wrap(
+      cacheKey,
+      300,
+      async () => {
+        const profile = await this.prisma.profile.findUnique({
+          where: { username },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                phone: true,
+                phoneNumber: true,
+                bannerUrls: true,
+                isRuknyVerified: true,
+                verifiedDisplayName: true,
+                verifiedCategory: true,
+                verificationLevel: true,
+              },
+            },
+            socialLinks: {
+              where: { status: 'active' },
+              orderBy: { displayOrder: 'asc' },
             },
           },
-          socialLinks: {
-            where: { status: 'active' },
-            orderBy: { displayOrder: 'asc' },
-          },
-        },
-      });
+        });
 
-      if (!profile) {
-        throw new NotFoundException(
-          `Profile with username "${username}" not found`,
-        );
-      }
+        if (!profile) {
+          throw new NotFoundException(
+            `Profile with username "${username}" not found`,
+          );
+        }
 
-      // Don't return email if profile is private and not the owner
-      if (profile.visibility === 'PRIVATE' && profile.userId !== requesterId) {
-        delete profile.user.email;
-      }
-
-      const isOwner = profile.userId === requesterId;
-
-      // Respect privacy settings for non-owners
-      if (!isOwner) {
-        if (profile.hideEmail) {
+        // Always strip as public visitor — never key cache on requesterId
+        if (profile.visibility === 'PRIVATE' || profile.hideEmail) {
           delete profile.user.email;
         }
         if (profile.hidePhone) {
           delete (profile.user as { phone?: string | null }).phone;
           delete (profile.user as { phoneNumber?: string | null }).phoneNumber;
         }
-      }
 
-      const publicEmail = profile.user.email ?? null;
-      const publicPhone =
-        (profile.user as { phoneNumber?: string | null }).phoneNumber ||
-        (profile.user as { phone?: string | null }).phone ||
-        null;
+        const publicEmail = profile.user.email ?? null;
+        const publicPhone =
+          (profile.user as { phoneNumber?: string | null }).phoneNumber ||
+          (profile.user as { phone?: string | null }).phone ||
+          null;
 
-      // Get follow counts separately
-      const [followersCount, followingCount] = await Promise.all([
-        this.prisma.follows.count({
-          where: { followingId: profile.userId },
-        }),
-        this.prisma.follows.count({
-          where: { followerId: profile.userId },
-        }),
-      ]);
+        const [followersCount, followingCount] = await Promise.all([
+          this.prisma.follows.count({
+            where: { followingId: profile.userId },
+          }),
+          this.prisma.follows.count({
+            where: { followerId: profile.userId },
+          }),
+        ]);
 
-      // Convert banner keys to stable proxy URLs
-      const bannerKeys = (profile.user.bannerUrls || []).filter(
-        (key: string) => key && !key.startsWith('http'),
-      );
-      const bannerUrls = bannerKeys.map((key: string) => `/api/media/${key}`);
+        const bannerKeys = (profile.user.bannerUrls || []).filter(
+          (key: string) => key && !key.startsWith('http'),
+        );
+        const bannerUrls = bannerKeys.map((key: string) => `/api/media/${key}`);
 
-      // Convert avatar and cover keys to stable proxy URLs
-      let avatarUrl = (profile as any).avatar as string | undefined | null;
-      let coverUrl = (profile as any).coverImage as string | undefined | null;
+        let avatarUrl = (profile as any).avatar as string | undefined | null;
+        let coverUrl = (profile as any).coverImage as string | undefined | null;
 
-      // Handle legacy local paths (convert to full API URL or clear if invalid)
-      const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
-
-      if (avatarUrl && !avatarUrl.startsWith('http')) {
-        if (avatarUrl.startsWith('/uploads/')) {
-          this.logger.warn(
-            `Legacy local avatar path detected for user, clearing: ${avatarUrl}`,
-          );
-          avatarUrl = null;
-        } else if (!avatarUrl.startsWith('/api/')) {
-          avatarUrl = `/api/media/${avatarUrl.replace(/^\/+/, '')}`;
+        if (avatarUrl && !avatarUrl.startsWith('http')) {
+          if (avatarUrl.startsWith('/uploads/')) {
+            this.logger.warn(
+              `Legacy local avatar path detected for user, clearing: ${avatarUrl}`,
+            );
+            avatarUrl = null;
+          } else if (!avatarUrl.startsWith('/api/')) {
+            avatarUrl = `/api/media/${avatarUrl.replace(/^\/+/, '')}`;
+          }
         }
-      }
 
-      if (coverUrl && !coverUrl.startsWith('http')) {
-        if (coverUrl.startsWith('/uploads/')) {
-          this.logger.warn(
-            `Legacy local cover path detected for user, clearing: ${coverUrl}`,
-          );
-          coverUrl = null;
-        } else if (!coverUrl.startsWith('/api/')) {
-          coverUrl = `/api/media/${coverUrl.replace(/^\/+/, '')}`;
+        if (coverUrl && !coverUrl.startsWith('http')) {
+          if (coverUrl.startsWith('/uploads/')) {
+            this.logger.warn(
+              `Legacy local cover path detected for user, clearing: ${coverUrl}`,
+            );
+            coverUrl = null;
+          } else if (!coverUrl.startsWith('/api/')) {
+            coverUrl = `/api/media/${coverUrl.replace(/^\/+/, '')}`;
+          }
         }
-      }
 
-      // Resolve logo cloud URLs in heroSettings
-      const resolvedHeroSettings = await this.resolveLogoUrls(
-        (profile as any).heroSettings,
-      );
+        const resolvedHeroSettings = await this.resolveLogoUrls(
+          (profile as any).heroSettings,
+        );
 
-      // Transform response to include _count and banners at profile level
-      return this.serializeProfile({
-        ...profile,
-        avatar: avatarUrl,
-        coverImage: coverUrl,
-        banners: bannerUrls,
-        heroSettings: resolvedHeroSettings,
-        isRuknyVerified: profile.user.isRuknyVerified,
-        verifiedDisplayName: profile.user.verifiedDisplayName,
-        verifiedCategory: profile.user.verifiedCategory,
-        verificationLevel: profile.user.verificationLevel,
-        email: publicEmail,
-        phone: publicPhone,
-        _count: {
-          followers: followersCount,
-          following: followingCount,
-        },
-      });
+        return this.serializeProfile({
+          ...profile,
+          avatar: avatarUrl,
+          coverImage: coverUrl,
+          banners: bannerUrls,
+          heroSettings: resolvedHeroSettings,
+          isRuknyVerified: profile.user.isRuknyVerified,
+          verifiedDisplayName: profile.user.verifiedDisplayName,
+          verifiedCategory: profile.user.verifiedCategory,
+          verificationLevel: profile.user.verificationLevel,
+          email: publicEmail,
+          phone: publicPhone,
+          _count: {
+            followers: followersCount,
+            following: followingCount,
+          },
+        });
+      },
+    );
+
+    if (!requesterId || publicProfile.userId !== requesterId) {
+      return publicProfile;
+    }
+
+    // Owner: overlay contact fields without putting them in the shared cache
+    const owner = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { email: true, phone: true, phoneNumber: true },
     });
+    const ownerPhone = owner?.phoneNumber || owner?.phone || null;
+
+    return {
+      ...publicProfile,
+      email: owner?.email ?? null,
+      phone: ownerPhone,
+      user: {
+        ...publicProfile.user,
+        email: owner?.email ?? null,
+        phone: owner?.phone ?? null,
+        phoneNumber: owner?.phoneNumber ?? null,
+      },
+    };
   }
 
   /**

@@ -9,6 +9,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { ApiKeyAuthGuard } from '../../developer/api-keys/guards/api-key-auth.guard';
 import { RequireScopes } from '../../developer/api-keys/decorators/require-scopes.decorator';
 import { MessagingService } from './messaging.service';
@@ -21,6 +22,7 @@ import { normalizeWhatsAppIdempotencyKey } from './whatsapp-message-idempotency.
  * يُستخدم بـ API Key (ليس JWT):
  *   X-API-Key: rk_live_xxxxxxxxxxxx
  */
+@Public()
 @ApiTags('WhatsApp API - Messages')
 @ApiHeader({ name: 'X-API-Key', required: true })
 @UseGuards(ApiKeyAuthGuard)

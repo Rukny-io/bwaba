@@ -24,7 +24,11 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import {
+  JwtAuthGuard,
+  OptionalJwtAuthGuard,
+} from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { ProfilesService } from './profiles.service';
 import { CreateProfileDto, UpdateProfileDto } from './dto';
 import { StorageService } from '../storage/storage.service';
@@ -61,6 +65,7 @@ export class ProfilesController {
     return this.profilesService.findByUserId(req.user.id);
   }
 
+  @Public()
   @Get('check/:username')
   @ApiOperation({ summary: 'Check if username is available' })
   @ApiParam({ name: 'username', description: 'Username to check availability' })
@@ -69,6 +74,8 @@ export class ProfilesController {
     return this.profilesService.checkUsernameAvailability(username);
   }
 
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':username')
   @ApiOperation({ summary: 'Get profile by username (public)' })
   @ApiParam({ name: 'username', description: 'Username of the profile' })

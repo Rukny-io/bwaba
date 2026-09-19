@@ -498,17 +498,17 @@ services:
     networks:
       - rukny_network
 
-  # ─── pgAdmin Database Manager ───
+  # ─── pgAdmin Database Manager (localhost + SSH tunnel only) ───
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.14
     container_name: rukny_pgadmin
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@rukny.io}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?set PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD}
       PGADMIN_LISTEN_PORT: 5050
-      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
-      PGADMIN_CONFIG_WTF_CSRF_SSL_STRICT: "False"
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "True"
+      PGADMIN_CONFIG_WTF_CSRF_SSL_STRICT: "True"
       SCRIPT_NAME: ""
     ports:
       - "127.0.0.1:5050:5050"

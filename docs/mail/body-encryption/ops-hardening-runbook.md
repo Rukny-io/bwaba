@@ -25,6 +25,8 @@
 
 ## After encryption enabled
 
-- [ ] Nightly plaintext scanner (`npm run mail:body-encryption:scan`)  
+- [ ] `MAIL_BODY_ENCRYPTION_DUAL_WRITE=false` on production API after pilot soak  
+- [ ] Prod CMK for new mail; IAM allows both staging + prod keys for legacy decrypt  
+- [ ] Daily `null-plaintext` cron + weekly `scan` cron (`install-mail-encryption-cron.sh`)  
 - [ ] Alert on encrypt/decrypt failure metrics  
-- [ ] CloudTrail on KMS key
+- [ ] CloudTrail on both KMS keys (staging + production)

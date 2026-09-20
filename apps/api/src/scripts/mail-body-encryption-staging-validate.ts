@@ -23,6 +23,20 @@ async function main() {
     detail: { MAIL_BODY_ENCRYPTION_ENABLED: globalEnabled },
   });
 
+  const dualWriteExplicit =
+    process.env.MAIL_BODY_ENCRYPTION_DUAL_WRITE?.trim().toLowerCase();
+  const dualWrite =
+    dualWriteExplicit === 'true' || dualWriteExplicit === '1'
+      ? true
+      : dualWriteExplicit === 'false' || dualWriteExplicit === '0'
+        ? false
+        : process.env.NODE_ENV !== 'production';
+  checks.push({
+    name: 'dual_write_flag',
+    ok: true,
+    detail: { MAIL_BODY_ENCRYPTION_DUAL_WRITE: dualWrite },
+  });
+
   checks.push({
     name: 'kms_configured',
     ok: kms.canUseEncryption(),

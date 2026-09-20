@@ -21,4 +21,8 @@ export class MailBodyEncryptionPolicy {
     });
     return app?.bodyEncryptionEnabled === true;
   }
+
+  dualWritePlaintext(): boolean {
+    return this.flags.bodyEncryptionDualWrite();
+  }
 }

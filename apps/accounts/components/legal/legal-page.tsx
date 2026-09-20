@@ -10,8 +10,10 @@ import {
   LegalSidebar,
   type LegalNavGroup,
 } from "@/components/legal/legal-sidebar"
+import { DynamicIslandTOC } from "@/components/ui/dynamic-island-toc"
 import type { LegalDocumentContent } from "@/lib/legal/types"
 import { switchLocale } from "@/lib/switch-locale"
+import { cn } from "@/lib/utils"
 
 type LegalPageKind = "terms" | "privacy"
 
@@ -124,11 +126,11 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
         dir="ltr"
         className="sticky top-0 z-40 border-b border-[color-mix(in_srgb,var(--border)_70%,transparent)] bg-[var(--background)]/85 backdrop-blur-md"
       >
-        <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-5 sm:h-[3.75rem] sm:px-6 lg:max-w-6xl">
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+        <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-2 px-4 sm:h-[3.75rem] sm:gap-3 sm:px-6 lg:max-w-6xl">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3.5">
             <Link
               href={kind === "privacy" ? "/privacy" : "/terms"}
-              className="flex min-w-0 items-center gap-2 sm:gap-2.5"
+              className="flex min-w-0 items-center gap-2"
             >
               <Image
                 src="/rukny-logo.svg"
@@ -142,10 +144,10 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
                 Rukny Legal
               </span>
             </Link>
-            <span className="hidden text-[13px] text-[var(--muted-foreground)] sm:inline">
+            <span className="hidden text-[13px] text-[var(--muted-foreground)] md:inline">
               /
             </span>
-            <div className="hidden items-center gap-3 sm:flex">
+            <div className="hidden items-center gap-3 md:flex">
               <Link
                 href="/privacy"
                 className={
@@ -169,27 +171,62 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
             </div>
           </div>
 
-          <nav className="flex shrink-0 items-center gap-1.5">
+          <nav className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={() => switchLocale(locale, router)}
-              className="hidden h-9 items-center px-2.5 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] sm:inline-flex"
+              className="inline-flex h-8 items-center px-2 text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] sm:h-9 sm:px-2.5 sm:text-[13px]"
               aria-label={t("language")}
             >
               {t("language")}
             </button>
             <Link
               href="/login"
-              className="inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-3 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-colors hover:opacity-90 sm:h-9 sm:text-[13px]"
+              className="inline-flex h-8 items-center rounded-full bg-[var(--primary)] px-3 text-[12px] font-semibold text-[var(--primary-foreground)] transition-colors hover:opacity-90 sm:h-9 sm:text-[13px]"
             >
               {isEn ? "Sign in" : "تسجيل الدخول"}
             </Link>
           </nav>
         </div>
+
+        <div className="border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] px-4 pb-3 pt-3 md:hidden">
+          <div
+            className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface-secondary)] p-1"
+            role="tablist"
+            aria-label={isEn ? "Legal documents" : "المستندات القانونية"}
+          >
+            <Link
+              href="/privacy"
+              role="tab"
+              aria-selected={kind === "privacy"}
+              className={cn(
+                "inline-flex h-9 items-center justify-center rounded-lg text-[13px] font-medium transition-colors",
+                kind === "privacy"
+                  ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
+                  : "text-[var(--muted-foreground)]",
+              )}
+            >
+              {isEn ? "Privacy" : "الخصوصية"}
+            </Link>
+            <Link
+              href="/terms"
+              role="tab"
+              aria-selected={kind === "terms"}
+              className={cn(
+                "inline-flex h-9 items-center justify-center rounded-lg text-[13px] font-medium transition-colors",
+                kind === "terms"
+                  ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
+                  : "text-[var(--muted-foreground)]",
+              )}
+            >
+              {isEn ? "Terms" : "الشروط"}
+            </Link>
+          </div>
+        </div>
       </header>
 
       <div className="flex-1">
-        <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-8 sm:px-6 sm:pt-10 lg:pb-16">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10 sm:pb-24 lg:pb-16">
           <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10 xl:gap-12">
             <LegalSidebar
               productTitle={productTitle}
@@ -198,17 +235,17 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
             />
 
             <article className="min-w-0">
-              <header className="mb-8 max-w-2xl sm:mb-10">
-                <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+              <header className="mb-7 max-w-2xl sm:mb-10">
+                <p className="text-[12px] font-medium text-[var(--muted-foreground)] sm:text-[13px]">
                   {isEn ? "Legal" : "القانوني"}
                 </p>
-                <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.25rem] sm:leading-[1.15]">
+                <h1 className="mt-2 text-[1.5rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.25rem] sm:leading-[1.15]">
                   {content.title}
                 </h1>
-                <p className="mt-3 text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
+                <p className="mt-3 text-[14px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
                   {content.description}
                 </p>
-                <p className="mt-3 text-[13px] text-[var(--muted-foreground)]">
+                <p className="mt-3 text-[12.5px] leading-6 text-[var(--muted-foreground)] sm:text-[13px] sm:leading-normal">
                   {isEn
                     ? `Updated ${content.lastUpdated}. See also `
                     : `آخر تحديث ${content.lastUpdated}. راجع أيضًا `}
@@ -222,7 +259,7 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
                 </p>
               </header>
 
-              <div className="max-w-2xl space-y-10 text-[15px] leading-7 text-[var(--foreground)] sm:space-y-12 sm:text-base sm:leading-8">
+              <div className="max-w-2xl space-y-9 text-[14px] leading-7 text-[var(--foreground)] sm:space-y-12 sm:text-base sm:leading-8">
                 {content.sections.map((section) => (
                   <LegalSectionBlock key={section.id} section={section} />
                 ))}
@@ -232,8 +269,12 @@ export function LegalPage({ kind, contentAr, contentEn }: LegalPageProps) {
         </div>
       </div>
 
+      <div className="lg:hidden">
+        <DynamicIslandTOC selector="article h2[data-toc-title]" />
+      </div>
+
       <footer dir="ltr" className="mt-auto border-t border-[var(--border)]">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-5 py-8 text-[13px] text-[var(--muted-foreground)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:max-w-6xl">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-8 text-center text-[13px] text-[var(--muted-foreground)] sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:text-start lg:max-w-6xl">
           <p>© {new Date().getFullYear()} Rukny</p>
           <div className="flex flex-wrap gap-4">
             <Link

@@ -33,6 +33,30 @@ describe('MailFeatureFlags', () => {
     expect(subject.bodyEncryptionEnabled()).toBe(true);
   });
 
+  it('defaults dual-write off in production and on in development', () => {
+    expect(flags({ NODE_ENV: 'production' }).bodyEncryptionDualWrite()).toBe(
+      false,
+    );
+    expect(flags({ NODE_ENV: 'development' }).bodyEncryptionDualWrite()).toBe(
+      true,
+    );
+  });
+
+  it('honors explicit MAIL_BODY_ENCRYPTION_DUAL_WRITE', () => {
+    expect(
+      flags({
+        NODE_ENV: 'production',
+        MAIL_BODY_ENCRYPTION_DUAL_WRITE: 'true',
+      }).bodyEncryptionDualWrite(),
+    ).toBe(true);
+    expect(
+      flags({
+        NODE_ENV: 'development',
+        MAIL_BODY_ENCRYPTION_DUAL_WRITE: 'false',
+      }).bodyEncryptionDualWrite(),
+    ).toBe(false);
+  });
+
   it('honors explicit rollout values and fails closed at guarded endpoints', () => {
     const subject = flags({
       NODE_ENV: 'development',

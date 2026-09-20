@@ -84,11 +84,13 @@ function CircleProgress({ percentage }: { percentage: number }) {
 type DynamicIslandTOCProps = {
   children?: ReactNode;
   selector?: string;
+  className?: string;
 };
 
 export function DynamicIslandTOC({
   children,
   selector = "article h1, article h2, article h3, article h4, .prose h1, .prose h2, .prose h3, .prose h4, [data-toc]",
+  className,
 }: DynamicIslandTOCProps) {
   const [headings, setHeadings] = useState<HeadingData[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -96,9 +98,24 @@ export function DynamicIslandTOC({
   const [isExpanded, setIsExpanded] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isRtl, setIsRtl] = useState(false);
+  const [islandWidth, setIslandWidth] = useState({ collapsed: 280, expanded: 340 });
 
   useEffect(() => {
     setIsRtl(document.documentElement.dir.toLowerCase().startsWith("rtl"));
+  }, []);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      const maxWidth = Math.max(240, window.innerWidth - 32);
+      setIslandWidth({
+        collapsed: Math.min(280, maxWidth),
+        expanded: Math.min(340, maxWidth),
+      });
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth, { passive: true });
+    return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
   useEffect(() => {
@@ -196,7 +213,10 @@ export function DynamicIslandTOC({
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-        className="fixed bottom-[30px] left-1/2 z-[9999] flex -translate-x-1/2 flex-col items-center"
+        className={cn(
+          "fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-[9999] flex w-[calc(100%-2rem)] max-w-[340px] -translate-x-1/2 flex-col items-center",
+          className,
+        )}
       >
         <motion.div
           onClick={() => {
@@ -204,13 +224,13 @@ export function DynamicIslandTOC({
           }}
           initial={false}
           animate={{
-            width: isExpanded ? 340 : 280,
+            width: isExpanded ? islandWidth.expanded : islandWidth.collapsed,
             height: isExpanded ? 400 : 52,
           }}
           transition={islandTransition}
           style={{ cursor: isExpanded ? "default" : "pointer" }}
           className={cn(
-            "relative overflow-hidden border border-foreground/10 bg-background text-foreground shadow-2xl",
+            "relative w-full overflow-hidden border border-foreground/10 bg-background text-foreground shadow-2xl",
             isExpanded ? "rounded-4xl" : "rounded-2xl",
           )}
         >

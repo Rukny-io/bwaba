@@ -511,7 +511,7 @@ export class MailInboundService {
       messageId,
       bodyText,
       bodyHtml,
-      dualWritePlaintext: true,
+      dualWritePlaintext: this.bodyEncryption.dualWritePlaintext(),
     });
 
     const inReplyTo = this.normalizeMessageId(

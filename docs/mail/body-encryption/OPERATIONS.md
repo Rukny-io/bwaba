@@ -20,7 +20,25 @@ MAIL_KMS_KEY_ID=alias/rukny-mail-body-encryption-staging
 UPDATE mail_apps SET "bodyEncryptionEnabled" = true WHERE id = '<mail-app-uuid>';
 ```
 
-Restart API. New mail is stored as `MIGRATING` (dual-write plaintext + ciphertext).
+Restart API.
+
+### Dual-write vs direct encrypt
+
+| `MAIL_BODY_ENCRYPTION_DUAL_WRITE` | New mail status | Plaintext in DB |
+|-----------------------------------|-----------------|-----------------|
+| `true` (staging pilot soak) | `MIGRATING` | Yes until `null-plaintext` |
+| `false` (production default) | `ENCRYPTED` | No |
+
+Defaults: `false` in production when unset; `true` in dev/test when unset.
+
+After pilot soak on VPS:
+
+```bash
+MAIL_BODY_ENCRYPTION_DUAL_WRITE=false
+MAIL_KMS_KEY_ID=alias/rukny-mail-body-encryption   # prod CMK for new mail
+```
+
+Keep IAM access to **both** staging and prod KMS keys so legacy rows decrypt.
 
 ## Scripts
 
@@ -39,6 +57,7 @@ Restart API. New mail is stored as `MIGRATING` (dual-write plaintext + ciphertex
 
 - [staging-kms-provisioning.md](./staging-kms-provisioning.md)
 - [staging-pilot-runbook.md](./staging-pilot-runbook.md)
+- [vps-hardening-deploy.md](./vps-hardening-deploy.md)
 - [phase-6-production-rollout.md](./phase-6-production-rollout.md)
 
 ## Rollout sequence (Doc 3)
@@ -52,12 +71,28 @@ Restart API. New mail is stored as `MIGRATING` (dual-write plaintext + ciphertex
 
 ```bash
 MAIL_BODY_ENCRYPTION_ENABLED=false
+# Or re-enable soak rollback:
+MAIL_BODY_ENCRYPTION_DUAL_WRITE=true
 ```
 
 While status is `MIGRATING`, plaintext fallback still works.
 
+## VPS cron (recommended)
+
+```bash
+# Daily null-plaintext safety net (3am)
+0 3 * * * cd /root/bwaba && docker compose exec -T api node dist/scripts/mail-body-encryption-null-plaintext.js >> /var/log/mail-null-plaintext.log 2>&1
+
+# Weekly scan (Sunday 4am)
+0 4 * * 0 cd /root/bwaba && docker compose exec -T api node dist/scripts/mail-body-encryption-scan.js >> /var/log/mail-encryption-scan.log 2>&1
+```
+
+Install via: `apps/api/scripts/install-mail-encryption-cron.sh`
+
 ## Production
 
 - Do **not** use `MAIL_BODY_ENCRYPTION_DEV_FALLBACK`
+- Set `MAIL_BODY_ENCRYPTION_DUAL_WRITE=false` after pilot soak
+- Prod CMK: `./scripts/provision-mail-body-kms.sh production`; dual-key IAM: `./scripts/kms/attach-api-iam-dual-keys.sh`
 - Do **not** announce until `scan` is clean for cohort
 - See [ops-hardening-runbook.md](./ops-hardening-runbook.md)

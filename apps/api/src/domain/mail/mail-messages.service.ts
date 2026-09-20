@@ -800,7 +800,7 @@ export class MailMessagesService {
       messageId: messageIdHeader,
       bodyText: plainText || null,
       bodyHtml: outboundHtml ?? null,
-      dualWritePlaintext: true,
+      dualWritePlaintext: this.bodyEncryption.dualWritePlaintext(),
     });
 
     const queued = await this.prisma.mailMessage.create({

@@ -7,6 +7,7 @@ export const MAIL_FEATURE_ENV = {
   ruknyVerification: 'MAIL_RUKNY_DOMAIN_VERIFICATION_ENABLED',
   outboundBimi: 'MAIL_OUTBOUND_BIMI_ENABLED',
   bodyEncryption: 'MAIL_BODY_ENCRYPTION_ENABLED',
+  bodyEncryptionDualWrite: 'MAIL_BODY_ENCRYPTION_DUAL_WRITE',
 } as const;
 
 @Injectable()
@@ -36,6 +37,14 @@ export class MailFeatureFlags {
       ?.trim()
       .toLowerCase();
     return configured === 'true' || configured === '1';
+  }
+
+  /**
+   * When true, encrypted mail keeps plaintext columns (MIGRATING) for rollback soak.
+   * Defaults OFF in production; ON in dev/test unless explicitly set.
+   */
+  bodyEncryptionDualWrite(): boolean {
+    return this.enabled(MAIL_FEATURE_ENV.bodyEncryptionDualWrite);
   }
 
   requireRuknyVerification(): void {

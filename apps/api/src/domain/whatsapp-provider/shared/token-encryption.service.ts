@@ -19,12 +19,24 @@ export class TokenEncryptionService {
 
   constructor(private configService: ConfigService) {
     const masterKey = this.configService.get<string>('ENCRYPTION_KEY', '');
+    const allowInsecureDev =
+      this.configService.get<string>('ENCRYPTION_KEY_ALLOW_INSECURE_DEV') ===
+      'true';
+    const isProd = process.env.NODE_ENV === 'production';
+
     if (!masterKey || masterKey.length < 32) {
+      if (isProd || !allowInsecureDev) {
+        throw new Error(
+          'ENCRYPTION_KEY must be set to at least 32 characters. ' +
+            'Refusing to start with a fallback encryption key. ' +
+            'Generate one with: openssl rand -hex 32',
+        );
+      }
       this.logger.warn(
-        'ENCRYPTION_KEY not set or too short. Token encryption will use fallback.',
+        'ENCRYPTION_KEY missing — using insecure local-dev fallback (ENCRYPTION_KEY_ALLOW_INSECURE_DEV=true)',
       );
     }
-    // اشتقاق مفتاح 32 بايت من المفتاح الرئيسي
+
     this.encryptionKey = scryptSync(
       masterKey || 'default-dev-key-change-in-production',
       'rukny-whatsapp-salt',

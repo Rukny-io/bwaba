@@ -48,6 +48,13 @@ export const envSchema = z.object({
     .default('false')
     .transform((val) => val === 'true'),
 
+  // WhatsApp / WABA token encryption (AES-256-GCM via scrypt-derived key)
+  ENCRYPTION_KEY: z.string().optional(),
+  ENCRYPTION_KEY_ALLOW_INSECURE_DEV: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
+
   // OAuth
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -147,7 +154,41 @@ export const envSchema = z.object({
     .string()
     .default('3001')
     .transform((val) => parseInt(val, 10)),
-});
+})
+  .superRefine((data, ctx) => {
+    if (data.FIELD_ENCRYPTION_ENABLED) {
+      if (!data.FIELD_ENCRYPTION_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['FIELD_ENCRYPTION_KEY'],
+          message:
+            'FIELD_ENCRYPTION_KEY is required when FIELD_ENCRYPTION_ENABLED=true',
+        });
+      }
+      if (!data.BLIND_INDEX_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['BLIND_INDEX_KEY'],
+          message:
+            'BLIND_INDEX_KEY is required when FIELD_ENCRYPTION_ENABLED=true',
+        });
+      }
+    }
+
+    const encryptionKey = data.ENCRYPTION_KEY ?? '';
+    if (
+      data.NODE_ENV === 'production' &&
+      encryptionKey.length > 0 &&
+      encryptionKey.length < 32
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ENCRYPTION_KEY'],
+        message:
+          'ENCRYPTION_KEY must be at least 32 characters in production',
+      });
+    }
+  });
 
 export type EnvConfig = z.infer<typeof envSchema>;
 

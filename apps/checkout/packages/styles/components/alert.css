@@ -1,0 +1,100 @@
+/* Alert component styles */
+
+/* Base alert styles */
+.alert {
+  @apply flex w-full flex-row items-start justify-start gap-3 border px-3.5 py-3.5 sm:gap-4 sm:px-4;
+  border-radius: min(1.25rem, var(--radius-2xl));
+  border-color: color-mix(in oklab, var(--border) 80%, transparent);
+  background-color: var(--surface);
+}
+
+/* Alert elements */
+.alert__content {
+  @apply flex min-w-0 grow flex-col items-start gap-0.5;
+}
+
+.alert__indicator {
+  @apply mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl select-none;
+
+  [data-slot="alert-default-icon"] {
+    @apply box-content size-4;
+  }
+}
+
+.alert__title {
+  @apply text-sm leading-5 font-semibold tracking-tight;
+}
+
+.alert__description {
+  @apply text-sm leading-5 text-muted;
+}
+
+/* Variant modifiers */
+.alert--default {
+  background-color: color-mix(in oklab, var(--default) 55%, var(--surface));
+  border-color: color-mix(in oklab, var(--border) 90%, transparent);
+}
+
+.alert--default .alert__indicator {
+  @apply bg-default text-foreground;
+}
+
+.alert--default .alert__title {
+  @apply text-foreground;
+}
+
+.alert--accent {
+  background-color: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.alert--accent .alert__indicator {
+  @apply bg-accent-soft text-accent-soft-foreground;
+  background-color: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.alert--accent .alert__title {
+  @apply text-accent-soft-foreground;
+}
+
+.alert--success {
+  background-color: var(--success-soft);
+  border-color: color-mix(in oklab, var(--success) 22%, transparent);
+}
+
+.alert--success .alert__indicator {
+  @apply text-success-soft-foreground;
+  background-color: color-mix(in oklab, var(--success) 18%, transparent);
+}
+
+.alert--success .alert__title {
+  @apply text-success-soft-foreground;
+}
+
+.alert--warning {
+  background-color: var(--warning-soft);
+  border-color: color-mix(in oklab, var(--warning) 28%, transparent);
+}
+
+.alert--warning .alert__indicator {
+  @apply text-warning-soft-foreground;
+  background-color: color-mix(in oklab, var(--warning) 20%, transparent);
+}
+
+.alert--warning .alert__title {
+  @apply text-warning-soft-foreground;
+}
+
+.alert--danger {
+  background-color: var(--danger-soft);
+  border-color: color-mix(in oklab, var(--danger) 24%, transparent);
+}
+
+.alert--danger .alert__indicator {
+  @apply text-danger-soft-foreground;
+  background-color: color-mix(in oklab, var(--danger) 18%, transparent);
+}
+
+.alert--danger .alert__title {
+  @apply text-danger-soft-foreground;
+}

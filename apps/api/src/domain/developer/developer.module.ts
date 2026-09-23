@@ -1,10 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { RedisModule } from '../../core/cache/redis.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkspaceModule } from '../workspace/workspace.module';
+import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payment.module';
+import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-session.guard';
 
 // API Keys
 import { ApiKeysController } from './api-keys/api-keys.controller';
@@ -19,6 +22,10 @@ import { DevSubscriptionsService } from './subscriptions/dev-subscriptions.servi
 // Wallet
 import { WalletController } from './wallet/wallet.controller';
 import { WalletService } from './wallet/wallet.service';
+
+// Checkout
+import { DeveloperCheckoutController } from './checkout/developer-checkout.controller';
+import { DeveloperCheckoutService } from './checkout/developer-checkout.service';
 
 // Webhooks
 import { DevWebhooksController } from './webhooks/dev-webhooks.controller';
@@ -56,9 +63,18 @@ import { DevProductsService } from './products/dev-products.service';
   imports: [
     PrismaModule,
     RedisModule,
-    AuthModule,
+    ConfigModule,
+    forwardRef(() => AuthModule),
     WorkspaceModule,
     forwardRef(() => FormsModule),
+    forwardRef(() => QasehPaymentModule),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+      }),
+      inject: [ConfigService],
+    }),
     BullModule.registerQueueAsync({
       name: 'webhook-delivery',
       useFactory: (config: ConfigService) => ({
@@ -85,6 +101,7 @@ import { DevProductsService } from './products/dev-products.service';
     ApiKeysController,
     DevSubscriptionsController,
     WalletController,
+    DeveloperCheckoutController,
     DevWebhooksController,
     ContactsController,
     UsageController,
@@ -92,6 +109,7 @@ import { DevProductsService } from './products/dev-products.service';
     DevProductsController,
   ],
   providers: [
+    CheckoutSessionGuard,
     AppsService,
     AppsUploadService,
     AppAnalyticsService,
@@ -102,6 +120,7 @@ import { DevProductsService } from './products/dev-products.service';
     JwtOrApiKeyGuard,
     DevSubscriptionsService,
     WalletService,
+    DeveloperCheckoutService,
     DevWebhooksService,
     WebhookDeliveryService,
     WebhookDeliveryProcessor,
@@ -117,6 +136,7 @@ import { DevProductsService } from './products/dev-products.service';
     JwtOrApiKeyGuard,
     DevSubscriptionsService,
     WalletService,
+    DeveloperCheckoutService,
     WebhookDeliveryService,
     UsageService,
     DevFormsService,

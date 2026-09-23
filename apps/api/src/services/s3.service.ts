@@ -1,3 +1,7 @@
+/**
+ * Legacy S3 client (multipart upload helpers). Prefer `shared/services/s3.service`
+ * for new code — both implementations coexist until migration completes.
+ */
 import {
   Injectable,
   Logger,

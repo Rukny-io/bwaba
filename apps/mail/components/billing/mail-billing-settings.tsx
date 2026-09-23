@@ -11,7 +11,7 @@ import {
   Label,
   Skeleton,
 } from "@heroui/react";
-import { MailNotice } from "@/components/app/mail-notice";
+import { BillingNotice, BillingPanel, BillingSection } from "@/components/billing/billing-ui";
 import {
   formatMailAliasLimit,
   formatMailIqD,
@@ -23,9 +23,11 @@ import {
   fetchMailPlans,
   fetchMailSubscription,
   requestMailPlan,
+  type MailCardPaymentsInfo,
   type MailPendingPlanRequest,
   type MailSubscriptionView,
 } from "@/lib/mail-subscription-client";
+import { startMailCheckoutSession } from "@/lib/mail-checkout";
 
 const FEATURE_LABELS: Array<{
   key: keyof NonNullable<MailSubscriptionView["features"]>;
@@ -68,6 +70,11 @@ export function MailPlanSettingsSection() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [cardPayments, setCardPayments] = useState<MailCardPaymentsInfo>({
+    available: false,
+    status: "unavailable",
+  });
   const [selectedPlanId, setSelectedPlanId] = useState<MailPlanId>("standard");
   const [seats, setSeats] = useState(3);
 
@@ -87,6 +94,7 @@ export function MailPlanSettingsSection() {
         plan.limits?.mailboxesIncluded ?? getMailPlan(plan.id).limits.mailboxesIncluded,
     }));
     setPlans(nextPlans);
+    setCardPayments(plansData.cardPayments);
     setNeedsApp(current.needsApp);
     setAppName(current.app?.name ?? null);
     setSubscription(current.subscription);
@@ -141,6 +149,7 @@ export function MailPlanSettingsSection() {
     !canManageBilling ||
     Boolean(pendingRequest) ||
     busy ||
+    paying ||
     !selectedPlan;
 
   function onSelectPlan(planId: MailPlanId) {
@@ -172,19 +181,41 @@ export function MailPlanSettingsSection() {
     }
   }
 
+  async function onPayPlan() {
+    if (!selectedPlan || requestLocked || !cardPayments.available) return;
+    setPaying(true);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await startMailCheckoutSession(
+        selectedPlan.id,
+        clampedSeats,
+      );
+      window.location.href = result.checkoutUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout.");
+      setPaying(false);
+    }
+  }
+
   return (
-    <div className="flex min-w-0 flex-col gap-5 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-[var(--foreground)]">Plan</h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            {appName
-              ? `Seats and storage apply only to ${appName}.`
-              : "Seats and storage apply only to the workspace you have open."}{" "}
-            Card payment is coming soon.
-          </p>
-        </div>
-        {loading ? null : (
+    <BillingSection
+      title="Subscription"
+      description={
+        appName
+          ? `Seats and storage apply only to ${appName}. ${
+              cardPayments.available
+                ? "Continue through Rukny Checkout, or request admin activation."
+                : "Card payments are temporarily unavailable."
+            }`
+          : `Seats and storage apply only to the workspace you have open. ${
+              cardPayments.available
+                ? "Continue through Rukny Checkout, or request admin activation."
+                : "Card payments are temporarily unavailable."
+            }`
+      }
+      action={
+        loading ? undefined : (
           <Chip
             color={active ? "success" : pendingRequest ? "warning" : "default"}
             size="sm"
@@ -192,12 +223,12 @@ export function MailPlanSettingsSection() {
           >
             {active ? active.planName : pendingRequest ? "Pending" : "No plan"}
           </Chip>
-        )}
-      </div>
-
+        )
+      }
+    >
       {error ? (
-        <MailNotice
-          status="danger"
+        <BillingNotice
+          tone="danger"
           title="Something went wrong"
           description={error}
           onDismiss={() => setError("")}
@@ -205,8 +236,8 @@ export function MailPlanSettingsSection() {
       ) : null}
 
       {success ? (
-        <MailNotice
-          status="success"
+        <BillingNotice
+          tone="success"
           title="Request submitted"
           description={success}
           onDismiss={() => setSuccess("")}
@@ -283,8 +314,8 @@ export function MailPlanSettingsSection() {
       )}
 
       {pendingRequest ? (
-        <MailNotice
-          status="warning"
+        <BillingNotice
+          tone="warning"
           title="Request pending"
           description={`Ticket ${pendingRequest.ticketNumber}${
             pendingRequest.plan ? ` · ${pendingRequest.plan}` : ""
@@ -295,14 +326,14 @@ export function MailPlanSettingsSection() {
       ) : null}
 
       {!needsApp && canManageBilling && plans.length > 0 ? (
-        <div className="flex min-w-0 flex-col gap-4 rounded-xl bg-[var(--surface-secondary)] p-4">
+        <BillingPanel className="flex min-w-0 flex-col gap-4">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--foreground)]">
-              Request a subscription
+              Change subscription
             </h3>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Choose a plan and mailbox seats for this workspace. We open a ticket for
-              admin activation.
+              Choose a plan and mailbox seats for this workspace. Pay by card or open a
+              ticket for admin activation.
             </p>
           </div>
 
@@ -411,36 +442,54 @@ export function MailPlanSettingsSection() {
                 </span>
               </p>
             </div>
-            <Button
-              size="sm"
-              isDisabled={requestLocked}
-              onPress={() => void onRequestPlan()}
-            >
-              {busy
-                ? "Sending…"
-                : pendingRequest
-                  ? "Request pending"
-                  : active
-                    ? "Request plan change"
-                    : "Request subscription"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                isDisabled={requestLocked}
+                onPress={() => void onRequestPlan()}
+              >
+                {busy
+                  ? "Sending…"
+                  : pendingRequest
+                    ? "Request pending"
+                    : active
+                      ? "Request change"
+                      : "Request ticket"}
+              </Button>
+              <Button
+                size="sm"
+                className="rounded-full shadow-none"
+                isDisabled={
+                  requestLocked || !cardPayments.available || Boolean(pendingRequest)
+                }
+                onPress={() => void onPayPlan()}
+              >
+                {paying ? "Opening Checkout…" : `Checkout · ${formatMailIqD(monthlyTotal)}`}
+              </Button>
+            </div>
           </div>
-        </div>
+        </BillingPanel>
       ) : null}
 
       {!needsApp && !canManageBilling && !loading ? (
-        <MailNotice
-          status="default"
+        <BillingNotice
+          tone="info"
           title="Billing managed by owner"
           description="Ask the workspace owner, admin, or billing contact to request or change the plan."
         />
       ) : null}
 
       <div className="flex justify-end">
-        <Button size="sm" variant="ghost" onPress={() => router.push("/pricing")}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="rounded-full shadow-none"
+          onPress={() => router.push("/pricing")}
+        >
           Compare all plans
         </Button>
       </div>
-    </div>
+    </BillingSection>
   );
 }

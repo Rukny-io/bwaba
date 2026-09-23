@@ -6,7 +6,7 @@ import { useReducedMotion } from "framer-motion";
 
 /**
  * Smooth scrolling for marketing pages (Lenis).
- * Disabled when the user prefers reduced motion.
+ * Wraps content in `#smooth-wrapper` / `#smooth-content` like Antigravity.
  */
 export function MailSmoothScroll({ children }: { children: React.ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -15,7 +15,7 @@ export function MailSmoothScroll({ children }: { children: React.ReactNode }) {
     if (reduceMotion) return;
 
     const lenis = new Lenis({
-      duration: 1.05,
+      duration: 1.15,
       smoothWheel: true,
       touchMultiplier: 1.4,
     });
@@ -33,5 +33,13 @@ export function MailSmoothScroll({ children }: { children: React.ReactNode }) {
     };
   }, [reduceMotion]);
 
-  return children;
+  if (reduceMotion) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div id="smooth-wrapper">
+      <div id="smooth-content">{children}</div>
+    </div>
+  );
 }

@@ -10,6 +10,8 @@ import {
   Query,
   Req,
   Sse,
+  HttpException,
+  HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -101,22 +103,42 @@ export class MailMessagesController {
   ): Promise<Observable<MessageEvent>> {
     await this.messages.assertOwnedApp(user.id, appId);
     return new Observable<MessageEvent>((subscriber) => {
-      subscriber.next({
-        data: { type: 'connected', appId },
-      } as MessageEvent);
+      let streamSubscription: ReturnType<MailRealtimeService['subscribeStream']>;
+      try {
+        streamSubscription = this.realtime.subscribeStream(
+          appId,
+          user.id,
+          (event) => {
+            if (event.type === 'expired') {
+              subscriber.complete();
+              return;
+            }
+            if (event.type === 'connected') {
+              subscriber.next({
+                data: { type: 'connected', appId },
+              } as MessageEvent);
+              return;
+            }
+            subscriber.next({ data: event } as MessageEvent);
+          },
+        );
+      } catch {
+        subscriber.error(
+          new HttpException(
+            'Too many active mail stream connections. Close an existing tab and try again.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          ),
+        );
+        return;
+      }
 
-      const unsubscribe = this.realtime.subscribe(appId, (event) => {
-        subscriber.next({ data: event } as MessageEvent);
-      });
-
-      // Keep proxies/browsers from closing idle SSE connections.
       const heartbeat = setInterval(() => {
         subscriber.next({ data: { type: 'ping' } } as MessageEvent);
       }, 25_000);
 
       return () => {
         clearInterval(heartbeat);
-        unsubscribe();
+        streamSubscription.unsubscribe();
       };
     });
   }

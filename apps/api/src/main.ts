@@ -244,6 +244,8 @@ async function bootstrap() {
     'http://127.0.0.1:3007',
     'http://localhost:3009',
     'http://127.0.0.1:3009',
+    'http://localhost:3010',
+    'http://127.0.0.1:3010',
     'https://localhost:3004',
     'https://127.0.0.1:3004',
     // Production domains
@@ -256,6 +258,7 @@ async function bootstrap() {
     'https://forms.rukny.io',
     'https://hq.rukny.io',
     'https://mail.rukny.io',
+    'https://checkout.rukny.io',
     'https://rukny.store',
     'https://www.rukny.store',
     // Environment variable override
@@ -268,7 +271,9 @@ async function bootstrap() {
     process.env.FORMS_FRONTEND_URL,
     process.env.HQ_FRONTEND_URL,
     process.env.MAIL_FRONTEND_URL,
+    process.env.CHECKOUT_FRONTEND_URL,
     process.env.NEXT_PUBLIC_MAIL_URL,
+    process.env.NEXT_PUBLIC_CHECKOUT_URL,
     process.env.FORM_PUBLIC_BASE_URL,
   ].filter(Boolean); // Remove undefined values
 

@@ -1,93 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Resend } from 'resend';
+import { PlatformEmailService } from './platform-email.service';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
-  private resend: Resend | null = null;
   private emailEnabled: boolean = false;
-  private useResend: boolean = false;
   private fromEmail: string;
   private fromName: string;
 
-  constructor(private configService: ConfigService) {
-    // First, check for Resend API (preferred)
-    const resendApiKey = this.configService.get('RESEND_API_KEY');
-
-    if (resendApiKey) {
-      this.resend = new Resend(resendApiKey);
-      this.emailEnabled = true;
-      this.useResend = true;
-      this.fromEmail = this.configService.get(
-        'RESEND_FROM_EMAIL',
-        'notifications@rukny.store',
-      );
+  constructor(
+    private configService: ConfigService,
+    private readonly platformEmail: PlatformEmailService,
+  ) {
+    this.emailEnabled = this.platformEmail.isEnabled();
+    const from =
+      this.configService.get<string>('MAIL_SYSTEM_FROM') ||
+      this.configService.get<string>('MAIL_BILLING_FROM') ||
+      this.configService.get<string>('RESEND_FROM_EMAIL') ||
+      this.configService.get<string>('SMTP_FROM_EMAIL') ||
+      'noreply@rukny.io';
+    const angled = String(from).match(/^(.*?)\s*<([^>]+)>$/);
+    if (angled) {
+      this.fromName = angled[1].replace(/"/g, '').trim() || 'Rukny';
+      this.fromEmail = angled[2].trim();
+    } else {
+      this.fromEmail = String(from).trim();
       this.fromName = this.configService.get('SMTP_FROM_NAME', 'Rukny');
+    }
+
+    if (this.emailEnabled) {
       console.log(
-        `✅ Email service enabled via Resend API - From: ${this.fromEmail}`,
+        `✅ Email service enabled via SES (Developer Email stack) - From: ${this.fromEmail}`,
       );
     } else {
-      // Fallback to SMTP if no Resend
-      const smtpHost =
-        this.configService.get('MAIL_HOST') ||
-        this.configService.get('SMTP_HOST');
-      const smtpUser =
-        this.configService.get('MAIL_USER') ||
-        this.configService.get('SMTP_USER');
-      const smtpPassword =
-        this.configService.get('MAIL_PASSWORD') ||
-        this.configService.get('SMTP_PASSWORD') ||
-        this.configService.get('SMTP_PASS');
-
-      if (smtpHost && smtpUser && smtpPassword) {
-        this.emailEnabled = true;
-        const port = parseInt(
-          this.configService.get('MAIL_PORT') ||
-            this.configService.get('SMTP_PORT') ||
-            '587',
-        );
-        const secure = this.configService.get('MAIL_SECURE') === 'true';
-
-        this.transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: port,
-          secure: secure,
-          auth: {
-            user: smtpUser,
-            pass: smtpPassword,
-          },
-          connectionTimeout: 30000,
-          socketTimeout: 30000,
-          greetingTimeout: 15000,
-          pool: true,
-          maxConnections: 5,
-          maxMessages: 100,
-        } as nodemailer.TransportOptions);
-
-        this.fromEmail = this.configService.get(
-          'SMTP_FROM_EMAIL',
-          'notifications@rukny.store',
-        );
-        this.fromName = this.configService.get('SMTP_FROM_NAME', 'Rukny');
-        console.log(
-          `✅ Email service enabled via SMTP - Host: ${smtpHost}:${port}`,
-        );
-      } else {
-        console.warn(
-          '⚠️  Email service disabled - Missing RESEND_API_KEY or SMTP credentials',
-        );
-        console.warn('   Email notifications will be logged to console only');
-      }
+      console.warn(
+        '⚠️  Email service disabled - Missing AWS credentials for SES',
+      );
+      console.warn('   Email notifications will be logged to console only');
     }
   }
 
   /**
-   * Send email using Resend or SMTP based on configuration
-   * This is the main public method for sending emails
+   * Send email via platform SES (same stack as Developer Email API).
    */
   async sendEmail(options: {
     to: string;
@@ -102,42 +58,40 @@ export class EmailService {
       return false;
     }
 
-    const from = options.from || `"${this.fromName}" <${this.fromEmail}>`;
+    const from =
+      options.from || `"${this.fromName}" <${this.fromEmail}>`;
 
     try {
-      if (this.useResend && this.resend) {
-        // Use Resend API
-        const result = await this.resend.emails.send({
-          from: `${this.fromName} <${this.fromEmail}>`,
-          to: options.to,
-          subject: options.subject,
-          html: options.html,
-        });
-
-        if (result.error) {
-          throw new Error(result.error.message);
-        }
-
-        console.log(`✅ Email sent via Resend to ${options.to}`);
-        return true;
-      } else if (this.transporter) {
-        // Use SMTP
-        await this.transporter.sendMail({
-          from,
-          to: options.to,
-          subject: options.subject,
-          html: options.html,
-        });
-
-        console.log(`✅ Email sent via SMTP to ${options.to}`);
-        return true;
+      const result = await this.platformEmail.send({
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        from,
+      });
+      if (!result.success) {
+        throw new Error(result.error || 'SES send failed');
       }
-
-      return false;
+      console.log(`✅ Email sent via SES to ${options.to}`);
+      return true;
     } catch (error: any) {
       console.error(`❌ Failed to send email to ${options.to}:`, error.message);
       throw error;
     }
+  }
+
+  /** @deprecated Use sendEmail — kept for call sites that built nodemailer options */
+  private async deliverViaTransport(mailOptions: {
+    from?: string;
+    to: string;
+    subject: string;
+    html: string;
+  }): Promise<void> {
+    await this.sendEmail({
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      html: mailOptions.html,
+      from: mailOptions.from,
+    });
   }
 
   /**
@@ -191,7 +145,7 @@ export class EmailService {
         html: this.getSecurityAlertTemplate(userName, alertData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Security alert email sent to ${to}`);
     } catch (error) {
       console.error('Failed to send security alert email:', error);
@@ -228,8 +182,8 @@ export class EmailService {
         html: this.getLoginAlertTemplate(userName, loginData),
       };
 
-      if (this.transporter) {
-        await this.transporter.sendMail(mailOptions);
+      if (this.emailEnabled) {
+        await this.deliverViaTransport(mailOptions);
         console.log(`Login alert email sent to ${to}`);
       } else {
         console.log(`📧 [SIMULATED] Login alert would be sent to ${to}`);
@@ -263,7 +217,7 @@ export class EmailService {
         html: this.getPasswordChangeTemplate(userName, changeData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Password change alert sent to ${to}`);
     } catch (error) {
       console.error('Failed to send password change alert:', error);
@@ -297,8 +251,8 @@ export class EmailService {
         html: this.getNewDeviceTemplate(userName, deviceData),
       };
 
-      if (this.transporter) {
-        await this.transporter.sendMail(mailOptions);
+      if (this.emailEnabled) {
+        await this.deliverViaTransport(mailOptions);
         console.log(`New device alert sent to ${to}`);
       } else {
         console.log(`📧 [SIMULATED] New device alert would be sent to ${to}`);
@@ -332,7 +286,7 @@ export class EmailService {
         html: this.getFailedLoginAlertTemplate(userName, alertData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Failed login alert sent to ${to}`);
     } catch (error) {
       console.error('Failed to send failed login alert:', error);
@@ -369,7 +323,7 @@ export class EmailService {
         ),
       };
 
-      await this.transporter.sendMail(oldEmailOptions);
+      await this.deliverViaTransport(oldEmailOptions);
 
       // Send to NEW email
       const newEmailOptions = {
@@ -383,7 +337,7 @@ export class EmailService {
         ),
       };
 
-      await this.transporter.sendMail(newEmailOptions);
+      await this.deliverViaTransport(newEmailOptions);
 
       console.log(`Email change alerts sent to ${oldEmail} and ${newEmail}`);
     } catch (error) {
@@ -423,7 +377,7 @@ export class EmailService {
         html: this.getEventRegistrationTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Event registration confirmation sent to ${to}`);
     } catch (error) {
       console.error('Failed to send event registration email:', error);
@@ -456,7 +410,7 @@ export class EmailService {
         html: this.getEventReminderTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Event reminder sent to ${to}`);
     } catch (error) {
       console.error('Failed to send event reminder:', error);
@@ -486,7 +440,7 @@ export class EmailService {
         html: this.getWaitlistTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Waitlist notification sent to ${to}`);
     } catch (error) {
       console.error('Failed to send waitlist notification:', error);
@@ -517,7 +471,7 @@ export class EmailService {
         html: this.getWaitlistPromotionTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Waitlist promotion notification sent to ${to}`);
     } catch (error) {
       console.error('Failed to send waitlist promotion notification:', error);
@@ -547,7 +501,7 @@ export class EmailService {
         html: this.getEventCancellationTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Event cancellation sent to ${to}`);
     } catch (error) {
       console.error('Failed to send cancellation email:', error);
@@ -581,7 +535,7 @@ export class EmailService {
         html: this.getEventCreatedTemplate(organizerName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Event created notification sent to ${to}`);
     } catch (error) {
       console.error('Failed to send event created notification:', error);
@@ -613,7 +567,7 @@ export class EmailService {
         html: this.getNewRegistrationTemplate(organizerName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`New registration notification sent to ${to}`);
     } catch (error) {
       console.error('Failed to send new registration notification:', error);
@@ -645,7 +599,7 @@ export class EmailService {
         html: this.getOrganizerInvitationTemplate(userName, eventData),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`Organizer invitation sent to ${to}`);
     } catch (error) {
       console.error('Failed to send organizer invitation:', error);
@@ -796,7 +750,7 @@ export class EmailService {
         ),
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.deliverViaTransport(mailOptions);
       console.log(`✅ Workspace invitation sent to ${to}`);
     } catch (error) {
       console.error('Failed to send workspace invitation:', error);
@@ -2207,8 +2161,8 @@ export class EmailService {
         html: template,
       };
 
-      if (this.transporter) {
-        await this.transporter.sendMail(mailOptions);
+      if (this.emailEnabled) {
+        await this.deliverViaTransport(mailOptions);
         console.log(`✅ QuickSign login link sent to ${to}`);
       } else {
         console.log(
@@ -2285,8 +2239,8 @@ export class EmailService {
         html: template,
       };
 
-      if (this.transporter) {
-        await this.transporter.sendMail(mailOptions);
+      if (this.emailEnabled) {
+        await this.deliverViaTransport(mailOptions);
         console.log(`✅ QuickSign signup link sent to ${to}`);
       } else {
         console.log(
@@ -2353,8 +2307,8 @@ export class EmailService {
         html: template,
       };
 
-      if (this.transporter) {
-        await this.transporter.sendMail(mailOptions);
+      if (this.emailEnabled) {
+        await this.deliverViaTransport(mailOptions);
         console.log(`✅ IP verification code sent to ${to}`);
       } else {
         console.log(

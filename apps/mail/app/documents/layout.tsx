@@ -13,6 +13,7 @@ export default async function DocumentsLayout({
       signedIn={Boolean(user)}
       plainBackground
       smoothScroll={false}
+      variant="antigravity"
     >
       {children}
     </MailMarketingShell>

@@ -113,6 +113,7 @@ model User {
   mailAppMemberships             MailAppMember[]                 @relation("mail_app_member")
   mailAppInvitationsSent         MailAppMember[]                 @relation("mail_app_inviter")
   mailMailboxesAssigned          MailMailbox[]                   @relation("mail_mailbox_assignee")
+  mailQuarantineActions          MailQuarantineActionLog[]       @relation("mail_quarantine_actor")
 
   // Developer Portal relations
   developerApps             DeveloperApp[]
@@ -617,6 +618,7 @@ model Store {
   longitude           Float?
   descriptionAr       String?
   metadata            Json?
+  cashOnDeliveryEnabled Boolean             @default(true)
   coupons             coupons[]
   forms               Form[]
   orders              orders[]
@@ -3548,6 +3550,9 @@ model MailApp {
   autoReplies                MailAutoReply[]
   aliases                    MailAlias[]
   forwarders                 MailForwarder[]
+  filterRules                MailFilterRule[]
+  securitySettings           MailAppSecuritySettings?
+  quarantineActionLogs       MailQuarantineActionLog[]
   domainVerificationRequests MailDomainVerificationRequest[]
 
   @@unique([userId, slotIndex])
@@ -3680,6 +3685,7 @@ model MailMailbox {
   autoReply    MailAutoReply?
   aliases      MailAlias[]
   forwarders   MailForwarder[]
+  filterRules  MailFilterRule[]
 
   @@unique([domain, localPart])
   @@index([mailAppId])
@@ -3783,6 +3789,97 @@ model MailForwarder {
   @@map("mail_forwarders")
 }
 
+enum MailFilterRuleType {
+  BLOCKLIST
+  ALLOWLIST
+  FILTER
+}
+
+enum MailFilterMatchField {
+  SENDER
+  DOMAIN
+  SUBJECT
+  RECIPIENT
+  SENDER_REGEX
+  SUBJECT_REGEX
+}
+
+enum MailFilterAction {
+  SPAM
+  QUARANTINE
+  INBOX
+  PROMOTIONS
+  SOCIAL
+  DELETE
+}
+
+/// Blocklist, allowlist, and custom filter rules for inbound mail
+model MailFilterRule {
+  id         String               @id @default(uuid())
+  mailAppId  String
+  /// null = applies to all mailboxes in the workspace
+  mailboxId  String?
+  ruleType   MailFilterRuleType
+  matchField MailFilterMatchField
+  pattern    String
+  action     MailFilterAction
+  priority   Int                  @default(100)
+  enabled    Boolean              @default(true)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  mailApp MailApp      @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox? @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([mailAppId, enabled, priority])
+  @@index([mailboxId])
+  @@map("mail_filter_rules")
+}
+
+/// Workspace-level anti-spam and quarantine preferences
+model MailAppSecuritySettings {
+  mailAppId            String  @id
+  quarantineSuspicious Boolean @default(true)
+  notifyOnQuarantine   Boolean @default(false)
+  /// Days before quarantined messages are auto-deleted (0 = never)
+  quarantineRetentionDays Int @default(30)
+  /// Off by default — avoids false positives on legitimate new senders
+  quarantineNewSendersWithoutDmarc Boolean @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+
+  @@map("mail_app_security_settings")
+}
+
+enum MailQuarantineAction {
+  RELEASE
+  SPAM
+  DELETE
+  EXPIRED
+}
+
+/// Audit trail for quarantine review actions
+model MailQuarantineActionLog {
+  id             String               @id @default(uuid())
+  mailAppId      String
+  messageId      String?
+  actorUserId    String
+  action         MailQuarantineAction
+  fromAddress    String
+  subject        String               @default("")
+  mailboxAddress String
+  createdAt      DateTime             @default(now())
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  actor   User    @relation("mail_quarantine_actor", fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([mailAppId, createdAt])
+  @@index([actorUserId])
+  @@map("mail_quarantine_action_logs")
+}
+
 enum MailMessageDirection {
   INBOUND
   OUTBOUND
@@ -3794,6 +3891,7 @@ enum MailMessageFolder {
   DRAFTS
   TRASH
   SPAM
+  QUARANTINE
   ARCHIVE
   PROMOTIONS
   SOCIAL
@@ -3858,6 +3956,12 @@ model MailMessage {
   errorMessage String?
   /// Raw MIME object key after inbound S3 delivery (future)
   rawS3Key     String?
+  /// Filter rule that matched at inbound time (if any)
+  matchedRuleId    String?
+  /// Why the message was quarantined (e.g. ses_gray, partial_auth, rule:uuid)
+  quarantineReason String?
+  /// Auto-delete quarantined mail after this time (null = no expiry)
+  quarantineExpiresAt DateTime?
 
   sentAt     DateTime?
   receivedAt DateTime?
@@ -3869,6 +3973,7 @@ model MailMessage {
 
   @@index([mailboxId, folder, createdAt])
   @@index([mailboxId, folder, isRead])
+  @@index([folder, quarantineExpiresAt])
   @@index([threadId])
   @@index([userId])
   @@index([sesMessageId])
@@ -3918,6 +4023,10 @@ model MailSubscriptionPayment {
   billingCycle   BillingCycle
   mailboxCount   Int           @default(1)
   status         PaymentStatus @default(PENDING)
+  /// Al-Qaseh payment_id (authoritative external reference)
+  paymentId      String?
+  /// Al-Qaseh hosted-page token
+  paymentToken   String?
   paidAt         DateTime?
   failedAt       DateTime?
   failureReason  String?
@@ -3927,6 +4036,7 @@ model MailSubscriptionPayment {
 
   subscription MailSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
+  @@unique([paymentId])
   @@index([subscriptionId])
   @@index([status])
   @@index([createdAt])

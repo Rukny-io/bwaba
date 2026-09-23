@@ -59,8 +59,23 @@ const nextConfig: NextConfig = {
     "@rukny/auth",
     "@rukny/thmanyah-font",
   ],
-  // Keep ioredis (and its CJS deps) outside Turbopack/webpack bundling.
+  // Keep ioredis outside the bundle (CJS). Bundle @aws-sdk/client-sesv2 into
+  // server routes so standalone images do not depend on copying node_modules.
   serverExternalPackages: ["ioredis"],
+  outputFileTracingIncludes: {
+    "/api/mail/domains": [
+      "./node_modules/@aws-sdk/**/*",
+      "./node_modules/@smithy/**/*",
+    ],
+    "/api/mail/verify-domain": [
+      "./node_modules/@aws-sdk/**/*",
+      "./node_modules/@smithy/**/*",
+    ],
+    "/api/mail/setup": [
+      "./node_modules/@aws-sdk/**/*",
+      "./node_modules/@smithy/**/*",
+    ],
+  },
   turbopack: {
     root: path.resolve(appRoot),
     resolveAlias: monorepoAliases,

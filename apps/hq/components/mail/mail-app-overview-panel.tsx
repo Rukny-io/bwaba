@@ -78,6 +78,14 @@ export function MailAppOverviewPanel({ app }: { app: AdminMailAppDetail }) {
           <DetailRow label="Type" value={formatMailAppType(app.appType)} />
           <DetailRow label="Status" value={formatMailAppStatus(app.status)} />
           <DetailRow label="Contact email" value={app.contactEmail ?? '—'} />
+          <DetailRow
+            label="Body encryption"
+            value={app.bodyEncryptionEnabled ? 'Enabled' : 'Disabled'}
+          />
+          <DetailRow
+            label="Description"
+            value={app.description?.trim() ? app.description : '—'}
+          />
           <DetailRow label="Created" value={formatMailDateTime(app.createdAt)} />
           <DetailRow label="Updated" value={formatMailDateTime(app.updatedAt)} />
         </section>
@@ -103,6 +111,9 @@ export function MailAppOverviewPanel({ app }: { app: AdminMailAppDetail }) {
             </Link>
             <Link href={`/app/mail/${app.appId}?tab=analytics`} className="text-[var(--primary)]">
               Open analytics
+            </Link>
+            <Link href={`/app/mail/${app.appId}?tab=actions`} className="text-[var(--primary)]">
+              Customize / delete
             </Link>
           </div>
         </section>

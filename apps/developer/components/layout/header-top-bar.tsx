@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import {
   Receipt,
   ChevronDown,
@@ -26,6 +27,12 @@ import {
   dashboardTopTabsChipClass,
   dashboardTopTabsGlassClass,
 } from '@/components/app/nav-glass';
+import { useMasterWallet } from '@/hooks/use-wallet';
+import { formatIqd } from '@/lib/wallet-format';
+import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
+import { appToast } from '@/lib/app-toast';
+
+const DEFAULT_TOP_UP_AMOUNT = 10_000;
 
 export function HeaderTopBar({
   workspaces,
@@ -39,8 +46,26 @@ export function HeaderTopBar({
   const t = useTranslations();
   const pathname = usePathname();
   const appsActive = pathname === '/apps' || pathname.startsWith('/apps/');
+  const { data: wallet } = useMasterWallet();
+  const [topUpBusy, setTopUpBusy] = useState(false);
+
+  const balanceLabel = formatIqd(wallet?.balance ?? 0, t.dashboard.iqd);
 
   const chipTriggerClass = cn(dashboardTopTabsChipClass, 'gap-1 outline-none');
+
+  async function handleTopUp() {
+    if (topUpBusy) return;
+    setTopUpBusy(true);
+    try {
+      await redirectToDeveloperCheckout({
+        kind: 'WALLET_TOPUP',
+        amount: DEFAULT_TOP_UP_AMOUNT,
+      });
+    } catch (error) {
+      appToast.fromError(error, t.topbar.topUp);
+      setTopUpBusy(false);
+    }
+  }
 
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-start bg-transparent px-3 pt-3 pb-2 sm:flex sm:px-5 sm:pt-4">
@@ -142,25 +167,44 @@ export function HeaderTopBar({
 
         <Dropdown>
           <Dropdown.Trigger className={cn(chipTriggerClass, 'max-w-[11rem] truncate sm:max-w-none')}>
-            <span className="truncate">
-              <span className="sm:hidden">0 {t.dashboard.iqd}</span>
+            <span className="truncate" dir="ltr" lang="en">
+              <span className="sm:hidden">{balanceLabel}</span>
               <span className="hidden sm:inline">
-                {`${t.topbar.walletBalance}: 0 ${t.dashboard.iqd}`}
+                {`${t.topbar.walletBalance}: ${balanceLabel}`}
               </span>
             </span>
             <ChevronDown size={14} className="shrink-0 opacity-70" />
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom end" offset={14} className="min-w-[13rem]">
-            <Dropdown.Menu>
-              <Dropdown.Item id="top-up" textValue={t.topbar.topUp} className="gap-2">
+            <Dropdown.Menu
+              onAction={(key) => {
+                if (key === 'top-up') void handleTopUp();
+              }}
+            >
+              <Dropdown.Item
+                id="top-up"
+                textValue={t.topbar.topUp}
+                className="gap-2"
+                isDisabled={topUpBusy}
+              >
                 <PlusCircle className="size-4 shrink-0" />
-                {t.topbar.topUp}
+                {topUpBusy ? '…' : t.topbar.topUp}
               </Dropdown.Item>
-              <Dropdown.Item id="invoices" textValue={t.topbar.viewInvoices} className="gap-2">
+              <Dropdown.Item
+                id="invoices"
+                textValue={t.topbar.viewInvoices}
+                href="/settings/platform"
+                className="gap-2"
+              >
                 <Receipt className="size-4 shrink-0" />
                 {t.topbar.viewInvoices}
               </Dropdown.Item>
-              <Dropdown.Item id="licensing" textValue={t.topbar.licensing} className="gap-2">
+              <Dropdown.Item
+                id="licensing"
+                textValue={t.topbar.licensing}
+                href="/settings/platform"
+                className="gap-2"
+              >
                 <ShieldCheck className="size-4 shrink-0" />
                 {t.topbar.licensing}
               </Dropdown.Item>

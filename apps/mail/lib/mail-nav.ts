@@ -2,6 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   AtSign,
   Code2,
+  CreditCard,
+  FileText,
   Forward,
   Globe,
   Inbox,
@@ -9,6 +11,9 @@ import {
   Mails,
   ReplyAll,
   ScrollText,
+  Settings,
+  Shield,
+  ShieldAlert,
   Smartphone,
   Users,
 } from "lucide-react";
@@ -28,11 +33,13 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/aliases", icon: AtSign, label: "Email Alias", exact: true },
   { href: "/catch-all", icon: Mails, label: "Catch-all email", exact: true },
   { href: "/auto-reply", icon: ReplyAll, label: "Automatic Reply", exact: true },
+  { href: "/security", icon: Shield, label: "Security", exact: true },
 ];
 
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
   { href: "/domain", icon: Globe, label: "Domain settings", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
+  { href: "/quarantine", icon: ShieldAlert, label: "Quarantine", exact: true },
   { href: "/developers", icon: Code2, label: "Developers", exact: true },
 ];
 
@@ -41,11 +48,11 @@ export const MAIL_UNPUBLISHED_NAV: MailNavItem[] = [
   { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
 ];
 
-export const MAIL_HEADER_NAV: { href: string; label: string; exact?: boolean }[] = [
-  { href: "/inbox", label: "Inbox", exact: true },
-  { href: "/settings", label: "Settings", exact: true },
-  { href: "/apps", label: "Workspaces", exact: true },
-  { href: "/documents", label: "Documents", exact: true },
+export const MAIL_HEADER_NAV: MailNavItem[] = [
+  { href: "/settings", icon: Settings, label: "Settings", exact: true },
+  { href: "/billing", icon: CreditCard, label: "Billing", exact: false },
+  { href: "/apps", icon: LayoutGrid, label: "Workspaces", exact: true },
+  { href: "/documents", icon: FileText, label: "Documents", exact: true },
 ];
 
 /** Pricing lives on the marketing site (/pricing), not in the console. */

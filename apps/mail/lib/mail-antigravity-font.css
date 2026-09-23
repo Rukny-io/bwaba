@@ -1,0 +1,86 @@
+@import "@fontsource-variable/google-sans/wght.css";
+@import "@fontsource-variable/google-sans-flex/wght.css";
+
+/* Antigravity font stack — matches antigravity.google */
+.mail-antigravity-font {
+  font-family: "Google Sans Variable", "Google Sans", system-ui, -apple-system,
+    sans-serif;
+  font-weight: 400;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern" 1;
+}
+
+.mail-antigravity-font header,
+.mail-antigravity-font nav,
+.mail-antigravity-font .ag-font-nav {
+  font-family: "Google Sans Flex Variable", "Google Sans Flex", system-ui,
+    -apple-system, sans-serif;
+}
+
+/* Antigravity: 32px medium headlines, 16px regular body */
+.mail-antigravity-font h1,
+.mail-antigravity-font h2,
+.mail-antigravity-font h3 {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.mail-antigravity-font p,
+.mail-antigravity-font li {
+  font-weight: 400;
+}
+
+.mail-antigravity-font button,
+.mail-antigravity-font .ag-font-medium {
+  font-weight: 500;
+}
+
+/* Antigravity icon bouncer — agent-first section */
+.mail-antigravity-font .ag-icon-bouncer {
+  padding-block: 2.75rem;
+}
+
+@media (min-width: 640px) {
+  .mail-antigravity-font .ag-icon-bouncer {
+    padding-block: 3.25rem;
+  }
+}
+
+.mail-antigravity-font .icon-list {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  will-change: transform;
+}
+
+.mail-antigravity-font .icon-list .grid-col {
+  flex-shrink: 0;
+  will-change: transform;
+}
+
+.mail-antigravity-font .bouncer {
+  display: flex;
+  height: 4rem;
+  width: 4rem;
+  min-width: 4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  color: #6b6f76;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 640px) {
+  .mail-antigravity-font .bouncer {
+    height: 4.5rem;
+    width: 4.5rem;
+    min-width: 4.5rem;
+  }
+}

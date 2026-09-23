@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   MailAppStatus,
+  MailAppType,
   MailDomainStatus,
   MailMailboxStatus,
   MailMessageStatus,
@@ -22,6 +23,7 @@ import {
   MAIL_MESSAGE_ADMIN_LIST_SELECT,
   MAIL_MESSAGE_ADMIN_SELECT,
 } from './mail-message-admin.select';
+import type { AdminUpdateMailAppDto } from './dto/admin-mail.dto';
 
 const GB = 1024 ** 3;
 const ALERT_LIMIT = 50;
@@ -617,6 +619,7 @@ export class AdminMailService {
       ...this.mapAppListItem(app, usedBytes),
       contactEmail: app.contactEmail,
       description: app.description,
+      bodyEncryptionEnabled: app.bodyEncryptionEnabled,
       slotIndex: app.slotIndex,
       userId: app.userId,
       updatedAt: app.updatedAt.toISOString(),
@@ -637,6 +640,48 @@ export class AdminMailService {
       sesRefreshAvailable: this.mailSes.isConfigured(),
       recentFailures: recentFailures.map((row) => this.mapDeliveryRow(row)),
     };
+  }
+
+  async updateApp(publicAppId: string, dto: AdminUpdateMailAppDto) {
+    await this.requireApp(publicAppId);
+
+    const data: Prisma.MailAppUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.description !== undefined) {
+      data.description = dto.description?.trim() || null;
+    }
+    if (dto.contactEmail !== undefined) {
+      data.contactEmail = dto.contactEmail.trim();
+    }
+    if (dto.appType !== undefined) {
+      data.appType = dto.appType as MailAppType;
+    }
+    if (dto.status !== undefined) {
+      data.status = dto.status as MailAppStatus;
+    }
+    if (dto.bodyEncryptionEnabled !== undefined) {
+      data.bodyEncryptionEnabled = dto.bodyEncryptionEnabled;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('No fields to update.');
+    }
+
+    await this.prisma.mailApp.update({
+      where: { appId: publicAppId },
+      data,
+    });
+
+    return this.getApp(publicAppId);
+  }
+
+  async deleteApp(publicAppId: string) {
+    const app = await this.requireApp(publicAppId);
+    await this.prisma.mailApp.delete({ where: { appId: publicAppId } });
+    this.logger.warn(
+      `Admin permanently deleted Mail app ${publicAppId} (${app.name})`,
+    );
+    return { deleted: true, appId: publicAppId };
   }
 
   async listMailboxes(publicAppId: string) {
@@ -891,6 +936,7 @@ export class AdminMailService {
       select: {
         ...APP_LIST_SELECT,
         description: true,
+        bodyEncryptionEnabled: true,
         slotIndex: true,
         userId: true,
       },

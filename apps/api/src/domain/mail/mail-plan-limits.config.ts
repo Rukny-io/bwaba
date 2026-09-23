@@ -8,6 +8,7 @@ export type MailPlanLimits = {
   consoleMembersIncluded: number;
   storageGbPerMailbox: number;
   forwardingRules: number;
+  filterRules: number;
   emailAliases: number;
   agenticMail: boolean;
   aiToolsUnlimited: boolean;
@@ -70,6 +71,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
     consoleMembersIncluded: 0,
     storageGbPerMailbox: 5,
     forwardingRules: 5,
+    filterRules: 10,
     emailAliases: 10,
     agenticMail: true,
     aiToolsUnlimited: true,
@@ -84,6 +86,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
     consoleMembersIncluded: 5,
     storageGbPerMailbox: 20,
     forwardingRules: 20,
+    filterRules: 50,
     emailAliases: 50,
     agenticMail: true,
     aiToolsUnlimited: true,
@@ -98,6 +101,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
     consoleMembersIncluded: 15,
     storageGbPerMailbox: 30,
     forwardingRules: 50,
+    filterRules: MAIL_UNLIMITED,
     emailAliases: MAIL_UNLIMITED,
     agenticMail: true,
     aiToolsUnlimited: true,

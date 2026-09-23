@@ -29,8 +29,10 @@ import {
 } from './mail-storage.util';
 import {
   classifyInboundMail,
+  classifySuspiciousForQuarantine,
   type SesVerdict,
 } from './mail-message-classifier';
+import { MailFilterRulesService } from './mail-filter-rules.service';
 import {
   MailBimiService,
   normalizeSenderDomain,
@@ -87,6 +89,7 @@ export class MailInboundService {
     private readonly bimi: MailBimiService,
     private readonly bodyCrypto: MailBodyCryptoService,
     private readonly bodyEncryption: MailBodyEncryptionPolicy,
+    private readonly filterRules: MailFilterRulesService,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -484,7 +487,8 @@ export class MailInboundService {
       'unknown@unknown';
     const fromName = this.firstName(input.parsed.from);
     const senderDomain = normalizeSenderDomain(fromAddress);
-    const folder = classifyInboundMail({
+    const subject = input.parsed.subject?.trim() || '(no subject)';
+    const classificationInput = {
       fromAddress,
       spamVerdict: input.receipt?.spamVerdict,
       virusVerdict: input.receipt?.virusVerdict,
@@ -496,7 +500,70 @@ export class MailInboundService {
       listUnsubscribe: this.headerString(input.parsed, 'list-unsubscribe'),
       xSpamFlag: this.headerString(input.parsed, 'x-spam-flag'),
       xSpamStatus: this.headerString(input.parsed, 'x-spam-status'),
+    };
+
+    const [rules, securitySettings] = await Promise.all([
+      this.filterRules.loadRulesForMailbox(mailbox.mailAppId, mailbox.id),
+      this.filterRules.getSecuritySettingsForApp(mailbox.mailAppId),
+    ]);
+
+    const mailboxAddress = `${mailbox.localPart}@${mailbox.domain}`;
+    const recipientAddresses = [
+      ...uniqueCandidates,
+      mailboxAddress,
+      ...toFromParsed,
+      ...this.addressesFrom(input.parsed.cc),
+    ];
+
+    const ruleResult = this.filterRules.evaluate(rules, {
+      fromAddress,
+      senderDomain,
+      subject,
+      recipientAddresses: [...new Set(recipientAddresses.filter(Boolean))],
     });
+
+    if (ruleResult?.reject) {
+      this.logger.warn(
+        `Inbound rejected by filter rule=${ruleResult.matchedRuleId} from=${fromAddress} mailbox=${mailbox.id}`,
+      );
+      return null;
+    }
+
+    let folder =
+      ruleResult?.folder ??
+      classifyInboundMail(classificationInput);
+
+    let matchedRuleId = ruleResult?.matchedRuleId ?? null;
+    let quarantineReason = ruleResult?.reason ?? null;
+
+    if (!ruleResult?.folder && securitySettings.quarantineSuspicious) {
+      const suspiciousFolder = classifySuspiciousForQuarantine(
+        classificationInput,
+        {
+          quarantineNewSendersWithoutDmarc:
+            securitySettings.quarantineNewSendersWithoutDmarc,
+        },
+      );
+      if (suspiciousFolder) {
+        folder = suspiciousFolder;
+        quarantineReason =
+          ['GRAY'].includes(
+            input.receipt?.spamVerdict?.status?.toUpperCase() ?? '',
+          ) ||
+          ['GRAY'].includes(
+            input.receipt?.virusVerdict?.status?.toUpperCase() ?? '',
+          )
+            ? 'ses_gray'
+            : securitySettings.quarantineNewSendersWithoutDmarc
+              ? 'dmarc_none_partial_auth'
+              : 'partial_auth';
+      }
+    }
+
+    const quarantineExpiresAt =
+      folder === MailMessageFolder.QUARANTINE
+        ? this.filterRules.quarantineExpiryForApp(securitySettings)
+        : null;
     const bodyText =
       typeof input.parsed.text === 'string' ? input.parsed.text : null;
     const bodyHtml =
@@ -554,7 +621,10 @@ export class MailInboundService {
             : [`${mailbox.localPart}@${mailbox.domain}`],
           ccAddresses: this.addressesFrom(input.parsed.cc),
           bccAddresses: [],
-          subject: input.parsed.subject?.trim() || '(no subject)',
+          subject,
+          matchedRuleId,
+          quarantineReason,
+          quarantineExpiresAt,
           bodyText: bodyFields.bodyText,
           bodyHtml: bodyFields.bodyHtml,
           bodyCryptoStatus: bodyFields.bodyCryptoStatus,
@@ -593,7 +663,10 @@ export class MailInboundService {
             );
           });
         }
-        if (folder !== MailMessageFolder.SPAM) {
+        if (
+          folder !== MailMessageFolder.SPAM &&
+          folder !== MailMessageFolder.QUARANTINE
+        ) {
           void this.autoReply
             .maybeReply({
               mailboxId: mailbox.id,
@@ -636,6 +709,26 @@ export class MailInboundService {
             });
         }
         return created;
+      })
+      .catch(async (error: unknown) => {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          (error as { code: string }).code === 'P2002'
+        ) {
+          const duplicate = await this.prisma.mailMessage.findFirst({
+            where: { messageId },
+            select: { id: true },
+          });
+          if (duplicate) {
+            this.logger.debug(
+              `Duplicate inbound (P2002) skipped messageId=${messageId}`,
+            );
+            return duplicate;
+          }
+        }
+        throw error;
       });
   }
 

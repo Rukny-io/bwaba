@@ -18,7 +18,6 @@ import {
   deleteDomainRequest,
   verifyDomainRequest,
 } from "@/lib/verify-domain-client";
-import { fulfillPendingMailbox } from "@/lib/mail-pending-mailbox";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { mailFeatureFlags } from "@/lib/mail-feature-flags";
 
@@ -111,9 +110,12 @@ export function MailDomainDashboard({
         const appId = readMailAppIdFromDocument();
         if (appId) {
           try {
-            await fulfillPendingMailbox(appId);
+            const { startMailCheckoutSession } = await import("@/lib/mail-checkout");
+            const session = await startMailCheckoutSession("starter", 1, appId);
+            window.location.assign(session.checkoutUrl);
+            return;
           } catch {
-            // User can create the mailbox from Mailboxes after Starter is on.
+            // User can continue from Mailboxes / Billing checkout CTA.
           }
         }
       }

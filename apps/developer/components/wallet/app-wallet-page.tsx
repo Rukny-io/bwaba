@@ -29,8 +29,10 @@ import { formatIqd } from '@/lib/wallet-format';
 import { appWhatsapp } from '@/lib/app-routes';
 import { appToast } from '@/lib/app-toast';
 import { useIsWorkspaceOwner } from '@/components/workspace/workspace-role-provider';
+import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
 
 const SUGGESTED_AMOUNTS = [5000, 10000, 25000];
+const TOP_UP_AMOUNTS = [5000, 10000, 25000, 50000];
 
 interface AppWalletPageProps {
   publicAppId: string;
@@ -54,6 +56,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
   const isOwner = useIsWorkspaceOwner();
 
   const [amount, setAmount] = useState('');
+  const [topUpBusy, setTopUpBusy] = useState(false);
 
   const numericAmount = useMemo(
     () => Number(amount.replace(/[^\d]/g, '')),
@@ -85,6 +88,24 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
       appToast.fromError(error, w.transferFailed);
     }
   }, [allocateMutation, masterWallet?.balance, numericAmount, w]);
+
+  const handleTopUp = useCallback(
+    async (topUpAmount: number) => {
+      if (!isOwner || topUpBusy) return;
+      setTopUpBusy(true);
+      try {
+        await redirectToDeveloperCheckout({
+          kind: 'WALLET_TOPUP',
+          amount: topUpAmount,
+          appId: publicAppId,
+        });
+      } catch (error) {
+        appToast.fromError(error, 'Could not continue to Checkout');
+        setTopUpBusy(false);
+      }
+    },
+    [isOwner, publicAppId, topUpBusy],
+  );
 
   const canTransfer =
     isOwner &&
@@ -146,6 +167,34 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
           comparisonPrimary={`${w.spentTotal}: ${formatIqd(appWallet.totalSpent, currency)}`}
         />
       </DashboardGrid>
+
+      <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+        <WalletSectionHeader
+          icon={Plus}
+          title="Top up wallet"
+          description="Continue to Checkout to add balance with card payment."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {TOP_UP_AMOUNTS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              disabled={!isOwner || topUpBusy}
+              onClick={() => void handleTopUp(value)}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-1.5 text-xs font-medium tabular-nums transition-colors hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))] disabled:cursor-not-allowed disabled:opacity-40"
+              dir="ltr"
+              lang="en"
+            >
+              Checkout · {formatIqd(value, currency)}
+            </button>
+          ))}
+        </div>
+        {!isOwner ? (
+          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            شحن الرصيد يقتصر على مالك الحساب.
+          </p>
+        ) : null}
+      </section>
 
       <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
         <WalletSectionHeader

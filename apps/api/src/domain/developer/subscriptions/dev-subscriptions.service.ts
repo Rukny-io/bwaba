@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
-  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
+import { PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
 import {
@@ -155,7 +157,7 @@ export class DevSubscriptionsService {
     };
   }
 
-  private async ensureDeveloperSubscription(userId: string) {
+  async ensureDeveloperSubscription(userId: string) {
     let subscription = await this.prisma.developerSubscription.findUnique({
       where: { userId },
       include: {
@@ -241,66 +243,79 @@ export class DevSubscriptionsService {
     ];
   }
 
-  async upgradePlan(userId: string, dto: UpgradePlanDto) {
-    if (dto.plan !== 'PRO') {
-      throw new ForbiddenException('Only the Pro plan is available for upgrade');
+  /**
+   * Direct free upgrades are disabled — Pro requires a paid Checkout session.
+   * @deprecated Use DeveloperCheckoutService.createCheckoutSession(PRO_UPGRADE)
+   */
+  async upgradePlan(_userId: string, _dto: UpgradePlanDto) {
+    throw new BadRequestException({
+      code: 'DEVELOPER_CHECKOUT_REQUIRED',
+      message:
+        'Pro upgrades require Checkout. Create a checkout session and complete payment.',
+    });
+  }
+
+  /**
+   * Activate Pro after a verified Al-Qaseh payment (webhook / callback).
+   */
+  async activateProAfterPayment(
+    userId: string,
+    paymentId: string,
+    billingCycle: 'MONTHLY' | 'YEARLY',
+  ) {
+    const payment = await this.prisma.developerPayment.findFirst({
+      where: {
+        id: paymentId,
+        subscription: { userId },
+        status: PaymentStatus.PENDING,
+      },
+    });
+    if (!payment) {
+      throw new NotFoundException('Developer payment not found or already processed');
     }
 
-    const effectivePlan = await this.resolveEffectivePlan(userId);
-    const stored = await this.ensureDeveloperSubscription(userId);
-
-    if (
-      effectivePlan === 'PRO' &&
-      (stored.plan === 'PRO' || LEGACY_PLANS_TO_MIGRATE.has(stored.plan))
-    ) {
-      throw new ForbiddenException('You are already on the Pro plan');
-    }
-
-    const cycle = dto.billingCycle === 'YEARLY' ? 'yearly' : 'monthly';
-    const price = DEVELOPER_PRO_PRICING[cycle];
     const limits = DEVELOPER_PLAN_LIMITS.PRO;
     const now = new Date();
     const periodEnd = new Date(now);
-
-    if (cycle === 'monthly') {
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-    } else {
+    if (billingCycle === 'YEARLY') {
       periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    } else {
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
     }
 
-    const updated = await this.prisma.developerSubscription.update({
-      where: { userId },
-      data: {
-        plan: 'PRO',
-        billingCycle: cycle === 'monthly' ? 'MONTHLY' : 'YEARLY',
-        status: 'ACTIVE',
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-        messagesLimit: limits.maxMessagesPerMonth,
-        apiKeysLimit: resolveLimitValue(limits.maxApiKeys),
-        phoneNumbersLimit: resolveLimitValue(limits.maxPhoneNumbers),
-        webhooksLimit: resolveLimitValue(limits.maxWebhooks),
-        contactsLimit: resolveLimitValue(limits.maxContacts),
-        appsLimit: resolveLimitValue(limits.maxApps),
-        rateLimitPerMinute: limits.rateLimitPerMinute,
-        logRetentionDays: limits.logRetentionDays,
-      },
-    });
-
-    await this.prisma.developerPayment.create({
-      data: {
-        subscriptionId: updated.id,
-        amount: price,
-        type: 'SUBSCRIPTION',
-        status: 'COMPLETED',
-        paymentMethod: dto.paymentMethod,
-        paidAt: now,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.developerSubscription.update({
+        where: { userId },
+        data: {
+          plan: 'PRO',
+          billingCycle,
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          messagesLimit: limits.maxMessagesPerMonth,
+          apiKeysLimit: resolveLimitValue(limits.maxApiKeys),
+          phoneNumbersLimit: resolveLimitValue(limits.maxPhoneNumbers),
+          webhooksLimit: resolveLimitValue(limits.maxWebhooks),
+          contactsLimit: resolveLimitValue(limits.maxContacts),
+          appsLimit: resolveLimitValue(limits.maxApps),
+          rateLimitPerMinute: limits.rateLimitPerMinute,
+          logRetentionDays: limits.logRetentionDays,
+        },
+      }),
+      this.prisma.developerPayment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          paidAt: now,
+          paymentMethod: payment.paymentMethod || 'card',
+        },
+      }),
+    ]);
 
     await this.redis.del(`devsub:${userId}`);
-    this.logger.log(`User ${userId} upgraded to Pro`);
-
+    this.logger.log(
+      `User ${userId} activated Pro via payment ${paymentId} (${billingCycle})`,
+    );
     return this.getSubscription(userId);
   }
 

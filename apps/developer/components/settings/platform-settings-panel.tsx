@@ -4,6 +4,8 @@
 
 import Link from 'next/link';
 
+import { useState } from 'react';
+
 import { Check, KeyRound, Package } from 'lucide-react';
 
 import { useTranslations } from '@/components/providers/translations-provider';
@@ -28,6 +30,10 @@ import {
 
 import { appProducts } from '@/lib/app-routes';
 
+import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
+
+import { appToast } from '@/lib/app-toast';
+
 import {
 
   OptionButton,
@@ -36,6 +42,63 @@ import {
 
 } from '@/components/settings/settings-ui';
 
+
+
+function UpgradeToProButton() {
+
+  const [busy, setBusy] = useState(false);
+
+
+
+  async function handleUpgrade() {
+
+    if (busy) return;
+
+    setBusy(true);
+
+    try {
+
+      await redirectToDeveloperCheckout({
+
+        kind: 'PRO_UPGRADE',
+
+        billingCycle: 'MONTHLY',
+
+      });
+
+    } catch (error) {
+
+      appToast.fromError(error, 'Could not continue to Checkout');
+
+      setBusy(false);
+
+    }
+
+  }
+
+
+
+  return (
+
+    <button
+
+      type="button"
+
+      disabled={busy}
+
+      onClick={() => void handleUpgrade()}
+
+      className="ms-2 mt-4 inline-flex h-9 items-center justify-center rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:opacity-60"
+
+    >
+
+      {busy ? '…' : 'Upgrade to Pro · Checkout'}
+
+    </button>
+
+  );
+
+}
 
 
 function InstalledProductsSettings({ appId }: { appId: string }) {
@@ -245,13 +308,17 @@ export function PlatformSettingsPanel({
 
             href="/pricing"
 
-            className="mt-4 inline-flex h-9 items-center justify-center rounded-full bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            className="mt-4 inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
 
           >
 
             {s.viewPricing}
 
           </Link>
+
+          {subscription && effectivePlan !== 'PRO' ? (
+            <UpgradeToProButton />
+          ) : null}
 
         </div>
 

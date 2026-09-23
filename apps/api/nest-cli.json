@@ -16,6 +16,10 @@
       {
         "include": "domain/stores/data/*.json",
         "outDir": "dist"
+      },
+      {
+        "include": "assets/**/*",
+        "outDir": "dist"
       }
     ]
   },

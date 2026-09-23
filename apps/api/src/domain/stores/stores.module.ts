@@ -51,6 +51,7 @@ import { AccountUpgradeController } from './account-upgrade.controller';
 import { CheckoutAddressesController } from './checkout-addresses.controller';
 // 🛒 طلبات Checkout
 import { CheckoutOrdersController } from './checkout-orders.controller';
+import { CheckoutPaymentOptionsController } from './checkout-payment-options.controller';
 // 📥 نظام المنتجات الرقمية
 import { DigitalAssetsService } from './digital-assets.service';
 import {
@@ -68,6 +69,7 @@ import { WhatsappModule } from '../../integrations/whatsapp';
 import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/whatsapp-business.module';
 import { EmailModule } from '../../integrations/email/email.module';
 import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payment.module';
+import { TrackingSessionGuard } from '../../core/common/guards/auth/tracking-session.guard';
 
 @Module({
   imports: [
@@ -116,6 +118,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     CheckoutAddressesController,
     // 🛒 Controller طلبات Checkout
     CheckoutOrdersController,
+    CheckoutPaymentOptionsController,
     // 📥 Controller المنتجات الرقمية
     DigitalAssetsController,
     DownloadsController,
@@ -146,6 +149,7 @@ import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payme
     OrderTrackingService,
     // 🚀 Service ترقية الحساب
     AccountUpgradeService,
+    TrackingSessionGuard,
   ],
   exports: [
     StoresService,

@@ -31,8 +31,21 @@ const SOCIAL_DOMAINS = [
   'snapchat.com',
 ];
 
+function verdictStatus(verdict: SesVerdict | undefined) {
+  return verdict?.status?.toUpperCase() ?? '';
+}
+
 function failed(verdict: SesVerdict | undefined) {
-  return verdict?.status?.toUpperCase() === 'FAIL';
+  return verdictStatus(verdict) === 'FAIL';
+}
+
+function gray(verdict: SesVerdict | undefined) {
+  return verdictStatus(verdict) === 'GRAY';
+}
+
+function passedOrGray(verdict: SesVerdict | undefined) {
+  const status = verdictStatus(verdict);
+  return status === 'PASS' || status === 'GRAY' || status === '';
 }
 
 function senderDomain(address: string) {
@@ -86,4 +99,53 @@ export function classifyInboundMail(
   }
 
   return MailMessageFolder.INBOX;
+}
+
+export type QuarantineHeuristicOptions = {
+  quarantineNewSendersWithoutDmarc?: boolean;
+};
+
+function dmarcMissingOrNone(verdict: SesVerdict | undefined) {
+  const status = verdictStatus(verdict);
+  return !status || status === 'NONE' || status === 'UNKNOWN';
+}
+
+export function classifySuspiciousForQuarantine(
+  input: MailClassificationInput,
+  options: QuarantineHeuristicOptions = {},
+): MailMessageFolder | null {
+  if (gray(input.spamVerdict)) {
+    return MailMessageFolder.QUARANTINE;
+  }
+  if (gray(input.virusVerdict)) {
+    return MailMessageFolder.QUARANTINE;
+  }
+
+  const authResults = [
+    failed(input.spfVerdict),
+    failed(input.dkimVerdict),
+    failed(input.dmarcVerdict),
+  ];
+  const failCount = authResults.filter(Boolean).length;
+  const passOrGrayCount = [
+    input.spfVerdict,
+    input.dkimVerdict,
+    input.dmarcVerdict,
+  ].filter((verdict) => passedOrGray(verdict)).length;
+
+  if (failCount === 1 && passOrGrayCount >= 1) {
+    return MailMessageFolder.QUARANTINE;
+  }
+
+  // Disabled by default — only quarantine when DMARC is absent AND another auth signal fails.
+  if (options.quarantineNewSendersWithoutDmarc) {
+    if (
+      dmarcMissingOrNone(input.dmarcVerdict) &&
+      (failed(input.spfVerdict) || failed(input.dkimVerdict))
+    ) {
+      return MailMessageFolder.QUARANTINE;
+    }
+  }
+
+  return null;
 }

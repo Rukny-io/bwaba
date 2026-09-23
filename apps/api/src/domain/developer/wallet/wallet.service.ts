@@ -170,15 +170,17 @@ export class WalletService {
       },
     });
 
-    // TODO: هنا يتم التوجيه لبوابة الدفع (ZainCash, FastPay, etc.)
-    // عند تأكيد الدفع، يتم استدعاء verifyTopUp
+    // Prefer DeveloperCheckoutService.createCheckoutSession(WALLET_TOPUP).
+    // This endpoint only creates a PENDING ledger row; credit happens via
+    // verifyTopUp after Al-Qaseh webhook/callback.
 
     return {
       transactionId: transaction.id,
       amount: dto.amount,
       paymentMethod: dto.paymentMethod,
       status: 'PENDING',
-      // paymentUrl: await this.getPaymentUrl(dto) // عند ربط بوابة الدفع
+      message:
+        'Use POST /developer/checkout-session with kind=WALLET_TOPUP to pay via Checkout.',
     };
   }
 
@@ -188,48 +190,82 @@ export class WalletService {
   async verifyTopUp(userId: string, transactionId: string) {
     const wallet = await this.getWallet(userId);
 
-    const transaction = await this.prisma.walletTransaction.findFirst({
-      where: {
-        id: transactionId,
-        walletId: wallet.id,
-        type: 'TOP_UP',
-        status: 'PENDING',
-      },
-    });
+    const result = await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.walletTransaction.findFirst({
+        where: {
+          id: transactionId,
+          walletId: wallet.id,
+          type: 'TOP_UP',
+        },
+      });
 
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found or already processed');
-    }
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
 
-    // تحديث المحفظة والمعاملة في transaction واحد
-    const [updatedWallet, updatedTransaction] = await this.prisma.$transaction([
-      this.prisma.developerWallet.update({
+      if (transaction.status === 'COMPLETED') {
+        const currentWallet = await tx.developerWallet.findUnique({
+          where: { id: wallet.id },
+        });
+        return {
+          balance: currentWallet?.balance ?? wallet.balance,
+          transaction,
+        };
+      }
+
+      if (transaction.status !== 'PENDING') {
+        throw new NotFoundException('Transaction not found or already processed');
+      }
+
+      const claimed = await tx.walletTransaction.updateMany({
+        where: { id: transactionId, status: 'PENDING' },
+        data: {
+          status: 'COMPLETED',
+          balanceAfter: wallet.balance + transaction.amount,
+        },
+      });
+
+      if (claimed.count === 0) {
+        const current = await tx.walletTransaction.findUnique({
+          where: { id: transactionId },
+        });
+        if (current?.status === 'COMPLETED') {
+          const currentWallet = await tx.developerWallet.findUnique({
+            where: { id: wallet.id },
+          });
+          return {
+            balance: currentWallet?.balance ?? wallet.balance,
+            transaction: current,
+          };
+        }
+        throw new NotFoundException('Transaction not found or already processed');
+      }
+
+      const updatedWallet = await tx.developerWallet.update({
         where: { id: wallet.id },
         data: {
           balance: { increment: transaction.amount },
           totalTopUps: { increment: transaction.amount },
         },
-      }),
-      this.prisma.walletTransaction.update({
-        where: { id: transactionId },
-        data: {
-          status: 'COMPLETED',
-          balanceAfter: wallet.balance + transaction.amount,
-        },
-      }),
-    ]);
+      });
 
-    // مسح الكاش
+      const updatedTransaction = await tx.walletTransaction.findUnique({
+        where: { id: transactionId },
+      });
+
+      return {
+        balance: updatedWallet.balance,
+        transaction: updatedTransaction!,
+      };
+    });
+
     await this.redis.del(`wallet:${userId}`);
 
     this.logger.log(
-      `Top-up verified: ${transaction.amount} IQD for user ${userId}`,
+      `Top-up verified: ${result.transaction.amount} IQD for user ${userId}`,
     );
 
-    return {
-      balance: updatedWallet.balance,
-      transaction: updatedTransaction,
-    };
+    return result;
   }
 
   /**
@@ -413,34 +449,10 @@ export class WalletService {
   private async triggerAutoRecharge(userId: string, wallet: any) {
     if (!wallet.autoRechargeAmount) return;
 
-    this.logger.log(
-      `Auto-recharge triggered for user ${userId}: ${wallet.autoRechargeAmount} IQD`,
+    // Auto-recharge requires a saved payment method — disabled until gateway integration ships.
+    this.logger.warn(
+      `Auto-recharge skipped for user ${userId}: payment gateway not integrated`,
     );
-
-    // TODO: تكامل مع بوابة الدفع المحفوظة
-    // حالياً نضيف الرصيد مباشرة (سيتم تحديثه عند ربط بوابة الدفع)
-    await this.prisma.$transaction([
-      this.prisma.developerWallet.update({
-        where: { id: wallet.id },
-        data: {
-          balance: { increment: wallet.autoRechargeAmount },
-          totalTopUps: { increment: wallet.autoRechargeAmount },
-        },
-      }),
-      this.prisma.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          type: 'AUTO_RECHARGE',
-          amount: wallet.autoRechargeAmount,
-          balanceBefore: wallet.balance,
-          balanceAfter: wallet.balance + wallet.autoRechargeAmount,
-          status: 'COMPLETED',
-          description: 'شحن تلقائي',
-        },
-      }),
-    ]);
-
-    await this.redis.del(`wallet:${userId}`);
   }
 
   private getCategoryDescription(category: string): string {

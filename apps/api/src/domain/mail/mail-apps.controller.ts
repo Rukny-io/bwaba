@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -33,6 +34,14 @@ export class MailAppsController {
   @ApiOperation({ summary: 'List Mail apps for the signed-in user' })
   list(@CurrentUser() user: AuthenticatedUser) {
     return this.mailApps.listApps(user.id);
+  }
+
+  @Get('domain-taken')
+  @ApiOperation({
+    summary: 'Check if an ACTIVE Mail workspace already claims a domain',
+  })
+  domainTaken(@Query('domain') domain: string) {
+    return this.mailApps.isPrimaryDomainTaken(domain ?? '');
   }
 
   @Post('otp/send')

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import https from 'https';
 
 export interface WhatsAppBusinessResult {
   messageId: string;
@@ -35,14 +36,16 @@ export class WhatsAppBusinessError extends Error {
 export class WhatsAppBusinessService implements OnModuleInit {
   private readonly logger = new Logger(WhatsAppBusinessService.name);
   private readonly client: AxiosInstance;
+  private readonly accessToken: string;
   private readonly phoneNumberId: string;
   private readonly businessAccountId: string;
   private readonly authTemplateName: string;
   private readonly authTemplateLanguage: string;
   private readonly enabled: boolean;
+  private readonly apiVersion: string;
 
   constructor(private configService: ConfigService) {
-    const accessToken = this.configService.get<string>(
+    this.accessToken = this.configService.get<string>(
       'WHATSAPP_BUSINESS_TOKEN',
       '',
     );
@@ -63,7 +66,7 @@ export class WhatsAppBusinessService implements OnModuleInit {
       'en',
     );
 
-    this.enabled = !!(accessToken && this.phoneNumberId);
+    this.enabled = !!(this.accessToken && this.phoneNumberId);
 
     if (!this.enabled) {
       this.logger.warn(
@@ -73,18 +76,21 @@ export class WhatsAppBusinessService implements OnModuleInit {
       this.logger.log('✅ WhatsApp Business service enabled');
     }
 
-    const apiVersion =
+    this.apiVersion =
       this.configService.get<string>('WHATSAPP_GRAPH_API_VERSION') ||
       this.configService.get<string>('WHATSAPP_API_VERSION') ||
       'v25.0';
 
+    // Prefer IPv4 — Docker/desktop stacks often resolve graph.facebook.com to
+    // AAAA first and then hit ETIMEDOUT on broken IPv6 routes.
     this.client = axios.create({
-      baseURL: `https://graph.facebook.com/${apiVersion}`,
+      baseURL: `https://graph.facebook.com/${this.apiVersion}`,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${this.accessToken}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
+      httpsAgent: new https.Agent({ family: 4, keepAlive: true }),
     });
   }
 
@@ -316,6 +322,153 @@ export class WhatsAppBusinessService implements OnModuleInit {
       );
 
       throw new Error(`فشل إرسال الرسالة: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Upload a binary file to Meta WhatsApp media (returns media id).
+   * Used for invoice PDFs within the 24h customer-care window.
+   */
+  async uploadMedia(
+    buffer: Buffer,
+    filename: string,
+    mimeType = 'application/pdf',
+  ): Promise<string> {
+    if (!this.enabled) {
+      throw new Error('WhatsApp Business service is not configured');
+    }
+
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mimeType);
+    form.append(
+      'file',
+      new Blob([new Uint8Array(buffer)], { type: mimeType }),
+      filename,
+    );
+
+    try {
+      // Separate request: default client forces JSON Content-Type.
+      const response = await axios.post(
+        `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/media`,
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+          timeout: 60000,
+          httpsAgent: new https.Agent({ family: 4, keepAlive: true }),
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        },
+      );
+
+      const mediaId = String(response.data?.id || '');
+      if (!mediaId) {
+        throw new Error('Meta media upload returned no id');
+      }
+      this.logger.log(`✅ WhatsApp media uploaded: ${mediaId}`);
+      return mediaId;
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.error?.message ||
+        error?.message ||
+        'Unknown error';
+      this.logger.error(`❌ WhatsApp media upload failed: ${errorMessage}`);
+      throw new Error(`فشل رفع ملف واتساب: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Send a document (e.g. invoice PDF) by media id or public link.
+   * Requires an open 24h customer-care window (e.g. after checkout OTP).
+   */
+  async sendDocument(
+    phoneNumber: string,
+    options: {
+      mediaId?: string;
+      link?: string;
+      filename: string;
+      caption?: string;
+    },
+  ): Promise<WhatsAppBusinessResult> {
+    if (!this.enabled) {
+      throw new Error('WhatsApp Business service is not configured');
+    }
+    if (!options.mediaId && !options.link) {
+      throw new Error('mediaId or link is required');
+    }
+
+    const formatted = this.formatPhoneNumber(phoneNumber);
+    const document: Record<string, string> = {
+      filename: options.filename,
+    };
+    if (options.mediaId) document.id = options.mediaId;
+    if (options.link) document.link = options.link;
+    if (options.caption) document.caption = options.caption;
+
+    try {
+      const response = await this.client.post(
+        `/${this.phoneNumberId}/messages`,
+        {
+          messaging_product: 'whatsapp',
+          to: formatted,
+          type: 'document',
+          document,
+        },
+      );
+
+      const messageId = response.data?.messages?.[0]?.id || '';
+      this.logger.log(
+        `✅ WhatsApp document sent to ${this.maskPhone(formatted)}: ${messageId}`,
+      );
+      return { messageId, status: 'accepted' };
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.error?.message ||
+        error?.message ||
+        'Unknown error';
+      this.logger.error(`❌ WhatsApp document send failed: ${errorMessage}`);
+      throw new Error(`فشل إرسال مستند واتساب: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Upload PDF then send as document; on failure, send text with download link.
+   */
+  async sendInvoiceDocument(
+    phoneNumber: string,
+    options: {
+      pdfBuffer: Buffer;
+      filename: string;
+      caption: string;
+      fallbackLink?: string;
+    },
+  ): Promise<WhatsAppBusinessResult & { via: 'document' | 'text' }> {
+    try {
+      const mediaId = await this.uploadMedia(
+        options.pdfBuffer,
+        options.filename,
+        'application/pdf',
+      );
+      const result = await this.sendDocument(phoneNumber, {
+        mediaId,
+        filename: options.filename,
+        caption: options.caption,
+      });
+      return { ...result, via: 'document' };
+    } catch (docError) {
+      this.logger.warn(
+        `WhatsApp document path failed, trying text fallback: ${
+          docError instanceof Error ? docError.message : String(docError)
+        }`,
+      );
+      if (!options.fallbackLink) {
+        throw docError;
+      }
+      const text = `${options.caption}\n\nDownload invoice:\n${options.fallbackLink}`;
+      const result = await this.sendTextMessage(phoneNumber, text);
+      return { ...result, via: 'text' };
     }
   }
 

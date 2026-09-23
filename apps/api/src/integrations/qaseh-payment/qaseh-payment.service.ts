@@ -53,8 +53,15 @@ export class QasehPaymentService {
    */
   verifyWebhookSignature(req: RawBodyRequest<Request>): boolean {
     if (!this.webhookSecret) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        this.logger.error(
+          'QASEH_WEBHOOK_SECRET is not set — rejecting webhook in production',
+        );
+        return false;
+      }
       this.logger.warn(
-        'QASEH_WEBHOOK_SECRET is not set — skipping webhook signature verification',
+        'QASEH_WEBHOOK_SECRET is not set — skipping webhook signature verification (dev only)',
       );
       return true;
     }
@@ -138,13 +145,15 @@ export class QasehPaymentService {
     description: string;
     customerEmail?: string;
     customData?: Record<string, any>;
+    /** Override default QASEH_REDIRECT_URL when set */
+    redirectUrl?: string;
   }): Promise<QasehCreatePaymentResponse> {
     const payload: QasehCreatePaymentParams = {
       amount: params.amount,
       currency: params.currency,
       description: params.description,
       order_id: params.orderId,
-      redirect_url: this.redirectUrl,
+      redirect_url: params.redirectUrl || this.redirectUrl,
       transaction_type: 'Retail',
       webhook_url: this.webhookUrl,
       ...(params.customerEmail ? { email: params.customerEmail } : {}),

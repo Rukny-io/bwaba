@@ -90,6 +90,43 @@ export class CheckoutAuthService {
   ): Promise<OtpRequestResponse> {
     const { phoneNumber, email, preferEmail } = dto;
 
+    // Email-only channel
+    if (preferEmail) {
+      if (!email) {
+        throw new BadRequestException({
+          message: 'يجب تقديم البريد الإلكتروني',
+          code: 'MISSING_EMAIL',
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      await this.checkRateLimit(`email:${normalizedEmail}`);
+      if (clientIp) await this.checkIpRateLimit(clientIp);
+
+      const existingUser = await (this.prisma.user as any).findFirst({
+        where: { email: normalizedEmail },
+      });
+      const linkedPhone = existingUser?.phoneNumber as string | undefined;
+
+      const externalId = `checkout_${Date.now()}`;
+      const { otpId } = await this.sendOtpViaEmail(
+        linkedPhone || null,
+        normalizedEmail,
+        externalId,
+      );
+
+      return {
+        success: true,
+        message: 'تم إرسال رمز التحقق عبر البريد الإلكتروني',
+        otpId,
+        sentVia: 'EMAIL',
+        expiresIn: 600,
+        maskedPhone: linkedPhone
+          ? this.maskPhoneNumber(linkedPhone)
+          : normalizedEmail,
+      };
+    }
+
     if (!phoneNumber) {
       throw new BadRequestException({
         message: 'يجب تقديم رقم الهاتف',
@@ -106,50 +143,39 @@ export class CheckoutAuthService {
     let verification: any;
     let sentVia: 'WHATSAPP' | 'EMAIL' = 'WHATSAPP';
 
-    // If user prefers email or no WhatsApp available, go straight to email
-    if (preferEmail && email) {
+    // Generate 6-digit OTP
+    const otpCode = crypto.randomInt(100000, 999999).toString();
+    const bcryptLib = await import('bcryptjs');
+    const codeHash = await bcryptLib.hash(otpCode, 10);
+
+    try {
+      // 🔒 F2-02: platform-wide billing circuit breaker before paying Meta.
+      await this.enforceGlobalDailyCap();
+      const result = await this.whatsappBusiness.sendOtp(
+        phoneNumber,
+        otpCode,
+      );
+      verification = { id: `wa_${result.messageId || externalId}`, codeHash };
+    } catch (whatsappError) {
+      this.logger.warn(
+        `⚠️ WhatsApp Business verification failed, falling back to Email: ${(whatsappError as Error).message}`,
+      );
+      // Fallback to email - use provided email or find from DB
+      const fallbackEmail = email || (await this.findUserEmail(phoneNumber));
+      if (!fallbackEmail) {
+        throw new BadRequestException({
+          message:
+            'فشل إرسال الرمز عبر واتساب. يرجى إدخال بريدك الإلكتروني للاستلام عبره.',
+          code: 'WHATSAPP_FAILED_NEED_EMAIL',
+        });
+      }
       const { otpId } = await this.sendOtpViaEmail(
         phoneNumber,
-        email,
+        fallbackEmail,
         externalId,
       );
       verification = { id: otpId };
       sentVia = 'EMAIL';
-    } else {
-      // Generate 6-digit OTP
-      const otpCode = crypto.randomInt(100000, 999999).toString();
-      const bcryptLib = await import('bcryptjs');
-      const codeHash = await bcryptLib.hash(otpCode, 10);
-
-      try {
-        // 🔒 F2-02: platform-wide billing circuit breaker before paying Meta.
-        await this.enforceGlobalDailyCap();
-        const result = await this.whatsappBusiness.sendOtp(
-          phoneNumber,
-          otpCode,
-        );
-        verification = { id: `wa_${result.messageId || externalId}`, codeHash };
-      } catch (whatsappError) {
-        this.logger.warn(
-          `⚠️ WhatsApp Business verification failed, falling back to Email: ${(whatsappError as Error).message}`,
-        );
-        // Fallback to email - use provided email or find from DB
-        const fallbackEmail = email || (await this.findUserEmail(phoneNumber));
-        if (!fallbackEmail) {
-          throw new BadRequestException({
-            message:
-              'فشل إرسال الرمز عبر واتساب. يرجى إدخال بريدك الإلكتروني للاستلام عبره.',
-            code: 'WHATSAPP_FAILED_NEED_EMAIL',
-          });
-        }
-        const { otpId } = await this.sendOtpViaEmail(
-          phoneNumber,
-          fallbackEmail,
-          externalId,
-        );
-        verification = { id: otpId };
-        sentVia = 'EMAIL';
-      }
     }
 
     // 3. Store verification record
@@ -188,42 +214,57 @@ export class CheckoutAuthService {
     dto: VerifyCheckoutOtpDto,
     clientIp?: string,
   ): Promise<OtpVerifyResponse> {
-    const { phoneNumber, code, otpId } = dto;
+    const { phoneNumber, email, code, otpId } = dto;
 
-    if (!phoneNumber) {
+    if (!phoneNumber && !email) {
       throw new BadRequestException({
-        message: 'يجب تقديم رقم الهاتف',
-        code: 'MISSING_PHONE',
+        message: 'يجب تقديم رقم الهاتف أو البريد الإلكتروني',
+        code: 'MISSING_IDENTIFIER',
       });
     }
 
     // Check brute-force lockout per IP
     if (clientIp) await this.checkVerifyBruteForce(clientIp);
 
-    // Check if this OTP was sent via email (otpId starts with 'email_')
-    const isEmailOtp = otpId.startsWith('email_');
+    const normalizedEmail = email?.trim().toLowerCase();
+    const isEmailOtp = otpId.startsWith('email_') || Boolean(normalizedEmail);
 
     if (isEmailOtp) {
-      // Verify email-based OTP from database
-      await this.verifyEmailOtp(phoneNumber, code, otpId);
+      await this.verifyEmailOtp(phoneNumber || null, code, otpId, normalizedEmail);
     } else {
-      // Verify WhatsApp-based OTP from database (same bcrypt check)
+      if (!phoneNumber) {
+        throw new BadRequestException({
+          message: 'يجب تقديم رقم الهاتف',
+          code: 'MISSING_PHONE',
+        });
+      }
       await this.verifyWhatsappOtp(phoneNumber, code);
     }
 
-    // OTP verified → the phone is proven, so mark the user verified.
-    const { user, isNewUser } = await this.getOrCreateGuestUser(
-      phoneNumber,
-      undefined,
-      true,
-    );
+    let user: any;
+    let isNewUser = false;
+    let sessionPhone = phoneNumber || '';
 
-    // 🔒 F2-01: A fully-verified checkout session. `verified: true` + purchase
-    // scope authorizes payment/order-status endpoints.
+    if (normalizedEmail && !phoneNumber) {
+      const result = await this.getOrCreateGuestUserByEmail(normalizedEmail);
+      user = result.user;
+      isNewUser = result.isNewUser;
+      sessionPhone = user.phoneNumber || '';
+    } else {
+      const result = await this.getOrCreateGuestUser(
+        phoneNumber!,
+        undefined,
+        true,
+      );
+      user = result.user;
+      isNewUser = result.isNewUser;
+    }
+
     const accessToken = this.jwtService.sign(
       {
         sub: user.id,
-        phone: phoneNumber,
+        phone: sessionPhone || undefined,
+        email: normalizedEmail || user.email,
         type: 'checkout',
         verified: true,
         scope: 'purchase',
@@ -237,6 +278,7 @@ export class CheckoutAuthService {
       accessToken,
       userId: user.id,
       isNewUser,
+      phoneNumber: sessionPhone || undefined,
     };
   }
 
@@ -295,7 +337,21 @@ export class CheckoutAuthService {
     dto: ResendCheckoutOtpDto,
     clientIp?: string,
   ): Promise<OtpRequestResponse> {
-    const { phoneNumber } = dto;
+    const { phoneNumber, email, preferredChannel, preferEmail } = dto;
+    const useEmail =
+      preferEmail ||
+      preferredChannel === 'EMAIL' ||
+      Boolean(email && !phoneNumber);
+
+    if (useEmail) {
+      return this.requestOtp(
+        {
+          email,
+          preferEmail: true,
+        },
+        clientIp,
+      );
+    }
 
     if (!phoneNumber) {
       throw new BadRequestException({
@@ -338,7 +394,7 @@ export class CheckoutAuthService {
       this.logger.warn(
         `⚠️ WhatsApp Business resend failed, falling back to Email: ${(whatsappError as Error).message}`,
       );
-      const fallbackEmail = await this.findUserEmail(phoneNumber);
+      const fallbackEmail = email || (await this.findUserEmail(phoneNumber));
       if (!fallbackEmail) {
         throw new BadRequestException({
           message: 'فشل إرسال الرمز عبر واتساب. يرجى إدخال بريدك الإلكتروني.',
@@ -591,7 +647,7 @@ export class CheckoutAuthService {
    * 📧 إرسال OTP عبر البريد الإلكتروني (fallback)
    */
   private async sendOtpViaEmail(
-    phoneNumber: string,
+    phoneNumber: string | null,
     email: string,
     externalId: string,
   ): Promise<{ otpId: string }> {
@@ -605,7 +661,8 @@ export class CheckoutAuthService {
 
     await this.prismaAny.whatsappOtp.create({
       data: {
-        phoneNumber,
+        phoneNumber: phoneNumber || null,
+        email,
         codeHash,
         type: 'CHECKOUT',
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
@@ -629,7 +686,9 @@ export class CheckoutAuthService {
       `,
     });
 
-    this.logger.log(`📧 Email OTP sent to ${email} for ${phoneNumber}`);
+    this.logger.log(
+      `📧 Email OTP sent to ${email}${phoneNumber ? ` for ${phoneNumber}` : ''}`,
+    );
 
     return { otpId };
   }
@@ -698,13 +757,18 @@ export class CheckoutAuthService {
    * �📧 التحقق من OTP المرسل بالبريد الإلكتروني
    */
   private async verifyEmailOtp(
-    phoneNumber: string,
+    phoneNumber: string | null,
     code: string,
     otpId: string,
+    email?: string,
   ): Promise<void> {
     const otp = await this.prismaAny.whatsappOtp.findFirst({
       where: {
-        phoneNumber,
+        ...(email
+          ? { email }
+          : phoneNumber
+            ? { phoneNumber }
+            : { id: otpId.replace(/^email_/, '') }),
         type: 'CHECKOUT',
         sentVia: 'EMAIL',
         expiresAt: { gte: new Date() },
@@ -753,5 +817,48 @@ export class CheckoutAuthService {
       where: { id: otp.id },
       data: { verifiedAt: new Date() },
     });
+  }
+
+  private async getOrCreateGuestUserByEmail(
+    email: string,
+  ): Promise<{ user: any; isNewUser: boolean }> {
+    let user = await (this.prisma.user as any).findFirst({
+      where: { email },
+      include: { profile: true },
+    });
+
+    if (user) {
+      if (!user.emailVerified) {
+        user = await (this.prisma.user as any).update({
+          where: { id: user.id },
+          data: { emailVerified: true },
+        });
+      }
+      return { user, isNewUser: false };
+    }
+
+    const guestUsername = `guest_${crypto.randomBytes(6).toString('hex')}`;
+
+    user = await (this.prisma.user as any).create({
+      data: {
+        id: crypto.randomUUID(),
+        email,
+        phoneNumber: null,
+        phoneVerified: false,
+        emailVerified: true,
+        accountType: 'GUEST_CHECKOUT',
+        role: 'GUEST',
+        profile: {
+          create: {
+            id: crypto.randomUUID(),
+            username: guestUsername,
+            name: email.split('@')[0],
+          },
+        },
+      },
+      include: { profile: true },
+    });
+
+    return { user, isNewUser: true };
   }
 }

@@ -43,4 +43,24 @@ describe('buildRawMimeMessage', () => {
       'Content-Transfer-Encoding: base64\r\n\r\nSGVsbG8=\r\n',
     );
   });
+
+  it('embeds PDF attachments in multipart/mixed', () => {
+    const message = Buffer.from(
+      buildRawMimeMessage({
+        ...baseInput,
+        bodyHtml: '<p>Invoice</p>',
+        attachments: [
+          {
+            filename: 'INV-1.pdf',
+            contentType: 'application/pdf',
+            content: Buffer.from('%PDF-1.4 test'),
+          },
+        ],
+      }),
+    ).toString('utf8');
+
+    expect(message).toContain('multipart/mixed');
+    expect(message).toContain('Content-Disposition: attachment; filename="INV-1.pdf"');
+    expect(message).toContain('application/pdf');
+  });
 });

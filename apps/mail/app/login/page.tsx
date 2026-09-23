@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthLoadingCard } from "@/components/auth/auth-status-card";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { MailFrameButton } from "@/components/marketing/mail-frame-cta";
+import { agLayout } from "@/lib/mail-antigravity-theme";
 import {
   DEFAULT_APP_PATH,
   getAccountsLoginUrl,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth-redirect";
 import { clearOAuthHash, readOAuthCallbackParams } from "@/lib/oauth-callback";
 import { resetAuthClientState } from "@/lib/api-client";
+import { cn } from "@heroui/react";
 
 function GoogleIcon() {
   return (
@@ -35,6 +36,13 @@ function GoogleIcon() {
       />
     </svg>
   );
+}
+
+function sessionCopy(flag: string | null) {
+  if (flag === "expired") return "Your session expired. Sign in to continue.";
+  if (flag === "invalid") return "Could not verify your session. Sign in again.";
+  if (flag === "logout") return "Signed out successfully.";
+  return "Create a workspace, connect your domain, and start sending.";
 }
 
 function LoginContent() {
@@ -66,46 +74,43 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <div className="w-full border border-[#e8e8e8] bg-white p-6 sm:p-8">
+      <div className="w-full rounded-2xl border border-[#E8E8E8] bg-white/90 p-7 shadow-[0_8px_40px_-20px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:p-8">
         <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-[1.8px] text-[#666666]">
-            Rukny Mail
-          </p>
-          <h1 className="mt-3 text-2xl font-bold tracking-[-0.03em] text-[#111111]">
-            Welcome to Mail
+          <p className={agLayout.pill}>Welcome</p>
+          <h1 className="mt-5 text-[1.75rem] font-medium leading-tight tracking-[0em] text-[#1D1D1D]">
+            Sign in to Mail
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[#666666]">
-            {sessionFlag === "expired"
-              ? "Your session expired. Sign in to continue."
-              : sessionFlag === "invalid"
-                ? "Could not verify your session. Sign in again."
-                : sessionFlag === "logout"
-                  ? "Signed out successfully."
-                  : "Create a workspace, connect your domain, and start sending."}
+          <p className={cn(agLayout.lead, "mt-3")}>
+            {sessionCopy(sessionFlag)}
           </p>
         </div>
 
-        <div className="mt-8 flex flex-col gap-2">
-          <MailFrameButton
-            className="w-full [&_button]:w-full"
+        <div className="mt-8 flex flex-col gap-3">
+          <button
+            type="button"
+            className={cn(agLayout.btnPrimary, "w-full gap-2.5")}
             onClick={() => {
               window.location.href = getGoogleOAuthUrl(nextPath);
             }}
           >
             <GoogleIcon />
             <span>Continue with Google</span>
-          </MailFrameButton>
+          </button>
 
-          <MailFrameButton
-            variant="ghost"
-            className="w-full [&_button]:w-full"
+          <button
+            type="button"
+            className={cn(agLayout.btnSecondary, "w-full")}
             onClick={() => {
               window.location.href = getAccountsLoginUrl(nextPath);
             }}
           >
             Sign in with Rukny
-          </MailFrameButton>
+          </button>
         </div>
+
+        <p className="mt-6 text-center text-[13px] leading-relaxed text-[#9CA3AF]">
+          By continuing you agree to use Mail for your workspace.
+        </p>
       </div>
     </AuthShell>
   );

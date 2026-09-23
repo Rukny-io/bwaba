@@ -6,8 +6,9 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,32 +16,54 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-session.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
+import {
+  assertVerifiedCheckoutSession,
+  resolveCheckoutContact,
+} from '../checkout/checkout-session.util';
+import type { CheckoutSessionContext } from '../checkout/checkout-session.types';
 
 /**
  * 📍 Checkout Addresses Controller
  *
- * إدارة العناوين للمستخدمين الضيوف باستخدام رقم الهاتف
+ * إدارة العناوين للمستخدمين الضيوف — مربوطة بجلسة checkout فقط
  */
 @ApiTags('Checkout Addresses')
 @ApiBearerAuth()
+@Public()
 @UseGuards(CheckoutSessionGuard)
+@Throttle({ default: { limit: 30, ttl: 60_000 } })
 @Controller('checkout/addresses')
 export class CheckoutAddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
+  private requireSessionPhone(
+    req: { checkoutSession?: CheckoutSessionContext },
+  ): string {
+    const session = assertVerifiedCheckoutSession(req.checkoutSession);
+    const { phoneNumber } = resolveCheckoutContact(session);
+    if (!phoneNumber) {
+      throw new ForbiddenException({
+        message: 'يجب التحقق عبر رقم الهاتف لإدارة العناوين',
+        code: 'CHECKOUT_PHONE_REQUIRED',
+      });
+    }
+    return phoneNumber;
+  }
+
   /**
-   * 📋 عرض عناوين رقم الهاتف
+   * 📋 عرض عناوين جلسة checkout
    */
   @Get()
-  @ApiOperation({ summary: 'عرض عناوين رقم الهاتف' })
-  @ApiQuery({ name: 'phoneNumber', required: true })
+  @ApiOperation({ summary: 'عرض عناوين جلسة checkout' })
   @ApiResponse({ status: 200, description: 'قائمة العناوين' })
-  async getAddresses(@Query('phoneNumber') phoneNumber: string) {
+  async getAddresses(@Req() req: { checkoutSession?: CheckoutSessionContext }) {
+    const phoneNumber = this.requireSessionPhone(req);
     return this.addressesService.getAddressesByPhone(phoneNumber);
   }
 
@@ -51,11 +74,15 @@ export class CheckoutAddressesController {
   @ApiOperation({ summary: 'إضافة عنوان جديد' })
   @ApiResponse({ status: 201, description: 'تم إضافة العنوان بنجاح' })
   async createAddress(
-    @Body() createAddressDto: CreateAddressDto & { phoneNumber: string },
+    @Body() createAddressDto: CreateAddressDto,
+    @Req() req: { checkoutSession?: CheckoutSessionContext },
   ) {
+    const session = assertVerifiedCheckoutSession(req.checkoutSession);
+    const phoneNumber = this.requireSessionPhone(req);
     return this.addressesService.createAddressByPhone(
-      createAddressDto.phoneNumber,
+      phoneNumber,
       createAddressDto,
+      session.userId,
     );
   }
 
@@ -68,11 +95,13 @@ export class CheckoutAddressesController {
   @ApiResponse({ status: 200, description: 'تم التحديث بنجاح' })
   async updateAddress(
     @Param('id') addressId: string,
-    @Body() updateAddressDto: UpdateAddressDto & { phoneNumber: string },
+    @Body() updateAddressDto: UpdateAddressDto,
+    @Req() req: { checkoutSession?: CheckoutSessionContext },
   ) {
+    const phoneNumber = this.requireSessionPhone(req);
     return this.addressesService.updateAddressByPhone(
       addressId,
-      updateAddressDto.phoneNumber,
+      phoneNumber,
       updateAddressDto,
     );
   }
@@ -83,12 +112,12 @@ export class CheckoutAddressesController {
   @Delete(':id')
   @ApiOperation({ summary: 'حذف عنوان' })
   @ApiParam({ name: 'id', description: 'معرف العنوان' })
-  @ApiQuery({ name: 'phoneNumber', required: true })
   @ApiResponse({ status: 200, description: 'تم الحذف بنجاح' })
   async deleteAddress(
     @Param('id') addressId: string,
-    @Query('phoneNumber') phoneNumber: string,
+    @Req() req: { checkoutSession?: CheckoutSessionContext },
   ) {
+    const phoneNumber = this.requireSessionPhone(req);
     return this.addressesService.deleteAddressByPhone(addressId, phoneNumber);
   }
 }

@@ -75,8 +75,8 @@ function RoleDropdown({
         isDisabled={disabled}
         className={
           size === "sm"
-            ? "inline-flex h-8 min-w-[7.5rem] items-center justify-between gap-1.5 rounded-lg bg-[var(--surface-secondary)] px-2.5 text-start text-xs font-medium text-[var(--foreground)] outline-none"
-            : "inline-flex h-10 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[var(--field-background)] px-3 text-start text-sm font-medium text-[var(--foreground)] outline-none"
+            ? "inline-flex h-9 min-w-[8rem] items-center justify-between gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-start text-[13px] font-medium text-[var(--foreground)] outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_8%,var(--surface-secondary))]"
+            : "inline-flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-2xl bg-[var(--surface-secondary)] px-3.5 text-start text-sm font-medium text-[var(--foreground)] outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_8%,var(--surface-secondary))]"
         }
       >
         <span className="min-w-0 truncate">{selected?.label ?? "Role"}</span>
@@ -126,7 +126,7 @@ function PersonAvatar({
   const src = resolveAvatarUrl(avatar);
 
   return (
-    <Avatar size="md" className="shrink-0">
+    <Avatar size="md" className="shrink-0 ring-1 ring-[color-mix(in_srgb,var(--foreground)_8%,transparent)]">
       {src ? <Avatar.Image alt="" src={src} /> : null}
       <Avatar.Fallback>{initials(display, email)}</Avatar.Fallback>
     </Avatar>
@@ -188,8 +188,14 @@ export function MailTeamPage() {
     );
   }, [roster]);
 
+  const peopleCount = useMemo(() => {
+    if (!roster) return 0;
+    return (roster.owner ? 1 : 0) + roster.members.length;
+  }, [roster]);
+
   const needsUpgrade = Boolean(roster && roster.consoleMembersIncluded === 0);
   const atSeatLimit = Boolean(roster && seatsLeft <= 0 && !needsUpgrade);
+  const inviteLocked = busy || needsUpgrade || atSeatLimit;
 
   async function onInvite() {
     if (!appId || busy || !email.trim()) return;
@@ -258,27 +264,35 @@ export function MailTeamPage() {
   }
 
   return (
-    <section className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-4 sm:gap-6" dir="ltr">
-      <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
+    <section
+      className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-5 sm:gap-7"
+      dir="ltr"
+    >
+      <div className="flex min-w-0 flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
             Team
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-[var(--muted-foreground)]">
-            Invite Rukny accounts to manage this workspace, then assign mailboxes
-            for SSO inbox access.
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-[var(--muted-foreground)]">
+            Invite Rukny accounts to this workspace, then assign mailboxes for SSO
+            inbox access.
           </p>
         </div>
         {loading || !roster ? null : (
-          <Chip
-            color={needsUpgrade || atSeatLimit ? "warning" : "default"}
-            size="sm"
-            variant="soft"
-          >
-            {needsUpgrade
-              ? "Upgrade to invite"
-              : `${roster.consoleMembersUsed} / ${roster.consoleMembersIncluded} seats`}
-          </Chip>
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip
+              color={needsUpgrade || atSeatLimit ? "warning" : "default"}
+              size="sm"
+              variant="soft"
+            >
+              {needsUpgrade
+                ? "Upgrade to invite"
+                : `${roster.consoleMembersUsed} / ${roster.consoleMembersIncluded} seats`}
+            </Chip>
+            <Chip size="sm" variant="soft">
+              {peopleCount} {peopleCount === 1 ? "person" : "people"}
+            </Chip>
+          </div>
         )}
       </div>
 
@@ -301,261 +315,286 @@ export function MailTeamPage() {
       ) : null}
 
       {loading || !roster ? (
-        <div className="space-y-3 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
-          <Skeleton className="h-5 w-36 rounded-lg" />
-          <Skeleton className="h-3 w-full rounded-full" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-16 w-full rounded-xl" />
+        <div className="space-y-4">
+          <div className="space-y-3 rounded-[1.35rem] bg-[var(--surface)] p-5 md:p-6">
+            <Skeleton className="h-5 w-40 rounded-lg" />
+            <Skeleton className="h-3 w-full rounded-full" />
+            <Skeleton className="h-11 w-full rounded-2xl" />
+          </div>
+          <div className="space-y-3 rounded-[1.35rem] bg-[var(--surface)] p-5 md:p-6">
+            <Skeleton className="h-5 w-28 rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+          </div>
         </div>
       ) : (
         <>
-          <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
-                <Users className="size-5" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    Console seats
-                  </p>
-                  <p className="text-xs tabular-nums text-[var(--muted-foreground)]">
-                    {roster.consoleMembersUsed} used · {seatsLeft} left
-                  </p>
-                </div>
-                {needsUpgrade ? (
-                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                    Standard unlocks teammate invites for this workspace.
-                  </p>
-                ) : (
-                  <Meter
-                    aria-label="Console seats used"
-                    className="mt-3 gap-1.5"
-                    size="sm"
-                    value={seatPercent}
-                  >
-                    <Meter.Track>
-                      <Meter.Fill />
-                    </Meter.Track>
-                  </Meter>
-                )}
-              </div>
-            </div>
-
-            {needsUpgrade ? (
-              <MailNotice
-                status="warning"
-                title="Invites locked"
-                description="Upgrade to Standard or Premium to invite teammates and assign console seats."
-                action={{
-                  label: "View plans",
-                  onPress: () => router.push("/pricing"),
-                }}
-              />
-            ) : null}
-
-            {atSeatLimit ? (
-              <MailNotice
-                status="warning"
-                title="All seats in use"
-                description={`This plan includes ${roster.consoleMembersIncluded} console seats. Remove someone or upgrade for more.`}
-                action={{
-                  label: "Upgrade",
-                  onPress: () => router.push("/pricing"),
-                }}
-              />
-            ) : null}
-          </div>
-
-          {roster.canManage ? (
-            <div className="flex min-w-0 flex-col gap-5 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
-              <div className="flex items-center gap-2">
-                <UserPlus className="size-4 text-[var(--muted-foreground)]" aria-hidden />
-                <h2 className="text-sm font-semibold text-[var(--foreground)]">
-                  Invite teammate
-                </h2>
-              </div>
-
-              <TextField
-                isRequired
-                fullWidth
-                className="gap-1.5"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                isDisabled={busy || needsUpgrade || atSeatLimit}
-              >
-                <Label className="text-sm font-medium text-[var(--foreground)]">
-                  Rukny email
-                </Label>
-                <Input placeholder="teammate@company.com" autoComplete="email" />
-                <Description>
-                  They must already have a Rukny account with this email.
-                </Description>
-              </TextField>
-
-              <div className="min-w-0">
-                <Label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
-                  Role
-                </Label>
-                <RoleDropdown
-                  label="Invite role"
-                  value={role}
-                  disabled={busy || needsUpgrade || atSeatLimit}
-                  onChange={setRole}
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  isDisabled={
-                    busy || needsUpgrade || atSeatLimit || !email.trim()
-                  }
-                  onPress={() => void onInvite()}
-                >
-                  {busy ? "Sending…" : "Send invite"}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {roster.owner || roster.members.length > 0 ? (
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-semibold text-[var(--foreground)]">
-                  People
-                </h2>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  {(roster.owner ? 1 : 0) + roster.members.length} total
-                </p>
-              </div>
-
-              {roster.owner ? (
-                <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-[var(--surface)] p-4 md:px-5">
-                  <PersonAvatar
-                    name={roster.owner.name}
-                    email={roster.owner.email}
-                    avatar={roster.owner.avatar}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--foreground)]">
-                      {roster.owner.name || roster.owner.email}
+          {/* Seats + invite */}
+          <div className="overflow-hidden rounded-[1.35rem] bg-[var(--surface)]">
+            <div className="border-b border-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-5 py-5 md:px-6">
+              <div className="flex min-w-0 items-start gap-3.5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
+                  <Users className="size-[1.125rem]" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+                      Console seats
                     </p>
-                    <p className="truncate text-xs text-[var(--muted-foreground)]">
-                      {roster.owner.email}
+                    <p className="text-[12px] tabular-nums text-[var(--muted-foreground)]">
+                      {needsUpgrade
+                        ? "No seats on this plan"
+                        : `${roster.consoleMembersUsed} used · ${seatsLeft} left`}
                     </p>
                   </div>
-                  <Chip size="sm" variant="soft" color="accent">
-                    Owner
-                  </Chip>
+                  {needsUpgrade ? (
+                    <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
+                      Standard unlocks teammate invites for this workspace.
+                    </p>
+                  ) : (
+                    <Meter
+                      aria-label="Console seats used"
+                      className="mt-3 gap-1.5"
+                      size="sm"
+                      value={seatPercent}
+                    >
+                      <Meter.Track className="rounded-full bg-[var(--surface-secondary)]">
+                        <Meter.Fill className="rounded-full bg-[var(--foreground)]" />
+                      </Meter.Track>
+                    </Meter>
+                  )}
+                </div>
+              </div>
+
+              {needsUpgrade ? (
+                <div className="mt-4">
+                  <MailNotice
+                    status="warning"
+                    title="Invites locked"
+                    description="Upgrade to Standard or Premium to invite teammates and assign console seats."
+                    action={{
+                      label: "View plans",
+                      onPress: () => router.push("/pricing"),
+                    }}
+                  />
                 </div>
               ) : null}
 
-              {roster.members.map((member) => {
-                const label = member.user.name || member.user.email;
-                const pending = member.status === "PENDING";
-                const rowBusy = busyId === member.id;
+              {atSeatLimit ? (
+                <div className="mt-4">
+                  <MailNotice
+                    status="warning"
+                    title="All seats in use"
+                    description={`This plan includes ${roster.consoleMembersIncluded} console seats. Remove someone or upgrade for more.`}
+                    action={{
+                      label: "Upgrade",
+                      onPress: () => router.push("/pricing"),
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
 
-                return (
-                  <div
-                    key={member.id}
-                    className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 sm:flex-row sm:items-center md:px-5"
+            {roster.canManage ? (
+              <div className="px-5 py-5 md:px-6 md:py-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <UserPlus
+                    className="size-4 text-[var(--muted-foreground)]"
+                    aria-hidden
+                  />
+                  <h2 className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+                    Invite teammate
+                  </h2>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end">
+                  <TextField
+                    isRequired
+                    fullWidth
+                    className="min-w-0 flex-1 gap-1.5"
+                    type="email"
+                    value={email}
+                    onChange={setEmail}
+                    isDisabled={inviteLocked}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <PersonAvatar
-                        name={member.user.name}
-                        email={member.user.email}
-                        avatar={member.user.avatar}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-medium text-[var(--foreground)]">
-                            {label}
-                          </p>
-                          {pending ? (
-                            <Chip size="sm" variant="soft" color="warning">
-                              Pending
-                            </Chip>
-                          ) : null}
-                        </div>
-                        <p className="truncate text-xs text-[var(--muted-foreground)]">
-                          {member.user.email}
-                        </p>
-                      </div>
-                    </div>
+                    <Label className="text-[13px] font-medium text-[var(--foreground)]">
+                      Rukny email
+                    </Label>
+                    <Input
+                      placeholder="teammate@company.com"
+                      autoComplete="email"
+                      className="h-11 rounded-2xl"
+                    />
+                  </TextField>
 
-                    <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-                      {roster.canManage ? (
-                        <RoleDropdown
-                          size="sm"
-                          label={`Role for ${label}`}
-                          value={member.role}
-                          disabled={rowBusy || busy}
-                          onChange={(next) => void onChangeRole(member.id, next)}
-                        />
-                      ) : (
-                        <Chip size="sm" variant="soft">
-                          {roleLabel(member.role)}
-                        </Chip>
-                      )}
-
-                      {roster.canManage ? (
-                        <AlertDialog>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            isDisabled={rowBusy || busy}
-                          >
-                            Remove
-                          </Button>
-                          <AlertDialog.Backdrop>
-                            <AlertDialog.Container>
-                              <AlertDialog.Dialog className="sm:max-w-[400px]">
-                                <AlertDialog.CloseTrigger />
-                                <AlertDialog.Header>
-                                  <AlertDialog.Icon status="danger" />
-                                  <AlertDialog.Heading>
-                                    Remove {label}?
-                                  </AlertDialog.Heading>
-                                </AlertDialog.Header>
-                                <AlertDialog.Body>
-                                  <p className="text-sm text-[var(--muted-foreground)]">
-                                    They lose console access to this workspace.
-                                    Assigned mailboxes stay on the domain.
-                                  </p>
-                                </AlertDialog.Body>
-                                <AlertDialog.Footer>
-                                  <Button slot="close" variant="tertiary">
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    slot="close"
-                                    variant="danger"
-                                    onPress={() => void onRemove(member.id)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </AlertDialog.Footer>
-                              </AlertDialog.Dialog>
-                            </AlertDialog.Container>
-                          </AlertDialog.Backdrop>
-                        </AlertDialog>
-                      ) : null}
-                    </div>
+                  <div className="min-w-0 lg:w-[11rem]">
+                    <Label className="mb-1.5 block text-[13px] font-medium text-[var(--foreground)]">
+                      Role
+                    </Label>
+                    <RoleDropdown
+                      label="Invite role"
+                      value={role}
+                      disabled={inviteLocked}
+                      onChange={setRole}
+                    />
                   </div>
-                );
-              })}
+
+                  <Button
+                    className="h-11 shrink-0 rounded-full px-5 lg:self-end"
+                    isDisabled={inviteLocked || !email.trim()}
+                    onPress={() => void onInvite()}
+                  >
+                    {busy ? "Sending…" : "Send invite"}
+                  </Button>
+                </div>
+
+                <p className="mt-2.5 text-[13px] leading-5 text-[var(--muted-foreground)]">
+                  They must already have a Rukny account with this email.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {/* People */}
+          {roster.owner || roster.members.length > 0 ? (
+            <div className="overflow-hidden rounded-[1.35rem] bg-[var(--surface)]">
+              <div className="flex items-center justify-between gap-3 border-b border-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-5 py-4 md:px-6">
+                <h2 className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+                  People
+                </h2>
+                <p className="text-[12px] tabular-nums text-[var(--muted-foreground)]">
+                  {peopleCount} total
+                </p>
+              </div>
+
+              <ul className="divide-y divide-[color-mix(in_srgb,var(--foreground)_6%,transparent)]">
+                {roster.owner ? (
+                  <li className="flex min-w-0 items-center gap-3.5 px-5 py-4 md:px-6">
+                    <PersonAvatar
+                      name={roster.owner.name}
+                      email={roster.owner.email}
+                      avatar={roster.owner.avatar}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                        {roster.owner.name || roster.owner.email}
+                      </p>
+                      <p className="truncate text-[13px] text-[var(--muted-foreground)]">
+                        {roster.owner.email}
+                      </p>
+                    </div>
+                    <Chip size="sm" variant="soft" color="accent">
+                      Owner
+                    </Chip>
+                  </li>
+                ) : null}
+
+                {roster.members.map((member) => {
+                  const label = member.user.name || member.user.email;
+                  const pending = member.status === "PENDING";
+                  const rowBusy = busyId === member.id;
+
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex min-w-0 flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center md:px-6"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                        <PersonAvatar
+                          name={member.user.name}
+                          email={member.user.email}
+                          avatar={member.user.avatar}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                              {label}
+                            </p>
+                            {pending ? (
+                              <Chip size="sm" variant="soft" color="warning">
+                                Pending
+                              </Chip>
+                            ) : null}
+                          </div>
+                          <p className="truncate text-[13px] text-[var(--muted-foreground)]">
+                            {member.user.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+                        {roster.canManage ? (
+                          <RoleDropdown
+                            size="sm"
+                            label={`Role for ${label}`}
+                            value={member.role}
+                            disabled={rowBusy || busy}
+                            onChange={(next) => void onChangeRole(member.id, next)}
+                          />
+                        ) : (
+                          <Chip size="sm" variant="soft">
+                            {roleLabel(member.role)}
+                          </Chip>
+                        )}
+
+                        {roster.canManage ? (
+                          <AlertDialog>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="rounded-full text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
+                              isDisabled={rowBusy || busy}
+                            >
+                              Remove
+                            </Button>
+                            <AlertDialog.Backdrop>
+                              <AlertDialog.Container>
+                                <AlertDialog.Dialog className="sm:max-w-[400px]">
+                                  <AlertDialog.CloseTrigger />
+                                  <AlertDialog.Header>
+                                    <AlertDialog.Icon status="danger" />
+                                    <AlertDialog.Heading>
+                                      Remove {label}?
+                                    </AlertDialog.Heading>
+                                  </AlertDialog.Header>
+                                  <AlertDialog.Body>
+                                    <p className="text-sm text-[var(--muted-foreground)]">
+                                      They lose console access to this workspace.
+                                      Assigned mailboxes stay on the domain.
+                                    </p>
+                                  </AlertDialog.Body>
+                                  <AlertDialog.Footer>
+                                    <Button slot="close" variant="tertiary">
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      slot="close"
+                                      variant="danger"
+                                      onPress={() => void onRemove(member.id)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </AlertDialog.Footer>
+                                </AlertDialog.Dialog>
+                              </AlertDialog.Container>
+                            </AlertDialog.Backdrop>
+                          </AlertDialog>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           ) : (
-            <EmptyState className="rounded-2xl bg-[var(--surface)] px-5 py-12">
-              <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+            <EmptyState className="rounded-[1.35rem] bg-[var(--surface)] px-5 py-14">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
                 <Users className="size-5" aria-hidden />
               </div>
-              <p className="mt-3 text-sm font-medium text-[var(--foreground)]">
+              <p className="mt-4 text-[15px] font-semibold text-[var(--foreground)]">
                 No teammates yet
               </p>
-              <p className="mt-1 max-w-sm text-sm text-[var(--muted-foreground)]">
+              <p className="mt-1.5 max-w-sm text-sm leading-6 text-[var(--muted-foreground)]">
                 {roster.canManage
                   ? "Send an invite above. After they accept, assign a mailbox from Mailboxes."
                   : "Only the owner can invite people to this workspace."}
@@ -564,9 +603,14 @@ export function MailTeamPage() {
           )}
 
           {!roster.canManage ? (
-            <div className="flex justify-start">
+            <div className="flex justify-start pt-1">
               <AlertDialog>
-                <Button size="sm" variant="danger" isDisabled={busy}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full text-[var(--danger)]"
+                  isDisabled={busy}
+                >
                   Leave workspace
                 </Button>
                 <AlertDialog.Backdrop>
@@ -575,7 +619,9 @@ export function MailTeamPage() {
                       <AlertDialog.CloseTrigger />
                       <AlertDialog.Header>
                         <AlertDialog.Icon status="danger" />
-                        <AlertDialog.Heading>Leave this workspace?</AlertDialog.Heading>
+                        <AlertDialog.Heading>
+                          Leave this workspace?
+                        </AlertDialog.Heading>
                       </AlertDialog.Header>
                       <AlertDialog.Body>
                         <p className="text-sm text-[var(--muted-foreground)]">

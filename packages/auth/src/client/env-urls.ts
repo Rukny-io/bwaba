@@ -15,6 +15,7 @@ export const LOCAL_SERVICE_URLS = {
   developer: 'http://localhost:3004',
   forms: 'http://localhost:3007',
   mail: 'http://localhost:3009',
+  checkout: 'http://localhost:3010',
   publicSite: 'http://localhost:3006',
 } as const;
 
@@ -28,6 +29,7 @@ export const PRODUCTION_SERVICE_URLS = {
   developer: 'https://developers.rukny.io',
   forms: 'https://forms.rukny.io',
   mail: 'https://mail.rukny.io',
+  checkout: 'https://checkout.rukny.io',
   publicSite: 'https://rukny.io',
 } as const;
 
@@ -136,6 +138,13 @@ export function resolveMailUrl(options?: ResolveUrlOptions): string {
   if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.mail;
   return trimTrailingSlash(
     process.env.NEXT_PUBLIC_MAIL_URL || PRODUCTION_SERVICE_URLS.mail,
+  );
+}
+
+export function resolveCheckoutUrl(options?: ResolveUrlOptions): string {
+  if (shouldUseLocalServiceUrls(options)) return LOCAL_SERVICE_URLS.checkout;
+  return trimTrailingSlash(
+    process.env.NEXT_PUBLIC_CHECKOUT_URL || PRODUCTION_SERVICE_URLS.checkout,
   );
 }
 

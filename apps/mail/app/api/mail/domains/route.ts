@@ -15,6 +15,7 @@ import {
   formatSesError,
 } from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
 import {
@@ -57,10 +58,19 @@ export async function POST(request: Request) {
 
     const owner = await findMailAppIdByDomain(domain);
     if (owner && owner !== session.appId) {
-      return jsonError(
-        "This domain is already connected to another workspace. Use a different domain.",
-        409,
+      // Redis can keep a binding after archive/delete. Reclaim when no ACTIVE
+      // Nest workspace still claims the domain.
+      const taken = await apiFetchJson<{ taken?: boolean }>(
+        `/mail/apps/domain-taken?domain=${encodeURIComponent(domain)}`,
       );
+      const stillTaken = taken.ok && taken.data.taken === true;
+      if (stillTaken) {
+        return jsonError(
+          "This domain is already connected to another workspace. Use a different domain.",
+          409,
+        );
+      }
+      await deleteMailDomainBinding(owner);
     }
 
     if (!process.env.AWS_ACCESS_KEY_ID?.trim() || !process.env.AWS_SECRET_ACCESS_KEY?.trim()) {

@@ -1,6 +1,26 @@
-import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { BillingCycle, MailPlan } from '@prisma/client';
 import { Type } from 'class-transformer';
+
+export class PayMailSubscriptionDto {
+  @IsEnum(MailPlan)
+  plan: MailPlan;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  mailboxCount: number;
+}
 
 export class RequestMailSubscriptionDto {
   @IsEnum(MailPlan)
@@ -30,4 +50,11 @@ export class AdminActivateMailSubscriptionDto {
   @IsOptional()
   @IsUUID()
   ticketId?: string;
+}
+
+export class SendMailInvoiceDto {
+  @IsOptional()
+  @IsArray()
+  @IsIn(['email', 'whatsapp'], { each: true })
+  channels?: Array<'email' | 'whatsapp'>;
 }

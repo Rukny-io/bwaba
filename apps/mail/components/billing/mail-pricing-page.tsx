@@ -15,9 +15,11 @@ import {
   fetchMailPlans,
   fetchMailSubscription,
   requestMailPlan,
+  type MailCardPaymentsInfo,
   type MailPendingPlanRequest,
   type MailSubscriptionView,
 } from "@/lib/mail-subscription-client";
+import { startMailCheckoutSession } from "@/lib/mail-checkout";
 
 type PlanCard = {
   id: MailPlanId;
@@ -49,6 +51,11 @@ export function MailPricingPage() {
   const [seatsByPlan, setSeatsByPlan] = useState<Partial<Record<MailPlanId, number>>>({});
   const [loading, setLoading] = useState(true);
   const [busyPlan, setBusyPlan] = useState<MailPlanId | null>(null);
+  const [payingPlan, setPayingPlan] = useState<MailPlanId | null>(null);
+  const [cardPayments, setCardPayments] = useState<MailCardPaymentsInfo>({
+    available: false,
+    status: "unavailable",
+  });
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -61,6 +68,7 @@ export function MailPricingPage() {
         ]);
         if (cancelled) return;
         setPlans(plansData.plans);
+        setCardPayments(plansData.cardPayments);
         setNeedsApp(current.needsApp);
         setAppName(current.app?.name ?? null);
         setSubscription(current.subscription);
@@ -123,6 +131,19 @@ export function MailPricingPage() {
     }
   }
 
+  async function payPlan(planId: MailPlanId) {
+    setError("");
+    setPayingPlan(planId);
+    try {
+      const seats = planSeats[planId] || 1;
+      const result = await startMailCheckoutSession(planId, seats);
+      window.location.href = result.checkoutUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout.");
+      setPayingPlan(null);
+    }
+  }
+
   if (loading) {
     return <div className="min-h-[40vh]" />;
   }
@@ -139,9 +160,11 @@ export function MailPricingPage() {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
           Each workspace has its own subscription — seats, storage, and features are not
           shared with your other workspaces. Prices are in Iraqi dinar (IQD), billed monthly.
-          Extra mailboxes above the included amount are added to the plan total. Card
-          payment is coming soon. Starter starts after DNS is verified; Standard and
-          Premium are requested here and activated by an admin.
+          Extra mailboxes above the included amount are added to the plan total.{" "}
+          {cardPayments.available
+            ? "Pay securely through Rukny Checkout (Al-Qaseh), or request admin activation."
+            : "Card payments are temporarily unavailable — you can still request admin activation."}{" "}
+          Starter also requires checkout after DNS is verified — there is no free passage.
         </p>
       </header>
 
@@ -172,9 +195,8 @@ export function MailPricingPage() {
         </div>
       ) : (
         <div className="border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-5 py-4 text-sm text-[var(--muted-foreground)]">
-          No paid plan on {appName || "this workspace"} yet. Starter starts after DNS is
-          verified. Request Standard or Premium — an admin will activate extra seats and
-          features for this workspace only.
+          No active plan on {appName || "this workspace"} yet. After DNS is verified, continue
+          through Checkout to activate Starter — or choose Standard / Premium below.
         </div>
       )}
 
@@ -205,8 +227,10 @@ export function MailPricingPage() {
           const total = mailPlanMonthlyTotal(plan.id, seats);
           const isCurrent = Boolean(active && active.planId === plan.id);
           const busy = busyPlan === plan.id;
+          const paying = payingPlan === plan.id;
+          const canPay = !needsApp;
           const requestDisabled =
-            needsApp || Boolean(pendingRequest) || Boolean(busyPlan);
+            needsApp || Boolean(pendingRequest) || Boolean(busyPlan) || Boolean(payingPlan);
 
           return (
             <article
@@ -327,10 +351,21 @@ export function MailPricingPage() {
               </button>
               <button
                 type="button"
-                disabled
-                className="mt-2 inline-flex h-10 items-center justify-center border border-[var(--border)] px-4 text-xs font-medium text-[var(--muted-foreground)]"
+                disabled={
+                  needsApp ||
+                  Boolean(pendingRequest) ||
+                  paying ||
+                  !cardPayments.available ||
+                  !canPay
+                }
+                onClick={() => void payPlan(plan.id)}
+                className="mt-2 inline-flex h-10 w-full items-center justify-center border border-[var(--border)] px-4 text-xs font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-secondary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
               >
-                Pay by card — coming soon
+                {paying
+                  ? "Opening Checkout…"
+                  : cardPayments.available
+                    ? `Checkout · ${formatMailIqD(total)}`
+                    : "Checkout — unavailable"}
               </button>
             </article>
           );

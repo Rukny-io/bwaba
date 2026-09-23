@@ -28,6 +28,11 @@ export type MailSesSendInput = {
   messageIdHeader: string;
   inReplyTo?: string | null;
   configurationSetName?: string;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    content: Buffer;
+  }>;
 };
 
 @Injectable()
@@ -146,7 +151,19 @@ export class MailSesService {
       ReplyToAddresses: input.replyTo?.length ? input.replyTo : [input.from],
       Content: {
         Raw: {
-          Data: buildRawMimeMessage(input),
+          Data: buildRawMimeMessage({
+            from: input.from,
+            fromName: input.fromName,
+            to: input.to,
+            cc: input.cc,
+            subject: input.subject,
+            bodyText: input.bodyText,
+            bodyHtml: input.bodyHtml,
+            replyTo: input.replyTo,
+            messageIdHeader: input.messageIdHeader,
+            inReplyTo: input.inReplyTo,
+            attachments: input.attachments,
+          }),
         },
       },
     });

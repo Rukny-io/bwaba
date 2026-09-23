@@ -6,6 +6,7 @@ export type MailMessageFolderApi =
   | "DRAFTS"
   | "TRASH"
   | "SPAM"
+  | "QUARANTINE"
   | "ARCHIVE"
   | "PROMOTIONS"
   | "SOCIAL";
@@ -82,6 +83,7 @@ export type MailFolderCounts = {
   drafts: number;
   trash: number;
   spam: number;
+  quarantine: number;
   archive: number;
   promotions: number;
   social: number;
@@ -185,6 +187,7 @@ export async function getMailMessageCounts(
     drafts: data.drafts ?? 0,
     trash: data.trash ?? 0,
     spam: data.spam ?? 0,
+    quarantine: data.quarantine ?? 0,
     archive: data.archive ?? 0,
     promotions: data.promotions ?? 0,
     social: data.social ?? 0,

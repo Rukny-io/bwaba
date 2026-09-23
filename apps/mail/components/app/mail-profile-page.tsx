@@ -187,7 +187,7 @@ export function MailProfilePage() {
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-[var(--foreground)]">Workspace</h2>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                Mail app name, plan, and domain settings live in Settings.
+                Workspace identity, appearance, and domain settings live in Settings.
               </p>
             </div>
             <Button size="sm" variant="ghost" onPress={() => window.location.assign(href("/settings"))}>

@@ -503,10 +503,18 @@ export class MailAppsService {
       app.domainStatus === MailDomainStatus.ACTIVE &&
       previous.domainStatus !== MailDomainStatus.ACTIVE
     ) {
-      await this.subscriptions.provisionStarterAfterDomainVerified(
+      const starter = await this.subscriptions.provisionStarterAfterDomainVerified(
         userId,
         appId,
       );
+      return {
+        app: this.toView(app),
+        needsCheckout: Boolean(starter.needsCheckout),
+        checkoutUrl:
+          'checkoutUrl' in starter ? starter.checkoutUrl : undefined,
+        checkoutSessionId:
+          'sessionId' in starter ? starter.sessionId : undefined,
+      };
     }
 
     return { app: this.toView(app) };
@@ -516,8 +524,26 @@ export class MailAppsService {
     await this.access.requireOwner(userId, appId);
     const app = await this.prisma.mailApp.update({
       where: { appId },
-      data: { status: MailAppStatus.ARCHIVED },
+      data: {
+        status: MailAppStatus.ARCHIVED,
+        primaryDomain: null,
+        domainStatus: MailDomainStatus.NONE,
+        domainCheckedAt: null,
+      },
     });
     return { app: this.toView(app) };
+  }
+
+  /** True when an ACTIVE workspace already claims this domain. */
+  async isPrimaryDomainTaken(domain: string): Promise<{ taken: boolean }> {
+    const normalized = domain.trim().toLowerCase();
+    if (!normalized) return { taken: false };
+    const count = await this.prisma.mailApp.count({
+      where: {
+        primaryDomain: normalized,
+        status: MailAppStatus.ACTIVE,
+      },
+    });
+    return { taken: count > 0 };
   }
 }

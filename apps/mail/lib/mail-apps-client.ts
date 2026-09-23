@@ -131,6 +131,9 @@ export async function updateMailApp(
 }
 
 export async function archiveMailApp(appId: string): Promise<void> {
+  // Free the domain lock before Nest archives the app (so Redis cannot block re-add).
+  await sessionFetch("/api/mail/bindings", { method: "DELETE" }).catch(() => null);
+
   const response = await sessionFetch(`/api/v1/mail/apps/${encodeURIComponent(appId)}`, {
     method: "DELETE",
   });

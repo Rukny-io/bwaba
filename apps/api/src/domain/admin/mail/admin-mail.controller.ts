@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -15,7 +16,10 @@ import { JwtAuthGuard } from '../../../core/common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../../core/common/guards/roles.guard';
 import { Roles } from '../../../core/common/decorators/auth/roles.decorator';
 import { AdminMailService } from './admin-mail.service';
-import { AdminUpdateMailboxStatusDto } from './dto/admin-mail.dto';
+import {
+  AdminUpdateMailAppDto,
+  AdminUpdateMailboxStatusDto,
+} from './dto/admin-mail.dto';
 import {
   AuthenticatedUser,
   CurrentUser,
@@ -159,6 +163,16 @@ export class AdminMailController {
   @Get('apps/:appId')
   getApp(@Param('appId') appId: string) {
     return this.adminMail.getApp(appId);
+  }
+
+  @Patch('apps/:appId')
+  updateApp(@Param('appId') appId: string, @Body() dto: AdminUpdateMailAppDto) {
+    return this.adminMail.updateApp(appId, dto);
+  }
+
+  @Delete('apps/:appId')
+  deleteApp(@Param('appId') appId: string) {
+    return this.adminMail.deleteApp(appId);
   }
 
   @Patch('mailboxes/:id/status')

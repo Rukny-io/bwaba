@@ -83,8 +83,9 @@ import { WhatsAppProviderModule } from './domain/whatsapp-provider/whatsapp-prov
 import { BusinessHubModule } from './domain/business-hub/business-hub.module';
 
 // Infrastructure
-// Use the UploadModule under `modules` which provides presign/confirm endpoints
+// Banner/media upload (S3 presign) — separate from infrastructure/upload used by LinksModule
 import { UploadModule } from './modules/upload/upload.module';
+import { CheckoutModule } from './domain/checkout/checkout.module';
 import { SecurityModule } from './infrastructure/security/security.module';
 
 // Shared
@@ -118,6 +119,7 @@ import { SharedModule } from './shared/modules/shared.module';
     // Infrastructure
     SecurityModule,
     UploadModule,
+    CheckoutModule,
 
     // Domain - Auth & Users
     AuthModule,

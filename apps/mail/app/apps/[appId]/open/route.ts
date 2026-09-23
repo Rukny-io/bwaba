@@ -15,6 +15,7 @@ import {
 } from "@/lib/mail-slot-map";
 import {
   MAIL_BOUND_DOMAIN_COOKIE,
+  MAIL_PLAN_COOKIE,
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
 } from "@/lib/ses";
@@ -101,6 +102,13 @@ export async function GET(request: Request, ctx: RouteCtx) {
     });
   }
 
+  // Check active subscription — required before console tools after DNS.
+  const subResult = await apiFetchJson<{
+    subscription?: { status?: string } | null;
+  }>(`/mail/apps/${encodeURIComponent(appId)}/subscription`);
+  const hasActivePlan =
+    subResult.ok && subResult.data.subscription?.status === "ACTIVE";
+
   // Always land on mailboxes overview (/app), never inbox.
   const landing = `/u${slotIndex}/app`;
   const response = NextResponse.redirect(new URL(landing, origin), 303);
@@ -131,6 +139,16 @@ export async function GET(request: Request, ctx: RouteCtx) {
   } else {
     response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+  }
+
+  if (hasActivePlan) {
+    response.cookies.set(MAIL_PLAN_COOKIE, "1", {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+    });
+  } else {
+    response.cookies.set(MAIL_PLAN_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
   }
 
   return response;

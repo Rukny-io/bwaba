@@ -74,7 +74,8 @@
   --field-radius: 1rem;
   --radius-2xl: calc(var(--radius) * 1.5);
   --radius-3xl: calc(var(--radius) * 3);
-  --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-arabic: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
   --link: #111111;
 }
 
@@ -610,6 +611,18 @@ body {
 
 .mail-send-rise {
   animation: mail-send-rise 0.45s ease both;
+}
+
+/* Inbox density preference (Settings → Inbox display) */
+html[data-mail-density="compact"] .dashboard-page {
+  --mail-row-pad-y: 0.5rem;
+  --mail-section-gap: 0.75rem;
+}
+
+html[data-mail-density="comfortable"] .dashboard-page,
+html:not([data-mail-density]) .dashboard-page {
+  --mail-row-pad-y: 0.75rem;
+  --mail-section-gap: 1rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

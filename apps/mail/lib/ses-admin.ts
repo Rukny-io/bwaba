@@ -32,7 +32,31 @@ function isAlreadyExists(error: unknown) {
 
 export function formatSesError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  if (message.includes("not authorized") || message.includes("AccessDenied")) {
+  const name =
+    typeof error === "object" && error && "name" in error ? String(error.name) : "";
+  const code =
+    typeof error === "object" && error && "code" in error ? String(error.code) : "";
+
+  if (
+    code === "MODULE_NOT_FOUND" ||
+    message.includes("Cannot find module '@aws-sdk/client-sesv2'") ||
+    message.includes("Cannot find module \"@aws-sdk/client-sesv2\"")
+  ) {
+    return "Mail image is missing the AWS SES SDK. Rebuild the mail container, then try again.";
+  }
+  if (
+    name.includes("UnrecognizedClient") ||
+    name.includes("InvalidClientTokenId") ||
+    message.includes("SignatureDoesNotMatch") ||
+    (message.includes("security token") && message.includes("invalid"))
+  ) {
+    return "AWS rejected the Mail credentials (invalid or rotated access key). Update AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.production, then recreate the mail container.";
+  }
+  if (
+    message.includes("not authorized") ||
+    message.includes("AccessDenied") ||
+    name.includes("AccessDenied")
+  ) {
     return "This AWS user cannot manage email identities. Add SES identity permissions, then try again.";
   }
   if (error instanceof Error && error.message) return error.message;

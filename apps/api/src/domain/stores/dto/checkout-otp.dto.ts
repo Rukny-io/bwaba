@@ -141,12 +141,26 @@ export class ResendCheckoutOtpDto {
   preferredChannel?: 'WHATSAPP' | 'EMAIL';
 
   @ApiPropertyOptional({
+    description: 'تفضيل البريد الإلكتروني',
+    example: false,
+  })
+  @IsOptional()
+  preferEmail?: boolean;
+
+  @ApiPropertyOptional({
     description: 'البريد الإلكتروني (مطلوب إذا كانت القناة EMAIL)',
     example: 'ahmed@example.com',
   })
   @IsOptional()
   @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'معرف OTP السابق',
+  })
+  @IsOptional()
+  @IsString()
+  otpId?: string;
 }
 
 /**
@@ -221,6 +235,12 @@ export class OtpVerifyResponse {
 
   @ApiProperty({ example: false, description: 'هل المستخدم جديد؟' })
   isNewUser: boolean;
+
+  @ApiPropertyOptional({
+    description: 'رقم الهاتف المرتبط بالحساب إن وُجد',
+    example: '+9647701234567',
+  })
+  phoneNumber?: string;
 }
 
 /**

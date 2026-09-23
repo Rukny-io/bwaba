@@ -17,6 +17,8 @@ export const MAIL_READY_COOKIE = "rukny-mail-ready";
 export const MAIL_SHELL_COOKIE = "rukny-mail-shell";
 /** Survives logout — last bound domain for the account (restore hint). */
 export const MAIL_BOUND_DOMAIN_COOKIE = "rukny_mail_bound_domain";
+/** Active paid/starter plan via Checkout (set on /apps/:id/open). */
+export const MAIL_PLAN_COOKIE = "rukny-mail-plan";
 /** @deprecated cleared on logout; was developer-app scoped */
 export const MAIL_READY_APP_COOKIE = "rukny-mail-ready-app";
 /** @deprecated cleared on logout; was developer-app map */

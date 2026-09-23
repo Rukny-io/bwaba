@@ -88,6 +88,12 @@ COPY --from=builder /app/apps/mail/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/.next/static ./.next/static
 
+# SES routes externalize @aws-sdk/client-sesv2 — copy runtime tree standalone tracing can miss.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/node_modules/@aws-sdk ./node_modules/@aws-sdk
+COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/node_modules/@smithy ./node_modules/@smithy
+COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/node_modules/tslib ./node_modules/tslib
+COPY --from=builder --chown=nextjs:nodejs /app/apps/mail/node_modules/bowser ./node_modules/bowser
+
 USER nextjs
 
 EXPOSE 3009

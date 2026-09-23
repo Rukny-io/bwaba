@@ -4,10 +4,10 @@ import {
   Get,
   Body,
   Param,
-  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,12 +16,14 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
+import { TrackingSessionGuard } from '../../core/common/guards/auth/tracking-session.guard';
 import { OrderTrackingService } from './order-tracking.service';
 import {
   RequestTrackingOtpDto,
   VerifyTrackingOtpDto,
-  QuickTrackDto,
 } from './dto/order-tracking.dto';
+import type { TrackingSessionContext } from '../checkout/checkout-session.types';
 
 /**
  * 📦 API تتبع الطلبات
@@ -29,6 +31,7 @@ import {
  * Endpoints عامة لتتبع الطلبات عبر OTP
  */
 @ApiTags('Order Tracking - تتبع الطلبات')
+@Public()
 @Controller('track')
 export class OrderTrackingController {
   constructor(private readonly trackingService: OrderTrackingService) {}
@@ -49,7 +52,7 @@ export class OrderTrackingController {
    */
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 طلبات في الدقيقة
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'طلب رمز OTP للتتبع' })
   @ApiResponse({ status: 200, description: 'تم إرسال رمز التحقق' })
   @ApiResponse({ status: 404, description: 'لا توجد طلبات لهذا الرقم' })
@@ -63,7 +66,7 @@ export class OrderTrackingController {
    */
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 محاولات في الدقيقة
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'التحقق من OTP وبدء جلسة التتبع' })
   @ApiResponse({ status: 200, description: 'تم التحقق - قائمة الطلبات' })
   @ApiResponse({ status: 400, description: 'رمز التحقق غير صالح' })
@@ -72,16 +75,18 @@ export class OrderTrackingController {
   }
 
   /**
-   * 📋 جلب قائمة الطلبات (يتطلب جلسة تتبع)
+   * 📋 جلب قائمة الطلبات (يتطلب جلسة تتبع OTP)
    */
   @Post('orders')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'جلب قائمة الطلبات برقم الهاتف' })
+  @UseGuards(TrackingSessionGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'جلب قائمة الطلبات برقم الهاتف المُتحقق' })
   @ApiResponse({ status: 200, description: 'قائمة الطلبات' })
-  async getOrders(@Body('phoneNumber') phoneNumber: string) {
-    // ملاحظة: في الواقع سيتم استخدام الـ JWT من الجلسة
-    // هذا للتبسيط في المرحلة الأولى
-    return this.trackingService.getOrdersByPhone(phoneNumber);
+  async getOrders(@Req() req: { trackingSession?: TrackingSessionContext }) {
+    return this.trackingService.getOrdersByPhone(
+      req.trackingSession!.phoneNumber,
+    );
   }
 
   /**
@@ -89,13 +94,18 @@ export class OrderTrackingController {
    */
   @Post('order/:orderNumber')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(TrackingSessionGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'جلب تفاصيل طلب معين' })
   @ApiResponse({ status: 200, description: 'تفاصيل الطلب' })
   @ApiResponse({ status: 404, description: 'الطلب غير موجود' })
   async getOrderDetails(
     @Param('orderNumber') orderNumber: string,
-    @Body('phoneNumber') phoneNumber: string,
+    @Req() req: { trackingSession?: TrackingSessionContext },
   ) {
-    return this.trackingService.getOrderDetails(orderNumber, phoneNumber);
+    return this.trackingService.getOrderDetails(
+      orderNumber,
+      req.trackingSession!.phoneNumber,
+    );
   }
 }

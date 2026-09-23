@@ -256,7 +256,12 @@ export function DevSidebar({ appId, avatarUrl, userName }: DevSidebarProps) {
                 <Settings className="size-4 shrink-0" />
                 {t.topbar.settings}
               </Dropdown.Item>
-              <Dropdown.Item id="billing" textValue={t.topbar.billing} className="gap-2">
+              <Dropdown.Item
+                id="billing"
+                textValue={t.topbar.billing}
+                href="/settings/platform"
+                className="gap-2"
+              >
                 <Receipt className="size-4 shrink-0" />
                 {t.topbar.billing}
               </Dropdown.Item>

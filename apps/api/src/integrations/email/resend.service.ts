@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import { PlatformEmailService } from './platform-email.service';
 
 /**
- * 📧 Resend Email Service
- * Clean, minimal email design inspired by Google
- * https://resend.com/docs/api-reference/introduction
+ * Transactional email templates (login, reset, receipts).
+ * Transport: platform SES — same stack as Developer Email API.
  */
 
 interface EmailOptions {
@@ -32,24 +31,24 @@ interface EmailResult {
 @Injectable()
 export class ResendService {
   private readonly logger = new Logger(ResendService.name);
-  private resend: Resend | null = null;
-  private emailEnabled: boolean = false;
   private defaultFrom: string;
 
-  constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+  constructor(
+    private configService: ConfigService,
+    private readonly platformEmail: PlatformEmailService,
+  ) {
+    this.defaultFrom =
+      this.configService.get<string>('MAIL_SYSTEM_FROM') ||
+      this.configService.get<string>('MAIL_BILLING_FROM') ||
+      this.configService.get<string>('RESEND_FROM_EMAIL') ||
+      'Rukny <noreply@rukny.io>';
 
-    if (apiKey) {
-      this.resend = new Resend(apiKey);
-      this.emailEnabled = true;
-      this.defaultFrom = this.configService.get<string>(
-        'RESEND_FROM_EMAIL',
-        'Rukny <notifications@rukny.store>',
-      );
-      this.logger.log('✅ Resend email service enabled');
+    if (this.platformEmail.isEnabled()) {
+      this.logger.log('✅ Template email service enabled via SES');
     } else {
-      this.logger.warn('⚠️ Resend disabled - Missing RESEND_API_KEY');
-      this.logger.warn('   Email notifications will be logged to console only');
+      this.logger.warn(
+        '⚠️ Template email disabled — missing AWS credentials for SES',
+      );
     }
   }
 
@@ -162,47 +161,47 @@ export class ResendService {
    * Check if email service is enabled
    */
   isEnabled(): boolean {
-    return this.emailEnabled;
+    return this.platformEmail.isEnabled();
   }
 
   /**
-   * Send email using Resend
+   * Send email via platform SES (Developer Email stack)
    */
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
     const { to, subject, html, text, from, replyTo, cc, bcc, attachments } =
       options;
 
-    if (!this.emailEnabled || !this.resend) {
+    if (!this.platformEmail.isEnabled()) {
       this.logger.log(`📧 [Email Disabled] To: ${to}, Subject: ${subject}`);
       return { success: true, messageId: 'console-only' };
     }
 
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: from || this.defaultFrom,
-        to: Array.isArray(to) ? to : [to],
+      const result = await this.platformEmail.send({
+        to,
         subject,
         html,
         text,
+        from: from || this.defaultFrom,
         replyTo,
-        cc: cc ? (Array.isArray(cc) ? cc : [cc]) : undefined,
-        bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
-        attachments: attachments?.map((att) => ({
-          filename: att.filename,
-          content: att.content,
-        })),
+        cc,
+        bcc,
+        attachments,
       });
 
-      if (error) {
-        this.logger.error(`❌ Failed to send email: ${error.message}`);
-        return { success: false, error: error.message };
+      if (!result.success) {
+        this.logger.error(`❌ Failed to send email: ${result.error}`);
+        return { success: false, error: result.error };
       }
 
-      this.logger.log(`✅ Email sent successfully to ${to} - ID: ${data?.id}`);
-      return { success: true, messageId: data?.id };
+      this.logger.log(
+        `✅ Email sent successfully to ${to} - ID: ${result.messageId}`,
+      );
+      return { success: true, messageId: result.messageId };
     } catch (error) {
-      this.logger.error(`❌ Email error: ${error.message}`);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Email error: ${message}`);
+      return { success: false, error: message };
     }
   }
 
@@ -777,6 +776,60 @@ export class ResendService {
       to,
       subject: `Your form "${formData.formTitle}" is ready – Rukny`,
       html,
+    });
+  }
+
+  /**
+   * Mail subscription invoice receipt (PDF attachment).
+   */
+  async sendMailInvoiceReceipt(options: {
+    to: string;
+    invoiceNumber: string;
+    appName: string;
+    planName: string;
+    mailboxCount: number;
+    amountIqd: number;
+    pdfBuffer: Buffer;
+    downloadUrl?: string;
+  }): Promise<EmailResult> {
+    const amountLabel = `${new Intl.NumberFormat('en-IQ').format(
+      Math.max(0, Math.floor(options.amountIqd)),
+    )} IQD`;
+    const seatsLabel =
+      options.mailboxCount === 1
+        ? '1 mailbox seat'
+        : `${options.mailboxCount} mailbox seats`;
+
+    const html = this.getBaseTemplate({
+      greeting: 'Hello,',
+      title: 'Your Rukny Mail invoice',
+      message: `Invoice ${options.invoiceNumber} for workspace "${options.appName}" is attached as a PDF.`,
+      buttonText: options.downloadUrl ? 'Download invoice' : undefined,
+      buttonUrl: options.downloadUrl,
+      footerText: 'This email was sent by Rukny Mail billing.',
+      additionalContent: `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8f9fa;border-radius:8px;">
+          <tr>
+            <td style="padding:16px;">
+              <p style="margin:0 0 8px 0;font-size:13px;color:#5f6368;"><strong style="color:#202124;">Plan:</strong> ${options.planName}</p>
+              <p style="margin:0 0 8px 0;font-size:13px;color:#5f6368;"><strong style="color:#202124;">Seats:</strong> ${seatsLabel}</p>
+              <p style="margin:0;font-size:13px;color:#5f6368;"><strong style="color:#202124;">Amount:</strong> ${amountLabel}</p>
+            </td>
+          </tr>
+        </table>
+      `,
+    });
+
+    return this.sendEmail({
+      to: options.to,
+      subject: `Rukny Mail invoice ${options.invoiceNumber}`,
+      html,
+      attachments: [
+        {
+          filename: `${options.invoiceNumber}.pdf`,
+          content: options.pdfBuffer,
+        },
+      ],
     });
   }
 }

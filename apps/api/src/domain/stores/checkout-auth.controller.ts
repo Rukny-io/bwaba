@@ -12,6 +12,7 @@ import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { CheckoutAuthService } from './checkout-auth.service';
 import { getClientIp } from '../../core/common/utils/client-ip.util';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import {
   RequestCheckoutOtpDto,
   VerifyCheckoutOtpDto,
@@ -32,6 +33,7 @@ import {
  * - إعادة إرسال OTP
  */
 @ApiTags('Checkout Auth')
+@Public()
 @Controller('auth/checkout')
 export class CheckoutAuthController {
   constructor(private readonly checkoutAuthService: CheckoutAuthService) {}

@@ -20,10 +20,7 @@ import {
   writeMailDomainSetup,
 } from "@/lib/mail-domain-storage";
 import { createDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
-import {
-  fulfillPendingMailbox,
-  readPendingMailbox,
-} from "@/lib/mail-pending-mailbox";
+import { readPendingMailbox } from "@/lib/mail-pending-mailbox";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 
 type Step = 1 | 2 | 3;
@@ -142,11 +139,19 @@ export function MailSetupWizard() {
       if (result.verified) {
         setMailWizardDismissed(false);
         const appId = readMailAppIdFromDocument();
+        // DNS unlocks the domain — plan activation always goes through checkout.
+        if (result.checkoutUrl) {
+          window.location.assign(result.checkoutUrl);
+          return;
+        }
         if (appId) {
           try {
-            await fulfillPendingMailbox(appId);
+            const { startMailCheckoutSession } = await import("@/lib/mail-checkout");
+            const session = await startMailCheckoutSession("starter", 1, appId);
+            window.location.assign(session.checkoutUrl);
+            return;
           } catch {
-            // Starter or mailbox can be finished from Mailboxes.
+            // Fall through to app; billing CTA will send them to checkout.
           }
         }
         router.refresh();

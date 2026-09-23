@@ -1,3 +1,9 @@
+type RawMimeAttachment = {
+  filename: string;
+  contentType: string;
+  content: Buffer;
+};
+
 type RawMimeInput = {
   from: string;
   fromName?: string | null;
@@ -9,6 +15,7 @@ type RawMimeInput = {
   replyTo?: string[];
   messageIdHeader: string;
   inReplyTo?: string | null;
+  attachments?: RawMimeAttachment[];
 };
 
 function encodeHeaderWord(value: string): string {
@@ -40,13 +47,57 @@ function crlf(value: string): string {
   return value.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
 }
 
-function wrapBase64(value: string): string {
-  const encoded = Buffer.from(value, 'utf8').toString('base64');
-  return encoded.replace(/(.{76})/g, '$1\r\n').trim();
+function wrapBase64String(value: string): string {
+  return value.replace(/(.{76})/g, '$1\r\n').trim();
+}
+
+function wrapBase64Utf8(value: string): string {
+  return wrapBase64String(Buffer.from(value, 'utf8').toString('base64'));
+}
+
+function wrapBase64Buffer(value: Buffer): string {
+  return wrapBase64String(value.toString('base64'));
+}
+
+function sanitizeFilename(filename: string): string {
+  const cleaned = filename.replace(/[\r\n"]/g, '_').trim() || 'attachment.bin';
+  return cleaned.slice(0, 180);
+}
+
+function buildAlternativePart(
+  boundary: string,
+  text: string,
+  html?: string,
+): string {
+  if (!html) {
+    return [
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      wrapBase64Utf8(text || ' '),
+      '',
+    ].join('\r\n');
+  }
+
+  return [
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrapBase64Utf8(text || ' '),
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrapBase64Utf8(html),
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
 }
 
 export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
-  const boundary = `rukny-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
   const now = new Date().toUTCString().replace(/GMT$/, '+0000');
   const messageId = input.messageIdHeader.trim();
   const fromHeader = formatMailbox(input.from, input.fromName);
@@ -57,6 +108,9 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
       ? input.bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
       : '');
   const html = input.bodyHtml?.trim();
+  const attachments = input.attachments?.filter(
+    (item) => item.content?.length && item.filename,
+  );
 
   const headers = [
     `From: ${fromHeader}`,
@@ -74,19 +128,49 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
   ].filter((line): line is string => Boolean(line));
 
   let body: string;
-  if (html) {
+  if (attachments?.length) {
+    const mixedBoundary = `rukny-mix-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    const altBoundary = `rukny-alt-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    headers.push(
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    );
+
+    const parts = [
+      `--${mixedBoundary}`,
+      buildAlternativePart(altBoundary, text, html),
+    ];
+
+    for (const attachment of attachments) {
+      const filename = sanitizeFilename(attachment.filename);
+      const contentType =
+        attachment.contentType?.trim() || 'application/octet-stream';
+      parts.push(
+        `--${mixedBoundary}`,
+        `Content-Type: ${contentType}; name="${filename}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${filename}"`,
+        '',
+        wrapBase64Buffer(attachment.content),
+        '',
+      );
+    }
+
+    parts.push(`--${mixedBoundary}--`, '');
+    body = parts.join('\r\n');
+  } else if (html) {
+    const boundary = `rukny-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     body = [
       `--${boundary}`,
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
       '',
-      wrapBase64(text || ' '),
+      wrapBase64Utf8(text || ' '),
       `--${boundary}`,
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
       '',
-      wrapBase64(html),
+      wrapBase64Utf8(html),
       `--${boundary}--`,
       '',
     ].join('\r\n');
@@ -95,7 +179,7 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
     );
-    body = `${wrapBase64(text || ' ')}\r\n`;
+    body = `${wrapBase64Utf8(text || ' ')}\r\n`;
   }
 
   return Buffer.from(

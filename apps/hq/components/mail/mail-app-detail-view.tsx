@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   Mail,
+  Settings2,
   type LucideIcon,
 } from 'lucide-react';
 import { Chip } from '@heroui/react';
@@ -37,6 +38,7 @@ import { MailAppOverviewPanel } from '@/components/mail/mail-app-overview-panel'
 import { MailAppMailboxesPanel } from '@/components/mail/mail-app-mailboxes-panel';
 import { MailAppSubscriptionPanel } from '@/components/mail/mail-app-subscription-panel';
 import { MailAppDomainPanel } from '@/components/mail/mail-app-domain-panel';
+import { MailAppActionsPanel } from '@/components/mail/mail-app-actions-panel';
 import { MailDeliveryTable } from '@/components/mail/mail-delivery-table';
 import { MailAnalyticsPanel } from '@/components/mail/mail-analytics-panel';
 
@@ -46,7 +48,8 @@ type MailDetailTab =
   | 'mailboxes'
   | 'subscription'
   | 'domain'
-  | 'delivery';
+  | 'delivery'
+  | 'actions';
 
 const TAB_IDS: MailDetailTab[] = [
   'overview',
@@ -55,6 +58,7 @@ const TAB_IDS: MailDetailTab[] = [
   'subscription',
   'domain',
   'delivery',
+  'actions',
 ];
 
 const TABS: { id: MailDetailTab; label: string; icon: LucideIcon }[] = [
@@ -64,6 +68,7 @@ const TABS: { id: MailDetailTab; label: string; icon: LucideIcon }[] = [
   { id: 'subscription', label: 'Subscription', icon: CreditCard },
   { id: 'domain', label: 'Domain', icon: Globe },
   { id: 'delivery', label: 'Delivery', icon: Mail },
+  { id: 'actions', label: 'Actions', icon: Settings2 },
 ];
 
 function parseTabParam(value: string | null): MailDetailTab {
@@ -295,6 +300,12 @@ export function MailAppDetailView({ appId }: { appId: string }) {
             pageSize={delivery?.limit ?? 20}
             total={delivery?.total ?? 0}
             onPageChange={setDeliveryPage}
+          />
+        ) : null}
+        {activeTab === 'actions' ? (
+          <MailAppActionsPanel
+            app={app}
+            onUpdated={() => loadApp({ silent: true })}
           />
         ) : null}
       </div>

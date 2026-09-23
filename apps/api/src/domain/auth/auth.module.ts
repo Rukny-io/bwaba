@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Logger, Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -64,7 +64,7 @@ if (isGitHubOAuthConfigured()) {
     NotificationsModule,
     StorageModule,
     RedisModule,
-    StoresModule,
+    forwardRef(() => StoresModule),
     WhatsappModule,
     PassportModule,
     JwtModule.registerAsync({

@@ -218,6 +218,7 @@ export interface AdminMailMailbox {
 export interface AdminMailAppDetail extends AdminMailApp {
   contactEmail: string | null;
   description: string | null;
+  bodyEncryptionEnabled: boolean;
   slotIndex: number;
   userId: string;
   updatedAt: string;
@@ -233,6 +234,15 @@ export interface AdminMailAppDetail extends AdminMailApp {
   counts: { mailboxes: number; failed24h: number };
   sesRefreshAvailable: boolean;
   recentFailures: MailDeliveryItem[];
+}
+
+export interface AdminUpdateMailAppPayload {
+  name?: string;
+  description?: string | null;
+  contactEmail?: string;
+  appType?: MailAppType;
+  status?: MailAppStatus;
+  bodyEncryptionEnabled?: boolean;
 }
 
 export interface MailAppsExportResponse {

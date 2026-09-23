@@ -1,5 +1,5 @@
-import { MailPricingPage } from "@/components/billing/mail-pricing-page";
+import { MailBillingPage } from "@/components/billing/mail-billing-page";
 
 export default function BillingPage() {
-  return <MailPricingPage />;
+  return <MailBillingPage />;
 }

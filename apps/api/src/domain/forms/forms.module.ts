@@ -59,7 +59,7 @@ import { WorkspaceModule } from '../workspace/workspace.module';
     forwardRef(() => GoogleSheetsModule),
     forwardRef(() => GoogleDriveModule),
     SubscriptionsModule,
-    DeveloperModule,
+    forwardRef(() => DeveloperModule),
     WorkspaceModule,
     BullModule.registerQueueAsync({
       name: 'form-webhook',

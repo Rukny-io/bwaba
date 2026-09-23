@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PricingEstimatePage() {
   const user = await getCurrentMailUser();
   return (
-    <MailMarketingShell signedIn={Boolean(user)} plainBackground>
+    <MailMarketingShell signedIn={Boolean(user)} plainBackground variant="antigravity">
       <MailPricingEstimate signedIn={Boolean(user)} />
     </MailMarketingShell>
   );

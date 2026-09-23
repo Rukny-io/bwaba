@@ -62,6 +62,7 @@ import type {
 import type {
   AdminMailAppDetail,
   AdminMailMailbox,
+  AdminUpdateMailAppPayload,
   MailAlertsResponse,
   MailAnalyticsResponse,
   MailAppsExportResponse,
@@ -423,6 +424,21 @@ export const hqApi = {
   getMailApp: (appId: string) =>
     api
       .get<AdminMailAppDetail>(`/admin/mail/apps/${encodeURIComponent(appId)}`)
+      .then((r) => r.data),
+
+  updateMailApp: (appId: string, body: AdminUpdateMailAppPayload) =>
+    api
+      .patch<AdminMailAppDetail>(
+        `/admin/mail/apps/${encodeURIComponent(appId)}`,
+        body,
+      )
+      .then((r) => r.data),
+
+  deleteMailApp: (appId: string) =>
+    api
+      .delete<{ deleted: boolean; appId: string }>(
+        `/admin/mail/apps/${encodeURIComponent(appId)}`,
+      )
       .then((r) => r.data),
 
   getMailAppMailboxes: (appId: string) =>

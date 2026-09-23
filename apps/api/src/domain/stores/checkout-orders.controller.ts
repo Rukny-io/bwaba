@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -16,10 +24,17 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
+import { Throttle } from '@nestjs/throttler';
 import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-session.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { QasehPaymentService } from '../../integrations/qaseh-payment/qaseh-payment.service';
+import {
+  assertVerifiedCheckoutSession,
+  resolveCheckoutContact,
+} from '../checkout/checkout-session.util';
+import type { CheckoutSessionContext } from '../checkout/checkout-session.types';
 
 /**
  * Item في السلة
@@ -47,9 +62,10 @@ class OrderItemDto {
  * DTO لإنشاء طلب من checkout
  */
 class CreateCheckoutOrderDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  storeId: string;
+  storeId?: string;
 
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
@@ -62,11 +78,6 @@ class CreateCheckoutOrderDto {
   @Transform(({ value }) => String(value))
   @IsOptional()
   shippingAddressId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  phoneNumber?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -102,9 +113,12 @@ class CreateCheckoutOrderDto {
  */
 @ApiTags('Checkout Orders')
 @ApiBearerAuth()
+@Public()
 @UseGuards(CheckoutSessionGuard)
 @Controller('checkout/orders')
 export class CheckoutOrdersController {
+  private readonly logger = new Logger(CheckoutOrdersController.name);
+
   constructor(
     private readonly ordersService: OrdersService,
     private readonly prisma: PrismaService,
@@ -115,42 +129,37 @@ export class CheckoutOrdersController {
    * 📦 إنشاء طلب جديد (للضيوف)
    */
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'إنشاء طلب جديد للضيف' })
   @ApiResponse({ status: 201, description: 'تم إنشاء الطلب بنجاح' })
   @ApiResponse({ status: 400, description: 'بيانات غير صحيحة' })
   @ApiResponse({ status: 401, description: 'جلسة غير صالحة' })
   async createGuestOrder(
     @Body() createOrderDto: CreateCheckoutOrderDto,
-    @Req() req: any,
+    @Req() req: { checkoutSession?: CheckoutSessionContext },
   ) {
-    console.log(
-      '📦 Checkout Order Data:',
-      JSON.stringify(createOrderDto, null, 2),
-    );
-    console.log('🔐 Session Info:', {
-      userId: req.checkoutSession?.userId,
-      phone: req.checkoutSession?.phoneNumber,
-      email: req.checkoutSession?.email,
-    });
+    const session = assertVerifiedCheckoutSession(req.checkoutSession);
+    const { phoneNumber: sessionPhone, email: sessionEmail } =
+      resolveCheckoutContact(session);
 
-    let userId = req.checkoutSession?.userId;
-    const sessionPhone = req.checkoutSession?.phoneNumber;
-    const sessionEmail = req.checkoutSession?.email;
+    let userId = session.userId;
 
-    // إذا لم يكن هناك userId، نبحث عن المستخدم أو ننشئ واحد مؤقت
     if (!userId) {
-      console.log('⚠️ No userId in session, searching for existing user...');
-
-      // البحث عن مستخدم موجود
       let user = sessionPhone
         ? await this.prisma.user.findFirst({
             where: { phoneNumber: sessionPhone },
           })
-        : await this.prisma.user.findFirst({ where: { email: sessionEmail } });
+        : sessionEmail
+          ? await this.prisma.user.findFirst({ where: { email: sessionEmail } })
+          : null;
 
-      // إنشاء مستخدم مؤقت إذا لم يكن موجوداً
       if (!user) {
-        console.log('✨ Creating temporary user...');
+        if (!sessionPhone && !sessionEmail) {
+          throw new ForbiddenException({
+            message: 'يجب التحقق عبر رمز واتساب لإتمام الشراء',
+            code: 'CHECKOUT_VERIFICATION_REQUIRED',
+          });
+        }
         user = await this.prisma.user.create({
           data: {
             phoneNumber: sessionPhone,
@@ -159,39 +168,61 @@ export class CheckoutOrdersController {
             emailVerified: false,
           },
         });
-        console.log('✅ Temporary user created:', user.id);
       }
 
       userId = user.id;
     }
 
-    console.log('👤 Final userId:', userId);
-
     try {
-      // Link the shipping address to the user before creating orders
       if (createOrderDto.shippingAddressId) {
-        await this.prisma.addresses.updateMany({
-          where: { id: createOrderDto.shippingAddressId, userId: null },
-          data: { userId },
+        const address = await this.prisma.addresses.findUnique({
+          where: { id: createOrderDto.shippingAddressId },
         });
+
+        if (!address) {
+          throw new ForbiddenException('العنوان غير موجود');
+        }
+
+        const ownsAddress =
+          (sessionPhone && address.phoneNumber === sessionPhone) ||
+          (userId && address.userId === userId) ||
+          address.userId === null;
+
+        if (!ownsAddress) {
+          throw new ForbiddenException('غير مصرح باستخدام هذا العنوان');
+        }
+
+        if (address.userId === null) {
+          await this.prisma.addresses.updateMany({
+            where: {
+              id: createOrderDto.shippingAddressId,
+              userId: null,
+              ...(sessionPhone ? { phoneNumber: sessionPhone } : {}),
+            },
+            data: { userId },
+          });
+        }
       }
 
-      // Create a single order with all items
+      const paymentMethod = createOrderDto.paymentMethod || 'CASH';
+      const orderItems = createOrderDto.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        ...(item.variantId ? { variantId: item.variantId } : {}),
+      }));
+
+      if (paymentMethod === 'CASH') {
+        await this.ordersService.assertCashOnDeliveryAllowed(orderItems);
+      }
+
       const order = await this.ordersService.createDirectMultiItem(userId, {
         addressId: createOrderDto.shippingAddressId,
         customerNote: createOrderDto.notes,
-        phoneNumber: sessionPhone || createOrderDto.phoneNumber,
-        paymentMethod: createOrderDto.paymentMethod || 'CASH',
-        items: createOrderDto.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          ...(item.variantId ? { variantId: item.variantId } : {}),
-        })),
+        phoneNumber: sessionPhone,
+        paymentMethod,
+        items: orderItems,
       });
 
-      console.log(`✅ Order created: ${order.id}`);
-
-      // 💳 If payment method is QASEH_CARD, initiate payment
       if (
         createOrderDto.paymentMethod === 'QASEH_CARD' &&
         this.qasehPayment.isConfigured()
@@ -211,7 +242,6 @@ export class CheckoutOrdersController {
             customData: { rukny_order_id: order.id },
           });
 
-          // Update order with Qaseh payment info
           await this.prisma.orders.update({
             where: { id: order.id },
             data: {
@@ -232,8 +262,10 @@ export class CheckoutOrdersController {
             },
           };
         } catch (paymentError) {
-          console.error('❌ Qaseh payment initiation failed:', paymentError);
-          // Order is still created, payment can be retried
+          this.logger.error(
+            `Qaseh payment initiation failed for order ${order.id}`,
+            paymentError instanceof Error ? paymentError.stack : paymentError,
+          );
           return {
             success: true,
             message: 'تم إنشاء الطلب لكن فشل بدء الدفع. يمكنك إعادة المحاولة.',
@@ -249,7 +281,10 @@ export class CheckoutOrdersController {
         orders: [order],
       };
     } catch (error) {
-      console.error('❌ Error creating order:', error);
+      this.logger.error(
+        'Error creating checkout order',
+        error instanceof Error ? error.stack : error,
+      );
       throw error;
     }
   }

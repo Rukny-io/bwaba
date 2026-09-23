@@ -1304,4 +1304,109 @@ export class OrdersService {
 
     return formatted;
   }
+
+  private isPhysicalCodProduct(product: {
+    isDigital: boolean;
+    productKind: string;
+  }): boolean {
+    return !product.isDigital && product.productKind === 'PHYSICAL';
+  }
+
+  async resolveCheckoutPaymentOptions(
+    productIds: string[],
+  ): Promise<{
+    card: boolean;
+    cashOnDelivery: boolean;
+    reason?: string;
+    storeId?: string;
+    storeName?: string;
+  }> {
+    if (!productIds.length) {
+      return {
+        card: true,
+        cashOnDelivery: false,
+        reason: 'EMPTY_CART',
+      };
+    }
+
+    const products = await this.prisma.products.findMany({
+      where: { id: { in: productIds } },
+      include: {
+        stores: {
+          select: {
+            id: true,
+            name: true,
+            cashOnDeliveryEnabled: true,
+          },
+        },
+      },
+    });
+
+    if (products.length !== productIds.length) {
+      return {
+        card: true,
+        cashOnDelivery: false,
+        reason: 'PRODUCT_NOT_FOUND',
+      };
+    }
+
+    let storeId: string | null = null;
+    for (const product of products) {
+      if (!storeId) {
+        storeId = product.storeId;
+      } else if (product.storeId !== storeId) {
+        return {
+          card: true,
+          cashOnDelivery: false,
+          reason: 'MULTI_STORE',
+        };
+      }
+    }
+
+    const store = products[0]?.stores;
+    const allPhysical = products.every((p) => this.isPhysicalCodProduct(p));
+
+    const cashOnDelivery =
+      Boolean(store?.cashOnDeliveryEnabled) && allPhysical;
+
+    let reason: string | undefined;
+    if (!allPhysical) {
+      reason = 'DIGITAL_OR_NON_PHYSICAL';
+    } else if (!store?.cashOnDeliveryEnabled) {
+      reason = 'STORE_DISABLED';
+    }
+
+    return {
+      card: true,
+      cashOnDelivery,
+      reason,
+      storeId: store?.id,
+      storeName: store?.name,
+    };
+  }
+
+  async assertCashOnDeliveryAllowed(
+    items: Array<{ productId: string; quantity: number; variantId?: string }>,
+  ): Promise<void> {
+    const productIds = items.map((item) => item.productId);
+    const options = await this.resolveCheckoutPaymentOptions(productIds);
+
+    if (!options.cashOnDelivery) {
+      const messages: Record<string, string> = {
+        EMPTY_CART: 'لا توجد منتجات في الطلب',
+        PRODUCT_NOT_FOUND: 'أحد المنتجات غير موجود',
+        MULTI_STORE: 'جميع المنتجات يجب أن تكون من نفس المتجر',
+        DIGITAL_OR_NON_PHYSICAL:
+          'الدفع عند الاستلام غير متاح للمنتجات الرقمية أو الاشتراكات',
+        STORE_DISABLED: 'هذا المتجر لا يقبل الدفع عند الاستلام',
+      };
+      throw new BadRequestException({
+        message:
+          messages[options.reason || ''] ||
+          'الدفع عند الاستلام غير متاح لهذا الطلب',
+        code: 'COD_NOT_AVAILABLE',
+        reason: options.reason,
+      });
+    }
+  }
 }

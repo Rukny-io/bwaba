@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { findMailAppIdByDomain, upsertMailDomainBinding } from "@/lib/mail-domain-bindings";
+import {
+  deleteMailDomainBinding,
+  findMailAppIdByDomain,
+  upsertMailDomainBinding,
+} from "@/lib/mail-domain-bindings";
 import { createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import {
   MAIL_READY_APP_COOKIE,
@@ -31,13 +36,19 @@ export async function POST(request: Request) {
   const normalized = normalizeDomain(domain);
   const owner = await findMailAppIdByDomain(normalized);
   if (owner && owner !== session.appId) {
-    return NextResponse.json(
-      {
-        error:
-          "This domain is already connected to another workspace. Use a different domain.",
-      },
-      { status: 409 },
+    const taken = await apiFetchJson<{ taken?: boolean }>(
+      `/mail/apps/domain-taken?domain=${encodeURIComponent(normalized)}`,
     );
+    if (taken.ok && taken.data.taken === true) {
+      return NextResponse.json(
+        {
+          error:
+            "This domain is already connected to another workspace. Use a different domain.",
+        },
+        { status: 409 },
+      );
+    }
+    await deleteMailDomainBinding(owner);
   }
 
   const result = await verifyDomainDns(domain, Array.isArray(body?.tokens) ? body.tokens : []);
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
       await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
     }
 
-    await syncMailAppDomainToNest(session.appId, {
+    const sync = await syncMailAppDomainToNest(session.appId, {
       primaryDomain: normalized,
       domainStatus: status,
     });
@@ -90,6 +101,19 @@ export async function POST(request: Request) {
         path: "/",
         maxAge: 31536000,
         sameSite: "lax",
+      });
+    }
+
+    if (result.verified && sync.needsCheckout && sync.checkoutSessionId) {
+      const checkoutBase =
+        process.env.NEXT_PUBLIC_CHECKOUT_URL?.replace(/\/$/, "") ||
+        "http://localhost:3010";
+      const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sync.checkoutSessionId)}`;
+      return NextResponse.json({
+        ...result,
+        needsCheckout: true,
+        checkoutUrl,
+        checkoutSessionId: sync.checkoutSessionId,
       });
     }
   }

@@ -17,7 +17,9 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { MailAnnouncementBar } from "@/components/marketing/mail-announcement-bar";
 import { cn } from "@heroui/react";
+import { cfLayout } from "@/lib/mail-cloudflare-theme";
 import {
   resolveDeveloperUrl,
   resolveFormsUrl,
@@ -230,8 +232,12 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const primaryHref = signedIn ? "/apps" : "/login";
-  const primaryLabel = signedIn ? "Open console" : "Get started";
   const isHome = pathname === "/";
+  const primaryLabel = signedIn
+    ? "Open console"
+    : isHome
+      ? "Start building"
+      : "Get started";
   const overDark = isHome && !scrolled && !mobileOpen;
 
   useEffect(() => {
@@ -277,9 +283,15 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
 
   return (
     <>
+      {isHome ? (
+        <div className="fixed inset-x-0 top-0 z-50">
+          <MailAnnouncementBar ink={overDark} />
+        </div>
+      ) : null}
       <header
         className={cn(
-          "fixed inset-x-0 top-0 z-40 transition duration-200 ease-in-out",
+          "fixed inset-x-0 z-40 transition duration-200 ease-in-out",
+          isHome ? "top-9" : "top-0",
           overDark
             ? "bg-transparent"
             : scrolled || mobileOpen
@@ -287,7 +299,7 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
               : "border-b border-transparent bg-white/80 backdrop-blur-md",
         )}
       >
-        <div className="relative z-10 mx-auto w-full max-w-5xl px-6 md:max-w-7xl">
+        <div className="relative z-10 mx-auto w-full max-w-[1200px] px-5 sm:px-8">
           <div className="mx-auto flex h-[58px] w-full items-center gap-6">
             <Link
               href="/"
@@ -387,10 +399,14 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
               <Link
                 href={primaryHref}
                 className={cn(
-                  "inline-flex h-9 items-center px-4 text-[13px] font-semibold transition-colors",
-                  overDark
-                    ? "bg-white text-[#0a0a0a] hover:bg-[#e8e8e8]"
-                    : "bg-[#111111] text-white hover:bg-black",
+                  isHome
+                    ? cfLayout.btnPrimary
+                    : cn(
+                        "inline-flex h-9 items-center px-4 text-[13px] font-semibold transition-colors",
+                        overDark
+                          ? "bg-white text-[#0a0a0a] hover:bg-[#e8e8e8]"
+                          : "bg-[#111111] text-white hover:bg-black",
+                      ),
                 )}
               >
                 {primaryLabel}
@@ -401,10 +417,12 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
               <Link
                 href={primaryHref}
                 className={cn(
-                  "hidden h-9 items-center px-3.5 text-[13px] font-semibold sm:inline-flex",
-                  overDark
-                    ? "bg-white text-[#0a0a0a]"
-                    : "bg-[#111111] text-white",
+                  "hidden h-9 items-center sm:inline-flex",
+                  isHome
+                    ? cfLayout.btnPrimary
+                    : overDark
+                      ? "bg-white px-3.5 text-[13px] font-semibold text-[#0a0a0a]"
+                      : "bg-[#111111] px-3.5 text-[13px] font-semibold text-white",
                 )}
               >
                 {primaryLabel}
@@ -442,7 +460,12 @@ export function MailHomeHeader({ signedIn }: { signedIn: boolean }) {
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-x-0 top-[58px] bottom-0 overflow-y-auto border-t border-[#e8e8e8] bg-white">
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 overflow-y-auto border-t border-[#e8e8e8] bg-white",
+              isHome ? "top-[94px]" : "top-[58px]",
+            )}
+          >
             <div className="mx-auto flex max-w-lg flex-col gap-8 px-4 py-6 sm:px-6">
               {(
                 [

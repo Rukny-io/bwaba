@@ -369,6 +369,26 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const hasActivePlan = Boolean(subscription);
   const canAssign = Boolean(team?.canManage && assigneeOptions.length > 0);
 
+  // After Checkout activates a plan, create the pending mailbox from setup.
+  useEffect(() => {
+    if (!appId || !hasActivePlan) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { fulfillPendingMailbox } = await import("@/lib/mail-pending-mailbox");
+        const created = await fulfillPendingMailbox(appId);
+        if (created && !cancelled) {
+          await refreshMailboxes(appId);
+        }
+      } catch {
+        // Pending mailbox can be created manually from the form.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [appId, hasActivePlan, refreshMailboxes]);
+
   async function onAssignMailbox(mailboxId: string, userId: string) {
     if (!appId || assigningId) return;
     setAssigningId(mailboxId);
@@ -677,20 +697,43 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         className="min-w-0 rounded-2xl bg-[var(--surface)] p-4 sm:p-6"
       >
         {!loadingSub && !hasActivePlan ? (
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
-              {setup.domain}
-            </h2>
-            <p className="text-sm text-[var(--muted-foreground)]">
-              No active plan yet. See{" "}
-              <Link
-                href="/pricing"
-                className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-1">
+              <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
+                {setup.domain}
+              </h2>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Domain is ready. Activate a plan through Checkout to unlock mailboxes and
+                the console tools.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#111111] px-4 text-sm font-medium text-white"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const { startMailCheckoutSession } = await import(
+                        "@/lib/mail-checkout"
+                      );
+                      const session = await startMailCheckoutSession("starter", 1);
+                      window.location.assign(session.checkoutUrl);
+                    } catch {
+                      window.location.assign("/billing");
+                    }
+                  })();
+                }}
               >
-                pricing
-              </Link>{" "}
-              on the website to get started.
-            </p>
+                Continue to Checkout
+              </button>
+              <Link
+                href="/billing"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground)]"
+              >
+                See all plans
+              </Link>
+            </div>
           </div>
         ) : (
           <>

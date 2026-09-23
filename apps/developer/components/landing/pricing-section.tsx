@@ -22,10 +22,12 @@ import {
   type PricingPlan,
 } from '@/lib/pricing-plans';
 import { cn } from '@/lib/utils';
+import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
+import { appToast } from '@/lib/app-toast';
 
 const PLAN_HREF: Record<PlanId, string> = {
-  free: '/login?next=/apps',
-  pro: '/login?next=/apps',
+  free: '/apps',
+  pro: '/login?next=/settings/platform',
 };
 
 function CellValue({ value }: { value: CellValue }) {
@@ -149,11 +151,33 @@ function PlanCard({
   period: BillingPeriod;
 }) {
   const isFree = plan.priceMonthly === 0;
+  const [busy, setBusy] = useState(false);
   const displayPrice = isFree
     ? 0
     : period === 'yearly'
       ? monthlyEquivalentFromYearly(plan.priceYearly)
       : plan.priceMonthly;
+
+  async function handleProCheckout() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await redirectToDeveloperCheckout({
+        kind: 'PRO_UPGRADE',
+        billingCycle: period === 'yearly' ? 'YEARLY' : 'MONTHLY',
+      });
+    } catch (error) {
+      // Unauthenticated users land on login; authenticated get a toast.
+      const message =
+        error instanceof Error ? error.message : 'Could not start checkout.';
+      if (/401|unauthor|login|جلسة|تسجيل/i.test(message)) {
+        window.location.href = `/login?next=${encodeURIComponent('/pricing')}`;
+        return;
+      }
+      appToast.fromError(error, 'Could not continue to Checkout');
+      setBusy(false);
+    }
+  }
 
   return (
     <div
@@ -206,17 +230,35 @@ function PlanCard({
             : 'Billed monthly'}
       </p>
 
-      <Link
-        href={PLAN_HREF[plan.id]}
-        className={cn(
-          'mt-6 flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-90',
-          plan.popular
-            ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-            : 'bg-[var(--foreground)] text-[var(--background)]',
-        )}
-      >
-        {plan.ctaLabel}
-      </Link>
+      {isFree ? (
+        <Link
+          href={PLAN_HREF.free}
+          className={cn(
+            'mt-6 flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-90',
+            'bg-[var(--foreground)] text-[var(--background)]',
+          )}
+        >
+          {plan.ctaLabel}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void handleProCheckout()}
+          className={cn(
+            'mt-6 flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60',
+            plan.popular
+              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+              : 'bg-[var(--foreground)] text-[var(--background)]',
+          )}
+        >
+          {busy
+            ? '…'
+            : `Continue to Checkout · ${formatPrice(
+                period === 'yearly' ? plan.priceYearly : plan.priceMonthly,
+              )} ${CURRENCY}`}
+        </button>
+      )}
 
       <ul className="mt-7 flex flex-1 flex-col gap-2.5 border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] pt-6">
         {plan.highlights.map((item, index) => {

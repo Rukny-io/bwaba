@@ -3,6 +3,24 @@ import { join } from 'path';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import type { BillingCycle } from '@prisma/client';
+import { MAIL_INVOICE_TAX_IQD } from './mail-plan-limits.config';
+
+export type MailInvoiceTotals = {
+  subtotalIqd: number;
+  taxIqd: number;
+  totalIqd: number;
+};
+
+/** Flat tax on every Mail invoice: subtotal + MAIL_INVOICE_TAX_IQD. */
+export function mailInvoiceTotals(amountIqd: number): MailInvoiceTotals {
+  const subtotalIqd = Math.max(0, Math.floor(amountIqd));
+  const taxIqd = MAIL_INVOICE_TAX_IQD;
+  return {
+    subtotalIqd,
+    taxIqd,
+    totalIqd: subtotalIqd + taxIqd,
+  };
+}
 
 const COLORS = {
   ink: '#111111',
@@ -307,7 +325,8 @@ export async function renderMailInvoicePdf(
 
       y += 16;
 
-      // Totals
+      // Totals (flat 400 IQD tax on every invoice)
+      const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(input.amountIqd);
       const totalsLabelX = PAGE_MARGIN + contentWidth - 220;
       const totalsValueX = PAGE_MARGIN + contentWidth - 90;
 
@@ -318,7 +337,20 @@ export async function renderMailInvoicePdf(
       doc
         .fontSize(9)
         .fillColor(COLORS.ink)
-        .text(formatIqd(input.amountIqd), totalsValueX, y, {
+        .text(formatIqd(subtotalIqd), totalsValueX, y, {
+          width: 90,
+          align: 'right',
+        });
+      y += 18;
+
+      doc.fontSize(9).fillColor(COLORS.muted).text('Tax', totalsLabelX, y, {
+        width: 100,
+        align: 'right',
+      });
+      doc
+        .fontSize(9)
+        .fillColor(COLORS.ink)
+        .text(formatIqd(taxIqd), totalsValueX, y, {
           width: 90,
           align: 'right',
         });
@@ -334,7 +366,7 @@ export async function renderMailInvoicePdf(
       doc
         .fontSize(12)
         .fillColor(COLORS.ink)
-        .text(formatIqd(input.amountIqd), totalsValueX, y - 1, {
+        .text(formatIqd(totalIqd), totalsValueX, y - 1, {
           width: 90,
           align: 'right',
         });

@@ -171,6 +171,9 @@ export const MAIL_INCLUDED_OUTBOUND: Record<MailPlan, number> = {
   [MailPlan.PREMIUM]: 30_000,
 };
 
+/** Flat tax applied on every issued Mail invoice PDF (IQD). */
+export const MAIL_INVOICE_TAX_IQD = 400;
+
 /** Prepaid pack unit (Starter packs billed this phase). */
 export const MAIL_OUTBOUND_PACK_EMAILS = 1_000;
 

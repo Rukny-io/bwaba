@@ -1,5 +1,28 @@
 import { BillingCycle } from '@prisma/client';
-import { renderMailInvoicePdf } from './mail-invoice-pdf.util';
+import { MAIL_INVOICE_TAX_IQD } from './mail-plan-limits.config';
+import {
+  mailInvoiceTotals,
+  renderMailInvoicePdf,
+} from './mail-invoice-pdf.util';
+
+describe('mailInvoiceTotals', () => {
+  it('applies flat 400 IQD tax on every invoice', () => {
+    expect(mailInvoiceTotals(60_000)).toEqual({
+      subtotalIqd: 60_000,
+      taxIqd: MAIL_INVOICE_TAX_IQD,
+      totalIqd: 60_400,
+    });
+    expect(MAIL_INVOICE_TAX_IQD).toBe(400);
+  });
+
+  it('floors negative amounts to zero subtotal but still adds tax', () => {
+    expect(mailInvoiceTotals(-100)).toEqual({
+      subtotalIqd: 0,
+      taxIqd: 400,
+      totalIqd: 400,
+    });
+  });
+});
 
 describe('renderMailInvoicePdf', () => {
   it('generates a non-empty PDF buffer with table layout', async () => {

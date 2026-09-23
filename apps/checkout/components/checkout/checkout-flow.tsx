@@ -179,6 +179,10 @@ export function CheckoutFlow() {
               planName: preview.planName,
               mailboxCount: preview.mailboxCount,
               amount: preview.amount,
+              taxIqd: preview.taxIqd ?? 400,
+              totalAmount:
+                preview.totalAmount ??
+                preview.amount + (preview.taxIqd ?? 400),
               currency: preview.currency,
               appId: preview.appId,
               appName: preview.appName,
@@ -1577,10 +1581,10 @@ export function CheckoutFlow() {
               </p>
               <p className="mt-0.5 text-[13px] leading-5 text-zinc-500">
                 {cart.mail.kind === 'outbound_pack'
-                  ? `${(cart.mail.outboundPackEmails || 0).toLocaleString('en-US')} outbound emails · ${cart.mail.amount.toLocaleString('en-US')} ${cart.mail.currency}`
+                  ? `${(cart.mail.outboundPackEmails || 0).toLocaleString('en-US')} outbound emails · ${(cart.mail.totalAmount ?? cart.mail.amount + (cart.mail.taxIqd ?? 400)).toLocaleString('en-US')} ${cart.mail.currency}`
                   : `${cart.mail.mailboxCount} ${
                       cart.mail.mailboxCount === 1 ? 'seat' : 'seats'
-                    } · ${cart.mail.amount.toLocaleString('en-US')} ${cart.mail.currency}/mo`}
+                    } · ${(cart.mail.totalAmount ?? cart.mail.amount + (cart.mail.taxIqd ?? 400)).toLocaleString('en-US')} ${cart.mail.currency}/mo`}
               </p>
             </SoftPanel>
           ) : null}

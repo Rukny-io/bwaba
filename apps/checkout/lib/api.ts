@@ -263,6 +263,10 @@ export type MailCheckoutSessionPreview = {
   planName: string;
   mailboxCount: number;
   amount: number;
+  /** Flat invoice tax (IQD). */
+  taxIqd?: number;
+  /** amount + taxIqd — what the card is charged. */
+  totalAmount?: number;
   currency: string;
   appId: string;
   appName: string;
@@ -280,6 +284,8 @@ export type MailCheckoutPayResponse = {
   paymentId: string;
   qasehPaymentId?: string;
   amount: number;
+  taxIqd?: number;
+  totalAmount?: number;
   currency: string;
   plan: string;
   mailboxCount: number;

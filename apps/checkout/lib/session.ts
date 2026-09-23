@@ -27,6 +27,10 @@ export type MailCheckoutCart = {
   planName: string;
   mailboxCount: number;
   amount: number;
+  /** Flat invoice tax (IQD). Defaults to 400 when missing (legacy carts). */
+  taxIqd?: number;
+  /** amount + tax — card charge. */
+  totalAmount?: number;
   currency: string;
   appId: string;
   appName: string;

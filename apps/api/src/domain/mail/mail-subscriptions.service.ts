@@ -36,6 +36,7 @@ import {
   MAIL_PLAN_LIMITS,
   MAIL_PLAN_ORDER,
   MAIL_INCLUDED_OUTBOUND,
+  MAIL_INVOICE_TAX_IQD,
   MAIL_OUTBOUND_PACK_EMAILS,
   addOneMonth,
   formatMailAliasLimit,
@@ -53,7 +54,10 @@ import {
   signMailInvoiceToken,
   verifyMailInvoiceToken,
 } from './mail-invoice-token.util';
-import { renderMailInvoicePdf } from './mail-invoice-pdf.util';
+import {
+  mailInvoiceTotals,
+  renderMailInvoicePdf,
+} from './mail-invoice-pdf.util';
 
 const OPEN_TICKET_STATUSES: SupportTicketStatus[] = [
   SupportTicketStatus.OPEN,
@@ -403,11 +407,14 @@ export class MailSubscriptionsService {
     const checkoutBase = this.checkoutFrontendUrl();
     // Only session id in the URL — never trust client-supplied price/plan/seats.
     const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sessionId)}`;
+    const totals = mailInvoiceTotals(amount);
 
     return {
       sessionId,
       checkoutUrl,
       amount,
+      taxIqd: totals.taxIqd,
+      totalAmount: totals.totalIqd,
       currency: 'IQD',
       plan,
       planName,
@@ -426,6 +433,7 @@ export class MailSubscriptionsService {
     const expiresAt =
       session.expiresAt ||
       session.createdAt + CHECKOUT_SESSION_TTL_SECONDS * 1000;
+    const totals = mailInvoiceTotals(session.amount);
     return {
       sessionId: session.sessionId,
       product: 'mail' as const,
@@ -436,6 +444,8 @@ export class MailSubscriptionsService {
       outboundPackThousands: session.outboundPackThousands ?? null,
       outboundPackEmails: session.outboundPackEmails ?? null,
       amount: session.amount,
+      taxIqd: totals.taxIqd,
+      totalAmount: totals.totalIqd,
       currency: 'IQD',
       appId: session.appId,
       appName: session.appName,
@@ -517,11 +527,14 @@ export class MailSubscriptionsService {
 
     const checkoutBase = this.checkoutFrontendUrl();
     const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sessionId)}`;
+    const totals = mailInvoiceTotals(amount);
 
     return {
       sessionId,
       checkoutUrl,
       amount,
+      taxIqd: totals.taxIqd,
+      totalAmount: totals.totalIqd,
       currency: 'IQD',
       kind: 'outbound_pack' as const,
       plan,
@@ -959,6 +972,8 @@ export class MailSubscriptionsService {
           initiatedBy: userId,
           role: String(access.role),
           source: 'qaseh_card',
+          invoiceSubtotalIqd: amount,
+          invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
           ...(checkoutPhone ? { checkoutPhone } : {}),
           ...(checkoutEmail ? { checkoutEmail } : {}),
         },
@@ -971,11 +986,12 @@ export class MailSubscriptionsService {
         0,
         250,
       );
+    const chargeAmount = mailInvoiceTotals(amount).totalIqd;
 
     try {
       const qasehPayment = await this.qaseh.createPayment({
         orderId,
-        amount,
+        amount: chargeAmount,
         currency: 'IQD',
         description,
         redirectUrl: this.qasehCallbackUrl(),
@@ -985,7 +1001,9 @@ export class MailSubscriptionsService {
           rukny_mail_app_id: app.appId,
           plan,
           mailbox_count: seats,
-          amount_iqd: amount,
+          amount_iqd: chargeAmount,
+          subtotal_iqd: amount,
+          tax_iqd: MAIL_INVOICE_TAX_IQD,
         },
       });
 
@@ -1003,6 +1021,8 @@ export class MailSubscriptionsService {
             role: String(access.role),
             source: 'qaseh_card',
             qasehOrderId: orderId,
+            invoiceSubtotalIqd: amount,
+            invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
             ...(checkoutPhone ? { checkoutPhone } : {}),
             ...(checkoutEmail ? { checkoutEmail } : {}),
           },
@@ -1021,6 +1041,8 @@ export class MailSubscriptionsService {
             plan,
             mailboxCount: seats,
             amount,
+            taxIqd: MAIL_INVOICE_TAX_IQD,
+            chargeAmount,
             paymentRowId: payment.id,
             paymentId: qasehPayment.payment_id,
           },
@@ -1032,6 +1054,8 @@ export class MailSubscriptionsService {
         paymentId: payment.id,
         qasehPaymentId: qasehPayment.payment_id,
         amount,
+        taxIqd: MAIL_INVOICE_TAX_IQD,
+        totalAmount: chargeAmount,
         currency: 'IQD',
         plan,
         mailboxCount: seats,
@@ -1143,6 +1167,8 @@ export class MailSubscriptionsService {
           source: 'qaseh_card',
           outboundPackThousands: n,
           outboundPackEmails: emails,
+          invoiceSubtotalIqd: amount,
+          invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
           ...(checkoutPhone ? { checkoutPhone } : {}),
           ...(checkoutEmail ? { checkoutEmail } : {}),
         },
@@ -1155,11 +1181,12 @@ export class MailSubscriptionsService {
         0,
         250,
       );
+    const chargeAmount = mailInvoiceTotals(amount).totalIqd;
 
     try {
       const qasehPayment = await this.qaseh.createPayment({
         orderId,
-        amount,
+        amount: chargeAmount,
         currency: 'IQD',
         description,
         redirectUrl: this.qasehCallbackUrl(),
@@ -1171,7 +1198,9 @@ export class MailSubscriptionsService {
           plan,
           outbound_pack_thousands: n,
           outbound_pack_emails: emails,
-          amount_iqd: amount,
+          amount_iqd: chargeAmount,
+          subtotal_iqd: amount,
+          tax_iqd: MAIL_INVOICE_TAX_IQD,
         },
       });
 
@@ -1192,6 +1221,8 @@ export class MailSubscriptionsService {
             qasehOrderId: orderId,
             outboundPackThousands: n,
             outboundPackEmails: emails,
+            invoiceSubtotalIqd: amount,
+            invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
             ...(checkoutPhone ? { checkoutPhone } : {}),
             ...(checkoutEmail ? { checkoutEmail } : {}),
           },
@@ -1203,6 +1234,8 @@ export class MailSubscriptionsService {
         paymentId: payment.id,
         qasehPaymentId: qasehPayment.payment_id,
         amount,
+        taxIqd: MAIL_INVOICE_TAX_IQD,
+        totalAmount: chargeAmount,
         currency: 'IQD',
         plan,
         mailboxCount: subscription.mailboxCount,
@@ -1364,6 +1397,7 @@ export class MailSubscriptionsService {
       workspaceName: subscription.mailApp.name,
       workspaceDomain: subscription.mailApp.primaryDomain,
       contactEmail: subscription.mailApp.contactEmail,
+      customerName: subscription.mailApp.name,
       planName: planDef.name,
       billingCycle: subscription.billingCycle,
       mailboxCount: subscription.mailboxCount,
@@ -1374,7 +1408,7 @@ export class MailSubscriptionsService {
       qasehPaymentId: null,
       paymentRowId: null,
       status: 'ACTIVE',
-      note: 'Issued from active subscription (no card payment on file).',
+      note: 'صادرة من الاشتراك النشط (لا يوجد دفع بطاقة مسجّل).',
     });
 
     return {
@@ -1890,12 +1924,17 @@ export class MailSubscriptionsService {
         periodStart instanceof Date ? periodStart : new Date(periodStart),
       );
 
+    const isPack = String(meta.kind || '') === 'outbound_pack';
+    const packEmails = Math.floor(Number(meta.outboundPackEmails) || 0);
+    const proofUrl = this.buildInvoiceDownloadUrl(payment.id);
+
     const buffer = await renderMailInvoicePdf({
       invoiceNumber,
       issuedAt: new Date(),
       workspaceName: app.name,
       workspaceDomain: app.primaryDomain,
       contactEmail: app.contactEmail,
+      customerName: app.name,
       planName: planDef.name,
       billingCycle: payment.billingCycle,
       mailboxCount: payment.mailboxCount,
@@ -1907,6 +1946,9 @@ export class MailSubscriptionsService {
       qasehPaymentId: payment.paymentId,
       paymentRowId: payment.id,
       status: payment.status,
+      proofUrl,
+      isPack,
+      packEmails: packEmails > 0 ? packEmails : null,
     });
 
     return {
@@ -1965,9 +2007,14 @@ export class MailSubscriptionsService {
       : null;
 
     const qasehAmount = Number(context.amount);
+    const taxFromMeta = Math.floor(Number(meta.invoiceTaxIqd));
+    const expectedCharge =
+      Number.isFinite(taxFromMeta) && taxFromMeta >= 0
+        ? payment.amount + taxFromMeta
+        : payment.amount;
     if (
       !Number.isFinite(qasehAmount) ||
-      Math.trunc(qasehAmount) !== payment.amount
+      Math.trunc(qasehAmount) !== expectedCharge
     ) {
       await this.prisma.mailSubscriptionPayment.update({
         where: { id: payment.id },
@@ -1978,7 +2025,12 @@ export class MailSubscriptionsService {
           metadata: {
             ...meta,
             qasehAmount,
-            expectedAmount: payment.amount,
+            expectedAmount: expectedCharge,
+            invoiceSubtotalIqd: payment.amount,
+            invoiceTaxIqd:
+              Number.isFinite(taxFromMeta) && taxFromMeta >= 0
+                ? taxFromMeta
+                : 0,
           },
         },
       });

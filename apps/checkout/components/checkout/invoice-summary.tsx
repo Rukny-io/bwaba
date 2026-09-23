@@ -140,6 +140,9 @@ export function summarizeCart(cart: CheckoutCartState | null) {
     const label = isPack
       ? `${(cart.mail.outboundPackEmails || 0).toLocaleString('en-US')} outbound emails · ${cart.mail.appName}`
       : `${cart.mail.planName} · ${cart.mail.appName}`;
+    const taxIqd = cart.mail.taxIqd ?? 400;
+    const totalAmount =
+      cart.mail.totalAmount ?? cart.mail.amount + taxIqd;
     return {
       items: [
         {
@@ -152,7 +155,7 @@ export function summarizeCart(cart: CheckoutCartState | null) {
         },
       ] as CheckoutCartState['items'],
       quantity: 1,
-      subtotal: cart.mail.amount,
+      subtotal: totalAmount,
       hasPricedItems: true,
       isMail: true as const,
       isDeveloper: false as const,
@@ -214,6 +217,8 @@ function MailInvoiceDetails({
   const seatLabel =
     seats === 1 ? t('invoiceMailSeatUnit') : t('invoiceMailSeatsUnit');
   const isPack = mail.kind === 'outbound_pack';
+  const taxIqd = mail.taxIqd ?? 400;
+  const dueNow = mail.totalAmount ?? mail.amount + taxIqd;
 
   return (
     <div className="space-y-3">
@@ -279,19 +284,25 @@ function MailInvoiceDetails({
           <span>{t('invoiceSubtotal')}</span>
           <MoneyAmount amount={mail.amount} unit={unit} className="text-[13px]" />
         </div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-[13px] text-zinc-500">
+          <span>{t('invoiceTax')}</span>
+          <MoneyAmount amount={taxIqd} unit={unit} className="text-[13px]" />
+        </div>
         <div className="mt-2.5 flex items-baseline justify-between gap-3 border-t border-zinc-200/80 pt-2.5">
           <span className="text-[14px] font-semibold text-zinc-900">
             {t('invoiceDueNow')}
           </span>
           <MoneyAmount
-            amount={mail.amount}
+            amount={dueNow}
             unit={unit}
             className="text-[17px] font-semibold tracking-tight"
           />
         </div>
-        <p className="mt-1 text-end text-[11px] text-zinc-500">
-          {t('invoiceMailMonthly')} {t('invoicePerMonth')}
-        </p>
+        {!isPack ? (
+          <p className="mt-1 text-end text-[11px] text-zinc-500">
+            {t('invoiceMailMonthly')} {t('invoicePerMonth')}
+          </p>
+        ) : null}
       </div>
     </div>
   );

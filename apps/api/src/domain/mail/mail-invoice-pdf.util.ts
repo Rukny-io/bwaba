@@ -1,7 +1,9 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 import PDFDocument from 'pdfkit';
-import sharp from 'sharp';
+import QRCode from 'qrcode';
+import arabicReshaper from 'arabic-persian-reshaper';
+import bidiFactory from 'bidi-js';
 import type { BillingCycle } from '@prisma/client';
 import { MAIL_INVOICE_TAX_IQD } from './mail-plan-limits.config';
 
@@ -27,16 +29,18 @@ const COLORS = {
   muted: '#6b7280',
   faint: '#9ca3af',
   border: '#e5e7eb',
-  surface: '#f9fafb',
 };
 
 const PAGE_MARGIN = 48;
 
 const FONT = {
-  regular: 'IBMPlexSans-Regular',
-  medium: 'IBMPlexSans-Medium',
-  semibold: 'IBMPlexSans-SemiBold',
+  regular: 'NotoSansArabic-Regular',
+  bold: 'NotoSansArabic-Bold',
+  latin: 'IBMPlexSans-Regular',
+  latinBold: 'IBMPlexSans-SemiBold',
 } as const;
+
+const bidi = bidiFactory();
 
 function resolveFontPath(fileName: string): string | null {
   const candidates = [
@@ -51,26 +55,51 @@ function resolveFontPath(fileName: string): string | null {
 }
 
 function registerInvoiceFonts(doc: PDFKit.PDFDocument): void {
-  const regular = resolveFontPath(FONT.regular);
-  const medium = resolveFontPath(FONT.medium);
-  const semibold = resolveFontPath(FONT.semibold);
-
-  if (regular) doc.registerFont(FONT.regular, regular);
-  if (medium) doc.registerFont(FONT.medium, medium);
-  if (semibold) doc.registerFont(FONT.semibold, semibold);
+  for (const name of Object.values(FONT)) {
+    const path = resolveFontPath(name);
+    if (path) doc.registerFont(name, path);
+  }
 }
 
-function setInvoiceFont(
+function hasFont(name: string): boolean {
+  return Boolean(resolveFontPath(name));
+}
+
+function setArabicFont(
   doc: PDFKit.PDFDocument,
-  weight: 'regular' | 'medium' | 'semibold' = 'regular',
+  weight: 'regular' | 'bold' = 'regular',
 ): void {
-  const name = FONT[weight];
-  const path = resolveFontPath(name);
-  if (path) {
+  const name = weight === 'bold' ? FONT.bold : FONT.regular;
+  if (hasFont(name)) {
     doc.font(name);
     return;
   }
-  doc.font(weight === 'semibold' ? 'Helvetica-Bold' : 'Helvetica');
+  const latin = weight === 'bold' ? FONT.latinBold : FONT.latin;
+  if (hasFont(latin)) {
+    doc.font(latin);
+    return;
+  }
+  doc.font(weight === 'bold' ? 'Helvetica-Bold' : 'Helvetica');
+}
+
+function setLatinFont(
+  doc: PDFKit.PDFDocument,
+  weight: 'regular' | 'bold' = 'regular',
+): void {
+  const name = weight === 'bold' ? FONT.latinBold : FONT.latin;
+  if (hasFont(name)) {
+    doc.font(name);
+    return;
+  }
+  doc.font(weight === 'bold' ? 'Helvetica-Bold' : 'Helvetica');
+}
+
+/** Shape + reorder Arabic for PDFKit visual drawing. */
+function ar(text: string): string {
+  if (!text) return '';
+  const reshaped = arabicReshaper.ArabicShaper.convertArabic(text);
+  const embeddingLevels = bidi.getEmbeddingLevels(reshaped, 'rtl');
+  return bidi.getReorderedString(reshaped, embeddingLevels);
 }
 
 export interface MailInvoicePdfInput {
@@ -79,6 +108,8 @@ export interface MailInvoicePdfInput {
   workspaceName: string;
   workspaceDomain: string | null;
   contactEmail: string | null;
+  /** Display name for العميل (falls back to workspaceName). */
+  customerName?: string | null;
   planName: string;
   billingCycle: BillingCycle;
   mailboxCount: number;
@@ -90,41 +121,27 @@ export interface MailInvoicePdfInput {
   paymentRowId: string | null;
   status: string;
   note?: string;
+  /** Public URL encoded in QR (invoice download). */
+  proofUrl?: string | null;
+  /** Outbound pack line item instead of seat subscription. */
+  isPack?: boolean;
+  packEmails?: number | null;
 }
 
-function formatIqd(amount: number): string {
-  return `${new Intl.NumberFormat('en-IQ').format(Math.max(0, Math.floor(amount)))} IQD`;
+function formatIqdNumber(amount: number): string {
+  return new Intl.NumberFormat('en-IQ').format(Math.max(0, Math.floor(amount)));
+}
+
+function formatIqdAr(amount: number): string {
+  return ar(`${formatIqdNumber(amount)} دينار عراقي`);
 }
 
 function formatInvoiceDate(value: Date | null | undefined): string {
   if (!value || Number.isNaN(value.getTime())) return '—';
-  return value.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function resolveLogoSvgPath(): string | null {
-  const candidates = [
-    join(__dirname, '../../assets/rukny-logo.svg'),
-    join(process.cwd(), 'dist/assets/rukny-logo.svg'),
-    join(process.cwd(), 'src/assets/rukny-logo.svg'),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
-}
-
-async function loadLogoPng(): Promise<Buffer | null> {
-  const svgPath = resolveLogoSvgPath();
-  if (!svgPath) return null;
-  try {
-    return await sharp(svgPath).resize(160, 160, { fit: 'inside' }).png().toBuffer();
-  } catch {
-    return null;
-  }
+  const y = value.getFullYear();
+  const m = String(value.getMonth() + 1).padStart(2, '0');
+  const d = String(value.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function drawRule(
@@ -134,67 +151,86 @@ function drawRule(
   width: number,
   color = COLORS.border,
 ) {
-  doc.save().strokeColor(color).lineWidth(1).moveTo(x, y).lineTo(x + width, y).stroke().restore();
+  doc
+    .save()
+    .strokeColor(color)
+    .lineWidth(0.8)
+    .moveTo(x, y)
+    .lineTo(x + width, y)
+    .stroke()
+    .restore();
 }
 
-function drawTableHeader(
+function textRtl(
   doc: PDFKit.PDFDocument,
+  text: string,
   x: number,
   y: number,
-  widths: number[],
-  labels: string[],
+  width: number,
+  opts?: { bold?: boolean; size?: number; color?: string },
 ) {
-  const height = 26;
-  const totalWidth = widths.reduce((sum, w) => sum + w, 0);
-
-  doc.save();
-  doc.fillColor(COLORS.surface).rect(x, y, totalWidth, height).fill();
-  doc.restore();
-  drawRule(doc, x, y + height, totalWidth);
-
-  let cursor = x + 10;
-  setInvoiceFont(doc, 'medium');
-  doc.fontSize(8.5).fillColor(COLORS.muted);
-  for (let i = 0; i < labels.length; i++) {
-    doc.text(labels[i], cursor, y + 8, {
-      width: widths[i] - 12,
-      align: i >= labels.length - 2 ? 'right' : 'left',
-    });
-    cursor += widths[i];
-  }
-
-  return y + height;
+  setArabicFont(doc, opts?.bold ? 'bold' : 'regular');
+  doc
+    .fontSize(opts?.size ?? 10)
+    .fillColor(opts?.color ?? COLORS.ink)
+    .text(ar(text), x, y, { width, align: 'right', lineBreak: false });
 }
 
-function drawTableRow(
+function textShaped(
   doc: PDFKit.PDFDocument,
+  shaped: string,
   x: number,
   y: number,
-  widths: number[],
-  cells: string[],
-  rowHeight = 34,
+  width: number,
+  opts?: { bold?: boolean; size?: number; color?: string },
 ) {
-  const totalWidth = widths.reduce((sum, w) => sum + w, 0);
-  let cursor = x + 10;
+  setArabicFont(doc, opts?.bold ? 'bold' : 'regular');
+  doc
+    .fontSize(opts?.size ?? 10)
+    .fillColor(opts?.color ?? COLORS.ink)
+    .text(shaped, x, y, { width, align: 'right', lineBreak: false });
+}
 
-  setInvoiceFont(doc, 'regular');
-  doc.fontSize(9.5).fillColor(COLORS.ink);
-  for (let i = 0; i < cells.length; i++) {
-    doc.text(cells[i], cursor, y + 10, {
-      width: widths[i] - 12,
-      align: i >= cells.length - 2 ? 'right' : 'left',
+function textLtr(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  opts?: {
+    bold?: boolean;
+    size?: number;
+    color?: string;
+    align?: 'left' | 'right' | 'center';
+  },
+) {
+  setLatinFont(doc, opts?.bold ? 'bold' : 'regular');
+  doc
+    .fontSize(opts?.size ?? 10)
+    .fillColor(opts?.color ?? COLORS.ink)
+    .text(text, x, y, {
+      width,
+      align: opts?.align ?? 'left',
+      lineBreak: false,
     });
-    cursor += widths[i];
-  }
-
-  drawRule(doc, x, y + rowHeight, totalWidth);
-  return y + rowHeight;
 }
 
 export async function renderMailInvoicePdf(
   input: MailInvoicePdfInput,
 ): Promise<Buffer> {
-  const logo = await loadLogoPng();
+  let qrPng: Buffer | null = null;
+  if (input.proofUrl) {
+    try {
+      qrPng = await QRCode.toBuffer(input.proofUrl, {
+        type: 'png',
+        width: 110,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+    } catch {
+      qrPng = null;
+    }
+  }
 
   return new Promise((resolve, reject) => {
     try {
@@ -205,221 +241,275 @@ export async function renderMailInvoicePdf(
       doc.on('error', reject);
 
       registerInvoiceFonts(doc);
-      setInvoiceFont(doc, 'regular');
 
       const pageWidth = doc.page.width;
       const contentWidth = pageWidth - PAGE_MARGIN * 2;
+      const left = PAGE_MARGIN;
+      const right = PAGE_MARGIN + contentWidth;
       let y = PAGE_MARGIN;
 
-      // Header
-      const logoSize = 42;
-      if (logo) {
-        doc.image(logo, PAGE_MARGIN, y, { width: logoSize, height: logoSize });
-      }
+      const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(
+        input.amountIqd,
+      );
+      const seats = Math.max(1, input.mailboxCount);
+      const isPack = Boolean(input.isPack);
+      const qty = isPack ? 1 : seats;
+      const unitPrice = Math.floor(subtotalIqd / qty);
+      const periodStart = formatInvoiceDate(input.periodStart);
+      const periodEnd = formatInvoiceDate(input.periodEnd);
+      const issued = formatInvoiceDate(input.issuedAt);
+      const paid = formatInvoiceDate(input.paidAt);
+      const customer =
+        (input.customerName || input.workspaceName || '').trim() || '—';
+      const invoiceShort = input.invoiceNumber.replace(/^RM-/, '');
 
-      const headerTextX = logo ? PAGE_MARGIN + logoSize + 14 : PAGE_MARGIN;
-      setInvoiceFont(doc, 'semibold');
-      doc
-        .fontSize(18)
-        .fillColor(COLORS.ink)
-        .text('Rukny', headerTextX, y + 2);
-      setInvoiceFont(doc, 'regular');
-      doc
-        .fontSize(10)
-        .fillColor(COLORS.muted)
-        .text('Mail · Professional email for teams', headerTextX, y + 24);
-
-      const metaX = PAGE_MARGIN + contentWidth - 170;
-      setInvoiceFont(doc, 'semibold');
-      doc.fontSize(22).fillColor(COLORS.ink).text('INVOICE', metaX, y, {
-        width: 170,
-        align: 'right',
-      });
-      setInvoiceFont(doc, 'regular');
-      doc
-        .fontSize(9)
-        .fillColor(COLORS.muted)
-        .text(`# ${input.invoiceNumber}`, metaX, y + 28, {
-          width: 170,
-          align: 'right',
-        });
-      doc.text(`Issued ${formatInvoiceDate(input.issuedAt)}`, metaX, y + 42, {
-        width: 170,
-        align: 'right',
-      });
-      doc.text(`Status ${input.status}`, metaX, y + 56, {
-        width: 170,
+      // ── Header ──
+      textRtl(doc, 'فاتورة', right - 220, y, 220, { bold: true, size: 28 });
+      textLtr(doc, 'Rukny Mail', right - 220, y + 34, 220, {
+        size: 12,
+        color: COLORS.muted,
         align: 'right',
       });
 
-      y += logoSize + 28;
-      drawRule(doc, PAGE_MARGIN, y, contentWidth);
+      textRtl(doc, `رقم الفاتورة: #${invoiceShort}`, left, y + 6, 240, {
+        bold: true,
+        size: 11,
+      });
+      textRtl(doc, `تاريخ الإصدار: ${issued}`, left, y + 24, 240, {
+        size: 10,
+        color: COLORS.muted,
+      });
+
+      y += 58;
+      drawRule(doc, left, y, contentWidth);
+      y += 20;
+
+      // ── المرسل / العميل ──
+      const colW = contentWidth / 2 - 12;
+      const senderX = left + colW + 24;
+      const customerX = left;
+
+      textRtl(doc, 'المرسل:', senderX, y, colW, { bold: true, size: 11 });
+      textRtl(doc, 'العميل:', customerX, y, colW, { bold: true, size: 11 });
       y += 18;
 
-      // Bill to + company
-      const colWidth = contentWidth / 2 - 8;
-      doc.fontSize(8).fillColor(COLORS.muted).text('BILL TO', PAGE_MARGIN, y);
-      doc
-        .fontSize(8)
-        .fillColor(COLORS.muted)
-        .text('FROM', PAGE_MARGIN + colWidth + 16, y);
-
-      y += 14;
-      doc.fontSize(11).fillColor(COLORS.ink).text(input.workspaceName, PAGE_MARGIN, y, {
-        width: colWidth,
+      textLtr(doc, 'Rukny Mail', senderX, y, colW, {
+        size: 11,
+        align: 'right',
       });
-      doc
-        .fontSize(11)
-        .fillColor(COLORS.ink)
-        .text('Rukny', PAGE_MARGIN + colWidth + 16, y);
-
+      textRtl(doc, customer, customerX, y, colW, { size: 11 });
       y += 16;
-      doc.fontSize(9).fillColor(COLORS.muted);
-      if (input.workspaceDomain) {
-        doc.text(input.workspaceDomain, PAGE_MARGIN, y, { width: colWidth });
-      }
-      doc.text('rukny.io', PAGE_MARGIN + colWidth + 16, y);
-      y += 14;
 
+      textRtl(doc, 'العراق، بغداد', senderX, y, colW, {
+        size: 10,
+        color: COLORS.muted,
+      });
       if (input.contactEmail) {
-        doc.text(input.contactEmail, PAGE_MARGIN, y, { width: colWidth });
+        textLtr(doc, input.contactEmail, customerX, y, colW, {
+          size: 10,
+          color: COLORS.muted,
+          align: 'right',
+        });
       }
-      doc.text('support@rukny.io', PAGE_MARGIN + colWidth + 16, y);
+      y += 16;
+
+      textLtr(doc, 'support@rukny.io', senderX, y, colW, {
+        size: 10,
+        color: COLORS.muted,
+        align: 'right',
+      });
+      if (input.workspaceDomain) {
+        textLtr(doc, input.workspaceDomain, customerX, y, colW, {
+          size: 10,
+          color: COLORS.muted,
+          align: 'right',
+        });
+      }
       y += 28;
 
-      // Line items table
-      const colWidths = [
-        Math.floor(contentWidth * 0.36),
-        Math.floor(contentWidth * 0.24),
-        Math.floor(contentWidth * 0.1),
-        Math.floor(contentWidth * 0.15),
-        contentWidth -
-          Math.floor(contentWidth * 0.36) -
-          Math.floor(contentWidth * 0.24) -
-          Math.floor(contentWidth * 0.1) -
-          Math.floor(contentWidth * 0.15),
-      ];
+      // ── تفاصيل الطلب ──
+      textRtl(doc, 'تفاصيل الطلب', left, y, contentWidth, {
+        bold: true,
+        size: 13,
+      });
+      y += 18;
+      drawRule(doc, left, y, contentWidth);
+      y += 12;
 
-      const billingLabel =
-        input.billingCycle === 'YEARLY' ? 'Yearly' : 'Monthly';
-      const seats = Math.max(1, input.mailboxCount);
-      const unitPrice = Math.floor(input.amountIqd / seats);
-      const description = `${input.planName} plan · ${billingLabel}`;
-      const period = `${formatInvoiceDate(input.periodStart)} – ${formatInvoiceDate(input.periodEnd)}`;
+      // LTR coords: total | price | qty | product (product on the visual right)
+      const wTotal = Math.floor(contentWidth * 0.24);
+      const wPrice = Math.floor(contentWidth * 0.24);
+      const wQty = Math.floor(contentWidth * 0.12);
+      const wProduct = contentWidth - wTotal - wPrice - wQty;
+      const xTotal = left;
+      const xPrice = xTotal + wTotal;
+      const xQty = xPrice + wPrice;
+      const xProduct = xQty + wQty;
 
-      y = drawTableHeader(doc, PAGE_MARGIN, y, colWidths, [
-        'Description',
-        'Period',
-        'Qty',
-        'Unit price',
-        'Amount',
-      ]);
+      textRtl(doc, 'المجموع', xTotal, y, wTotal - 4, {
+        bold: true,
+        size: 10,
+        color: COLORS.muted,
+      });
+      textRtl(doc, 'السعر', xPrice, y, wPrice - 4, {
+        bold: true,
+        size: 10,
+        color: COLORS.muted,
+      });
+      textRtl(doc, 'الكمية', xQty, y, wQty - 4, {
+        bold: true,
+        size: 10,
+        color: COLORS.muted,
+      });
+      textRtl(doc, 'المنتج', xProduct, y, wProduct - 4, {
+        bold: true,
+        size: 10,
+        color: COLORS.muted,
+      });
+      y += 18;
+      drawRule(doc, left, y, contentWidth);
+      y += 12;
 
-      y = drawTableRow(doc, PAGE_MARGIN, y, colWidths, [
-        description,
-        period,
-        String(seats),
-        formatIqd(unitPrice),
-        formatIqd(input.amountIqd),
-      ]);
+      const productTitle = isPack
+        ? input.packEmails && input.packEmails > 0
+          ? `حزمة ${formatIqdNumber(input.packEmails)} رسالة صادرة`
+          : 'حزمة رسائل صادرة'
+        : `باقة ${input.planName}`;
+      const productSub = isPack
+        ? `باقة ${input.planName}`
+        : `من ${periodStart} إلى ${periodEnd}`;
 
+      textRtl(doc, productTitle, xProduct, y, wProduct - 4, {
+        bold: true,
+        size: 11,
+      });
+      textRtl(doc, String(qty), xQty, y, wQty - 4, { size: 11 });
+      textShaped(doc, formatIqdAr(unitPrice), xPrice, y, wPrice - 4, {
+        size: 10,
+      });
+      textShaped(doc, formatIqdAr(subtotalIqd), xTotal, y, wTotal - 4, {
+        size: 10,
+      });
+      y += 16;
+      textRtl(doc, productSub, xProduct, y, wProduct - 4, {
+        size: 9,
+        color: COLORS.muted,
+      });
+      y += 18;
+      drawRule(doc, left, y, contentWidth);
+      y += 20;
+
+      // ── Totals ──
+      const totalsW = wTotal + wPrice;
+      const totalsX = left;
+      const labelW = Math.floor(totalsW * 0.55);
+      const valueW = totalsW - labelW;
+
+      textRtl(doc, 'المجموع الفرعي', totalsX + valueW, y, labelW, {
+        size: 10,
+        color: COLORS.muted,
+      });
+      textShaped(doc, formatIqdAr(subtotalIqd), totalsX, y, valueW, {
+        size: 10,
+      });
+      y += 18;
+
+      textRtl(doc, 'الضريبة', totalsX + valueW, y, labelW, {
+        size: 10,
+        color: COLORS.muted,
+      });
+      textShaped(doc, formatIqdAr(taxIqd), totalsX, y, valueW, { size: 10 });
+      y += 16;
+      drawRule(doc, totalsX, y, totalsW);
+      y += 12;
+
+      textRtl(doc, 'الإجمالي', totalsX + valueW, y, labelW, {
+        bold: true,
+        size: 13,
+      });
+      textShaped(doc, formatIqdAr(totalIqd), totalsX, y, valueW, {
+        bold: true,
+        size: 13,
+      });
+      y += 36;
+
+      // ── معلومات الدفع ──
+      textRtl(doc, 'معلومات الدفع', left, y, contentWidth, {
+        bold: true,
+        size: 13,
+      });
+      y += 18;
+      drawRule(doc, left, y, contentWidth);
       y += 16;
 
-      // Totals (flat 400 IQD tax on every invoice)
-      const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(input.amountIqd);
-      const totalsLabelX = PAGE_MARGIN + contentWidth - 220;
-      const totalsValueX = PAGE_MARGIN + contentWidth - 90;
+      const payColW = contentWidth / 2 - 12;
+      const payRightX = left + payColW + 24;
+      const payLeftX = left;
 
-      doc.fontSize(9).fillColor(COLORS.muted).text('Subtotal', totalsLabelX, y, {
-        width: 100,
-        align: 'right',
+      textRtl(doc, 'طريقة الدفع: خدمات كي كارد', payRightX, y, payColW, {
+        size: 10,
       });
-      doc
-        .fontSize(9)
-        .fillColor(COLORS.ink)
-        .text(formatIqd(subtotalIqd), totalsValueX, y, {
-          width: 90,
-          align: 'right',
-        });
-      y += 18;
-
-      doc.fontSize(9).fillColor(COLORS.muted).text('Tax', totalsLabelX, y, {
-        width: 100,
-        align: 'right',
+      textRtl(doc, `رقم الطلب: #${invoiceShort}`, payLeftX, y, payColW, {
+        size: 10,
       });
-      doc
-        .fontSize(9)
-        .fillColor(COLORS.ink)
-        .text(formatIqd(taxIqd), totalsValueX, y, {
-          width: 90,
-          align: 'right',
-        });
-      y += 18;
+      y += 16;
 
-      drawRule(doc, totalsLabelX, y, 190, COLORS.border);
-      y += 10;
-
-      doc.fontSize(11).fillColor(COLORS.ink).text('Total', totalsLabelX, y, {
-        width: 100,
-        align: 'right',
+      textRtl(
+        doc,
+        `تاريخ تأكيد الدفع: ${paid !== '—' ? paid : issued}`,
+        payRightX,
+        y,
+        payColW,
+        { size: 10 },
+      );
+      textRtl(doc, `تاريخ الطلب: ${issued}`, payLeftX, y, payColW, {
+        size: 10,
       });
-      doc
-        .fontSize(12)
-        .fillColor(COLORS.ink)
-        .text(formatIqd(totalIqd), totalsValueX, y - 1, {
-          width: 90,
-          align: 'right',
-        });
       y += 22;
 
-      doc
-        .fontSize(8)
-        .fillColor(COLORS.faint)
-        .text('All amounts in Iraqi dinar (IQD). Bank fees may apply separately.', PAGE_MARGIN, y);
-      y += 24;
-
-      // Payment details
-      if (input.paidAt || input.qasehPaymentId || input.paymentRowId) {
-        drawRule(doc, PAGE_MARGIN, y, contentWidth);
-        y += 12;
-        doc.fontSize(8).fillColor(COLORS.muted).text('PAYMENT DETAILS', PAGE_MARGIN, y);
+      if (qrPng) {
+        textRtl(doc, 'إثبات الدفع (QR):', payRightX, y, payColW, {
+          size: 10,
+        });
         y += 14;
-        doc.fontSize(9).fillColor(COLORS.ink);
-        if (input.paidAt) {
-          doc.text(`Paid on ${formatInvoiceDate(input.paidAt)}`, PAGE_MARGIN, y);
-          y += 14;
-        }
-        if (input.qasehPaymentId) {
-          doc.text(`Reference ${input.qasehPaymentId}`, PAGE_MARGIN, y);
-          y += 14;
-        }
-        if (input.paymentRowId) {
-          doc.text(`Payment id ${input.paymentRowId}`, PAGE_MARGIN, y);
-          y += 14;
-        }
+        const qrSize = 88;
+        doc.image(qrPng, right - qrSize, y, { width: qrSize, height: qrSize });
+        textRtl(
+          doc,
+          'امسح الرمز لعرض / تحميل الفاتورة',
+          payRightX,
+          y + qrSize + 8,
+          payColW,
+          { size: 8, color: COLORS.faint },
+        );
+        y += qrSize + 28;
+      } else if (input.qasehPaymentId) {
+        textLtr(doc, input.qasehPaymentId, payRightX, y, payColW, {
+          size: 9,
+          color: COLORS.muted,
+          align: 'right',
+        });
+        y += 18;
       }
 
       if (input.note) {
-        y += 6;
-        doc
-          .fontSize(8)
-          .fillColor(COLORS.muted)
-          .text(input.note, PAGE_MARGIN, y, { width: contentWidth });
-        y += 20;
+        textRtl(doc, input.note, left, y, contentWidth, {
+          size: 8,
+          color: COLORS.muted,
+        });
+        y += 16;
       }
 
-      // Footer
-      const footerY = doc.page.height - PAGE_MARGIN - 24;
-      drawRule(doc, PAGE_MARGIN, footerY - 10, contentWidth);
-      doc
-        .fontSize(7.5)
-        .fillColor(COLORS.faint)
-        .text(
-          'This invoice was generated automatically by Rukny Mail for the subscription listed above. For billing questions, contact support@rukny.io.',
-          PAGE_MARGIN,
-          footerY,
-          { width: contentWidth, align: 'left' },
-        );
+      const footerY = doc.page.height - PAGE_MARGIN - 20;
+      drawRule(doc, left, footerY - 10, contentWidth);
+      textRtl(
+        doc,
+        'تم إنشاء هذه الفاتورة تلقائياً بواسطة Rukny Mail. للاستفسارات: support@rukny.io',
+        left,
+        footerY,
+        contentWidth,
+        { size: 8, color: COLORS.faint },
+      );
 
       doc.end();
     } catch (error) {

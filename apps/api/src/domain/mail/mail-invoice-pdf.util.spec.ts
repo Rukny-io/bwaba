@@ -25,14 +25,15 @@ describe('mailInvoiceTotals', () => {
 });
 
 describe('renderMailInvoicePdf', () => {
-  it('generates a non-empty PDF buffer with table layout', async () => {
+  it('generates a non-empty Arabic-style PDF buffer', async () => {
     const buffer = await renderMailInvoicePdf({
       invoiceNumber: 'RM-202509-TEST1234',
       issuedAt: new Date('2026-09-01T00:00:00Z'),
       workspaceName: 'Acme Workspace',
       workspaceDomain: 'acme.rukny.io',
       contactEmail: 'billing@acme.test',
-      planName: 'Pro',
+      customerName: 'Acme Workspace',
+      planName: 'Standard',
       billingCycle: BillingCycle.MONTHLY,
       mailboxCount: 5,
       amountIqd: 60000,
@@ -42,6 +43,7 @@ describe('renderMailInvoicePdf', () => {
       qasehPaymentId: 'pay_test_123',
       paymentRowId: 'row_test_456',
       status: 'PAID',
+      proofUrl: 'https://api.rukny.io/api/v1/mail/invoices/download?token=test',
     });
 
     expect(Buffer.isBuffer(buffer)).toBe(true);

@@ -17,15 +17,14 @@ if [ ! -f .env.production ]; then
     exit 1
 fi
 
-# ─── Load environment variables ───
-export $(grep -v '^#' .env.production | xargs)
-
 # ─── Build and start containers ───
+# Note: do NOT `export $(... xargs)` — values like "Name <email@x>" break bash.
+# docker compose --env-file handles quoting correctly.
 echo "📦 Building Docker images..."
 docker compose --env-file .env.production -f docker-compose.yml build
 
 echo "🔄 Starting services..."
-docker compose --env-file .env.production -f docker-compose.yml up -d
+docker compose --env-file .env.production -f docker-compose.yml up -d --build
 
 echo "⏳ Waiting for services to be ready..."
 sleep 10

@@ -103,7 +103,7 @@ export function MailSidebar({
   userName?: string | null;
 }) {
   const pathname = usePathname();
-  const { primary, secondary, footer, slot } = mailNavForPathname(pathname);
+  const { primary, footer, slot } = mailNavForPathname(pathname);
   const profileHref = slot !== null ? `/u${slot}/profile` : "/profile";
   const settingsHref = slot !== null ? `/u${slot}/settings` : "/settings";
 
@@ -120,21 +120,13 @@ export function MailSidebar({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-[var(--surface)] px-2 py-3">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_6%,var(--border))] bg-[var(--surface)] px-2 py-3 shadow-[0_10px_28px_rgba(17,17,17,0.06)]">
           <nav className="flex flex-col items-center gap-1.5" aria-label="Primary">
             {primary.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
             ))}
           </nav>
         </div>
-      </div>
-
-      <div className="mb-3 flex flex-col items-center gap-1.5 rounded-2xl bg-[var(--surface)] px-2 py-3">
-        <nav className="flex flex-col items-center gap-1.5" aria-label="Email tools">
-          {secondary.map((item) => (
-            <NavLink key={item.href} item={item} pathname={pathname} />
-          ))}
-        </nav>
       </div>
 
       <div className="flex flex-col items-center gap-2">

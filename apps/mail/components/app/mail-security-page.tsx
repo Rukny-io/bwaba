@@ -274,7 +274,7 @@ export function MailSecurityPage() {
     pattern.trim().length > 0 && !atLimit && !needsPlan && !saving && tab !== "settings";
 
   async function onCreate() {
-    if (!appId || !canCreate || tab === "settings") return;
+    if (!appId || !canCreate) return;
     const ruleType = ruleTypeForTab(tab);
     if (!ruleType) return;
 

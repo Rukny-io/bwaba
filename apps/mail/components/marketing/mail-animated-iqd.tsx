@@ -21,9 +21,9 @@ type MailAnimatedIqDProps = {
 };
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const REST = "#111111";
-const UP = "#666666";
-const DOWN = "#78716c";
+const REST = "#1D1D1D";
+const UP = "#6B6F76";
+const DOWN = "#9CA3AF";
 
 /**
  * Smooth IQD tween with a soft pop when the estimate rises or falls.

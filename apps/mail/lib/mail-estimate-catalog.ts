@@ -1,7 +1,6 @@
 /**
  * Marketing estimate catalog for /pricing/estimate.
- * Seat prices mirror mail-plans; outbound volume rates are estimate-only
- * until usage billing ships in the console.
+ * Seat prices + prepaid outbound packs (800 IQD / 1,000) match Billing.
  */
 
 import {
@@ -10,6 +9,9 @@ import {
   listMailPlans,
   mailPlanHighlights,
   mailPlanMonthlyTotal,
+  MAIL_INCLUDED_OUTBOUND,
+  MAIL_OUTBOUND_PACK_EMAILS,
+  MAIL_OUTBOUND_PACK_PRICE_IQD,
   type MailPlanId,
 } from "@/lib/mail-plans";
 
@@ -18,44 +20,22 @@ export const MAIL_ESTIMATE_OUTBOUND_MAX = 200_000;
 export const MAIL_ESTIMATE_MAILBOX_MIN = 1;
 export const MAIL_ESTIMATE_MAILBOX_MAX = 500;
 
-/**
- * Included outbound / month — clear ladder:
- * Starter for light use, Standard for teams, Premium for high volume.
- */
-export const MAIL_ESTIMATE_INCLUDED_OUTBOUND: Record<MailPlanId, number> = {
-  starter: 5_000,
-  standard: 25_000,
-  premium: 100_000,
-};
+export const MAIL_ESTIMATE_INCLUDED_OUTBOUND: Record<MailPlanId, number> =
+  MAIL_INCLUDED_OUTBOUND;
 
-/**
- * Marginal overage rates (IQD per 1,000 emails), applied in order.
- * Example: 50K overage = 10×1000 + 40×700 = 10,000 + 28,000 = 38,000 IQD.
- */
-export const MAIL_ESTIMATE_OVERAGE_BRACKETS = [
-  { upToEmails: 10_000, iqdPerThousand: 1_000 },
-  { upToEmails: 50_000, iqdPerThousand: 700 },
-  { upToEmails: 100_000, iqdPerThousand: 500 },
-  { upToEmails: Number.POSITIVE_INFINITY, iqdPerThousand: 400 },
-] as const;
+/** Flat pack price used for overage (same on every plan). */
+export const MAIL_ESTIMATE_PACK_PRICE_IQD =
+  MAIL_OUTBOUND_PACK_PRICE_IQD.starter ?? 800;
 
-/** Preset chips — answers “what does N emails cost?” */
+export const MAIL_ESTIMATE_PACK_EMAILS = MAIL_OUTBOUND_PACK_EMAILS;
+
+/** Volume chips aligned with plan quotas. */
 export const MAIL_ESTIMATE_VOLUME_PRESETS = [
-  { label: "1K", emails: 1_000 },
-  { label: "5K", emails: 5_000 },
+  { label: "4K", emails: 4_000 },
   { label: "10K", emails: 10_000 },
+  { label: "30K", emails: 30_000 },
   { label: "50K", emails: 50_000 },
   { label: "100K", emails: 100_000 },
-] as const;
-
-/**
- * Public rate card rows for the estimate UI (overage only, if nothing included).
- */
-export const MAIL_ESTIMATE_RATE_CARD = [
-  { label: "1,000 emails", emails: 1_000 },
-  { label: "10,000 emails", emails: 10_000 },
-  { label: "50,000 emails", emails: 50_000 },
-  { label: "100,000 emails", emails: 100_000 },
 ] as const;
 
 export type MailEstimateFeatureNeeds = {
@@ -77,17 +57,18 @@ export type MailEstimateBreakdown = {
   monthlyOutbound: number;
   includedOutbound: number;
   billableEmails: number;
+  packThousands: number;
   seatsCost: number;
   basePlanCost: number;
   extraMailboxes: number;
   extraMailboxUnit: number;
   extraSeatsCost: number;
+  /** Prepaid packs for overage (ceil to 1K units × 800 IQD). */
   volumeCost: number;
+  /** Seats + packs — what Billing charges. */
   totalMonthly: number;
-  /** IQD per 1,000 billable emails; null if no overage */
-  costPerThousandBillable: number | null;
-  /** totalMonthly / (monthlyOutbound/1000) when outbound > 0 */
-  effectiveCostPerThousand: number | null;
+  overQuota: boolean;
+  packPriceIqd: number;
   highlights: string[];
 };
 
@@ -95,28 +76,17 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-/** Cost in IQD for billable (overage) emails using marginal brackets. */
-export function rateForBillableEmails(billableEmails: number): number {
-  let remaining = Math.max(0, Math.floor(billableEmails));
-  if (remaining <= 0) return 0;
-
-  let cost = 0;
-  let covered = 0;
-
-  for (const bracket of MAIL_ESTIMATE_OVERAGE_BRACKETS) {
-    const bracketSize = bracket.upToEmails - covered;
-    if (bracketSize <= 0) continue;
-    const take = Math.min(remaining, bracketSize);
-    cost += (take / 1000) * bracket.iqdPerThousand;
-    remaining -= take;
-    covered += take;
-    if (remaining <= 0) break;
-  }
-
-  return Math.round(cost);
+/** Packs needed for billable emails (whole thousands, min 0). */
+export function packThousandsForEmails(billableEmails: number): number {
+  const n = Math.max(0, Math.floor(billableEmails));
+  if (n <= 0) return 0;
+  return Math.ceil(n / MAIL_ESTIMATE_PACK_EMAILS);
 }
 
-/** Overage cost if the full volume were billable (no plan included). */
+export function rateForBillableEmails(billableEmails: number): number {
+  return packThousandsForEmails(billableEmails) * MAIL_ESTIMATE_PACK_PRICE_IQD;
+}
+
 export function estimateRawVolumeCost(emails: number): number {
   return rateForBillableEmails(emails);
 }
@@ -138,20 +108,11 @@ export function estimateMailMonthlyCost(
 
   const includedOutbound = MAIL_ESTIMATE_INCLUDED_OUTBOUND[input.planId];
   const billableEmails = Math.max(0, monthlyOutbound - includedOutbound);
-  const volumeCost = rateForBillableEmails(billableEmails);
+  const packThousands = packThousandsForEmails(billableEmails);
+  const volumeCost = packThousands * MAIL_ESTIMATE_PACK_PRICE_IQD;
   const seatsCost = mailPlanMonthlyTotal(input.planId, mailboxes);
   const extraMailboxes = Math.max(0, mailboxes - plan.limits.mailboxesIncluded);
   const extraSeatsCost = extraMailboxes * plan.priceExtraMailbox;
-  const totalMonthly = seatsCost + volumeCost;
-
-  const costPerThousandBillable =
-    billableEmails > 0
-      ? Math.round((volumeCost / billableEmails) * 1000)
-      : null;
-  const effectiveCostPerThousand =
-    monthlyOutbound > 0
-      ? Math.round((totalMonthly / monthlyOutbound) * 1000)
-      : null;
 
   return {
     planId: input.planId,
@@ -160,18 +121,20 @@ export function estimateMailMonthlyCost(
     monthlyOutbound,
     includedOutbound,
     billableEmails,
+    packThousands,
     seatsCost,
     basePlanCost: plan.priceMonthly,
     extraMailboxes,
     extraMailboxUnit: plan.priceExtraMailbox,
     extraSeatsCost,
     volumeCost,
-    totalMonthly,
-    costPerThousandBillable,
-    effectiveCostPerThousand,
+    totalMonthly: seatsCost + volumeCost,
+    overQuota: billableEmails > 0,
+    packPriceIqd: MAIL_ESTIMATE_PACK_PRICE_IQD,
     highlights: [
       ...mailPlanHighlights(plan),
       `${includedOutbound.toLocaleString("en-IQ")} outbound emails included / mo`,
+      `${MAIL_ESTIMATE_PACK_PRICE_IQD.toLocaleString("en-IQ")} IQD / ${MAIL_ESTIMATE_PACK_EMAILS.toLocaleString("en-IQ")} extra emails`,
     ],
   };
 }
@@ -187,8 +150,7 @@ export function estimateAllPlans(input: Omit<MailEstimateInput, "planId">) {
 }
 
 /**
- * Recommend cheapest plan that satisfies feature gates.
- * Also bumps minimum plan when volume clearly needs higher included quota.
+ * Recommend the cheapest plan that satisfies feature gates and quota ladder.
  */
 export function recommendMailPlan(input: {
   mailboxes: number;

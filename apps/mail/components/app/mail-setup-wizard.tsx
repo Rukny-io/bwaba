@@ -268,12 +268,12 @@ export function MailSetupWizard() {
 
           {error ? <p className="text-center text-xs text-[var(--danger)]">{error}</p> : null}
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {step > 1 ? (
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 flex-1 rounded-xl font-medium"
+                className="h-11 w-full rounded-xl font-medium sm:w-auto sm:min-w-[6.5rem] sm:flex-none"
                 onPress={() => {
                   setError("");
                   setStep((current) => (current - 1) as Step);
@@ -308,7 +308,7 @@ export function MailSetupWizard() {
             {step === 2 ? (
               <Button
                 type="button"
-                className="h-11 flex-1 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
+                className="h-11 w-full rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)] sm:flex-1"
                 onPress={() => setStep(3)}
               >
                 I added the records
@@ -317,11 +317,11 @@ export function MailSetupWizard() {
             ) : null}
 
             {step === 3 ? (
-              <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+              <>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 flex-1 rounded-xl font-medium"
+                  className="h-11 w-full rounded-xl font-medium sm:flex-1"
                   isDisabled={verifying || !setup}
                   onPress={handleSkipToDashboard}
                 >
@@ -329,7 +329,7 @@ export function MailSetupWizard() {
                 </Button>
                 <Button
                   type="button"
-                  className="h-11 flex-1 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
+                  className="h-11 w-full rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)] sm:flex-1"
                   isDisabled={verifying}
                   onPress={() => void handleVerify()}
                 >
@@ -345,7 +345,7 @@ export function MailSetupWizard() {
                     </span>
                   )}
                 </Button>
-              </div>
+              </>
             ) : null}
           </div>
 

@@ -9,9 +9,11 @@ import { SupportTicketsModule } from '../support-tickets/support-tickets.module'
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SecurityModule } from '../../infrastructure/security/security.module';
 import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payment.module';
+import { EmailModule } from '../../integrations/email/email.module';
 import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-session.guard';
 import { MailSubscriptionsController } from './mail-subscriptions.controller';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
+import { MailOutboundUsageService } from './mail-outbound-usage.service';
 import { MailAppsController } from './mail-apps.controller';
 import { MailAppsService } from './mail-apps.service';
 import { MailMailboxesController } from './mail-mailboxes.controller';
@@ -67,6 +69,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
     SupportTicketsModule,
     NotificationsModule,
     SecurityModule,
+    EmailModule,
     forwardRef(() => QasehPaymentModule),
   ],
   controllers: [
@@ -89,6 +92,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
   providers: [
     CheckoutSessionGuard,
     MailSubscriptionsService,
+    MailOutboundUsageService,
     MailAppsService,
     MailAppAccessService,
     MailMembersService,
@@ -114,6 +118,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
   exports: [
     MailSesModule,
     MailSubscriptionsService,
+    MailOutboundUsageService,
     MailAppsService,
     MailAppAccessService,
     MailMembersService,

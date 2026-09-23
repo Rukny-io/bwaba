@@ -112,6 +112,7 @@ model User {
   mailAppsDomainReviewed         MailApp[]                       @relation("mail_app_domain_reviewer")
   mailAppMemberships             MailAppMember[]                 @relation("mail_app_member")
   mailAppInvitationsSent         MailAppMember[]                 @relation("mail_app_inviter")
+  mailAppEmailInvitesSent        MailAppEmailInvite[]            @relation("mail_app_email_inviter")
   mailMailboxesAssigned          MailMailbox[]                   @relation("mail_mailbox_assignee")
   mailQuarantineActions          MailQuarantineActionLog[]       @relation("mail_quarantine_actor")
 
@@ -3545,6 +3546,7 @@ model MailApp {
   domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
   mailboxes                  MailMailbox[]
   members                    MailAppMember[]
+  emailInvites               MailAppEmailInvite[]
   subscription               MailSubscription?
   catchAll                   MailCatchAll?
   autoReplies                MailAutoReply[]
@@ -3567,18 +3569,22 @@ model MailApp {
 
 /// Invited Rukny users who can open the Mail console / SSO into assigned mailboxes.
 model MailAppMember {
-  id          String             @id @default(uuid())
-  mailAppId   String
-  userId      String
-  role        MailAppMemberRole  @default(MEMBER)
-  status      InvitationStatus   @default(PENDING)
-  invitedBy   String
-  invitedAt   DateTime           @default(now())
-  acceptedAt  DateTime?
+  id           String            @id @default(uuid())
+  mailAppId    String
+  userId       String
+  role         MailAppMemberRole @default(MEMBER)
+  status       InvitationStatus  @default(PENDING)
+  invitedBy    String
+  invitedAt    DateTime          @default(now())
+  acceptedAt   DateTime?
+  /// When PENDING invites expire (lazy expiry on read).
+  expiresAt    DateTime?
+  /// Rate-limit resend emails.
+  lastResendAt DateTime?
   /// Per-user URL slot (/uN) allocated when the invitation is accepted.
-  slotIndex   Int?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  slotIndex    Int?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
   user    User    @relation("mail_app_member", fields: [userId], references: [id], onDelete: Cascade)
@@ -3588,8 +3594,36 @@ model MailAppMember {
   @@index([mailAppId])
   @@index([userId])
   @@index([status])
+  @@index([expiresAt])
   @@index([userId, slotIndex])
   @@map("mail_app_members")
+}
+
+/// Invite by email when the recipient does not yet have a Rukny account.
+model MailAppEmailInvite {
+  id           String            @id @default(uuid())
+  mailAppId    String
+  email        String
+  role         MailAppMemberRole @default(MEMBER)
+  status       InvitationStatus  @default(PENDING)
+  invitedBy    String
+  token        String            @unique
+  expiresAt    DateTime
+  invitedAt    DateTime          @default(now())
+  lastResendAt DateTime?
+  acceptedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  inviter User    @relation("mail_app_email_inviter", fields: [invitedBy], references: [id], onDelete: Restrict)
+
+  @@unique([mailAppId, email])
+  @@index([mailAppId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("mail_app_email_invites")
 }
 
 /// Auditable request/decision history for Rukny's administrative domain trust.
@@ -3997,8 +4031,12 @@ model MailSubscription {
   plan               MailPlan
   status             SubscriptionStatus @default(ACTIVE)
   billingCycle       BillingCycle       @default(MONTHLY)
-  /// Billed mailbox seats for this app (monthly total = plan price × mailboxCount)
+  /// Billed mailbox seats for this app (monthly total = base + extras)
   mailboxCount       Int                @default(1)
+  /// Outbound emails sent in the current billing period (included + packs)
+  outboundUsed       Int                @default(0)
+  /// Remaining prepaid outbound emails purchased for this period
+  outboundPackCredits Int               @default(0)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   cancelledAt        DateTime?

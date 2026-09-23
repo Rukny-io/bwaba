@@ -14,6 +14,9 @@ export type MailCheckoutSessionResponse = {
   appName: string;
   returnUrl: string;
   expiresIn: number;
+  kind?: "subscription" | "outbound_pack";
+  outboundPackThousands?: number;
+  outboundPackEmails?: number;
 };
 
 async function readJson<T>(response: Response): Promise<T & { message?: string | string[]; error?: string }> {
@@ -61,6 +64,37 @@ export async function startMailCheckoutSession(
 
   // Defense in depth: never forward price/plan/seats in the browser URL,
   // even if an older API build still embeds them in checkoutUrl.
+  return {
+    ...(data as MailCheckoutSessionResponse),
+    checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId, data.checkoutUrl),
+  };
+}
+
+/**
+ * Create a Mail → checkout session for prepaid outbound email packs.
+ */
+export async function startMailOutboundPackCheckout(
+  thousands: number,
+  appId = readMailAppIdFromDocument(),
+): Promise<MailCheckoutSessionResponse> {
+  if (!isValidMailAppId(appId)) {
+    throw new Error("Open a workspace first, then continue to checkout.");
+  }
+
+  const response = await sessionFetch(
+    `/api/v1/mail/apps/${encodeURIComponent(appId)}/usage/packs/checkout-session`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ thousands }),
+    },
+  );
+
+  const data = await readJson<MailCheckoutSessionResponse>(response);
+  if (!response.ok || !data.checkoutUrl || !data.sessionId) {
+    throw new Error(errorMessage(data, "Could not start pack checkout."));
+  }
+
   return {
     ...(data as MailCheckoutSessionResponse),
     checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId, data.checkoutUrl),

@@ -13,6 +13,7 @@ import {
   TextField,
 } from "@heroui/react";
 import { MailPlanSettingsSection } from "@/components/billing/mail-billing-settings";
+import { MailUsageSection } from "@/components/billing/mail-usage-section";
 import {
   BillingNotice,
   BillingPanel,
@@ -271,6 +272,8 @@ export function MailBillingPage() {
       ) : null}
 
       <MailPlanSettingsSection />
+
+      <MailUsageSection />
 
       {loading ? (
         <div className="space-y-2 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">

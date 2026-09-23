@@ -23,9 +23,10 @@ import {
 } from "@/lib/mail-slot-map";
 
 const AUTH_PAGES = ["/login", "/callback"];
-const PUBLIC_PREFIXES = ["/login", "/callback"];
+const PUBLIC_PREFIXES = ["/login", "/callback", "/invite"];
 const APP_PICKER_PREFIXES = ["/apps"];
 const BILLING_PREFIXES = ["/billing"];
+const INVITE_PREFIXES = ["/invite"];
 
 const DOMAIN_GATED_PREFIXES = [
   "/inbox",
@@ -233,6 +234,7 @@ export async function proxy(request: NextRequest) {
   const hasAppCookie = isValidMailAppId(cookieAppId);
   const isAppsArea = matchesPrefix(pathname, APP_PICKER_PREFIXES);
   const isBillingArea = matchesPrefix(pathname, BILLING_PREFIXES);
+  const isInviteArea = matchesPrefix(pathname, INVITE_PREFIXES);
   const ready = request.cookies.get(MAIL_READY_COOKIE)?.value === "1";
   const slotFromPath = parseMailSlot(pathname);
   const isSlottedProduct = SLOTTED_PRODUCT_PREFIXES.some(
@@ -296,7 +298,7 @@ export async function proxy(request: NextRequest) {
     return redirectToApps(request, "app_required");
   }
 
-  if (!hasAppCookie && !isAppsArea && !isBillingArea) {
+  if (!hasAppCookie && !isAppsArea && !isBillingArea && !isInviteArea) {
     return redirectToApps(request, "app_required");
   }
 

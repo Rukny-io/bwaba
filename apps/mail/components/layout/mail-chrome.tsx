@@ -1,13 +1,12 @@
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { MailChromeShell } from "@/components/layout/mail-chrome-shell";
 import { MailSidebar } from "@/components/layout/mail-sidebar";
-import { getCurrentMailUser } from "@/lib/current-user";
 
-async function MailSidebarUser() {
-  const user = await getCurrentMailUser();
-  return <MailSidebar avatarUrl={user?.avatar} userName={user?.name} />;
-}
-
+/**
+ * Keep this layout tree free of async server data (e.g. auth/me).
+ * Otherwise every soft navigation re-waits on the sidebar user fetch
+ * before the clicked section can appear.
+ */
 export function MailChrome({
   children,
   layout = "fill",
@@ -16,14 +15,7 @@ export function MailChrome({
   layout?: "fill" | "page";
 }) {
   return (
-    <MailChromeShell
-      layout={layout}
-      sidebar={
-        <Suspense fallback={<MailSidebar />}>
-          <MailSidebarUser />
-        </Suspense>
-      }
-    >
+    <MailChromeShell layout={layout} sidebar={<MailSidebar />}>
       {children}
     </MailChromeShell>
   );

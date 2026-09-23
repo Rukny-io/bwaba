@@ -227,8 +227,8 @@ export const MAIL_TUTORIAL_GUIDES: MailTutorialGuide[] = [
     summary: "Starter starts after DNS; higher tiers unlock more capacity.",
     duration: "2 min",
     steps: [
-      "Starter activates automatically once your domain DNS is verified.",
-      "Standard and Premium are requested from Pricing and enabled by an admin.",
+      "Starter activates after DNS verification and checkout in the console.",
+      "Standard and Premium are requested from Billing and enabled by an admin.",
       "Settings shows your current plan, storage, and mailbox limits for this workspace.",
       "Need more mailboxes or storage? Upgrade from Pricing, then check Settings.",
     ],
@@ -511,7 +511,7 @@ export const MAIL_TUTORIAL_GUIDES: MailTutorialGuide[] = [
     summary: "Mailboxes, storage, aliases, and forwarders per tier.",
     duration: "3 min",
     steps: [
-      "Starter: one mailbox, 5 GB storage, limited aliases and forwarders — activates after DNS verification.",
+      "Starter: one mailbox, 5 GB storage, owner-only console — activates after DNS verification and checkout.",
       "Standard and Premium add more mailboxes, storage, and routing headroom.",
       "Open Settings to see live usage for your workspace.",
       "Hit a limit? Request an upgrade from Pricing — admins activate higher tiers.",

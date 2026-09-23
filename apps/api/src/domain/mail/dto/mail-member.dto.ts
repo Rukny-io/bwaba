@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export enum MailAppMemberRoleDto {
   ADMIN = 'ADMIN',
@@ -23,4 +23,20 @@ export class UpdateMailAppMemberDto {
   @IsEnum(MailAppMemberRoleDto)
   @IsOptional()
   role?: MailAppMemberRoleDto;
+}
+
+export class TransferMailAppOwnershipDto {
+  @ApiProperty({ description: 'Accepted team member id to become the new owner' })
+  @IsUUID()
+  memberId: string;
+}
+
+export class AssignMailboxFromTeamDto {
+  @ApiPropertyOptional({
+    description: 'Mailbox id to assign; omit or null to unassign',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  mailboxId?: string | null;
 }

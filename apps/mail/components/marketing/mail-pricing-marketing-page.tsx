@@ -4,8 +4,6 @@ import { MailMarketingShell } from "@/components/marketing/mail-marketing-shell"
 import { MailReveal } from "@/components/marketing/mail-reveal";
 import {
   MAIL_ESTIMATE_INCLUDED_OUTBOUND,
-  MAIL_ESTIMATE_OVERAGE_BRACKETS,
-  estimateRawVolumeCost,
 } from "@/lib/mail-estimate-catalog";
 import {
   formatMailIqD,
@@ -22,7 +20,7 @@ const CTA_BY_PLAN: Record<
   { label: string; hrefSignedOut: string; hrefSignedIn: string }
 > = {
   starter: {
-    label: "Start for free",
+    label: "Get started",
     hrefSignedOut: "/login",
     hrefSignedIn: "/apps",
   },
@@ -47,9 +45,9 @@ const STARTER_BUILDS = [
       "Webmail from any device",
     ],
     gets: [
-      "1 mailbox with 5 GB",
+      "1 mailbox with 5 GB · owner-only console",
       "10 aliases for routing",
-      "Agentic Mail drafts included",
+      "AI assistant + 4,000 outbound / mo included",
     ],
   },
   {
@@ -60,9 +58,9 @@ const STARTER_BUILDS = [
       "Forwarders for roles like hello@",
     ],
     gets: [
-      "Upgrade to Standard for 3 seats",
-      "20 GB per mailbox",
-      "Open tracking when you need it",
+      "Upgrade to Standard for 3 seats + console team",
+      "20 GB per mailbox · open tracking",
+      "10,000 outbound emails / mo included",
     ],
   },
   {
@@ -95,10 +93,16 @@ const COMPARE_SECTIONS: { title: string; rows: CompareRow[] }[] = [
     rows: [
       { label: "Mailboxes included", starter: "1", standard: "3", premium: "5" },
       {
+        label: "Console members",
+        starter: "Owner only",
+        standard: "4",
+        premium: "10",
+      },
+      {
         label: "Extra mailbox",
-        starter: "3,000 IQD/mo",
-        standard: "2,000 IQD/mo",
-        premium: "2,000 IQD/mo",
+        starter: "2,000 IQD/mo",
+        standard: "3,000 IQD/mo",
+        premium: "4,000 IQD/mo",
       },
       {
         label: "Storage per mailbox",
@@ -114,39 +118,16 @@ const COMPARE_SECTIONS: { title: string; rows: CompareRow[] }[] = [
         premium: "Unlimited",
       },
       {
+        label: "Extra outbound emails",
+        starter: "800 IQD / 1,000",
+        standard: "800 IQD / 1,000",
+        premium: "800 IQD / 1,000",
+      },
+      {
         label: "Outbound emails included / mo",
-        starter: "5,000",
-        standard: "25,000",
-        premium: "100,000",
-      },
-    ],
-  },
-  {
-    title: "Outbound overage (estimate)",
-    rows: [
-      {
-        label: "First 10K overage / 1K emails",
-        starter: "1,000 IQD",
-        standard: "1,000 IQD",
-        premium: "1,000 IQD",
-      },
-      {
-        label: "Next up to 50K / 1K emails",
-        starter: "700 IQD",
-        standard: "700 IQD",
-        premium: "700 IQD",
-      },
-      {
-        label: "Next up to 100K / 1K emails",
-        starter: "500 IQD",
-        standard: "500 IQD",
-        premium: "500 IQD",
-      },
-      {
-        label: "Above 100K / 1K emails",
-        starter: "400 IQD",
-        standard: "400 IQD",
-        premium: "400 IQD",
+        starter: "4,000",
+        standard: "10,000",
+        premium: "30,000",
       },
     ],
   },
@@ -295,11 +276,12 @@ export async function MailPricingMarketingPage() {
             <MailReveal className="max-w-2xl">
               <p className={agLayout.pill}>Pricing</p>
               <h1 className={`${agLayout.heroTitle} mt-6`}>
-                Start free, scale when you are ready
+                Start with one mailbox, scale when you are ready
               </h1>
               <p className={`${agLayout.lead} mx-auto mt-5 max-w-xl`}>
-                Plans are per workspace, billed monthly in IQD — from a first
-                mailbox to a full team on your domain.
+                Plans are per workspace, billed monthly in IQD. Starter is one
+                mailbox and an owner-only console — open tracking, console team,
+                and more seats start on Standard.
               </p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
                 <Link href={primaryHref} className={agLayout.btnPrimary}>
@@ -326,46 +308,50 @@ export async function MailPricingMarketingPage() {
             ))}
           </div>
           <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-[#9CA3AF]">
-            Starter activates after DNS verification — no card required to begin.
-            Standard and Premium are requested in the console.
+            Starter activates after DNS verification and checkout in the
+            console. Standard and Premium are requested from Billing.
           </p>
         </section>
 
         <section className="border-t border-[#E8E8E8] bg-[#FAFAFA] py-14 sm:py-20">
           <div className={agLayout.container}>
             <MailReveal className="mx-auto max-w-xl text-center">
-              <h2 className={agLayout.sectionTitle}>What does volume cost?</h2>
+              <h2 className={agLayout.sectionTitle}>Outbound included by plan</h2>
               <p className={`${agLayout.lead} mt-4`}>
-                After your plan’s included send, overage is priced per 1,000
-                emails with volume discounts.
+                Each plan includes a monthly send quota. When you run out, buy
+                prepaid packs at 800 IQD per 1,000 emails from Billing → Usage.
               </p>
             </MailReveal>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[1_000, 10_000, 50_000, 100_000].map((emails) => (
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              {plans.map((plan) => (
                 <Link
-                  key={emails}
+                  key={plan.id}
                   href="/pricing/estimate"
                   className={`${agLayout.card} block hover:bg-white`}
                 >
                   <p className="text-[12px] font-medium text-[#9CA3AF]">
-                    {emails.toLocaleString("en-IQ")} emails
+                    {plan.name}
                   </p>
                   <p className="mt-2 text-2xl font-medium tracking-tight text-[#1D1D1D]">
-                    {formatMailIqD(estimateRawVolumeCost(emails))}
+                    {MAIL_ESTIMATE_INCLUDED_OUTBOUND[plan.id].toLocaleString(
+                      "en-IQ",
+                    )}
                   </p>
                   <p className="mt-1 text-xs text-[#6B6F76]">
-                    Overage list price · before included quota
+                    outbound emails / mo included
                   </p>
                 </Link>
               ))}
             </div>
             <p className="mt-6 text-center text-xs text-[#9CA3AF]">
-              Brackets:{" "}
-              {MAIL_ESTIMATE_OVERAGE_BRACKETS.map((b) =>
-                Number.isFinite(b.upToEmails)
-                  ? `≤${b.upToEmails.toLocaleString("en-IQ")}: ${b.iqdPerThousand.toLocaleString("en-IQ")} IQD/1K`
-                  : `above: ${b.iqdPerThousand.toLocaleString("en-IQ")} IQD/1K`,
-              ).join(" · ")}
+              Planning for higher volume?{" "}
+              <Link
+                href="/pricing/estimate"
+                className="font-medium text-[#6B6F76] underline-offset-2 hover:underline"
+              >
+                Estimate seats and quotas
+              </Link>
+              .
             </p>
           </div>
         </section>
@@ -456,8 +442,9 @@ export async function MailPricingMarketingPage() {
               ))}
             </div>
             <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-[#9CA3AF]">
-              Examples are illustrative only. Limits follow the plan catalog and
-              may change.
+              Starter is one mailbox and an owner-only console. Open tracking,
+              console team seats, and higher outbound quotas start on Standard.
+              Examples are illustrative — limits follow the plan catalog.
             </p>
           </div>
         </section>
@@ -528,8 +515,8 @@ export async function MailPricingMarketingPage() {
             <div className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] px-6 py-14 text-center sm:px-12">
               <h2 className={agLayout.sectionTitle}>Ready to send as yourself?</h2>
               <p className={`${agLayout.lead} mx-auto mt-4 max-w-lg`}>
-                Create a workspace, verify DNS, and open webmail. Upgrade seats
-                when you are ready.
+                Create a workspace, verify DNS, complete checkout for Starter,
+                and open webmail. Upgrade seats when your team needs more.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link href={primaryHref} className={agLayout.btnPrimary}>

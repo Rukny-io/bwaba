@@ -33,6 +33,9 @@ export type MailCheckoutCart = {
   returnUrl: string;
   /** Epoch ms — after this, cart must not be shown. */
   expiresAt?: number;
+  kind?: 'subscription' | 'outbound_pack';
+  outboundPackThousands?: number | null;
+  outboundPackEmails?: number | null;
 };
 
 export type DeveloperCheckoutCart = {

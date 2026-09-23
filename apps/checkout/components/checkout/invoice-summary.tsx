@@ -136,11 +136,16 @@ function buildTicketPath(
 export function summarizeCart(cart: CheckoutCartState | null) {
   if (cart?.mail) {
     const seats = Math.max(1, cart.mail.mailboxCount || 1);
-    const label = `${cart.mail.planName} · ${cart.mail.appName}`;
+    const isPack = cart.mail.kind === 'outbound_pack';
+    const label = isPack
+      ? `${(cart.mail.outboundPackEmails || 0).toLocaleString('en-US')} outbound emails · ${cart.mail.appName}`
+      : `${cart.mail.planName} · ${cart.mail.appName}`;
     return {
       items: [
         {
-          productId: `mail:${cart.mail.plan}`,
+          productId: isPack
+            ? `mail:pack:${cart.mail.outboundPackThousands || 1}`
+            : `mail:${cart.mail.plan}`,
           quantity: 1,
           name: label,
           price: cart.mail.amount,
@@ -208,6 +213,7 @@ function MailInvoiceDetails({
   const { t } = useLocale();
   const seatLabel =
     seats === 1 ? t('invoiceMailSeatUnit') : t('invoiceMailSeatsUnit');
+  const isPack = mail.kind === 'outbound_pack';
 
   return (
     <div className="space-y-3">
@@ -233,24 +239,37 @@ function MailInvoiceDetails({
               unit={unit}
               className="text-[15px] font-semibold"
             />
-            <p className="mt-0.5 text-[11px] text-zinc-500">{t('invoicePerMonth')}</p>
+            {!isPack ? (
+              <p className="mt-0.5 text-[11px] text-zinc-500">{t('invoicePerMonth')}</p>
+            ) : null}
           </div>
         </div>
 
         <div className="divide-y divide-zinc-200/70 px-4">
           <DetailRow label={t('invoiceMailPlan')} value={mail.planName} strong />
           <DetailRow label={t('invoiceMailWorkspace')} value={mail.appName} />
-          <DetailRow
-            label={t('invoiceMailSeats')}
-            value={
-              <span dir="ltr" className="tabular-nums">
-                {seats} {seatLabel}
-              </span>
-            }
-          />
+          {isPack ? (
+            <DetailRow
+              label="Emails"
+              value={
+                <span dir="ltr" className="tabular-nums">
+                  {(mail.outboundPackEmails || 0).toLocaleString('en-US')}
+                </span>
+              }
+            />
+          ) : (
+            <DetailRow
+              label={t('invoiceMailSeats')}
+              value={
+                <span dir="ltr" className="tabular-nums">
+                  {seats} {seatLabel}
+                </span>
+              }
+            />
+          )}
           <DetailRow
             label={t('invoiceMailBilling')}
-            value={t('invoiceMailMonthly')}
+            value={isPack ? 'One-time' : t('invoiceMailMonthly')}
           />
         </div>
       </div>

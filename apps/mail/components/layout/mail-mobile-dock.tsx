@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
-import { cn, Dropdown, Label } from "@heroui/react";
+import { cn, Dropdown, Header, Label } from "@heroui/react";
 import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import {
+  filterMailNavWithoutTeam,
   isNavItemActive,
   mailNavForPathname,
   type MailNavItem,
 } from "@/lib/mail-nav-scoped";
+import { fetchMailSubscription } from "@/lib/mail-subscription-client";
 
 const DOCK_PRIMARY_COUNT = 3;
 
@@ -64,20 +66,69 @@ function DockNavItem({
   );
 }
 
+function MoreMenuItem({ item }: { item: MailNavItem }) {
+  const Icon = item.icon;
+  return (
+    <Dropdown.Item key={item.href} id={item.href} textValue={item.label}>
+      <Dropdown.ItemIndicator />
+      <Icon
+        size={16}
+        strokeWidth={1.9}
+        className="shrink-0 text-[var(--muted-foreground)]"
+        aria-hidden
+      />
+      <Label>{item.label}</Label>
+    </Dropdown.Item>
+  );
+}
+
 export function MailMobileDock() {
   const pathname = usePathname();
   const router = useRouter();
-  const { primary, secondary } = mailNavForPathname(pathname);
+  const nav = mailNavForPathname(pathname);
+  const { secondary, headerTools } = nav;
   const { pendingHref, setPendingHref } = useMailNavPending();
   const [open, setOpen] = useState(false);
+  const [teamSupported, setTeamSupported] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await fetchMailSubscription();
+        if (cancelled) return;
+        const planId = snap.subscription?.planId;
+        const consoleSeats = snap.subscription?.limits?.consoleMembersIncluded ?? 0;
+        setTeamSupported(planId !== "starter" && consoleSeats > 0);
+      } catch {
+        if (!cancelled) setTeamSupported(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  const primary = useMemo(
+    () => (teamSupported ? nav.primary : filterMailNavWithoutTeam(nav.primary)),
+    [nav.primary, teamSupported],
+  );
 
   const dockItems = useMemo(
     () => primary.slice(0, DOCK_PRIMARY_COUNT),
     [primary],
   );
+  const moreMail = useMemo(
+    () => primary.slice(DOCK_PRIMARY_COUNT),
+    [primary],
+  );
+  const moreTools = useMemo(
+    () => [...headerTools, ...secondary],
+    [headerTools, secondary],
+  );
   const moreItems = useMemo(
-    () => [...primary.slice(DOCK_PRIMARY_COUNT), ...secondary],
-    [primary, secondary],
+    () => [...moreMail, ...moreTools],
+    [moreMail, moreTools],
   );
 
   const activeMoreHref = useMemo(() => {
@@ -153,27 +204,22 @@ export function MailMobileDock() {
                 router.push(item.href);
               }}
             >
-              <Dropdown.Section>
-                {moreItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Dropdown.Item
-                      key={item.href}
-                      id={item.href}
-                      textValue={item.label}
-                    >
-                      <Dropdown.ItemIndicator />
-                      <Icon
-                        size={16}
-                        strokeWidth={1.9}
-                        className="shrink-0 text-[var(--muted-foreground)]"
-                        aria-hidden
-                      />
-                      <Label>{item.label}</Label>
-                    </Dropdown.Item>
-                  );
-                })}
-              </Dropdown.Section>
+              {moreMail.length > 0 ? (
+                <Dropdown.Section>
+                  <Header>Mail</Header>
+                  {moreMail.map((item) => (
+                    <MoreMenuItem key={item.href} item={item} />
+                  ))}
+                </Dropdown.Section>
+              ) : null}
+              {moreTools.length > 0 ? (
+                <Dropdown.Section>
+                  <Header>Tools</Header>
+                  {moreTools.map((item) => (
+                    <MoreMenuItem key={item.href} item={item} />
+                  ))}
+                </Dropdown.Section>
+              ) : null}
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>

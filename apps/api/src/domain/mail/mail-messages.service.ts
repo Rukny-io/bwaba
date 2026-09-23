@@ -23,6 +23,7 @@ import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailRealtimeService } from './mail-realtime.service';
 import { MailSesService } from './mail-ses.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
+import { MailOutboundUsageService } from './mail-outbound-usage.service';
 import {
   decrementMailboxStorage,
   incrementMailboxStorage,
@@ -53,6 +54,7 @@ export class MailMessagesService {
     private readonly ses: MailSesService,
     private readonly realtime: MailRealtimeService,
     private readonly subscriptions: MailSubscriptionsService,
+    private readonly outboundUsage: MailOutboundUsageService,
     private readonly mailboxSessions: MailMailboxSessionService,
     private readonly flags: MailFeatureFlags,
     private readonly access: MailAppAccessService,
@@ -756,6 +758,9 @@ export class MailMessagesService {
         'This Mail app needs an active plan before you can send mail.',
       );
     }
+
+    const recipientCount = to.length + cc.length + bcc.length;
+    await this.outboundUsage.reserveOutbound(mailbox.mailAppId, recipientCount);
 
     const incomingBytes = utf8StorageBytes(bodyText, bodyHtml);
     const usedBytes = Number(mailbox.storageUsedBytes ?? 0);

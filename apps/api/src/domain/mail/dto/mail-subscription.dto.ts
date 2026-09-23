@@ -58,3 +58,12 @@ export class SendMailInvoiceDto {
   @IsIn(['email', 'whatsapp'], { each: true })
   channels?: Array<'email' | 'whatsapp'>;
 }
+
+export class BuyMailOutboundPackDto {
+  /** Number of 1,000-email packs to purchase (1–500). */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  thousands: number;
+}

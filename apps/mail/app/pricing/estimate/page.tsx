@@ -6,7 +6,7 @@ import { getCurrentMailUser } from "@/lib/current-user";
 export const metadata: Metadata = {
   title: "Estimate your costs — Rukny Mail",
   description:
-    "Estimate Rukny Mail monthly cost from seats and outbound volume. See what 1K or 50K emails cost in IQD.",
+    "Estimate Rukny Mail monthly cost in IQD: plan seats plus prepaid outbound packs at 800 IQD per 1,000 emails.",
 };
 
 export default async function PricingEstimatePage() {

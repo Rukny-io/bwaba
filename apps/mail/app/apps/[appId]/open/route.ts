@@ -18,6 +18,7 @@ import {
   MAIL_PLAN_COOKIE,
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
+  MAIL_SHELL_COOKIE,
 } from "@/lib/ses";
 import { resolveMailRequestOrigin } from "@/lib/auth-redirect";
 
@@ -50,6 +51,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     response.cookies.set(MAIL_APP_ID_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    response.cookies.set(MAIL_SHELL_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
     return response;
   }
 
@@ -122,6 +124,12 @@ export async function GET(request: Request, ctx: RouteCtx) {
   response.cookies.set(MAIL_BOUND_DOMAIN_COOKIE, "", {
     path: "/",
     maxAge: 0,
+    sameSite: "lax",
+  });
+  // Entering a workspace always unlocks console chrome (sidebar + top nav).
+  response.cookies.set(MAIL_SHELL_COOKIE, "1", {
+    path: "/",
+    maxAge: 31536000,
     sameSite: "lax",
   });
 

@@ -270,6 +270,9 @@ export type MailCheckoutSessionPreview = {
   digital: boolean;
   expiresAt?: string;
   expiresIn?: number;
+  kind?: 'subscription' | 'outbound_pack';
+  outboundPackThousands?: number | null;
+  outboundPackEmails?: number | null;
 };
 
 export type MailCheckoutPayResponse = {

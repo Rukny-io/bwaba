@@ -36,11 +36,16 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/security", icon: Shield, label: "Security", exact: true },
 ];
 
+/** Domain + Quarantine live in the top Main nav; keep Logs + Developers in the sidebar. */
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
-  { href: "/domain", icon: Globe, label: "Domain settings", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
-  { href: "/quarantine", icon: ShieldAlert, label: "Quarantine", exact: true },
   { href: "/developers", icon: Code2, label: "Developers", exact: true },
+];
+
+/** Moved out of the sidebar into the header Main pill. */
+export const MAIL_HEADER_TOOL_NAV: MailNavItem[] = [
+  { href: "/domain", icon: Globe, label: "Domain", exact: true },
+  { href: "/quarantine", icon: ShieldAlert, label: "Quarantine", exact: true },
 ];
 
 /** Built, but hidden from the sidebar until IMAP/SMTP is ready to publish. */
@@ -53,6 +58,7 @@ export const MAIL_HEADER_NAV: MailNavItem[] = [
   { href: "/billing", icon: CreditCard, label: "Billing", exact: false },
   { href: "/apps", icon: LayoutGrid, label: "Workspaces", exact: true },
   { href: "/documents", icon: FileText, label: "Documents", exact: true },
+  ...MAIL_HEADER_TOOL_NAV,
 ];
 
 /** Pricing lives on the marketing site (/pricing), not in the console. */

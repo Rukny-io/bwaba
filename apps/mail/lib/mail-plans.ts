@@ -56,11 +56,16 @@ export function mailPlanHighlights(plan: MailPlanDefinition): string[] {
   const included = plan.limits.mailboxesIncluded;
   const mailboxLine =
     included === 1 ? "1 mailbox included" : `${included} mailboxes included`;
+  const consoleLine =
+    plan.limits.consoleMembersIncluded === 0
+      ? "Owner-only console"
+      : `${plan.limits.consoleMembersIncluded} console members included`;
   const aliasLine = isMailUnlimited(plan.limits.emailAliases)
     ? "Unlimited aliases per mailbox"
     : `${plan.limits.emailAliases} aliases per mailbox`;
   return [
     mailboxLine,
+    consoleLine,
     `${plan.limits.storageGbPerMailbox} GB for emails`,
     aliasLine,
     ...plan.benefits,
@@ -73,7 +78,7 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     name: "Starter",
     bestFor: "one mailbox to get started",
     priceMonthly: 3_000,
-    priceExtraMailbox: 3_000,
+    priceExtraMailbox: 2_000,
     popular: false,
     limits: {
       mailboxesIncluded: 1,
@@ -97,11 +102,11 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     name: "Standard",
     bestFor: "small teams sharing one domain",
     priceMonthly: 6_000,
-    priceExtraMailbox: 2_000,
+    priceExtraMailbox: 3_000,
     popular: true,
     limits: {
       mailboxesIncluded: 3,
-      consoleMembersIncluded: 5,
+      consoleMembersIncluded: 4,
       storageGbPerMailbox: 20,
       forwardingRules: 20,
       filterRules: 50,
@@ -121,11 +126,11 @@ export const MAIL_PLANS: Record<MailPlanId, MailPlanDefinition> = {
     name: "Premium",
     bestFor: "teams that need more seats and delivery",
     priceMonthly: 10_000,
-    priceExtraMailbox: 2_000,
+    priceExtraMailbox: 4_000,
     popular: false,
     limits: {
       mailboxesIncluded: 5,
-      consoleMembersIncluded: 15,
+      consoleMembersIncluded: 10,
       storageGbPerMailbox: 30,
       forwardingRules: 50,
       filterRules: MAIL_UNLIMITED,
@@ -169,6 +174,31 @@ export function mailPlanMonthlyTotal(planId: MailPlanId, mailboxCount: number): 
 
 export function formatMailIqD(amount: number): string {
   return `${amount.toLocaleString("en-IQ")} ${MAIL_CURRENCY_LABEL}`;
+}
+
+/** Included outbound / month — mirrors API MAIL_INCLUDED_OUTBOUND. */
+export const MAIL_INCLUDED_OUTBOUND: Record<MailPlanId, number> = {
+  starter: 4_000,
+  standard: 10_000,
+  premium: 30_000,
+};
+
+export const MAIL_OUTBOUND_PACK_EMAILS = 1_000;
+
+/** Flat prepaid pack price for all plans. */
+export const MAIL_OUTBOUND_PACK_PRICE_IQD: Partial<Record<MailPlanId, number>> = {
+  starter: 800,
+  standard: 800,
+  premium: 800,
+};
+
+export function mailOutboundPackTotal(
+  planId: MailPlanId,
+  thousands: number,
+): number | null {
+  const unit = MAIL_OUTBOUND_PACK_PRICE_IQD[planId];
+  if (unit == null) return null;
+  return Math.max(1, Math.floor(thousands)) * unit;
 }
 
 export function formatMailStorage(bytes: number, quotaBytes: number): string {

@@ -35,11 +35,16 @@ import {
   MAIL_PLAN_DEFINITIONS,
   MAIL_PLAN_LIMITS,
   MAIL_PLAN_ORDER,
+  MAIL_INCLUDED_OUTBOUND,
+  MAIL_OUTBOUND_PACK_EMAILS,
   addOneMonth,
   formatMailAliasLimit,
   mailMonthlyTotal,
+  mailOutboundPackPriceIqd,
+  mailOutboundPackTotalIqd,
   mailPlanHighlights,
 } from './mail-plan-limits.config';
+import { MailOutboundUsageService } from './mail-outbound-usage.service';
 import { isMailAppPublicId } from './mail-app-id.util';
 import { storageQuotaBytesForPlan } from './mail-storage.util';
 import {
@@ -82,6 +87,10 @@ type MailCheckoutSessionPayload = {
   returnUrl: string;
   createdAt: number;
   expiresAt: number;
+  /** Default subscription seats; outbound_pack buys prepaid emails. */
+  kind?: 'subscription' | 'outbound_pack';
+  outboundPackThousands?: number;
+  outboundPackEmails?: number;
 };
 
 type MailAppRow = {
@@ -100,6 +109,8 @@ type SubscriptionWithApp = {
   status: SubscriptionStatus;
   billingCycle: BillingCycle;
   mailboxCount: number;
+  outboundUsed?: number;
+  outboundPackCredits?: number;
   currentPeriodStart: Date | null;
   currentPeriodEnd: Date | null;
   cancelledAt: Date | null;
@@ -129,6 +140,7 @@ export class MailSubscriptionsService {
     private readonly config: ConfigService,
     private readonly mailSes: MailSesService,
     private readonly whatsappBusiness: WhatsAppBusinessService,
+    private readonly outboundUsage: MailOutboundUsageService,
   ) {}
 
   getPlansOverview() {
@@ -417,9 +429,12 @@ export class MailSubscriptionsService {
     return {
       sessionId: session.sessionId,
       product: 'mail' as const,
+      kind: session.kind === 'outbound_pack' ? ('outbound_pack' as const) : ('subscription' as const),
       plan: session.plan,
       planName: session.planName,
       mailboxCount: session.seats,
+      outboundPackThousands: session.outboundPackThousands ?? null,
+      outboundPackEmails: session.outboundPackEmails ?? null,
       amount: session.amount,
       currency: 'IQD',
       appId: session.appId,
@@ -428,6 +443,113 @@ export class MailSubscriptionsService {
       digital: true,
       expiresAt: new Date(expiresAt).toISOString(),
       expiresIn: Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)),
+    };
+  }
+
+  /**
+   * Create a checkout session for prepaid outbound email packs (Starter).
+   * Amount = thousands × pack price (server-side only).
+   */
+  async createOutboundPackCheckoutSession(
+    userId: string,
+    publicAppId: string,
+    thousands: number,
+  ) {
+    const { app } = await this.requireBillingApp(userId, publicAppId);
+    const { subscription } = await this.getSubscriptionForApp(app.id);
+    if (!subscription || subscription.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        'Activate a Mail plan before buying outbound email packs.',
+      );
+    }
+    const plan = subscription.plan as MailPlan;
+    const packPrice = mailOutboundPackPriceIqd(plan);
+    if (packPrice == null) {
+      throw new BadRequestException(
+        'Outbound email packs are not available for this plan.',
+      );
+    }
+    const n = Math.max(1, Math.min(500, Math.floor(thousands)));
+    const amount = mailOutboundPackTotalIqd(plan, n);
+    const emails = n * MAIL_OUTBOUND_PACK_EMAILS;
+
+    const sessionId = randomBytes(24).toString('hex');
+    const planName = `${MAIL_PLAN_DEFINITIONS[plan].name} · ${emails.toLocaleString('en-IQ')} emails`;
+    const returnUrl = this.mailReturnUrl(app.appId);
+    const createdAt = Date.now();
+    const expiresAt = createdAt + CHECKOUT_SESSION_TTL_SECONDS * 1000;
+    const payload: MailCheckoutSessionPayload = {
+      sessionId,
+      userId: app.userId,
+      initiatedBy: userId,
+      appId: app.appId,
+      appName: app.name,
+      plan,
+      seats: subscription.mailboxCount,
+      amount,
+      planName,
+      returnUrl,
+      createdAt,
+      expiresAt,
+      kind: 'outbound_pack',
+      outboundPackThousands: n,
+      outboundPackEmails: emails,
+    };
+
+    await this.redis.set(
+      `${CHECKOUT_SESSION_PREFIX}${sessionId}`,
+      payload,
+      CHECKOUT_SESSION_TTL_SECONDS,
+    );
+    const stored = await this.redis.get(
+      `${CHECKOUT_SESSION_PREFIX}${sessionId}`,
+    );
+    if (!stored) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          code: 'MAIL_CHECKOUT_STORE_UNAVAILABLE',
+          message: 'Checkout session store is temporarily unavailable.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    const checkoutBase = this.checkoutFrontendUrl();
+    const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sessionId)}`;
+
+    return {
+      sessionId,
+      checkoutUrl,
+      amount,
+      currency: 'IQD',
+      kind: 'outbound_pack' as const,
+      plan,
+      planName,
+      outboundPackThousands: n,
+      outboundPackEmails: emails,
+      packPriceIqd: packPrice,
+      mailboxCount: subscription.mailboxCount,
+      appId: app.appId,
+      appName: app.name,
+      returnUrl,
+      expiresIn: CHECKOUT_SESSION_TTL_SECONDS,
+      expiresAt: new Date(expiresAt).toISOString(),
+    };
+  }
+
+  async getOutboundUsage(userId: string, publicAppId: string) {
+    const access = await this.access.requireAccess(userId, publicAppId);
+    const usage = await this.outboundUsage.getUsageForMailApp(access.app.id);
+    if (!usage) {
+      return {
+        usage: null,
+        canManageBilling: this.access.canManageBilling(access),
+      };
+    }
+    return {
+      usage,
+      canManageBilling: this.access.canManageBilling(access),
     };
   }
 
@@ -453,25 +575,32 @@ export class MailSubscriptionsService {
 
     const session = await this.readCheckoutSession(sessionId);
 
-    // Guest OTP on checkout.rukny.io creates a different user than the Mail
-    // billing owner who started the session — that is intentional. Always bill
-    // / activate using the session owner (initiatedBy), never the guest sub.
-    const result = await this.initiateCardPayment(
-      session.initiatedBy || session.userId,
-      session.appId,
-      session.plan,
-      session.seats,
-      {
-        checkoutPhone: checkoutSession.phoneNumber ?? null,
-        checkoutEmail: checkoutSession.email ?? null,
-      },
-    );
+    const result =
+      session.kind === 'outbound_pack'
+        ? await this.initiateOutboundPackPayment(
+            session.initiatedBy || session.userId,
+            session.appId,
+            session.outboundPackThousands ?? 1,
+            {
+              checkoutPhone: checkoutSession.phoneNumber ?? null,
+              checkoutEmail: checkoutSession.email ?? null,
+            },
+          )
+        : await this.initiateCardPayment(
+            session.initiatedBy || session.userId,
+            session.appId,
+            session.plan,
+            session.seats,
+            {
+              checkoutPhone: checkoutSession.phoneNumber ?? null,
+              checkoutEmail: checkoutSession.email ?? null,
+            },
+          );
 
     const remainingSec = Math.max(
       30,
       Math.floor(((session.expiresAt || Date.now()) - Date.now()) / 1000),
     );
-    // Keep session until payment settles — do not extend past original expiry.
     await this.redis.set(
       `${CHECKOUT_SESSION_PREFIX}${sessionId}`,
       {
@@ -906,6 +1035,180 @@ export class MailSubscriptionsService {
         currency: 'IQD',
         plan,
         mailboxCount: seats,
+        paymentUrl: this.qaseh.getPaymentPageUrl(qasehPayment.token),
+      };
+    } catch {
+      await this.prisma.mailSubscriptionPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.FAILED,
+          failedAt: new Date(),
+          failureReason: 'qaseh_create_failed',
+        },
+      });
+      throw new BadRequestException({
+        code: 'MAIL_CARD_CREATE_FAILED',
+        message: 'Could not start card payment. Please try again.',
+      });
+    }
+  }
+
+  /**
+   * Initiate Al-Qaseh payment for prepaid outbound email packs.
+   */
+  async initiateOutboundPackPayment(
+    userId: string,
+    publicAppId: string,
+    thousands: number,
+    checkoutContact?: {
+      checkoutPhone?: string | null;
+      checkoutEmail?: string | null;
+    },
+  ) {
+    if (!this.qaseh.isConfigured()) {
+      throw new BadRequestException({
+        code: 'MAIL_CARD_UNAVAILABLE',
+        message: 'Card payments are temporarily unavailable.',
+      });
+    }
+
+    const { app, access } = await this.requireBillingApp(userId, publicAppId);
+    await this.assertPayRateLimit(userId, app.appId);
+
+    const subscription = await this.prisma.mailSubscription.findUnique({
+      where: { mailAppId: app.id },
+    });
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Activate a Mail plan before buying outbound email packs.',
+      );
+    }
+
+    const plan = subscription.plan;
+    const packPrice = mailOutboundPackPriceIqd(plan);
+    if (packPrice == null) {
+      throw new BadRequestException(
+        'Outbound email packs are not available for this plan.',
+      );
+    }
+
+    const n = Math.max(1, Math.min(500, Math.floor(thousands)));
+    const amount = mailOutboundPackTotalIqd(plan, n);
+    const emails = n * MAIL_OUTBOUND_PACK_EMAILS;
+    const billingCycle = BillingCycle.MONTHLY;
+
+    await this.prisma.mailSubscriptionPayment.updateMany({
+      where: {
+        subscriptionId: subscription.id,
+        status: PaymentStatus.PENDING,
+        paymentId: { not: null },
+      },
+      data: {
+        status: PaymentStatus.FAILED,
+        failedAt: new Date(),
+        failureReason: 'superseded_by_new_payment',
+      },
+    });
+
+    const checkoutPhone =
+      typeof checkoutContact?.checkoutPhone === 'string' &&
+      checkoutContact.checkoutPhone.trim()
+        ? checkoutContact.checkoutPhone.trim()
+        : null;
+    const rawCheckoutEmail =
+      typeof checkoutContact?.checkoutEmail === 'string' &&
+      checkoutContact.checkoutEmail.trim()
+        ? checkoutContact.checkoutEmail.trim().toLowerCase()
+        : null;
+    const checkoutEmail =
+      rawCheckoutEmail && !rawCheckoutEmail.endsWith('@guest.rukny.io')
+        ? rawCheckoutEmail
+        : null;
+
+    const payment = await this.prisma.mailSubscriptionPayment.create({
+      data: {
+        subscriptionId: subscription.id,
+        amount,
+        billingCycle,
+        mailboxCount: subscription.mailboxCount,
+        status: PaymentStatus.PENDING,
+        metadata: {
+          product: 'mail',
+          kind: 'outbound_pack',
+          plan,
+          mailAppId: app.appId,
+          mailAppUuid: app.id,
+          initiatedBy: userId,
+          role: String(access.role),
+          source: 'qaseh_card',
+          outboundPackThousands: n,
+          outboundPackEmails: emails,
+          ...(checkoutPhone ? { checkoutPhone } : {}),
+          ...(checkoutEmail ? { checkoutEmail } : {}),
+        },
+      },
+    });
+
+    const orderId = `mailp_${payment.id.replace(/-/g, '').slice(0, 23)}`;
+    const description =
+      `Rukny Mail · ${emails.toLocaleString('en-US')} outbound emails · ${app.name}`.substring(
+        0,
+        250,
+      );
+
+    try {
+      const qasehPayment = await this.qaseh.createPayment({
+        orderId,
+        amount,
+        currency: 'IQD',
+        description,
+        redirectUrl: this.qasehCallbackUrl(),
+        customData: {
+          product: 'mail',
+          kind: 'outbound_pack',
+          rukny_mail_payment_id: payment.id,
+          rukny_mail_app_id: app.appId,
+          plan,
+          outbound_pack_thousands: n,
+          outbound_pack_emails: emails,
+          amount_iqd: amount,
+        },
+      });
+
+      await this.prisma.mailSubscriptionPayment.update({
+        where: { id: payment.id },
+        data: {
+          paymentId: qasehPayment.payment_id,
+          paymentToken: qasehPayment.token,
+          metadata: {
+            product: 'mail',
+            kind: 'outbound_pack',
+            plan,
+            mailAppId: app.appId,
+            mailAppUuid: app.id,
+            initiatedBy: userId,
+            role: String(access.role),
+            source: 'qaseh_card',
+            qasehOrderId: orderId,
+            outboundPackThousands: n,
+            outboundPackEmails: emails,
+            ...(checkoutPhone ? { checkoutPhone } : {}),
+            ...(checkoutEmail ? { checkoutEmail } : {}),
+          },
+        },
+      });
+
+      return {
+        success: true,
+        paymentId: payment.id,
+        qasehPaymentId: qasehPayment.payment_id,
+        amount,
+        currency: 'IQD',
+        plan,
+        mailboxCount: subscription.mailboxCount,
+        kind: 'outbound_pack' as const,
+        outboundPackThousands: n,
+        outboundPackEmails: emails,
         paymentUrl: this.qaseh.getPaymentPageUrl(qasehPayment.token),
       };
     } catch {
@@ -1711,6 +2014,82 @@ export class MailSubscriptionsService {
       return { handled: true, status: 'pending' };
     }
 
+    const metaKind = String(meta.kind || 'subscription');
+    if (metaKind === 'outbound_pack') {
+      const thousands = Math.max(
+        1,
+        Math.floor(Number(meta.outboundPackThousands) || 0),
+      );
+      const emailsFromMeta = Math.floor(Number(meta.outboundPackEmails) || 0);
+      const emails =
+        emailsFromMeta > 0
+          ? emailsFromMeta
+          : thousands * MAIL_OUTBOUND_PACK_EMAILS;
+      const now = new Date();
+      const app = payment.subscription.mailApp;
+
+      await this.prisma.$transaction(async (tx) => {
+        const current = await tx.mailSubscriptionPayment.findUnique({
+          where: { id: payment.id },
+        });
+        if (!current || current.status === PaymentStatus.COMPLETED) {
+          return;
+        }
+
+        await tx.mailSubscription.update({
+          where: { id: payment.subscriptionId },
+          data: { outboundPackCredits: { increment: emails } },
+        });
+
+        await tx.mailSubscriptionPayment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.COMPLETED,
+            paidAt: now,
+            failedAt: null,
+            failureReason: null,
+            metadata: {
+              ...meta,
+              kind: 'outbound_pack',
+              outboundPackEmails: emails,
+              creditedAt: now.toISOString(),
+              qasehPaymentStatus: context.payment_status,
+              source: 'qaseh_card',
+            },
+          },
+        });
+      });
+
+      await this.invalidateCache(app.id);
+
+      await this.securityLogs
+        .createLog({
+          userId: app.userId,
+          action: SecurityAction.SECURITY_SETTINGS_CHANGED,
+          status: SecurityStatus.SUCCESS,
+          description: `Mail outbound pack credited for ${app.name}`,
+          metadata: {
+            event: 'MAIL_OUTBOUND_PACK_CREDITED',
+            mailAppId: app.appId,
+            outboundPackEmails: emails,
+            amount: payment.amount,
+            paymentId,
+            paymentRowId: payment.id,
+          },
+        })
+        .catch(() => {});
+
+      void this.deliverPaymentInvoice(payment.id).catch((err) => {
+        this.logger.warn(
+          `Invoice delivery failed after pack payment ${payment.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
+
+      return { handled: true, status: 'completed' };
+    }
+
     if (!plan) {
       await this.prisma.mailSubscriptionPayment.update({
         where: { id: payment.id },
@@ -1747,6 +2126,8 @@ export class MailSubscriptionsService {
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
           cancelledAt: null,
+          outboundUsed: 0,
+          outboundPackCredits: 0,
         },
       });
 
@@ -1870,6 +2251,8 @@ export class MailSubscriptionsService {
               currentPeriodStart: now,
               currentPeriodEnd: periodEnd,
               cancelledAt: null,
+              outboundUsed: 0,
+              outboundPackCredits: 0,
             },
           })
         : await tx.mailSubscription.create({
@@ -1882,6 +2265,8 @@ export class MailSubscriptionsService {
               mailboxCount: seats,
               currentPeriodStart: now,
               currentPeriodEnd: periodEnd,
+              outboundUsed: 0,
+              outboundPackCredits: 0,
             },
           });
 
@@ -2118,6 +2503,14 @@ export class MailSubscriptionsService {
     const storageQuotaBytesPerMailbox = storageQuotaBytesForPlan(
       subscription.plan,
     );
+    const included = MAIL_INCLUDED_OUTBOUND[subscription.plan] ?? 0;
+    const outboundUsed = Math.max(0, subscription.outboundUsed ?? 0);
+    const outboundPackCredits = Math.max(
+      0,
+      subscription.outboundPackCredits ?? 0,
+    );
+    const outboundAllowance = included + outboundPackCredits;
+    const packPriceIqd = mailOutboundPackPriceIqd(subscription.plan);
     return {
       id: subscription.id,
       mailAppId: subscription.mailApp?.appId ?? null,
@@ -2159,6 +2552,18 @@ export class MailSubscriptionsService {
         automaticReplies: limits.automaticReplies,
         linkAndFileTracking: limits.linkAndFileTracking,
         premiumDelivery: limits.premiumDelivery,
+      },
+      outboundUsage: {
+        included,
+        used: outboundUsed,
+        packCredits: outboundPackCredits,
+        allowance: outboundAllowance,
+        remaining: Math.max(0, outboundAllowance - outboundUsed),
+        packEmails: MAIL_OUTBOUND_PACK_EMAILS,
+        packPriceIqd,
+        packsAvailable:
+          subscription.status === SubscriptionStatus.ACTIVE &&
+          packPriceIqd != null,
       },
       payments: subscription.payments ?? [],
     };

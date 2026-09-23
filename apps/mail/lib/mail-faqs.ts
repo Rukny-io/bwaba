@@ -24,7 +24,7 @@ export const MAIL_FAQS: MailFaqItem[] = [
     id: "plans",
     question: "How do plans work?",
     answer:
-      "Starter starts automatically after your domain DNS is verified. Standard and Premium are requested from Pricing and activated by an admin. Prices are monthly in IQD.",
+      "Starter activates after DNS verification and checkout in the console. Standard and Premium are requested from Billing and activated by an admin. Prices are monthly in IQD.",
   },
   {
     id: "inbox",

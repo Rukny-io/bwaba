@@ -35,6 +35,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
+import { fetchMailOutboundUsage } from "@/lib/mail-usage-client";
 
 export type ComposeDraft = {
   to: string;
@@ -139,6 +140,7 @@ export function MailComposeModal({
   const [signature, setSignature] = useState("");
   const [showSignatureEditor, setShowSignatureEditor] = useState(false);
   const [processingImage, setProcessingImage] = useState(false);
+  const [usageHint, setUsageHint] = useState<string | null>(null);
   const [, setEditorRevision] = useState(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const editor = useEditor({
@@ -192,6 +194,36 @@ export function MailComposeModal({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editor, fromAddress, initial, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setUsageHint(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { usage } = await fetchMailOutboundUsage();
+        if (cancelled || !usage) return;
+        if (usage.remaining <= 0) {
+          setUsageHint(
+            "Outbound quota reached. Buy email packs in Billing → Usage to send.",
+          );
+        } else if (usage.percentUsed >= 80) {
+          setUsageHint(
+            `${usage.remaining.toLocaleString("en-IQ")} outbound emails remaining this period.`,
+          );
+        } else {
+          setUsageHint(null);
+        }
+      } catch {
+        if (!cancelled) setUsageHint(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -592,6 +624,12 @@ export function MailComposeModal({
                     />
                   </TextField>
                 </div>
+              ) : null}
+
+              {usageHint ? (
+                <p className="px-4 pb-2 text-sm text-amber-700 dark:text-amber-400 sm:px-5">
+                  {usageHint}
+                </p>
               ) : null}
 
               {localError || error ? (

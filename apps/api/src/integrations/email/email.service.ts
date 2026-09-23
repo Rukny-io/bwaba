@@ -683,6 +683,89 @@ export class EmailService {
     }
   }
 
+  async sendMailTeamInvitation(
+    to: string,
+    data: {
+      inviterName: string;
+      role: string;
+      workspaceName: string;
+      inviteUrl: string;
+      needsSignup?: boolean;
+    },
+  ) {
+    const actionLabel = data.needsSignup
+      ? 'Create account & join'
+      : 'View invitation';
+    const note = data.needsSignup
+      ? 'You will create a Rukny account with this email, then join the workspace.'
+      : 'Sign in to Rukny Mail to accept or decline this invitation.';
+
+    const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+            <h2 style="margin:0 0 12px;">Mail workspace invitation</h2>
+            <p style="margin:0 0 12px;">Hi,</p>
+            <p style="margin:0 0 12px;"><strong>${data.inviterName}</strong> invited you to <strong>${data.workspaceName}</strong> as <strong>${data.role}</strong>.</p>
+            <p style="margin:0 0 20px;">
+              <a href="${data.inviteUrl}" style="display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
+                ${actionLabel}
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;margin:0 0 8px;">${note}</p>
+            <p style="color:#666;font-size:13px;margin:0;">If you did not expect this invite, you can ignore this email.</p>
+          </div>
+        `;
+
+    try {
+      await this.sendEmail({
+        to,
+        subject: `You're invited to ${data.workspaceName} on Rukny Mail`,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send mail team invitation:', error);
+    }
+  }
+
+  async sendMailOwnershipTransferred(
+    to: string,
+    data: {
+      workspaceName: string;
+      previousOwnerName: string;
+      newOwnerName: string;
+      appsUrl: string;
+      isNewOwner: boolean;
+    },
+  ) {
+    const title = data.isNewOwner
+      ? 'You are now the workspace owner'
+      : 'Workspace ownership transferred';
+    const body = data.isNewOwner
+      ? `<strong>${data.previousOwnerName}</strong> transferred ownership of <strong>${data.workspaceName}</strong> to you.`
+      : `You transferred ownership of <strong>${data.workspaceName}</strong> to <strong>${data.newOwnerName}</strong>. You remain on the team as an Admin.`;
+
+    const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+            <h2 style="margin:0 0 12px;">${title}</h2>
+            <p style="margin:0 0 12px;">${body}</p>
+            <p style="margin:0 0 20px;">
+              <a href="${data.appsUrl}" style="display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
+                Open workspaces
+              </a>
+            </p>
+          </div>
+        `;
+
+    try {
+      await this.sendEmail({
+        to,
+        subject: title,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send ownership transfer email:', error);
+    }
+  }
+
   /**
    * إرسال دعوة للانضمام لمساحة عمل
    */

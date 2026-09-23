@@ -145,9 +145,9 @@ function TabPanel({
 
   if (tab === "sending") {
     const sending = [
-      { plan: plans[0], volume: "5,000 outbound / mo" },
-      { plan: plans[1], volume: "25,000 outbound / mo" },
-      { plan: plans[2], volume: "100,000 outbound / mo" },
+      { plan: plans[0], volume: "4,000 outbound / mo" },
+      { plan: plans[1], volume: "10,000 outbound / mo" },
+      { plan: plans[2], volume: "30,000 outbound / mo" },
     ];
     return (
       <div className="grid gap-4 sm:grid-cols-3">
@@ -241,7 +241,7 @@ export function MailHomePricingHub() {
             {[
               "Anti-spam on every plan",
               "2FA per mailbox",
-              "No credit card for Starter",
+              "Starter after DNS + checkout",
             ].map((item) => (
               <span
                 key={item}

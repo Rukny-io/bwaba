@@ -81,7 +81,7 @@ export function writeMailDomainSetup(
     window.localStorage.removeItem(wizardDismissedKey(id));
     clearCookie(MAIL_READY_COOKIE);
     clearCookie(MAIL_READY_APP_COOKIE);
-    clearCookie(MAIL_SHELL_COOKIE);
+    // Keep MAIL_SHELL_COOKIE — clearing domain setup must not hide the console chrome.
     return;
   }
 

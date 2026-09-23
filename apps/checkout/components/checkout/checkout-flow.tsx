@@ -184,6 +184,9 @@ export function CheckoutFlow() {
               appName: preview.appName,
               returnUrl: preview.returnUrl,
               expiresAt,
+              kind: preview.kind === 'outbound_pack' ? 'outbound_pack' : 'subscription',
+              outboundPackThousands: preview.outboundPackThousands ?? null,
+              outboundPackEmails: preview.outboundPackEmails ?? null,
             },
           };
           saveCheckoutCart(nextCart);
@@ -1573,9 +1576,11 @@ export function CheckoutFlow() {
                 {cart.mail.planName} · {cart.mail.appName}
               </p>
               <p className="mt-0.5 text-[13px] leading-5 text-zinc-500">
-                {cart.mail.mailboxCount}{' '}
-                {cart.mail.mailboxCount === 1 ? 'seat' : 'seats'} ·{' '}
-                {cart.mail.amount.toLocaleString('en-US')} {cart.mail.currency}/mo
+                {cart.mail.kind === 'outbound_pack'
+                  ? `${(cart.mail.outboundPackEmails || 0).toLocaleString('en-US')} outbound emails · ${cart.mail.amount.toLocaleString('en-US')} ${cart.mail.currency}`
+                  : `${cart.mail.mailboxCount} ${
+                      cart.mail.mailboxCount === 1 ? 'seat' : 'seats'
+                    } · ${cart.mail.amount.toLocaleString('en-US')} ${cart.mail.currency}/mo`}
               </p>
             </SoftPanel>
           ) : null}

@@ -16,9 +16,11 @@ import {
   AuthenticatedUser,
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { MailMembersService } from './mail-members.service';
 import {
   InviteMailAppMemberDto,
+  TransferMailAppOwnershipDto,
   UpdateMailAppMemberDto,
 } from './dto/mail-member.dto';
 
@@ -55,6 +57,23 @@ export class MailMembersController {
     return this.members.declineInvitation(user.id, memberId);
   }
 
+  @Public()
+  @Get('invites/:token')
+  @ApiOperation({ summary: 'Preview an email-only Mail workspace invite' })
+  previewInvite(@Param('token') token: string) {
+    return this.members.getEmailInvitePreview(token);
+  }
+
+  @Post('invites/:token/claim')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Claim an email-only invite after signup/login' })
+  claimInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('token') token: string,
+  ) {
+    return this.members.claimEmailInvite(user.id, token);
+  }
+
   @Get('apps/:appId/members')
   @ApiOperation({ summary: 'List team members for a Mail workspace' })
   list(
@@ -65,7 +84,7 @@ export class MailMembersController {
   }
 
   @Post('apps/:appId/members')
-  @ApiOperation({ summary: 'Invite a Rukny user to this Mail workspace' })
+  @ApiOperation({ summary: 'Invite a teammate (existing or new Rukny email)' })
   invite(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -82,6 +101,28 @@ export class MailMembersController {
     @Param('appId') appId: string,
   ) {
     return this.members.leave(user.id, appId);
+  }
+
+  @Post('apps/:appId/transfer-ownership')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Transfer workspace ownership to an accepted member' })
+  transferOwnership(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Body() dto: TransferMailAppOwnershipDto,
+  ) {
+    return this.members.transferOwnership(user.id, appId, dto);
+  }
+
+  @Post('apps/:appId/members/:memberId/resend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend a pending member or email invite' })
+  resend(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return this.members.resend(user.id, appId, memberId);
   }
 
   @Patch('apps/:appId/members/:memberId')

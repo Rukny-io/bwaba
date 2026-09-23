@@ -25,6 +25,7 @@ import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-ses
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
   AdminActivateMailSubscriptionDto,
+  BuyMailOutboundPackDto,
   PayMailSubscriptionDto,
   RequestMailSubscriptionDto,
   SendMailInvoiceDto,
@@ -53,6 +54,36 @@ export class MailSubscriptionsController {
     @Param('appId') appId: string,
   ) {
     return this.mailSubscriptions.getOwnedAppSubscription(user.id, appId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('apps/:appId/usage')
+  @ApiOperation({ summary: 'Outbound email usage and pack pricing for this app' })
+  getUsage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ) {
+    return this.mailSubscriptions.getOutboundUsage(user.id, appId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 900_000 } })
+  @Post('apps/:appId/usage/packs/checkout-session')
+  @ApiOperation({
+    summary: 'Create checkout session for prepaid outbound email packs',
+  })
+  createOutboundPackCheckout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Body() dto: BuyMailOutboundPackDto,
+  ) {
+    return this.mailSubscriptions.createOutboundPackCheckoutSession(
+      user.id,
+      appId,
+      dto.thousands,
+    );
   }
 
   @ApiBearerAuth()

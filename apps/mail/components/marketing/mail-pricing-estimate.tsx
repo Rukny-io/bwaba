@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 import { cn } from "@heroui/react";
-import { MailFrameLink } from "@/components/marketing/mail-frame-cta";
 import { MailAnimatedIqD } from "@/components/marketing/mail-animated-iqd";
+import { MailReveal } from "@/components/marketing/mail-reveal";
 import {
   estimateAllPlans,
   estimateMailMonthlyCost,
-  estimateRawVolumeCost,
   formatEstimateIqD,
   formatOutboundLabel,
   MAIL_ESTIMATE_INCLUDED_OUTBOUND,
@@ -17,25 +16,32 @@ import {
   MAIL_ESTIMATE_MAILBOX_MIN,
   MAIL_ESTIMATE_OUTBOUND_MAX,
   MAIL_ESTIMATE_OUTBOUND_MIN,
-  MAIL_ESTIMATE_OVERAGE_BRACKETS,
-  MAIL_ESTIMATE_RATE_CARD,
+  MAIL_ESTIMATE_PACK_EMAILS,
+  MAIL_ESTIMATE_PACK_PRICE_IQD,
   MAIL_ESTIMATE_VOLUME_PRESETS,
   recommendMailPlan,
   type MailEstimateFeatureNeeds,
 } from "@/lib/mail-estimate-catalog";
-import { listMailPlans, type MailPlanId } from "@/lib/mail-plans";
-import { mailMarketingLayout as L } from "@/lib/mail-marketing-theme";
+import {
+  formatMailIqD,
+  listMailPlans,
+  type MailPlanId,
+} from "@/lib/mail-plans";
+import { agLayout } from "@/lib/mail-antigravity-theme";
 
 function formatCount(n: number): string {
   return n.toLocaleString("en-IQ");
 }
 
+const fieldClass =
+  "w-full rounded-xl border border-[#E8E8E8] bg-white px-3.5 py-2.5 text-sm tabular-nums text-[#1D1D1D] outline-none transition-colors focus:border-[#1D1D1D]";
+
 export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
   const plans = listMailPlans();
-  const [planId, setPlanId] = useState<MailPlanId>("standard");
+  const [planId, setPlanId] = useState<MailPlanId>("starter");
   const [autoRecommend, setAutoRecommend] = useState(true);
-  const [mailboxes, setMailboxes] = useState(3);
-  const [monthlyOutbound, setMonthlyOutbound] = useState(10_000);
+  const [mailboxes, setMailboxes] = useState(1);
+  const [monthlyOutbound, setMonthlyOutbound] = useState(4_000);
   const [features, setFeatures] = useState<MailEstimateFeatureNeeds>({
     openTracking: false,
     linkAndFileTracking: false,
@@ -83,83 +89,146 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
     planId === "starter"
       ? signedIn
         ? "Open console"
-        : "Start Building"
+        : "Get started"
       : signedIn
-        ? "Request this plan"
-        : "Get Started";
+        ? "Open billing"
+        : "Get started";
 
   return (
-    <main className="overflow-x-clip">
-      <section className="border-b border-[#e8e8e8]">
-        <div className={L.container}>
-          <div className="space-y-6 py-10 md:py-14 max-w-3xl">
+    <main className="overflow-x-clip bg-white text-[#1D1D1D]">
+      <section className="relative border-b border-[#E8E8E8]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.55]"
+          aria-hidden
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(66,133,244,0.08), transparent 55%), radial-gradient(ellipse 50% 40% at 100% 0%, rgba(52,168,83,0.06), transparent 45%)",
+          }}
+        />
+        <div className={`${agLayout.container} relative py-10 sm:py-16`}>
+          <MailReveal className="mx-auto max-w-2xl text-center">
             <Link
               href="/pricing"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#666666] transition-colors hover:text-[#111111]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#6B6F76] transition-colors hover:text-[#1D1D1D]"
             >
               <ArrowLeft className="size-4" aria-hidden />
               Pricing
             </Link>
-            <p className={L.heroBadge}>Estimate</p>
-            <h1 className={L.heroTitle}>Estimate your costs</h1>
-            <p className={L.heroLead}>
-              Pick a volume preset (1K–100K), seats, and a plan. Included send
-              grows with the plan; overage uses clear per-1K brackets — not a
-              diluted “effective” average.
+            <p className={`${agLayout.pill} mt-5 sm:mt-6`}>Cost estimator</p>
+            <h1 className={`${agLayout.heroTitle} mt-4 text-[clamp(1.75rem,7vw,4rem)] sm:mt-6`}>
+              Estimate your Mail bill
+            </h1>
+            <p className={`${agLayout.lead} mx-auto mt-4 max-w-xl text-[0.9375rem] sm:mt-5 sm:text-base`}>
+              Seats plus prepaid outbound packs — the same numbers Billing and
+              checkout charge. Packs are{" "}
+              {formatMailIqD(MAIL_ESTIMATE_PACK_PRICE_IQD)} per{" "}
+              {formatCount(MAIL_ESTIMATE_PACK_EMAILS)} emails when you exceed
+              your plan quota.
+            </p>
+          </MailReveal>
+        </div>
+      </section>
+
+      <section className="border-b border-[#E8E8E8] bg-[#FAFAFA] py-8 sm:py-12">
+        <div className={agLayout.container}>
+          <div className="mb-4 flex flex-col gap-1 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-3">
+            <div className="min-w-0">
+              <h2 className="text-base font-medium tracking-tight text-[#1D1D1D] sm:text-lg">
+                Plans at a glance
+              </h2>
+              <p className="mt-1 text-sm text-[#6B6F76]">
+                Included outbound, seat price, and extra mailbox rate.
+              </p>
+            </div>
+            <p className="text-xs text-[#9CA3AF]">
+              Extra emails: {formatMailIqD(MAIL_ESTIMATE_PACK_PRICE_IQD)} / 1,000
+              on every plan
             </p>
           </div>
-        </div>
-      </section>
-
-      <section className="border-b border-[#e8e8e8] py-8">
-        <div className={L.container}>
-          <div className="grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8] sm:grid-cols-2 lg:grid-cols-4">
-            {MAIL_ESTIMATE_RATE_CARD.map((row) => (
-              <button
-                key={row.emails}
-                type="button"
-                onClick={() => setMonthlyOutbound(row.emails)}
-                className="bg-white px-4 py-4 text-left transition-colors hover:bg-[#f5f5f5]"
-              >
-                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#999999]">
-                  {row.label}
-                </p>
-                <p className="mt-2 text-xl font-bold tracking-tight text-[#111111]">
-                  {formatEstimateIqD(estimateRawVolumeCost(row.emails))}
-                </p>
-                <p className="mt-1 text-xs text-[#666666]">
-                  Overage only · before plan included
-                </p>
-              </button>
-            ))}
+          <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+            {plans.map((plan) => {
+              const active = planId === plan.id;
+              const included = MAIL_ESTIMATE_INCLUDED_OUTBOUND[plan.id];
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => {
+                    setAutoRecommend(false);
+                    setPlanId(plan.id);
+                    setMonthlyOutbound(included);
+                    setMailboxes(plan.limits.mailboxesIncluded);
+                  }}
+                  className={cn(
+                    "w-[min(78vw,280px)] shrink-0 snap-center rounded-2xl border bg-white p-4 text-left transition-shadow sm:w-auto sm:snap-none sm:p-5",
+                    active
+                      ? "border-[#1D1D1D] shadow-[0_12px_40px_-16px_rgba(0,0,0,0.18)]"
+                      : "border-[#E8E8E8] hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)]",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-[#1D1D1D]">
+                      {plan.name}
+                    </p>
+                    {plan.popular ? (
+                      <span className="shrink-0 rounded-full bg-[#1D1D1D] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+                        Popular
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-xl font-medium tracking-tight text-[#1D1D1D] sm:text-2xl">
+                    {formatMailIqD(plan.priceMonthly)}
+                    <span className="ms-1 text-sm font-normal text-[#9CA3AF]">
+                      /mo
+                    </span>
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs text-[#6B6F76]">
+                    {plan.bestFor}
+                  </p>
+                  <dl className="mt-4 space-y-1.5 border-t border-[#E8E8E8] pt-3 text-xs text-[#6B6F76]">
+                    <div className="flex justify-between gap-2">
+                      <dt>Mailboxes</dt>
+                      <dd className="shrink-0 font-medium text-[#1D1D1D]">
+                        {plan.limits.mailboxesIncluded} included
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Extra mailbox</dt>
+                      <dd className="shrink-0 font-medium text-[#1D1D1D]">
+                        {formatMailIqD(plan.priceExtraMailbox)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Outbound included</dt>
+                      <dd className="shrink-0 font-medium text-[#1D1D1D]">
+                        {formatCount(included)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Team seats</dt>
+                      <dd className="shrink-0 font-medium text-[#1D1D1D]">
+                        {plan.limits.consoleMembersIncluded === 0
+                          ? "Owner only"
+                          : plan.limits.consoleMembersIncluded}
+                      </dd>
+                    </div>
+                  </dl>
+                </button>
+              );
+            })}
           </div>
-          <p className="mt-4 text-xs text-[#999999]">
-            Overage brackets:{" "}
-            {MAIL_ESTIMATE_OVERAGE_BRACKETS.map((b, i) => {
-              const prev = i === 0 ? 0 : MAIL_ESTIMATE_OVERAGE_BRACKETS[i - 1].upToEmails;
-              const label =
-                Number.isFinite(b.upToEmails)
-                  ? `${formatCount(prev + 1)}–${formatCount(b.upToEmails)}`
-                  : `${formatCount(prev + 1)}+`;
-              return `${label}: ${formatCount(b.iqdPerThousand)} IQD / 1K`;
-            }).join(" · ")}
-            . Included: Starter{" "}
-            {formatCount(MAIL_ESTIMATE_INCLUDED_OUTBOUND.starter)} · Standard{" "}
-            {formatCount(MAIL_ESTIMATE_INCLUDED_OUTBOUND.standard)} · Premium{" "}
-            {formatCount(MAIL_ESTIMATE_INCLUDED_OUTBOUND.premium)}.
-          </p>
         </div>
       </section>
 
-      <section className="border-b border-[#e8e8e8] py-10 sm:py-14">
-        <div className={L.container}>
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-10">
-            <div className="space-y-8">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#666666]">
-                  Monthly outbound
+      <section className="border-b border-[#E8E8E8] py-10 sm:py-20">
+        <div className={agLayout.container}>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-10">
+            <div className="order-2 space-y-5 sm:space-y-8 lg:order-1">
+              <div className="rounded-2xl border border-[#E8E8E8] bg-white p-4 sm:p-6">
+                <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[#9CA3AF]">
+                  Volume
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
                   {MAIL_ESTIMATE_VOLUME_PRESETS.map((preset) => {
                     const active = monthlyOutbound === preset.emails;
                     return (
@@ -168,10 +237,10 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                         type="button"
                         onClick={() => setMonthlyOutbound(preset.emails)}
                         className={cn(
-                          "min-h-9 border px-3.5 py-2 text-xs font-medium transition-colors sm:text-sm",
+                          "min-h-10 shrink-0 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
                           active
-                            ? "border-[#111111] bg-[#111111] text-white"
-                            : "border-[#e8e8e8] bg-white text-[#666666] hover:border-[#111111]/25 hover:text-[#111111]",
+                            ? "border-[#1D1D1D] bg-[#1D1D1D] text-white"
+                            : "border-[#E8E8E8] bg-[#FAFAFA] text-[#6B6F76] hover:border-[#1D1D1D]/25 hover:text-[#1D1D1D]",
                         )}
                       >
                         {preset.label}
@@ -179,16 +248,18 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     );
                   })}
                 </div>
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-end justify-between gap-3">
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="min-w-0">
                     <label
-                      htmlFor="outbound-range"
-                      className="text-sm font-medium text-[#111111]"
+                      htmlFor="outbound-input"
+                      className="text-sm font-medium text-[#1D1D1D]"
                     >
                       Outbound emails / month
                     </label>
                     <input
+                      id="outbound-input"
                       type="number"
+                      inputMode="numeric"
                       min={MAIL_ESTIMATE_OUTBOUND_MIN}
                       max={MAIL_ESTIMATE_OUTBOUND_MAX}
                       step={100}
@@ -205,84 +276,71 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                           ),
                         )
                       }
-                      className="w-28 border border-[#e8e8e8] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#111111] outline-none focus:border-[#111111]"
+                      className={cn(fieldClass, "mt-2")}
                     />
                   </div>
-                  <input
-                    id="outbound-range"
-                    type="range"
-                    min={MAIL_ESTIMATE_OUTBOUND_MIN}
-                    max={MAIL_ESTIMATE_OUTBOUND_MAX}
-                    step={100}
-                    value={monthlyOutbound}
-                    onChange={(e) =>
-                      setMonthlyOutbound(Number(e.target.value))
-                    }
-                    className="mail-estimate-range w-full"
-                  />
-                  <p className="text-xs text-[#999999]">
-                    {formatCount(MAIL_ESTIMATE_OUTBOUND_MIN)} –{" "}
-                    {formatCount(MAIL_ESTIMATE_OUTBOUND_MAX)} emails
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-end justify-between gap-3">
-                  <label
-                    htmlFor="mailbox-range"
-                    className="text-sm font-medium text-[#111111]"
-                  >
-                    Mailboxes
-                  </label>
-                  <input
-                    type="number"
-                    min={MAIL_ESTIMATE_MAILBOX_MIN}
-                    max={MAIL_ESTIMATE_MAILBOX_MAX}
-                    value={mailboxes}
-                    onChange={(e) =>
-                      setMailboxes(
-                        Math.min(
-                          MAIL_ESTIMATE_MAILBOX_MAX,
-                          Math.max(
-                            MAIL_ESTIMATE_MAILBOX_MIN,
-                            Math.floor(Number(e.target.value)) || 1,
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="mailbox-input"
+                      className="text-sm font-medium text-[#1D1D1D]"
+                    >
+                      Mailboxes
+                    </label>
+                    <input
+                      id="mailbox-input"
+                      type="number"
+                      inputMode="numeric"
+                      min={MAIL_ESTIMATE_MAILBOX_MIN}
+                      max={MAIL_ESTIMATE_MAILBOX_MAX}
+                      value={mailboxes}
+                      onChange={(e) =>
+                        setMailboxes(
+                          Math.min(
+                            MAIL_ESTIMATE_MAILBOX_MAX,
+                            Math.max(
+                              MAIL_ESTIMATE_MAILBOX_MIN,
+                              Math.floor(Number(e.target.value)) || 1,
+                            ),
                           ),
-                        ),
-                      )
-                    }
-                    className="w-20 border border-[#e8e8e8] bg-white px-2 py-1.5 text-right text-sm tabular-nums text-[#111111] outline-none focus:border-[#111111]"
-                  />
+                        )
+                      }
+                      className={cn(fieldClass, "mt-2")}
+                    />
+                  </div>
                 </div>
                 <input
-                  id="mailbox-range"
                   type="range"
-                  min={MAIL_ESTIMATE_MAILBOX_MIN}
-                  max={100}
-                  step={1}
-                  value={Math.min(mailboxes, 100)}
-                  onChange={(e) => setMailboxes(Number(e.target.value))}
-                  className="mail-estimate-range mt-3 w-full"
+                  min={MAIL_ESTIMATE_OUTBOUND_MIN}
+                  max={MAIL_ESTIMATE_OUTBOUND_MAX}
+                  step={100}
+                  value={monthlyOutbound}
+                  onChange={(e) => setMonthlyOutbound(Number(e.target.value))}
+                  className="mail-estimate-range mt-5 w-full"
+                  aria-label="Outbound emails per month"
                 />
-                <p className="mt-2 text-xs text-[#999999]">
-                  Slider up to 100; type up to {MAIL_ESTIMATE_MAILBOX_MAX} seats
+                <p className="mt-2 text-xs leading-relaxed text-[#9CA3AF]">
+                  {formatCount(MAIL_ESTIMATE_OUTBOUND_MIN)} –{" "}
+                  {formatCount(MAIL_ESTIMATE_OUTBOUND_MAX)} emails · up to{" "}
+                  {MAIL_ESTIMATE_MAILBOX_MAX} seats
                 </p>
               </div>
 
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-[#111111]">Plan</p>
-                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[#666666]">
+              <div className="rounded-2xl border border-[#E8E8E8] bg-white p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-[#1D1D1D]">
+                    Selected plan
+                  </p>
+                  <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-xs text-[#6B6F76]">
                     <input
                       type="checkbox"
                       checked={autoRecommend}
                       onChange={(e) => setAutoRecommend(e.target.checked)}
-                      className="size-3.5 accent-[#111111]"
+                      className="size-3.5 accent-[#1D1D1D]"
                     />
-                    Auto-recommend
+                    Auto
                   </label>
                 </div>
-                <div className="mt-3 grid gap-px overflow-hidden border border-[#e8e8e8] bg-[#e8e8e8] sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                   {plans.map((plan) => {
                     const active = planId === plan.id;
                     const isRec = recommended === plan.id;
@@ -295,25 +353,25 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                           setPlanId(plan.id);
                         }}
                         className={cn(
-                          "bg-white px-4 py-4 text-left transition-colors",
+                          "flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-shadow sm:flex-col sm:items-stretch sm:justify-start sm:py-3.5",
                           active
-                            ? "ring-1 ring-inset ring-[#111111]"
-                            : "hover:bg-[#f5f5f5]",
+                            ? "border-[#1D1D1D] bg-[#FAFAFA] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.12)]"
+                            : "border-[#E8E8E8] bg-white hover:border-[#1D1D1D]/20",
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-[#111111]">
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-2 sm:flex-none">
+                          <span className="text-sm font-medium text-[#1D1D1D]">
                             {plan.name}
                           </span>
                           {isRec ? (
-                            <span className="text-[10px] font-semibold uppercase tracking-[1px] text-[#666666]">
+                            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-[#6B6F76] ring-1 ring-[#E8E8E8]">
                               Best
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-1 text-xs text-[#666666]">
+                        <p className="shrink-0 text-xs text-[#6B6F76] sm:mt-1">
                           {formatCount(MAIL_ESTIMATE_INCLUDED_OUTBOUND[plan.id])}{" "}
-                          emails included
+                          included
                         </p>
                       </button>
                     );
@@ -321,32 +379,32 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm font-medium text-[#111111]">
-                  Features that affect recommendation
+              <div className="rounded-2xl border border-[#E8E8E8] bg-white p-4 sm:p-6">
+                <p className="text-sm font-medium text-[#1D1D1D]">
+                  Features that raise the plan floor
                 </p>
-                <ul className="mt-3 space-y-2 border border-[#e8e8e8] bg-white p-4">
+                <ul className="mt-3 space-y-2">
                   {(
                     [
                       {
                         key: "openTracking" as const,
                         label: "Open tracking",
-                        hint: "Needs Standard or higher",
+                        hint: "Standard or Premium",
                       },
                       {
                         key: "linkAndFileTracking" as const,
                         label: "Link and file tracking",
-                        hint: "Needs Premium",
+                        hint: "Premium",
                       },
                       {
                         key: "premiumDelivery" as const,
                         label: "Premium email delivery",
-                        hint: "Needs Premium",
+                        hint: "Premium",
                       },
                     ] as const
                   ).map((item) => (
                     <li key={item.key}>
-                      <label className="flex cursor-pointer items-start gap-3">
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#E8E8E8] bg-[#FAFAFA] px-3.5 py-3">
                         <input
                           type="checkbox"
                           checked={features[item.key]}
@@ -356,13 +414,13 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                               [item.key]: e.target.checked,
                             }))
                           }
-                          className="mt-1 size-3.5 accent-[#111111]"
+                          className="mt-0.5 size-3.5 shrink-0 accent-[#1D1D1D]"
                         />
-                        <span>
-                          <span className="block text-sm font-medium text-[#111111]">
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-[#1D1D1D]">
                             {item.label}
                           </span>
-                          <span className="text-xs text-[#999999]">
+                          <span className="text-xs text-[#9CA3AF]">
                             {item.hint}
                           </span>
                         </span>
@@ -370,28 +428,33 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-[#999999]">
-                  Agentic Mail, webmail, anti-spam, and mailbox 2FA are included
-                  on every plan.
+                <p className="mt-3 text-xs leading-relaxed text-[#9CA3AF]">
+                  Starter is owner-only (no Team). Standard includes{" "}
+                  {plans.find((p) => p.id === "standard")?.limits
+                    .consoleMembersIncluded ?? 4}{" "}
+                  console seats; Premium includes{" "}
+                  {plans.find((p) => p.id === "premium")?.limits
+                    .consoleMembersIncluded ?? 10}
+                  .
                 </p>
               </div>
             </div>
 
-            <aside className="lg:sticky lg:top-20">
-              <div className="border border-[#e8e8e8] bg-white">
-                <div className="border-b border-[#e8e8e8] px-5 py-5 sm:px-6">
-                  <p className="text-xs font-medium uppercase tracking-[1.2px] text-[#666666]">
-                    Estimated monthly
+            <aside className="order-1 lg:sticky lg:top-20 lg:order-2">
+              <div className="overflow-hidden rounded-2xl border border-[#E8E8E8] bg-white shadow-[0_16px_48px_-20px_rgba(0,0,0,0.15)]">
+                <div className="border-b border-[#E8E8E8] bg-[linear-gradient(180deg,#FAFAFA_0%,#FFFFFF_100%)] px-4 py-4 sm:px-6 sm:py-5">
+                  <p className="text-[12px] font-medium text-[#9CA3AF]">
+                    Estimated monthly total
                   </p>
-                  <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#111111] sm:text-4xl">
+                  <p className="mt-2 text-[1.75rem] font-medium tracking-[-0.02em] text-[#1D1D1D] sm:text-4xl">
                     <MailAnimatedIqD
                       value={estimate.totalMonthly}
                       size="hero"
                       suffix="/mo"
-                      suffixClassName="ms-0.5 text-base font-medium text-[#999999]"
+                      suffixClassName="ms-0.5 text-sm font-medium text-[#9CA3AF] sm:text-base"
                     />
                   </p>
-                  <p className="mt-2 text-sm text-[#666666]">
+                  <p className="mt-2 text-sm leading-relaxed text-[#6B6F76]">
                     {estimate.planName} · {formatCount(estimate.mailboxes)}{" "}
                     mailbox
                     {estimate.mailboxes === 1 ? "" : "es"} ·{" "}
@@ -399,105 +462,106 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                   </p>
                 </div>
 
-                <dl className="space-y-3 border-b border-[#e8e8e8] px-5 py-5 text-sm sm:px-6">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-[#666666]">Base plan</dt>
-                    <dd className="font-medium tabular-nums text-[#111111]">
+                <dl className="space-y-3 border-b border-[#E8E8E8] px-4 py-4 text-sm sm:px-6 sm:py-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="min-w-0 text-[#6B6F76]">
+                      Base plan ({estimate.planName})
+                    </dt>
+                    <dd className="shrink-0 font-medium tabular-nums text-[#1D1D1D]">
                       <MailAnimatedIqD value={estimate.basePlanCost} delay={0.04} />
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-[#666666]">
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="min-w-0 text-[#6B6F76]">
                       Extra seats
-                      {estimate.extraMailboxes > 0
-                        ? ` (${estimate.extraMailboxes} × ${formatEstimateIqD(estimate.extraMailboxUnit)})`
-                        : ""}
+                      {estimate.extraMailboxes > 0 ? (
+                        <span className="mt-0.5 block text-xs text-[#9CA3AF]">
+                          {estimate.extraMailboxes} ×{" "}
+                          {formatEstimateIqD(estimate.extraMailboxUnit)}
+                        </span>
+                      ) : null}
                     </dt>
-                    <dd className="font-medium tabular-nums text-[#111111]">
+                    <dd className="shrink-0 font-medium tabular-nums text-[#1D1D1D]">
                       <MailAnimatedIqD
                         value={estimate.extraSeatsCost}
                         delay={0.08}
                       />
                     </dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-[#666666]">
-                      Outbound overage
-                      {estimate.billableEmails > 0
-                        ? ` (${formatCount(estimate.billableEmails)} above ${formatCount(estimate.includedOutbound)} included)`
-                        : ` (within ${formatCount(estimate.includedOutbound)} included)`}
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="min-w-0 text-[#6B6F76]">
+                      Outbound packs
+                      {estimate.packThousands > 0 ? (
+                        <span className="mt-0.5 block text-xs text-[#9CA3AF]">
+                          {estimate.packThousands} ×{" "}
+                          {formatEstimateIqD(estimate.packPriceIqd)}
+                        </span>
+                      ) : null}
                     </dt>
-                    <dd className="font-medium tabular-nums text-[#111111]">
+                    <dd className="shrink-0 font-medium tabular-nums text-[#1D1D1D]">
                       <MailAnimatedIqD value={estimate.volumeCost} delay={0.12} />
                     </dd>
                   </div>
-                  {estimate.billableEmails > 0 &&
-                  estimate.costPerThousandBillable != null ? (
-                    <div className="flex justify-between gap-4 border-t border-[#e8e8e8] pt-3">
-                      <dt className="text-[#666666]">
-                        Overage rate / 1,000 emails
-                      </dt>
-                      <dd className="font-medium tabular-nums text-[#111111]">
-                        <MailAnimatedIqD
-                          value={estimate.costPerThousandBillable}
-                          delay={0.16}
-                        />
-                      </dd>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-4 border-t border-[#e8e8e8] pt-3">
-                      <dt className="text-[#666666]">Outbound volume</dt>
-                      <dd className="font-medium text-[#111111]">
-                        Included in plan
-                      </dd>
-                    </div>
-                  )}
-                  {estimate.effectiveCostPerThousand != null ? (
-                    <div className="flex justify-between gap-4 text-xs">
-                      <dt className="text-[#999999]">
-                        Blended (plan + volume) / 1,000
-                      </dt>
-                      <dd className="tabular-nums text-[#999999]">
-                        <MailAnimatedIqD
-                          value={estimate.effectiveCostPerThousand}
-                          delay={0.2}
-                        />
-                      </dd>
+                  <div className="flex flex-col gap-1 border-t border-[#E8E8E8] pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                    <dt className="text-[#6B6F76]">Quota status</dt>
+                    <dd className="text-sm font-medium leading-snug text-[#1D1D1D] sm:max-w-[60%] sm:text-end">
+                      {estimate.overQuota ? (
+                        <span>
+                          +{formatCount(estimate.billableEmails)} over{" "}
+                          {formatCount(estimate.includedOutbound)} included
+                        </span>
+                      ) : (
+                        <span>
+                          Within {formatCount(estimate.includedOutbound)}{" "}
+                          included
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                  {estimate.overQuota ? (
+                    <div className="rounded-xl border border-[#E8E8E8] bg-[#FAFAFA] px-3 py-2.5 text-xs leading-relaxed text-[#6B6F76]">
+                      Overage is sold in packs of{" "}
+                      {formatCount(MAIL_ESTIMATE_PACK_EMAILS)} emails at{" "}
+                      {formatMailIqD(MAIL_ESTIMATE_PACK_PRICE_IQD)} each —
+                      buy them from Billing → Usage when your meter hits zero.
                     </div>
                   ) : null}
                 </dl>
 
-                <ul className="space-y-2 border-b border-[#e8e8e8] px-5 py-5 sm:px-6">
+                <ul className="hidden space-y-2 border-b border-[#E8E8E8] px-4 py-4 sm:block sm:px-6 sm:py-5">
                   {estimate.highlights.map((item) => (
                     <li
                       key={item}
-                      className="flex gap-2 text-sm text-[#666666]"
+                      className="flex gap-2 text-sm text-[#6B6F76]"
                     >
                       <Check
-                        className="mt-0.5 size-4 shrink-0 text-[#111111]"
+                        className="mt-0.5 size-4 shrink-0 text-[#34A853]"
                         strokeWidth={2.4}
                         aria-hidden
                       />
-                      {item}
+                      <span className="min-w-0">{item}</span>
                     </li>
                   ))}
                 </ul>
 
-                <div className="px-5 py-5 sm:px-6">
-                  <MailFrameLink
-                    href={ctaHref}
-                    className="w-full [&_span.relative]:w-full"
-                  >
+                <div className="px-4 py-4 sm:px-6 sm:py-5">
+                  <Link href={ctaHref} className={`${agLayout.btnPrimary} w-full`}>
                     {ctaLabel}
-                  </MailFrameLink>
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    className={`${agLayout.btnGhost} mt-2 w-full`}
+                  >
+                    Compare full pricing
+                  </Link>
                 </div>
               </div>
 
-              <div className="mt-4 border border-[#e8e8e8] bg-[#fafafa]">
-                <p className="border-b border-[#e8e8e8] px-4 py-3 text-xs font-medium uppercase tracking-[1.2px] text-[#999999]">
-                  Same inputs · all plans
+              <div className="mt-4 overflow-hidden rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA]">
+                <p className="border-b border-[#E8E8E8] px-4 py-3 text-[12px] font-medium text-[#9CA3AF]">
+                  Same seats & volume · all plans
                 </p>
-                <ul className="divide-y divide-[#e8e8e8]">
+                <ul className="divide-y divide-[#E8E8E8]">
                   {allEstimates.map((row) => (
                     <li
                       key={row.planId}
@@ -508,15 +572,21 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                     >
                       <button
                         type="button"
-                        className="font-medium text-[#111111] hover:text-[#111111]"
+                        className="min-w-0 text-start font-medium text-[#1D1D1D]"
                         onClick={() => {
                           setAutoRecommend(false);
                           setPlanId(row.planId);
                         }}
                       >
                         {row.planName}
+                        {row.overQuota ? (
+                          <span className="mt-0.5 block text-[11px] font-normal text-[#9CA3AF]">
+                            includes {row.packThousands} pack
+                            {row.packThousands === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
                       </button>
-                      <span className="tabular-nums text-[#666666]">
+                      <span className="shrink-0 tabular-nums text-[#6B6F76]">
                         <MailAnimatedIqD
                           value={row.totalMonthly}
                           suffix="/mo"
@@ -531,15 +601,50 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
         </div>
       </section>
 
+      <section className="border-b border-[#E8E8E8] bg-[#FAFAFA] py-14 sm:py-16">
+        <div className={agLayout.container}>
+          <MailReveal className="mx-auto max-w-xl text-center">
+            <h2 className={agLayout.sectionTitle}>How the bill is built</h2>
+            <p className={`${agLayout.lead} mt-4`}>
+              Three clear parts — no hidden volume surprises.
+            </p>
+          </MailReveal>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {[
+              {
+                title: "Base plan",
+                body: "Monthly price for the mailboxes included on Starter, Standard, or Premium.",
+              },
+              {
+                title: "Extra mailboxes",
+                body: "2,000 / 3,000 / 4,000 IQD per extra seat on Starter / Standard / Premium.",
+              },
+              {
+                title: "Outbound packs",
+                body: `${formatMailIqD(MAIL_ESTIMATE_PACK_PRICE_IQD)} per ${formatCount(MAIL_ESTIMATE_PACK_EMAILS)} emails after your included quota — same on every plan.`,
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="rounded-2xl border border-[#E8E8E8] bg-white p-5"
+              >
+                <p className="text-sm font-medium text-[#1D1D1D]">{card.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#6B6F76]">
+                  {card.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="py-10 sm:py-12">
-        <div className={L.container}>
-          <p className="max-w-3xl text-xs leading-relaxed text-[#999999]">
-            Disclaimer: This calculator is illustrative for planning only — not
-            a quote or binding offer. Seat pricing matches current Mail plans.
-            Outbound volume rates are an estimate catalog and may change when
-            usage billing launches. Starter starts after DNS verification;
-            Standard and Premium are requested in the console. Card payment is
-            coming soon.
+        <div className={agLayout.container}>
+          <p className="mx-auto max-w-3xl text-center text-xs leading-relaxed text-[#9CA3AF]">
+            Totals use current seat prices and prepaid pack rules from Billing.
+            Packs are sold in whole thousands (rounded up). Starter activates
+            after DNS verification and checkout; Standard and Premium are
+            managed from Billing.
           </p>
         </div>
       </section>

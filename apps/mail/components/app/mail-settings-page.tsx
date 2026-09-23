@@ -125,6 +125,10 @@ export function MailSettingsPage() {
   }, [appId, load]);
 
   const canEditApp = Boolean(app?.isOwner);
+  const teamSupported = (() => {
+    const plan = (app?.subscription?.plan || "").toUpperCase();
+    return plan !== "" && plan !== "STARTER";
+  })();
   const dirty = Boolean(
     app &&
       canEditApp &&
@@ -384,9 +388,11 @@ export function MailSettingsPage() {
               <Button size="sm" variant="ghost" onPress={() => router.push(href("/forwarders"))}>
                 Forwarders
               </Button>
-              <Button size="sm" variant="ghost" onPress={() => router.push(href("/team"))}>
-                Team access
-              </Button>
+              {teamSupported ? (
+                <Button size="sm" variant="ghost" onPress={() => router.push(href("/team"))}>
+                  Team access
+                </Button>
+              ) : null}
               <Button size="sm" variant="ghost" onPress={() => router.push("/billing")}>
                 Billing & payments
               </Button>

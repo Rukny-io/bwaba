@@ -54,11 +54,16 @@ export function mailPlanHighlights(plan: MailPlanDefinition): string[] {
   const included = plan.limits.mailboxesIncluded;
   const mailboxLine =
     included === 1 ? '1 mailbox included' : `${included} mailboxes included`;
+  const consoleLine =
+    plan.limits.consoleMembersIncluded === 0
+      ? 'Owner-only console'
+      : `${plan.limits.consoleMembersIncluded} console members included`;
   const aliasLine = isMailUnlimited(plan.limits.emailAliases)
     ? 'Unlimited aliases per mailbox'
     : `${plan.limits.emailAliases} aliases per mailbox`;
   return [
     mailboxLine,
+    consoleLine,
     `${plan.limits.storageGbPerMailbox} GB for emails`,
     aliasLine,
     ...plan.benefits,
@@ -83,7 +88,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
   },
   STANDARD: {
     mailboxesIncluded: 3,
-    consoleMembersIncluded: 5,
+    consoleMembersIncluded: 4,
     storageGbPerMailbox: 20,
     forwardingRules: 20,
     filterRules: 50,
@@ -98,7 +103,7 @@ export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
   },
   PREMIUM: {
     mailboxesIncluded: 5,
-    consoleMembersIncluded: 15,
+    consoleMembersIncluded: 10,
     storageGbPerMailbox: 30,
     forwardingRules: 50,
     filterRules: MAIL_UNLIMITED,
@@ -119,7 +124,7 @@ export const MAIL_PLAN_DEFINITIONS: Record<MailPlan, MailPlanDefinition> = {
     name: 'Starter',
     bestFor: 'one mailbox to get started',
     priceMonthly: 3_000,
-    priceExtraMailbox: 3_000,
+    priceExtraMailbox: 2_000,
     popular: false,
     limits: MAIL_PLAN_LIMITS.STARTER,
     benefits: [...SHARED_BENEFITS],
@@ -129,7 +134,7 @@ export const MAIL_PLAN_DEFINITIONS: Record<MailPlan, MailPlanDefinition> = {
     name: 'Standard',
     bestFor: 'small teams sharing one domain',
     priceMonthly: 6_000,
-    priceExtraMailbox: 2_000,
+    priceExtraMailbox: 3_000,
     popular: true,
     limits: MAIL_PLAN_LIMITS.STANDARD,
     benefits: [...SHARED_BENEFITS],
@@ -139,7 +144,7 @@ export const MAIL_PLAN_DEFINITIONS: Record<MailPlan, MailPlanDefinition> = {
     name: 'Premium',
     bestFor: 'teams that need more seats and delivery',
     priceMonthly: 10_000,
-    priceExtraMailbox: 2_000,
+    priceExtraMailbox: 4_000,
     popular: false,
     limits: MAIL_PLAN_LIMITS.PREMIUM,
     benefits: [...SHARED_BENEFITS, 'Premium email delivery'],
@@ -157,6 +162,40 @@ export function mailMonthlyTotal(plan: MailPlan, mailboxCount: number): number {
   const def = MAIL_PLAN_DEFINITIONS[plan];
   const extra = Math.max(0, seats - def.limits.mailboxesIncluded);
   return def.priceMonthly + extra * def.priceExtraMailbox;
+}
+
+/** Included outbound emails / billing month by plan. */
+export const MAIL_INCLUDED_OUTBOUND: Record<MailPlan, number> = {
+  [MailPlan.STARTER]: 4_000,
+  [MailPlan.STANDARD]: 10_000,
+  [MailPlan.PREMIUM]: 30_000,
+};
+
+/** Prepaid pack unit (Starter packs billed this phase). */
+export const MAIL_OUTBOUND_PACK_EMAILS = 1_000;
+
+/** IQD per pack of MAIL_OUTBOUND_PACK_EMAILS — flat across all plans. */
+export const MAIL_OUTBOUND_PACK_PRICE_IQD: Partial<Record<MailPlan, number>> = {
+  [MailPlan.STARTER]: 800,
+  [MailPlan.STANDARD]: 800,
+  [MailPlan.PREMIUM]: 800,
+};
+
+export function mailOutboundPackPriceIqd(plan: MailPlan): number | null {
+  const price = MAIL_OUTBOUND_PACK_PRICE_IQD[plan];
+  return typeof price === 'number' && price > 0 ? price : null;
+}
+
+export function mailOutboundPackTotalIqd(
+  plan: MailPlan,
+  thousands: number,
+): number {
+  const unit = mailOutboundPackPriceIqd(plan);
+  if (unit == null) {
+    throw new Error(`Outbound packs are not available for plan ${plan}`);
+  }
+  const n = Math.max(1, Math.floor(thousands));
+  return n * unit;
 }
 
 export function addOneMonth(from = new Date()): Date {

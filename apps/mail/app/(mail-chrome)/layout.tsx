@@ -1,17 +1,14 @@
-import { cookies } from "next/headers";
 import { MailChrome } from "@/components/layout/mail-chrome";
-import { MAIL_READY_COOKIE, MAIL_SHELL_COOKIE } from "@/lib/ses";
 
-export default async function MailChromeLayout({
+/**
+ * Always mount product chrome for console routes.
+ * Do not gate on ready/shell cookies — those flip during domain restore/clear
+ * and caused the sidebar + header to vanish until a full reload.
+ */
+export default function MailChromeLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const ready = cookieStore.get(MAIL_READY_COOKIE)?.value === "1";
-  const shell = cookieStore.get(MAIL_SHELL_COOKIE)?.value === "1";
-
-  if (!ready && !shell) return children;
-
   return <MailChrome layout="page">{children}</MailChrome>;
 }

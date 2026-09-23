@@ -175,8 +175,8 @@ export function MailUsageSection() {
                 min={1}
                 max={500}
                 value={thousands}
-                onChange={(value) => setThousands(String(value))}
-                isDisabled={!canManage || buying}
+                onChange={(e) => setThousands(e.target.value)}
+                disabled={!canManage || buying}
               />
               <Description>
                 {emails.toLocaleString("en-IQ")} emails

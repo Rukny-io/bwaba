@@ -382,7 +382,7 @@ export function MailDevicesPage() {
                 fullWidth
                 className="flex-1 gap-1.5"
                 value={passwordLabel}
-                onChange={(event) => setPasswordLabel(event.target.value)}
+                onChange={setPasswordLabel}
               >
                 <Label className="text-sm font-medium text-[var(--foreground)]">
                   Label

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { CreditCard, Plus, Settings, X } from "lucide-react";
 import { cn, Dropdown, Header, Label } from "@heroui/react";
 import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import {
@@ -12,9 +12,12 @@ import {
   mailNavForPathname,
   type MailNavItem,
 } from "@/lib/mail-nav-scoped";
+import { stripMailSlotPrefix, withMailSlot } from "@/lib/mail-slot";
 import { fetchMailSubscription } from "@/lib/mail-subscription-client";
 
-const DOCK_PRIMARY_COUNT = 3;
+function navPath(href: string) {
+  return stripMailSlotPrefix(href).split("?")[0];
+}
 
 function DockNavItem({
   item,
@@ -86,7 +89,7 @@ export function MailMobileDock() {
   const pathname = usePathname();
   const router = useRouter();
   const nav = mailNavForPathname(pathname);
-  const { secondary, headerTools } = nav;
+  const { secondary, headerTools, slot } = nav;
   const { pendingHref, setPendingHref } = useMailNavPending();
   const [open, setOpen] = useState(false);
   const [teamSupported, setTeamSupported] = useState(true);
@@ -98,7 +101,8 @@ export function MailMobileDock() {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
         const planId = snap.subscription?.planId;
-        const consoleSeats = snap.subscription?.limits?.consoleMembersIncluded ?? 0;
+        const consoleSeats =
+          snap.subscription?.limits?.consoleMembersIncluded ?? 0;
         setTeamSupported(planId !== "starter" && consoleSeats > 0);
       } catch {
         if (!cancelled) setTeamSupported(true);
@@ -114,18 +118,50 @@ export function MailMobileDock() {
     [nav.primary, teamSupported],
   );
 
-  const dockItems = useMemo(
-    () => primary.slice(0, DOCK_PRIMARY_COUNT),
-    [primary],
+  const billingItem = useMemo<MailNavItem>(
+    () => ({
+      href: withMailSlot("/billing", slot),
+      icon: CreditCard,
+      label: "Billing",
+      exact: false,
+    }),
+    [slot],
   );
+
+  const settingsItem = useMemo<MailNavItem>(
+    () => ({
+      href: withMailSlot("/settings", slot),
+      icon: Settings,
+      label: "Settings",
+      exact: true,
+    }),
+    [slot],
+  );
+
+  /** Mobile pill: Inbox · Mailboxes · Billing · Settings */
+  const dockItems = useMemo(() => {
+    const find = (path: string) =>
+      primary.find((item) => navPath(item.href) === path);
+    return [find("/inbox"), find("/app"), billingItem, settingsItem].filter(
+      (item): item is MailNavItem => Boolean(item),
+    );
+  }, [primary, billingItem, settingsItem]);
+
+  const dockPaths = useMemo(
+    () => new Set(dockItems.map((item) => navPath(item.href))),
+    [dockItems],
+  );
+
   const moreMail = useMemo(
-    () => primary.slice(DOCK_PRIMARY_COUNT),
-    [primary],
+    () => primary.filter((item) => !dockPaths.has(navPath(item.href))),
+    [primary, dockPaths],
   );
+
   const moreTools = useMemo(
     () => [...headerTools, ...secondary],
     [headerTools, secondary],
   );
+
   const moreItems = useMemo(
     () => [...moreMail, ...moreTools],
     [moreMail, moreTools],
@@ -189,7 +225,9 @@ export function MailMobileDock() {
             className="min-w-[16rem] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--field-background)]"
           >
             <Dropdown.Menu
-              selectedKeys={activeMoreHref ? new Set([activeMoreHref]) : new Set()}
+              selectedKeys={
+                activeMoreHref ? new Set([activeMoreHref]) : new Set()
+              }
               selectionMode="single"
               onAction={(key) => {
                 const href = String(key);

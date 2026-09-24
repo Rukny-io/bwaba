@@ -135,6 +135,13 @@ export function MailPlanSettingsSection() {
   }, [refresh]);
 
   const active = subscription?.status === "ACTIVE" ? subscription : null;
+  const activeFeatures = useMemo(
+    () =>
+      active
+        ? FEATURE_LABELS.filter((feature) => active.features?.[feature.key])
+        : [],
+    [active],
+  );
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
     [plans, selectedPlanId],
@@ -144,13 +151,10 @@ export function MailPlanSettingsSection() {
   const monthlyTotal = selectedPlan
     ? mailPlanMonthlyTotal(selectedPlan.id, clampedSeats)
     : 0;
-  const requestLocked =
-    needsApp ||
-    !canManageBilling ||
-    Boolean(pendingRequest) ||
-    busy ||
-    paying ||
-    !selectedPlan;
+  const formLocked =
+    needsApp || !canManageBilling || busy || paying || !selectedPlan;
+  const ticketLocked = formLocked || Boolean(pendingRequest);
+  const checkoutLocked = formLocked || !cardPayments.available;
 
   function onSelectPlan(planId: MailPlanId) {
     const plan = plans.find((entry) => entry.id === planId);
@@ -161,7 +165,7 @@ export function MailPlanSettingsSection() {
   }
 
   async function onRequestPlan() {
-    if (!selectedPlan || requestLocked) return;
+    if (!selectedPlan || ticketLocked) return;
     setBusy(true);
     setError("");
     setSuccess("");
@@ -182,7 +186,7 @@ export function MailPlanSettingsSection() {
   }
 
   async function onPayPlan() {
-    if (!selectedPlan || requestLocked || !cardPayments.available) return;
+    if (!selectedPlan || checkoutLocked) return;
     setPaying(true);
     setError("");
     setSuccess("");
@@ -255,57 +259,62 @@ export function MailPlanSettingsSection() {
           Open a workspace to see its subscription.
         </p>
       ) : active ? (
-        <>
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Monthly total</dt>
-              <dd className="font-medium text-[var(--foreground)]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] text-[var(--muted-foreground)]">
+                {active.planName} plan
+              </p>
+              <p className="mt-0.5 text-[1.75rem] font-medium tracking-[-0.03em] tabular-nums text-[var(--foreground)]">
                 {formatMailIqD(active.monthlyTotal)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Mailbox seats</dt>
-              <dd className="font-medium text-[var(--foreground)]">{active.mailboxCount}</dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Renews</dt>
-              <dd className="font-medium text-[var(--foreground)]">
-                {active.renewsAt
-                  ? new Date(active.renewsAt).toLocaleDateString("en-GB")
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Storage</dt>
-              <dd className="font-medium text-[var(--foreground)]">
-                {active.limits.storageGbPerMailbox} GB for emails
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Forwarding</dt>
-              <dd className="font-medium text-[var(--foreground)]">
-                {active.limits.forwardingRules} rules
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
-              <dd className="font-medium text-[var(--foreground)]">
-                {formatMailAliasLimit(active.limits.emailAliases)}
-              </dd>
-            </div>
-          </dl>
-          <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
-            {FEATURE_LABELS.map((feature) => (
-              <li key={feature.key} className="text-[var(--muted-foreground)]">
-                <span className="font-medium text-[var(--foreground)]">
-                  {active.features?.[feature.key] ? "On" : "Off"}
+                <span className="ms-1 text-sm font-medium text-[var(--muted-foreground)]">
+                  /mo
                 </span>
-                {" · "}
-                {feature.label}
-              </li>
-            ))}
-          </ul>
-        </>
+              </p>
+            </div>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {active.mailboxCount} seat
+              {active.mailboxCount === 1 ? "" : "s"}
+              {active.renewsAt
+                ? ` · renews ${new Date(active.renewsAt).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}`
+                : ""}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-[13px] text-[var(--muted-foreground)]">
+            <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1">
+              {active.limits.storageGbPerMailbox} GB / mailbox
+            </span>
+            <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1">
+              {active.limits.forwardingRules} forwards
+            </span>
+            <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1">
+              {formatMailAliasLimit(active.limits.emailAliases)} aliases
+            </span>
+          </div>
+
+          {activeFeatures.length > 0 ? (
+            <div className="min-w-0 border-t border-[var(--border)] pt-4">
+              <p className="mb-2 text-[12px] font-medium text-[var(--muted-foreground)]">
+                Included
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {activeFeatures.map((feature) => (
+                  <li
+                    key={feature.key}
+                    className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[12px] text-[var(--foreground)]"
+                  >
+                    {feature.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <p className="text-sm text-[var(--muted-foreground)]">
           No paid plan on this workspace yet. Starter starts after DNS is verified.
@@ -321,7 +330,7 @@ export function MailPlanSettingsSection() {
             pendingRequest.plan ? ` · ${pendingRequest.plan}` : ""
           } · ${pendingRequest.mailboxCount} seat${
             pendingRequest.mailboxCount === 1 ? "" : "s"
-          }. An admin will activate this workspace plan.`}
+          }. An admin will activate this workspace plan — or pay now with Checkout.`}
         />
       ) : null}
 
@@ -344,7 +353,7 @@ export function MailPlanSettingsSection() {
             <Dropdown>
               <Dropdown.Trigger
                 aria-label="Select plan"
-                isDisabled={Boolean(pendingRequest) || busy}
+                isDisabled={busy || paying}
                 className="inline-flex h-10 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[var(--field-background)] px-3 text-start text-sm font-medium text-[var(--foreground)] outline-none"
               >
                 <span className="min-w-0 truncate">
@@ -409,9 +418,7 @@ export function MailPlanSettingsSection() {
                 size="sm"
                 variant="secondary"
                 aria-label="Fewer mailbox seats"
-                isDisabled={
-                  Boolean(pendingRequest) || busy || clampedSeats <= included
-                }
+                isDisabled={busy || paying || clampedSeats <= included}
                 onPress={() => setSeats(clampedSeats - 1)}
               >
                 <Minus className="size-3.5" aria-hidden />
@@ -424,7 +431,7 @@ export function MailPlanSettingsSection() {
                 size="sm"
                 variant="secondary"
                 aria-label="More mailbox seats"
-                isDisabled={Boolean(pendingRequest) || busy || clampedSeats >= 500}
+                isDisabled={busy || paying || clampedSeats >= 500}
                 onPress={() => setSeats(clampedSeats + 1)}
               >
                 <Plus className="size-3.5" aria-hidden />
@@ -446,7 +453,7 @@ export function MailPlanSettingsSection() {
               <Button
                 size="sm"
                 variant="secondary"
-                isDisabled={requestLocked}
+                isDisabled={ticketLocked}
                 onPress={() => void onRequestPlan()}
               >
                 {busy
@@ -460,9 +467,7 @@ export function MailPlanSettingsSection() {
               <Button
                 size="sm"
                 className="rounded-full shadow-none"
-                isDisabled={
-                  requestLocked || !cardPayments.available || Boolean(pendingRequest)
-                }
+                isDisabled={checkoutLocked}
                 onPress={() => void onPayPlan()}
               >
                 {paying ? "Opening Checkout…" : `Checkout · ${formatMailIqD(monthlyTotal)}`}

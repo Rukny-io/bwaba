@@ -25,39 +25,75 @@ function DocsNavGroups({
   productTitle: string;
   onNavigate?: () => void;
 }) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
   return (
     <nav
       className="flex flex-col gap-5"
       aria-label={`${productTitle} documentation`}
     >
-      {groups.map((group) => (
-        <div key={group.label} className="min-w-0">
-          <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
-            {group.label}
-          </p>
-          <div className="flex flex-col border-s border-[var(--border)] ps-px">
-            {group.items.map((item) => {
-              const active = isDocNavActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  onClick={onNavigate}
+      {groups.map((group) => {
+        const groupActive = group.items.some((item) =>
+          isDocNavActive(pathname, item.href),
+        );
+        const isCollapsed = group.collapsible
+          ? (collapsed[group.label] ?? !groupActive)
+          : false;
+
+        return (
+          <div key={group.label} className="min-w-0">
+            {group.collapsible ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setCollapsed((current) => ({
+                    ...current,
+                    [group.label]: !isCollapsed,
+                  }))
+                }
+                className="mb-1.5 flex w-full items-center justify-between gap-2 px-3 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+                aria-expanded={!isCollapsed}
+              >
+                <span>{group.label}</span>
+                <ChevronDown
                   className={cn(
-                    '-ms-px border-s-2 py-1 ps-3 pe-2 text-[13px] leading-5 transition-colors',
-                    active
-                      ? 'border-[var(--foreground)] font-medium text-[var(--foreground)]'
-                      : 'border-transparent text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]',
+                    'size-3.5 shrink-0 transition-transform duration-200',
+                    !isCollapsed && 'rotate-180',
                   )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+                  aria-hidden
+                />
+              </button>
+            ) : (
+              <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
+                {group.label}
+              </p>
+            )}
+            {!isCollapsed ? (
+              <div className="flex flex-col border-s border-[var(--border)] ps-px">
+                {group.items.map((item) => {
+                  const active = isDocNavActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={onNavigate}
+                      className={cn(
+                        '-ms-px border-s-2 py-1 ps-3 pe-2 text-[13px] leading-5 transition-colors',
+                        active
+                          ? 'border-[var(--foreground)] font-medium text-[var(--foreground)]'
+                          : 'border-transparent text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]',
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }

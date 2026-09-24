@@ -103,7 +103,14 @@ export default function EmailApiGetStartedPage() {
         <DocCode>{SDK_INSTALL}</DocCode>
         <DocCode>{SDK_QUICKSTART}</DocCode>
         <p>
-          Prefer curl or fetch? See{' '}
+          Using another language? Browse{' '}
+          <Link
+            href="/documentation/email-api/send"
+            className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+          >
+            Sending examples
+          </Link>{' '}
+          (Python, PHP, Go, SMTP, CLI, and more) or see{' '}
           <Link
             href="/documentation/email-api/rest"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"

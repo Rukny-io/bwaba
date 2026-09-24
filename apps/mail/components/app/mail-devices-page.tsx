@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronDown, Copy, Smartphone } from "lucide-react";
+import { Check, ChevronDown, Copy, Smartphone, Trash2 } from "lucide-react";
 import {
   Button,
-  Chip,
   Description,
   Dropdown,
   EmptyState,
+  Input,
   InputGroup,
   Label,
   Skeleton,
@@ -16,12 +16,20 @@ import {
 } from "@heroui/react";
 import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
+import {
+  createMailAppPassword,
+  listMailAppPasswords,
+  revokeMailAppPassword,
+  type CreatedMailAppPassword,
+  type MailAppPasswordView,
+} from "@/lib/mail-app-passwords-client";
 import { getMailApp } from "@/lib/mail-apps-client";
-import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
   listMailMailboxes,
   type MailMailboxView,
 } from "@/lib/mail-mailboxes-client";
+import { MAILBOX_IMAP_HOST, MAILBOX_SMTP_HOST } from "@/lib/mail-smtp-config";
+import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 
 function MailboxDropdown({
   value,
@@ -115,19 +123,23 @@ function CopyField({
 const CLIENTS = [
   {
     name: "Apple Mail",
-    steps: "Add Account → Other Mail Account. Use IMAP, the host below, and the mailbox password.",
+    steps:
+      "Add Account → Other Mail Account. Use the hosts below, your full email as username, and an app password.",
   },
   {
     name: "Outlook",
-    steps: "Add account → IMAP. Incoming 993 SSL, outgoing 587 STARTTLS, username is the full address.",
+    steps:
+      "Add account → IMAP. Incoming 993 SSL, outgoing 587 STARTTLS. Username is the full address; password is an app password.",
   },
   {
     name: "Gmail app",
-    steps: "Add account → Other. Choose IMAP and paste the same host, username, and mailbox password.",
+    steps:
+      "Add account → Other. Choose IMAP, paste the hosts below, and sign in with an app password.",
   },
   {
     name: "Android",
-    steps: "Add account → Personal (IMAP). Encryption on for both incoming and outgoing.",
+    steps:
+      "Add account → Personal (IMAP). Turn on encryption for incoming and outgoing mail.",
   },
 ] as const;
 
@@ -138,9 +150,13 @@ export function MailDevicesPage() {
   const href = (path: string) => withMailSlot(path, slot);
 
   const [appId, setAppId] = useState<string | null>(null);
-  const [domain, setDomain] = useState<string | null>(null);
   const [mailboxes, setMailboxes] = useState<MailMailboxView[]>([]);
   const [mailboxId, setMailboxId] = useState("");
+  const [appPasswords, setAppPasswords] = useState<MailAppPasswordView[]>([]);
+  const [passwordLabel, setPasswordLabel] = useState("");
+  const [createdPassword, setCreatedPassword] = useState<CreatedMailAppPassword | null>(null);
+  const [passwordsLoading, setPasswordsLoading] = useState(false);
+  const [creatingPassword, setCreatingPassword] = useState(false);
   const [copied, setCopied] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -157,9 +173,8 @@ export function MailDevicesPage() {
   const load = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const [app, boxes] = await Promise.all([getMailApp(id), listMailMailboxes(id)]);
+      const boxes = await listMailMailboxes(id);
       const active = boxes.filter((box) => box.status === "ACTIVE");
-      setDomain(app.primaryDomain);
       setMailboxes(active);
       setMailboxId((current) => {
         if (current && active.some((box) => box.id === current)) return current;
@@ -173,13 +188,34 @@ export function MailDevicesPage() {
     }
   }, []);
 
+  const loadPasswords = useCallback(async (id: string, selectedMailboxId: string) => {
+    if (!selectedMailboxId) {
+      setAppPasswords([]);
+      return;
+    }
+    setPasswordsLoading(true);
+    try {
+      const passwords = await listMailAppPasswords(id, selectedMailboxId);
+      setAppPasswords(passwords);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load app passwords.");
+    } finally {
+      setPasswordsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!appId) return;
     void load(appId);
   }, [appId, load]);
 
+  useEffect(() => {
+    if (!appId || !mailboxId) return;
+    setCreatedPassword(null);
+    void loadPasswords(appId, mailboxId);
+  }, [appId, mailboxId, loadPasswords]);
+
   const mailbox = mailboxes.find((box) => box.id === mailboxId) ?? null;
-  const host = domain ? `mail.${domain}` : "";
   const username = mailbox?.address || "";
 
   const mailboxOptions = useMemo(
@@ -200,6 +236,36 @@ export function MailDevicesPage() {
     }
   }
 
+  async function handleCreatePassword() {
+    if (!appId || !mailboxId || !passwordLabel.trim()) return;
+    setCreatingPassword(true);
+    try {
+      const password = await createMailAppPassword(
+        appId,
+        mailboxId,
+        passwordLabel.trim(),
+      );
+      setCreatedPassword(password);
+      setPasswordLabel("");
+      await loadPasswords(appId, mailboxId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create app password.");
+    } finally {
+      setCreatingPassword(false);
+    }
+  }
+
+  async function handleRevokePassword(passwordId: string) {
+    if (!appId || !mailboxId) return;
+    try {
+      await revokeMailAppPassword(appId, mailboxId, passwordId);
+      if (createdPassword?.id === passwordId) setCreatedPassword(null);
+      await loadPasswords(appId, mailboxId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not revoke app password.");
+    }
+  }
+
   return (
     <section className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-4 sm:gap-6">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
@@ -208,19 +274,11 @@ export function MailDevicesPage() {
             Connect apps & devices
           </h1>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            IMAP and SMTP settings for Outlook, Apple Mail, Gmail, and phones.
+            SMTP is live for sending from Outlook, Apple Mail, and phones. IMAP incoming sync
+            is coming soon.
           </p>
         </div>
-        <Chip color="warning" size="sm" variant="soft">
-          Preview
-        </Chip>
       </div>
-
-      <MailNotice
-        status="warning"
-        title="Not live yet"
-        description="These hosts are not accepting connections. Mail still works in the Rukny Inbox. Use this page to review the setup before launch."
-      />
 
       {error ? (
         <MailNotice
@@ -246,7 +304,7 @@ export function MailDevicesPage() {
             Create a mailbox first
           </p>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Device setup uses an active mailbox address and password.
+            Device setup uses an active mailbox address and an app password.
           </p>
           <Button size="sm" className="mt-4" onPress={() => router.push(href("/app"))}>
             Go to mailboxes
@@ -265,7 +323,7 @@ export function MailDevicesPage() {
                 onChange={setMailboxId}
               />
               <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
-                Sign in with this address and the mailbox password from Mailboxes.
+                Use your full email address as the username and an app password below.
               </p>
             </div>
 
@@ -277,33 +335,106 @@ export function MailDevicesPage() {
             />
             <CopyField
               label="IMAP host"
-              value={host}
-              description="Incoming · port 993 · SSL/TLS"
+              value={MAILBOX_IMAP_HOST}
+              description="Incoming · port 993 · SSL/TLS (coming soon)"
               copied={copied === "imap"}
-              onCopy={() => void copy("imap", host)}
+              onCopy={() => void copy("imap", MAILBOX_IMAP_HOST)}
             />
             <CopyField
               label="SMTP host"
-              value={host}
-              description="Outgoing · port 587 · STARTTLS"
+              value={MAILBOX_SMTP_HOST}
+              description="Outgoing · port 587 · STARTTLS (or 465 SMTPS)"
               copied={copied === "smtp"}
-              onCopy={() => void copy("smtp", host)}
+              onCopy={() => void copy("smtp", MAILBOX_SMTP_HOST)}
             />
           </div>
 
-          <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
+          <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
             <div>
               <h2 className="text-base font-semibold text-[var(--foreground)]">
                 App passwords
               </h2>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                Dedicated passwords for third-party apps are not available yet. Use the
-                mailbox password for now.
+                Create a dedicated password for each device or app. App passwords work even
+                when mailbox 2FA is enabled.
               </p>
             </div>
-            <Chip size="sm" variant="soft">
-              Coming soon
-            </Chip>
+
+            {createdPassword ? (
+              <MailNotice
+                status="success"
+                title="App password created"
+                description="Copy it now — you will not be able to see it again."
+              />
+            ) : null}
+
+            {createdPassword ? (
+              <CopyField
+                label={createdPassword.label}
+                value={createdPassword.secret}
+                copied={copied === "new-password"}
+                onCopy={() => void copy("new-password", createdPassword.secret)}
+              />
+            ) : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <TextField
+                fullWidth
+                className="flex-1 gap-1.5"
+                value={passwordLabel}
+                onChange={(event) => setPasswordLabel(event.target.value)}
+              >
+                <Label className="text-sm font-medium text-[var(--foreground)]">
+                  Label
+                </Label>
+                <Input placeholder="Outlook on Mac" />
+              </TextField>
+              <Button
+                className="shrink-0"
+                isDisabled={!passwordLabel.trim() || creatingPassword}
+                onPress={() => void handleCreatePassword()}
+              >
+                {creatingPassword ? "Creating…" : "Create password"}
+              </Button>
+            </div>
+
+            {passwordsLoading ? (
+              <Skeleton className="h-16 w-full rounded-xl" />
+            ) : appPasswords.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">
+                No active app passwords yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border)]">
+                {appPasswords.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
+                        {row.label}
+                      </p>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        Created {new Date(row.createdAt).toLocaleDateString()}
+                        {row.lastUsedAt
+                          ? ` · Last used ${new Date(row.lastUsedAt).toLocaleDateString()}`
+                          : ""}
+                      </p>
+                    </div>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Revoke ${row.label}`}
+                      onPress={() => void handleRevokePassword(row.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col gap-2">

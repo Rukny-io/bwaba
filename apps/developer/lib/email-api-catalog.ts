@@ -12,6 +12,7 @@ export type EmailApiSectionId =
   | 'overview'
   | 'auth'
   | 'messages'
+  | 'smtp'
   | 'domains'
   | 'errors'
   | 'try'
@@ -47,6 +48,7 @@ export const EMAIL_API_SECTIONS: {
   { id: 'overview', slug: '', label: 'Overview' },
   { id: 'auth', slug: 'auth', label: 'Authentication' },
   { id: 'messages', slug: 'messages', label: 'Messages' },
+  { id: 'smtp', slug: 'smtp', label: 'SMTP' },
   { id: 'domains', slug: 'domains', label: 'Domains' },
   { id: 'errors', slug: 'errors', label: 'Errors' },
   { id: 'try', slug: 'try', label: 'Try it' },
@@ -55,8 +57,8 @@ export const EMAIL_API_SECTIONS: {
 
 /** Primary portal tabs — Auth & Errors reachable from Overview. */
 export const EMAIL_API_NAV_SECTIONS = EMAIL_API_SECTIONS.filter((section) =>
-  (['overview', 'messages', 'domains', 'try', 'sdks'] as const).includes(
-    section.id as 'overview' | 'messages' | 'domains' | 'try' | 'sdks',
+  (['overview', 'messages', 'smtp', 'domains', 'try', 'sdks'] as const).includes(
+    section.id as 'overview' | 'messages' | 'smtp' | 'domains' | 'try' | 'sdks',
   ),
 );
 

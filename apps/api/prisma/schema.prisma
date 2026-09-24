@@ -2793,6 +2793,8 @@ model DeveloperEmailMessage {
   sesMessageId   String?                     @unique
   idempotencyKey String
   environment    String
+  /// rest | smtp
+  channel        String                      @default("rest")
   errorCode      String?
   errorMessage   String?
   sentAt         DateTime?
@@ -3720,6 +3722,7 @@ model MailMailbox {
   aliases      MailAlias[]
   forwarders   MailForwarder[]
   filterRules  MailFilterRule[]
+  appPasswords MailAppPassword[]
 
   @@unique([domain, localPart])
   @@index([mailAppId])
@@ -3727,6 +3730,23 @@ model MailMailbox {
   @@index([status])
   @@index([createdAt])
   @@map("mail_mailboxes")
+}
+
+/// Dedicated password for third-party mail clients (SMTP/IMAP).
+model MailAppPassword {
+  id         String    @id @default(uuid())
+  mailboxId  String
+  label      String
+  secretHash String
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxId])
+  @@index([revokedAt])
+  @@map("mail_app_passwords")
 }
 
 /// Unmatched *@domain mail delivered to one mailbox on this app
@@ -3988,6 +4008,8 @@ model MailMessage {
 
   sesMessageId String?
   errorMessage String?
+  /// webmail | smtp — null for inbound/system rows
+  clientSource String?
   /// Raw MIME object key after inbound S3 delivery (future)
   rawS3Key     String?
   /// Filter rule that matched at inbound time (if any)

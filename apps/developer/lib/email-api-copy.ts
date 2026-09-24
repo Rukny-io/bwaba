@@ -41,6 +41,13 @@ export const EMAIL_API_COPY = {
   messagesDesc:
     'One recipient per request in the MVP. The sender must be verified and explicitly linked to this app.',
 
+  smtpTitle: 'SMTP',
+  smtpDesc:
+    'Send from Laravel, Nodemailer, WordPress, or any SMTP client. Use username rukny and your API key as the password — same scopes, quotas, and verified senders as REST.',
+  smtpDocsLink: 'SMTP setup guide',
+  smtpNodemailerTitle: 'Nodemailer',
+  smtpLaravelTitle: 'Laravel .env',
+
   domainsDeliverabilityTitle: 'Deliverability protection',
   domainsDeliverabilityDesc:
     'Hard bounces and spam complaints suppress the recipient for your account. A suspicious increase in either can automatically pause sending pending review.',

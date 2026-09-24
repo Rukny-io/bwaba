@@ -114,16 +114,7 @@ export function DocCallout({
   );
 }
 
-export function DocCode({ children }: { children: string }) {
-  return (
-    <pre
-      className="overflow-x-auto rounded-xl bg-[var(--surface-secondary)] px-4 py-3.5 text-[12.5px] leading-relaxed text-[var(--foreground)]"
-      dir="ltr"
-    >
-      <code>{children}</code>
-    </pre>
-  );
-}
+export { DocCode } from '@/components/documentation/doc-code-block';
 
 export function DocInlineCode({ children }: { children: ReactNode }) {
   return (

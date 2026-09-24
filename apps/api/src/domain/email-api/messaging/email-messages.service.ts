@@ -25,11 +25,21 @@ export class EmailMessagesService {
     private readonly config: ConfigService,
   ) {}
 
+  async sendViaSmtp(
+    userId: string,
+    apiKeyId: string,
+    dto: SendEmailDto,
+    idempotencyKey: string,
+  ) {
+    return this.send(userId, apiKeyId, dto, idempotencyKey, 'smtp');
+  }
+
   async send(
     userId: string,
     apiKeyId: string,
     dto: SendEmailDto,
     idempotencyKey: string,
+    channel: 'rest' | 'smtp' = 'rest',
   ) {
     const apiKey = await this.prisma.developerApiKey.findFirst({
       where: { id: apiKeyId, userId, status: 'ACTIVE' },
@@ -104,6 +114,7 @@ export class EmailMessagesService {
           subject: dto.subject.trim(),
           idempotencyKey,
           environment,
+          channel,
         },
         select: { id: true, externalId: true, status: true, createdAt: true },
       });

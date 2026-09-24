@@ -34,6 +34,6 @@ import { EmailApiTryService } from './try/email-api-try.service';
     EmailSesEventsService,
     EmailApiTryService,
   ],
-  exports: [EmailEntitlementService],
+  exports: [EmailEntitlementService, EmailMessagesService],
 })
 export class EmailApiModule {}

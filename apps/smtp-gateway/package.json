@@ -1,0 +1,22 @@
+{
+  "name": "@rukny/smtp-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rukny SMTP gateway for Developer Email API and Rukny Mail",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "mailparser": "^3.9.15",
+    "smtp-server": "^3.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/smtp-server": "^3.5.12",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

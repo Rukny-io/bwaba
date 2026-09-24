@@ -724,6 +724,172 @@ export class MailMessagesService {
     return { ok: true as const };
   }
 
+  async sendViaSmtp(input: {
+    mailboxId: string;
+    userId: string;
+    appId: string;
+    from: string;
+    fromName?: string;
+    to: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject: string;
+    bodyText?: string;
+    bodyHtml?: string;
+  }) {
+    const to = this.normalizeEmails(input.to);
+    const cc = this.normalizeEmails(input.cc);
+    const bcc = this.normalizeEmails(input.bcc);
+    if (to.length === 0) {
+      throw new BadRequestException('At least one To recipient is required.');
+    }
+
+    const bodyText = input.bodyText?.trim() || undefined;
+    const bodyHtml = input.bodyHtml?.trim() || undefined;
+    if (!bodyText && !bodyHtml) {
+      throw new BadRequestException('Message body is required.');
+    }
+
+    const mailbox = await this.prisma.mailMailbox.findFirst({
+      where: {
+        id: input.mailboxId,
+        status: MailMailboxStatus.ACTIVE,
+        mailApp: { appId: input.appId, userId: input.userId, status: MailAppStatus.ACTIVE },
+      },
+      include: { mailApp: { select: { userId: true, appId: true } } },
+    });
+    if (!mailbox) {
+      throw new NotFoundException('Mailbox not found.');
+    }
+
+    const fromAddress = input.from.trim().toLowerCase();
+    const limits = await this.subscriptions.getActiveLimitsForApp(mailbox.mailAppId);
+    if (!limits) {
+      throw new BadRequestException(
+        'This Mail app needs an active plan before you can send mail.',
+      );
+    }
+
+    const recipientCount = to.length + cc.length + bcc.length;
+    await this.outboundUsage.reserveOutbound(mailbox.mailAppId, recipientCount);
+
+    const plainText =
+      bodyText ||
+      (bodyHtml
+        ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        : '');
+    const outboundHtml = bodyHtml?.trim() || undefined;
+    const incomingBytes = utf8StorageBytes(plainText, outboundHtml);
+    const usedBytes = Number(mailbox.storageUsedBytes ?? 0);
+    if (usedBytes + incomingBytes > limits.storageQuotaBytesPerMailbox) {
+      throw new BadRequestException(
+        'Mailbox storage quota reached for this app’s plan. Request more storage or delete mail.',
+      );
+    }
+
+    const messageIdHeader = this.rfcMessageId(mailbox.domain);
+    const snippet = this.snippetFrom(plainText || undefined, outboundHtml);
+    const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
+      mailbox.mailAppId,
+    );
+    const bodyFields = await this.bodyCrypto.buildCreateFields({
+      encryptionEnabled,
+      mailboxId: mailbox.id,
+      messageId: messageIdHeader,
+      bodyText: plainText || null,
+      bodyHtml: outboundHtml ?? null,
+      dualWritePlaintext: this.bodyEncryption.dualWritePlaintext(),
+    });
+
+    const queued = await this.prisma.mailMessage.create({
+      data: {
+        mailboxId: mailbox.id,
+        userId: input.userId,
+        threadId: randomUUID(),
+        messageId: messageIdHeader,
+        direction: MailMessageDirection.OUTBOUND,
+        folder: MailMessageFolder.SENT,
+        status: MailMessageStatus.QUEUED,
+        fromAddress,
+        fromName: input.fromName?.trim() || mailbox.displayName,
+        senderDomain: mailbox.domain.toLowerCase(),
+        toAddresses: to,
+        ccAddresses: cc,
+        bccAddresses: bcc,
+        replyTo: fromAddress,
+        subject: input.subject.trim(),
+        bodyText: bodyFields.bodyText,
+        bodyHtml: bodyFields.bodyHtml,
+        bodyCryptoStatus: bodyFields.bodyCryptoStatus,
+        bodyCryptoVersion: bodyFields.bodyCryptoVersion,
+        bodyKmsKeyId: bodyFields.bodyKmsKeyId,
+        bodyEncryptedDek: toPrismaBytes(bodyFields.bodyEncryptedDek),
+        bodyTextCiphertext: toPrismaBytes(bodyFields.bodyTextCiphertext),
+        bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
+        snippet,
+        isRead: true,
+        clientSource: 'smtp',
+      },
+    });
+
+    await incrementMailboxStorage(
+      this.prisma,
+      mailbox.id,
+      utf8StorageBytes(plainText, outboundHtml),
+    );
+
+    try {
+      const { sesMessageId } = await this.ses.sendEmail({
+        from: fromAddress,
+        fromName: input.fromName?.trim() || mailbox.displayName,
+        to,
+        cc,
+        bcc,
+        subject: input.subject.trim(),
+        bodyText: plainText || undefined,
+        bodyHtml: outboundHtml,
+        replyTo: [fromAddress],
+        messageIdHeader,
+      });
+
+      const sent = await this.prisma.mailMessage.update({
+        where: { id: queued.id },
+        data: {
+          status: MailMessageStatus.SENT,
+          sesMessageId,
+          sentAt: new Date(),
+          errorMessage: null,
+        },
+      });
+
+      this.realtime.publish({
+        type: 'mail.changed',
+        appId: input.appId,
+        mailboxId: mailbox.id,
+        folder: MailMessageFolder.SENT,
+        messageId: sent.id,
+        direction: 'OUTBOUND',
+      });
+
+      return {
+        ok: true as const,
+        messageId: sent.id,
+        sesMessageId,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Send failed.';
+      await this.prisma.mailMessage.update({
+        where: { id: queued.id },
+        data: {
+          status: MailMessageStatus.FAILED,
+          errorMessage: errorMessage.slice(0, 500),
+        },
+      });
+      throw error;
+    }
+  }
+
   async send(
     userId: string,
     appId: string,
@@ -838,6 +1004,7 @@ export class MailMessagesService {
         bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
         snippet,
         isRead: true,
+        clientSource: 'webmail',
       },
     });
 

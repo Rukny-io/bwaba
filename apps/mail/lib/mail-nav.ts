@@ -38,6 +38,7 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
 
 /** Domain + Quarantine live in the top Main nav; keep Logs + Developers in the sidebar. */
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
+  { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
   { href: "/developers", icon: Code2, label: "Developers", exact: true },
 ];
@@ -48,10 +49,8 @@ export const MAIL_HEADER_TOOL_NAV: MailNavItem[] = [
   { href: "/quarantine", icon: ShieldAlert, label: "Quarantine", exact: true },
 ];
 
-/** Built, but hidden from the sidebar until IMAP/SMTP is ready to publish. */
-export const MAIL_UNPUBLISHED_NAV: MailNavItem[] = [
-  { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
-];
+/** Reserved for features not yet linked in the sidebar. */
+export const MAIL_UNPUBLISHED_NAV: MailNavItem[] = [];
 
 export const MAIL_HEADER_NAV: MailNavItem[] = [
   { href: "/settings", icon: Settings, label: "Settings", exact: true },

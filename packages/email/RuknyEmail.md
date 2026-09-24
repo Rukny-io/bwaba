@@ -48,7 +48,21 @@ const status = await email.messages.getStatus('em_…');
 
 Failed HTTP calls throw `RuknyEmailError` with `status` and `body`.
 
+## SMTP (alternative to REST)
+
+Use any SMTP client with the same API key and `email:send` scope:
+
+| Setting | Value |
+|---------|-------|
+| Host | `smtp.rukny.io` |
+| Port | `587` (STARTTLS) or `465` (SMTPS) |
+| Username | `rukny` |
+| Password | Your API key (`rk_live_…`) |
+
+Idempotency uses the email `Message-ID` header when present. One recipient per message.
+
 ## Links
 
 - Documentation: https://developers.rukny.io/documentation/email-api
+- Sending examples: https://developers.rukny.io/documentation/email-api/send
 - Portal: https://developers.rukny.io

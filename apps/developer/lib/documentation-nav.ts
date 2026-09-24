@@ -1,3 +1,5 @@
+import { SEND_EXAMPLE_NAV_ITEMS } from '@/lib/email-api-send-catalog';
+
 /** Public Meta-style documentation navigation (English, LTR). */
 
 export const DOCUMENTATION_BASE = '/documentation';
@@ -13,6 +15,8 @@ export interface DocumentationNavItem {
 export interface DocumentationNavGroup {
   label: string;
   items: DocumentationNavItem[];
+  /** When true, the group can collapse in the sidebar (Resend-style). */
+  collapsible?: boolean;
 }
 
 export interface DocumentationProduct {
@@ -55,6 +59,14 @@ export const EMAIL_API_DOC_NAV_GROUPS: DocumentationNavGroup[] = [
       { slug: 'testing', label: 'Testing', href: `${emailBase}/testing` },
       { slug: 'quotas', label: 'Quotas & limits', href: `${emailBase}/quotas` },
       { slug: 'errors', label: 'Errors', href: `${emailBase}/errors` },
+    ],
+  },
+  {
+    label: 'Sending examples',
+    collapsible: true,
+    items: [
+      { slug: 'send', label: 'Overview', href: `${emailBase}/send` },
+      ...SEND_EXAMPLE_NAV_ITEMS,
     ],
   },
   {
@@ -135,6 +147,7 @@ export function isDocNavActive(pathname: string, href: string): boolean {
   const roots = [
     `${DOCUMENTATION_BASE}/email-api`,
     `${DOCUMENTATION_BASE}/forms`,
+    `${DOCUMENTATION_BASE}/email-api/send`,
   ];
   if (roots.includes(href)) {
     return pathname === href || pathname === `${href}/`;

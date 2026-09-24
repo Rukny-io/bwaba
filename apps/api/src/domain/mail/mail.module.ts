@@ -50,6 +50,8 @@ import { MailFeatureFlags } from './mail-feature-flags';
 import { MailBodyCryptoService } from './crypto/mail-body-crypto.service';
 import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
 import { MailKmsClient } from './crypto/mail-kms.client';
+import { MailAppPasswordsController } from './mail-app-passwords.controller';
+import { MailAppPasswordsService } from './mail-app-passwords.service';
 
 @Module({
   imports: [
@@ -88,6 +90,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
     MailSesWebhookController,
     MailPublicController,
     MailDomainVerificationController,
+    MailAppPasswordsController,
   ],
   providers: [
     CheckoutSessionGuard,
@@ -114,6 +117,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
     MailBodyEncryptionPolicy,
     MailRealtimeService,
     MailDomainVerificationService,
+    MailAppPasswordsService,
   ],
   exports: [
     MailSesModule,
@@ -140,6 +144,7 @@ import { MailKmsClient } from './crypto/mail-kms.client';
     MailBodyEncryptionPolicy,
     MailRealtimeService,
     MailDomainVerificationService,
+    MailAppPasswordsService,
   ],
 })
 export class MailModule {}

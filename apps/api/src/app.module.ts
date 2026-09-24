@@ -79,6 +79,7 @@ import { DevModule } from './dev/dev.module';
 import { DeveloperModule } from './domain/developer/developer.module';
 import { MailModule } from './domain/mail/mail.module';
 import { EmailApiModule } from './domain/email-api/email-api.module';
+import { SmtpInternalModule } from './domain/smtp/smtp-internal.module';
 import { WhatsAppProviderModule } from './domain/whatsapp-provider/whatsapp-provider.module';
 import { BusinessHubModule } from './domain/business-hub/business-hub.module';
 
@@ -174,6 +175,9 @@ import { SharedModule } from './shared/modules/shared.module';
 
     // Domain - Transactional Email API
     EmailApiModule,
+
+    // Internal SMTP relay (smtp-gateway)
+    SmtpInternalModule,
 
     // Domain - WhatsApp Tech Provider
     WhatsAppProviderModule,

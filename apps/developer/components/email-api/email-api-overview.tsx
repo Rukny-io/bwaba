@@ -18,6 +18,16 @@ export function EmailApiOverview() {
       desc: d.overviewMessagesDesc,
     },
     {
+      href: '/documentation/email-api/send',
+      title: 'Sending examples',
+      desc: 'Node, Python, PHP, Go, Rust, SMTP, CLI, and every major stack.',
+    },
+    {
+      href: appEmailApiHref(app.appId, 'smtp'),
+      title: d.smtpTitle,
+      desc: d.smtpDesc,
+    },
+    {
       href: appEmailApiHref(app.appId, 'domains'),
       title: d.overviewDomainsCard,
       desc: d.overviewDomainsDesc,

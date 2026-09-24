@@ -82,6 +82,11 @@ export default function EmailApiOverviewPage() {
             description="Copy-ready patterns for OTP, receipts, and magic links."
           />
           <DocLinkCard
+            href="/documentation/email-api/send"
+            title="Sending examples"
+            description="Node.js, Python, PHP, Go, SMTP, CLI, and every major stack."
+          />
+          <DocLinkCard
             href="/documentation/email-api/sdk"
             title="Node.js SDK"
             description="Install @rukny/email and ship with a few lines of TypeScript."
@@ -105,6 +110,15 @@ export default function EmailApiOverviewPage() {
               Node.js SDK
             </Link>{' '}
             — preferred for TypeScript and Node backends.
+          </li>
+          <li>
+            <Link
+              href="/documentation/email-api/send"
+              className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+            >
+              Sending examples
+            </Link>{' '}
+            — Node, Python, PHP, Go, Rust, SMTP, CLI, and more.
           </li>
           <li>
             <Link

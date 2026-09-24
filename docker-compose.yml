@@ -188,6 +188,35 @@ services:
     networks:
       - rukny_network
 
+  # ─── SMTP Gateway (Developer Email API + Rukny Mail) ───
+  smtp-gateway:
+    build:
+      context: ./apps/smtp-gateway
+      dockerfile: Dockerfile
+    container_name: rukny_smtp_gateway
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "0.0.0.0:587:587"
+      - "0.0.0.0:465:465"
+    environment:
+      NODE_ENV: production
+      SMTP_GATEWAY_HOST: 0.0.0.0
+      SMTP_GATEWAY_PORT: 587
+      SMTP_GATEWAY_TLS_PORT: 465
+      SMTP_GATEWAY_HOSTNAME: ${SMTP_GATEWAY_HOSTNAME:-smtp.rukny.io}
+      SMTP_GATEWAY_MAILBOX_HOSTNAME: ${SMTP_GATEWAY_MAILBOX_HOSTNAME:-smtp.mail.rukny.io}
+      SMTP_GATEWAY_API_BASE_URL: http://api:3001/api/v1
+      SMTP_GATEWAY_DEVELOPER_USERNAME: ${SMTP_GATEWAY_DEVELOPER_USERNAME:-rukny}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      SMTP_GATEWAY_TLS_CERT: ${SMTP_GATEWAY_TLS_CERT:-}
+      SMTP_GATEWAY_TLS_KEY: ${SMTP_GATEWAY_TLS_KEY:-}
+    volumes:
+      - ${SMTP_GATEWAY_TLS_DIR:-./certs/smtp}:/certs/smtp:ro
+    networks:
+      - rukny_network
+
   # ─── Next.js Dashboard App (app.rukny.io) ───
   app:
     build:

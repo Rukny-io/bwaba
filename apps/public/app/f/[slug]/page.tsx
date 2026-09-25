@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import { PublicFormPageView } from '@/components/public-form/public-form-page-view';
+import { PublicFormUnavailableView } from '@/components/public-form/public-form-unavailable-view';
+import { PublicFormEmptyState } from '@/components/public-form/public-form-empty-state';
 import { fetchPublicForm } from '@/lib/public-form-api';
+import { isValidPublicFormSlug } from '@rukny/forms-shared/public-form-utils';
 import type { Metadata } from 'next';
-
-const SLUG_PATTERN = /^[a-z0-9]{6}$/;
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -12,14 +13,19 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!SLUG_PATTERN.test(slug)) return { title: 'نموذج غير موجود' };
+  if (!isValidPublicFormSlug(slug)) return { title: 'نموذج غير موجود' };
 
-  const form = await fetchPublicForm(slug);
-  if (!form) return { title: 'نموذج غير موجود' };
+  const result = await fetchPublicForm(slug);
+  if (!result.ok) {
+    if (result.error === 'unavailable' && result.unavailable?.title) {
+      return { title: result.unavailable.title.trim() || 'نموذج غير متاح' };
+    }
+    return { title: 'نموذج غير موجود' };
+  }
 
   return {
-    title: form.title.trim() || 'نموذج',
-    description: form.description?.trim() || undefined,
+    title: result.form.title.trim() || 'نموذج',
+    description: result.form.description?.trim() || undefined,
   };
 }
 
@@ -28,17 +34,32 @@ export default async function PublicFormPage({ params, searchParams }: Props) {
   const { embed } = await searchParams;
   const isEmbed = embed === '1';
 
-  if (!SLUG_PATTERN.test(slug)) {
+  if (!isValidPublicFormSlug(slug)) {
     notFound();
   }
 
-  const form = await fetchPublicForm(slug);
+  const result = await fetchPublicForm(slug);
 
-  if (!form || form.slug !== slug) {
-    notFound();
+  if (result.ok) {
+    return <PublicFormPageView form={result.form} slug={slug} embed={isEmbed} />;
   }
 
-  return <PublicFormPageView form={form} slug={slug} embed={isEmbed} />;
+  if (result.error === 'unavailable' && result.unavailable) {
+    return (
+      <PublicFormUnavailableView meta={result.unavailable} embed={isEmbed} />
+    );
+  }
+
+  if (result.error === 'network' && process.env.NODE_ENV === 'development') {
+    return (
+      <PublicFormEmptyState
+        title="تعذّر الاتصال بالخادم"
+        description="تأكد أن API يعمل على المنفذ 3001 وأن API_BACKEND_URL مضبوط بشكل صحيح، ثم حدّث الصفحة."
+      />
+    );
+  }
+
+  notFound();
 }
 
 export const dynamic = 'force-dynamic';

@@ -1,3 +1,17 @@
+/** Matches API create-form.dto slug rules (lowercase, digits, hyphens, max 200). */
+export const PUBLIC_FORM_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,198}[a-z0-9])?$/;
+
+/** Auto-generated 6-character public slugs. */
+export const SYSTEM_FORM_SLUG_PATTERN = /^[a-z0-9]{6}$/;
+
+export function isValidPublicFormSlug(slug: string): boolean {
+  return PUBLIC_FORM_SLUG_PATTERN.test(slug);
+}
+
+export function isSystemFormSlug(slug: string): boolean {
+  return SYSTEM_FORM_SLUG_PATTERN.test(slug);
+}
+
 const LAYOUT_TYPES = new Set([
   'HEADING',
   'PARAGRAPH',

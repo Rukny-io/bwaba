@@ -311,8 +311,18 @@ export class FormsQueriesService {
     });
 
     if (!form) throw new NotFoundException('Form not found');
-    if (!isActiveForm(form) || form.status !== 'PUBLISHED') {
+    if (!isActiveForm(form)) {
       throw new NotFoundException('Form not found');
+    }
+    if (form.status !== 'PUBLISHED') {
+      throw new ForbiddenException({
+        code: 'FORM_UNAVAILABLE',
+        status: form.status,
+        title: form.title,
+        theme: form.theme,
+        opensAt: form.opensAt?.toISOString() ?? null,
+        closesAt: form.closesAt?.toISOString() ?? null,
+      });
     }
 
     if (!options?.skipViewTrack) {

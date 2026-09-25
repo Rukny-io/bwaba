@@ -1,9 +1,44 @@
 import type { PublicForm } from '@/lib/forms-types';
 import { API_PUBLIC_BASE, getBackendUrl } from '@/lib/config';
+import { isValidPublicFormSlug } from '@rukny/forms-shared/public-form-utils';
+
+export type FetchPublicFormError =
+  | 'invalid_slug'
+  | 'not_found'
+  | 'unavailable'
+  | 'network'
+  | 'invalid_response';
+
+export type UnavailableFormMeta = {
+  code: 'FORM_UNAVAILABLE';
+  status: string;
+  title?: string;
+  theme?: PublicForm['theme'];
+  opensAt?: string | null;
+  closesAt?: string | null;
+};
+
+export type FetchPublicFormResult =
+  | { ok: true; form: PublicForm }
+  | {
+      ok: false;
+      error: FetchPublicFormError;
+      unavailable?: UnavailableFormMeta;
+    };
+
+function logFetchFailure(slug: string, error: FetchPublicFormError, detail?: string) {
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[public-form] fetch failed (${error}) slug=${slug}`, detail ?? '');
+  }
+}
 
 export async function fetchPublicForm(
   slug: string,
-): Promise<PublicForm | null> {
+): Promise<FetchPublicFormResult> {
+  if (!isValidPublicFormSlug(slug)) {
+    return { ok: false, error: 'invalid_slug' };
+  }
+
   const base = getBackendUrl();
 
   try {
@@ -17,11 +52,72 @@ export async function fetchPublicForm(
       },
     );
 
-    if (!res.ok) return null;
-    return (await res.json()) as PublicForm;
-  } catch {
-    return null;
+    if (res.status === 403) {
+      try {
+        const body = (await res.json()) as UnavailableFormMeta & {
+          code?: string;
+        };
+        if (body.code === 'FORM_UNAVAILABLE') {
+          return {
+            ok: false,
+            error: 'unavailable',
+            unavailable: {
+              code: 'FORM_UNAVAILABLE',
+              status: body.status,
+              title: body.title,
+              theme: body.theme,
+              opensAt: body.opensAt ?? null,
+              closesAt: body.closesAt ?? null,
+            },
+          };
+        }
+      } catch {
+        // fall through
+      }
+      logFetchFailure(slug, 'invalid_response', '403 without FORM_UNAVAILABLE');
+      return { ok: false, error: 'invalid_response' };
+    }
+
+    if (res.status === 404) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    if (!res.ok) {
+      logFetchFailure(slug, 'invalid_response', `HTTP ${res.status}`);
+      return { ok: false, error: 'invalid_response' };
+    }
+
+    const form = (await res.json()) as PublicForm;
+    if (!form?.slug || form.slug !== slug) {
+      logFetchFailure(slug, 'invalid_response', 'slug mismatch in payload');
+      return { ok: false, error: 'invalid_response' };
+    }
+
+    return { ok: true, form };
+  } catch (err) {
+    logFetchFailure(
+      slug,
+      'network',
+      err instanceof Error ? err.message : String(err),
+    );
+    return { ok: false, error: 'network' };
   }
+}
+
+export function formUnavailableMessageFromMeta(meta: UnavailableFormMeta): string {
+  if (meta.status === 'CLOSED' || meta.status === 'ARCHIVED') {
+    return 'هذا النموذج مغلق ولا يقبل استجابات جديدة.';
+  }
+  if (meta.status === 'DRAFT') {
+    return 'هذا النموذج غير منشور بعد.';
+  }
+  if (meta.opensAt && new Date(meta.opensAt).getTime() > Date.now()) {
+    return 'لم يُفتح هذا النموذج للاستجابات بعد.';
+  }
+  if (meta.closesAt && new Date(meta.closesAt).getTime() < Date.now()) {
+    return 'انتهت فترة قبول الاستجابات لهذا النموذج.';
+  }
+  return 'هذا النموذج غير متاح حالياً.';
 }
 
 /** Browser → api.rukny.io through Cloudflare (geo headers preserved). */
@@ -259,17 +355,10 @@ export function isFormAvailable(form: PublicForm): boolean {
 }
 
 export function formUnavailableMessage(form: PublicForm): string {
-  if (form.status === 'CLOSED' || form.status === 'ARCHIVED') {
-    return 'هذا النموذج مغلق ولا يقبل استجابات جديدة.';
-  }
-  if (form.status === 'DRAFT') {
-    return 'هذا النموذج غير منشور بعد.';
-  }
-  if (form.opensAt && new Date(form.opensAt).getTime() > Date.now()) {
-    return 'لم يُفتح هذا النموذج للاستجابات بعد.';
-  }
-  if (form.closesAt && new Date(form.closesAt).getTime() < Date.now()) {
-    return 'انتهت فترة قبول الاستجابات لهذا النموذج.';
-  }
-  return 'هذا النموذج غير متاح حالياً.';
+  return formUnavailableMessageFromMeta({
+    code: 'FORM_UNAVAILABLE',
+    status: form.status,
+    opensAt: form.opensAt ?? null,
+    closesAt: form.closesAt ?? null,
+  });
 }

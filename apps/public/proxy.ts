@@ -10,9 +10,9 @@ import {
   type SecurityHeadersOptions,
 } from '@rukny/forms-shared/security-headers';
 import { USERNAME_PATTERN, isValidProfileUsername } from '@/lib/profile-routes';
+import { isValidPublicFormSlug } from '@rukny/forms-shared/public-form-utils';
 
 const isDev = process.env.NODE_ENV !== 'production';
-const SLUG_PATTERN = /^[a-z0-9]{6}$/;
 
 const BASE_SECURITY_OPTS: SecurityHeadersOptions = {
   isDev,
@@ -97,10 +97,10 @@ export async function proxy(request: NextRequest) {
     };
   }
 
-  const embedMatch = pathname.match(/^\/f\/([a-z0-9]{6})$/);
+  const embedMatch = pathname.match(/^\/f\/([^/]+)$/);
   if (embedMatch && embedRequested) {
     const slug = embedMatch[1];
-    if (SLUG_PATTERN.test(slug)) {
+    if (isValidPublicFormSlug(slug)) {
       const policy = await fetchEmbedPolicy(slug);
       if (policy) {
         securityOptions = {

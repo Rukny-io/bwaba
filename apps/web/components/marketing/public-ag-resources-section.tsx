@@ -47,7 +47,6 @@ export function PublicAgResourcesSection() {
 
   return (
     <section
-      dir="rtl"
       className={`${agLayout.sectionWhite} pb-24 pt-20 sm:pb-28 sm:pt-24`}
       aria-labelledby="public-resources-heading"
     >

@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import createNextIntlPlugin from 'next-intl/plugin';
 import { formsSharedResolveAliases } from '../../packages/forms-shared/next-resolve-aliases';
 import { thmanyahFontResolveAliases } from '../../packages/Thmanyah-Font-Family/next-resolve-aliases';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const monorepoAliases = {
   ...formsSharedResolveAliases(),
@@ -40,4 +43,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

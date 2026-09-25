@@ -48,8 +48,8 @@ export function PublicTypedText({
   const showCursor = mounted && !reduceMotion && count < text.length;
 
   return (
-    <Tag id={id} dir="rtl" className={cn('text-start', className)}>
-      <span aria-hidden="true" translate="no" dir="rtl" className="inline-block text-start">
+    <Tag id={id} className={cn('text-start', className)}>
+      <span aria-hidden="true" translate="no" className="inline-block text-start">
         {visible}
         {showCursor ? (
           <span className="ms-px inline-block h-[1em] w-px animate-pulse bg-[#1D1D1D]" />

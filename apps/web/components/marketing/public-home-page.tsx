@@ -11,7 +11,7 @@ import { PublicMarketingShell } from '@/components/marketing/public-marketing-sh
 export function PublicHomePage() {
   return (
     <PublicMarketingShell>
-      <main dir="rtl" lang="ar" className="bg-transparent text-[#1D1D1D]">
+      <main className="bg-transparent text-[#1D1D1D]">
         <PublicAgHero />
         <PublicAgIntroSection />
         <PublicAgLogoCloud />

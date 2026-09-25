@@ -1,0 +1,428 @@
+{
+  "notFound": "Product not found — Rukny",
+  "otherProducts": "Other products",
+  "exploreProduct": "Explore product",
+  "viewAll": "View all",
+  "featuresEyebrow": "Features",
+  "featuresTitle": "What you",
+  "featuresTitleMuted": " get",
+  "highlightsEyebrow": "Details",
+  "highlightsTitle": "Everything you",
+  "highlightsTitleMuted": " need",
+  "relatedEyebrow": "Other products",
+  "relatedTitle": "Explore",
+  "relatedTitleMuted": " more",
+  "pages": {
+    "stores": {
+      "eyebrow": "Store",
+      "title": "Online stores",
+      "headline": "Your store sells",
+      "headlineMuted": " digital and physical",
+      "description": "Digital products delivered instantly, and physical products shipped to customers — with secure payments, flexible customization, and full management from one dashboard.",
+      "ctaLabel": "Create your store",
+      "secondaryCta": {
+        "label": "View pricing"
+      },
+      "showcaseDescription": "Everything you need to sell — from adding products to receiving payment — in one integrated experience.",
+      "features": [
+        {
+          "title": "Three product types",
+          "description": "Physical items you ship, digital items delivered after payment, and services with no inventory — each with the right fields."
+        },
+        {
+          "title": "Full payment gateway",
+          "description": "Secure card payments, cash on delivery for physical products, and OTP verification to protect every order."
+        },
+        {
+          "title": "Customization and management",
+          "description": "Variants, category-specific fields, coupons, logo and cover image, and order and inventory tracking from one place."
+        }
+      ],
+      "highlights": [
+        "Physical, digital, and service products",
+        "Automatic digital file delivery after purchase",
+        "Variants: size, color, and type",
+        "Secure bank card payments",
+        "Cash on delivery for physical products",
+        "OTP verification via WhatsApp",
+        "Discount coupons and customer reviews",
+        "Order and payment status tracking",
+        "Store page ready to share"
+      ],
+      "detailSections": [
+        {
+          "eyebrow": "Product types",
+          "title": "Digital",
+          "titleMuted": " or physical — or service",
+          "items": [
+            {
+              "title": "Physical products",
+              "description": "Clothing, accessories, tools, or any tangible product — with images, descriptions, inventory, and delivery addresses."
+            },
+            {
+              "title": "Digital products",
+              "description": "PDFs, courses, templates, or digital content — upload once and deliver to the customer automatically after payment."
+            },
+            {
+              "title": "Services",
+              "description": "Consultations, appointments, or services with no inventory — add them as standalone products with a clear description and price."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Payments",
+          "title": "Payment gateway",
+          "titleMuted": " secure and local",
+          "items": [
+            {
+              "title": "Card payments",
+              "description": "Built-in payment gateway for card payments — a unified, secure checkout experience for your customers."
+            },
+            {
+              "title": "Cash on delivery",
+              "description": "Enable cash payment on delivery for physical products — a familiar option that builds buyer confidence."
+            },
+            {
+              "title": "Verification and protection",
+              "description": "OTP verification via WhatsApp before completing the order, with step-by-step payment and order status tracking."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Customization",
+          "title": "Your store",
+          "titleMuted": " tailored to your business",
+          "items": [
+            {
+              "title": "Smart variants and fields",
+              "description": "Sizes and colors for physical products, and custom fields based on your store category — like material and brand for fashion."
+            },
+            {
+              "title": "Store identity",
+              "description": "Store name, logo, cover image, Arabic description, and contact details — a page ready to share instantly."
+            },
+            {
+              "title": "Sales tools",
+              "description": "Discount coupons, wishlists, customer reviews, and linking your store to your Rukny profile."
+            }
+          ]
+        }
+      ]
+    },
+    "forms": {
+      "eyebrow": "Forms",
+      "title": "Smart forms",
+      "headline": "Smart forms",
+      "headlineMuted": " for every need",
+      "description": "Contact, surveys, registration, or requests — build a professional form with diverse fields, multiple steps, Google Sheets sync, and instant analytics.",
+      "ctaLabel": "Create a form",
+      "secondaryCta": {
+        "label": "Setup guide"
+      },
+      "showcaseDescription": "From a single question to a multi-step registration form — build it in minutes, publish it, and track every response.",
+      "workflowEyebrow": "How it works",
+      "workflowTitle": "Three steps",
+      "workflowTitleMuted": " to get started",
+      "features": [
+        {
+          "title": "Flexible builder",
+          "description": "30+ field types — text, choice, rating, file, signature, NPS, matrix — with steps and conditional logic."
+        },
+        {
+          "title": "Sync and integration",
+          "description": "Google Sheets and Drive, Webhooks, and CSV export — every response goes where you want it."
+        },
+        {
+          "title": "Verification and notifications",
+          "description": "OTP for email and WhatsApp, instant notifications, and analytics for every field and completion rate."
+        }
+      ],
+      "highlights": [
+        "Contact, surveys, registration, and requests",
+        "30+ field types including signature and files",
+        "Multiple steps and conditional logic",
+        "Google Sheets and Drive sync",
+        "Webhooks for your external systems",
+        "OTP for email and phone",
+        "Instant notification on every submission",
+        "Analytics and form completion rate",
+        "Shared team access for forms",
+        "Publish at rukny.io/f/slug",
+        "Link the form to your profile",
+        "CSV export for responses"
+      ],
+      "detailSections": [
+        {
+          "eyebrow": "Building",
+          "title": "Design",
+          "titleMuted": " your form",
+          "items": [
+            {
+              "title": "Diverse fields",
+              "description": "Text, choice, rating, NPS, matrix, ranking, and Iraqi governorates — more than 30 field types."
+            },
+            {
+              "title": "Multiple steps",
+              "description": "Split the form into clear steps — an easier experience for respondents and a higher completion rate."
+            },
+            {
+              "title": "Conditional logic",
+              "description": "Show or hide fields based on previous answers — forms that adapt to each respondent."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Content",
+          "title": "Add",
+          "titleMuted": " more than questions",
+          "items": [
+            {
+              "title": "Media and formatting",
+              "description": "Headings, paragraphs, images, video, and audio — a rich form that explains and collects at once."
+            },
+            {
+              "title": "Files and signature",
+              "description": "Upload PDF documents or sign electronically — ideal for applications and official registrations."
+            },
+            {
+              "title": "Protection and verification",
+              "description": "Protection from fake responses and OTP for email and WhatsApp — more accurate data and more reliable responses."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Integration",
+          "title": "Every response",
+          "titleMuted": " goes where you want",
+          "items": [
+            {
+              "title": "Google Sheets",
+              "description": "Automatic sync with Google Sheets — every submission appears in the sheet you choose."
+            },
+            {
+              "title": "Google Drive",
+              "description": "Upload files and signatures directly to Drive — automatic organization with no extra effort."
+            },
+            {
+              "title": "Webhooks",
+              "description": "Send events instantly to your external systems — direct integration with your workflow."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Use cases",
+          "title": "A form",
+          "titleMuted": " for every purpose",
+          "items": [
+            {
+              "title": "Contact and surveys",
+              "description": "Contact forms, customer feedback, and satisfaction surveys — collect feedback quickly."
+            },
+            {
+              "title": "Registration and requests",
+              "description": "Event registration, service requests, or job applications — fields suited to every scenario."
+            },
+            {
+              "title": "Interactive quizzes",
+              "description": "Short quizzes and assessments — with results analysis."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Management",
+          "title": "Track",
+          "titleMuted": " and share",
+          "items": [
+            {
+              "title": "Publish and share",
+              "description": "Public link rukny.io/f/slug — share it or link it to your Rukny profile."
+            },
+            {
+              "title": "Team collaboration",
+              "description": "Share the form with colleagues — different permissions for admin, edit, and view."
+            },
+            {
+              "title": "Analytics and export",
+              "description": "Completion rate, per-field analysis, and CSV export — decisions based on numbers."
+            }
+          ]
+        }
+      ],
+      "workflowSteps": [
+        {
+          "title": "Build your form",
+          "description": "Choose fields, arrange steps, and enable conditional logic — from a simple, flexible editor."
+        },
+        {
+          "title": "Publish it",
+          "description": "Get a public link or link it to your profile — share it with your audience instantly."
+        },
+        {
+          "title": "Track responses",
+          "description": "Instant notifications, Sheets sync, and analytics — every submission in one place."
+        }
+      ]
+    },
+    "profile": {
+      "eyebrow": "Identity",
+      "title": "Profile",
+      "headline": "One link",
+      "headlineMuted": " for your entire presence",
+      "description": "A personal page that brings together your links, store, and forms — a professional destination you share in one tap.",
+      "ctaLabel": "Create your page",
+      "secondaryCta": {
+        "label": "Setup guide"
+      },
+      "showcaseDescription": "From content creator to merchant — one page that brings together everything you want your audience to see.",
+      "features": [
+        {
+          "title": "One link for everyone",
+          "description": "Share rukny.io/username and bring all your links and products together on one clean page."
+        },
+        {
+          "title": "Rich links",
+          "description": "Social media, WhatsApp, forms, store, and external links — in an order you control."
+        },
+        {
+          "title": "Flexible identity",
+          "description": "Photo, cover, bio, and appearance themes — a page that reflects your personality or brand."
+        }
+      ],
+      "highlights": [
+        "Short, easy-to-share personal link",
+        "Instagram, TikTok, YouTube, X, and WhatsApp",
+        "Link your store and forms directly",
+        "Custom headings, text, and links",
+        "Profile photo and cover image",
+        "Appearance themes: classic, dark, and minimal",
+        "Hide email or phone when needed",
+        "Link click analytics",
+        "Public or private page"
+      ],
+      "detailSections": [
+        {
+          "eyebrow": "Content",
+          "title": "All your links",
+          "titleMuted": " in one place",
+          "items": [
+            {
+              "title": "Social media",
+              "description": "Instagram, TikTok, YouTube, X, LinkedIn, Facebook, Snapchat, Telegram — with ready-made icons."
+            },
+            {
+              "title": "Store and forms",
+              "description": "Link your store and forms directly from the page — visitors reach your products and surveys without searching."
+            },
+            {
+              "title": "Custom links",
+              "description": "Any external link, email, phone, subtitle, or descriptive text — arrange them as you like."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Appearance",
+          "title": "Your identity",
+          "titleMuted": " your way",
+          "items": [
+            {
+              "title": "Photo and cover",
+              "description": "Upload your profile photo and cover image — a professional first impression for every visitor."
+            },
+            {
+              "title": "Bio and name",
+              "description": "Display name, short bio, and contact details — everything a visitor needs to know about you."
+            },
+            {
+              "title": "Appearance themes",
+              "description": "Choose between classic, dark, or minimal themes — a look that suits your style."
+            }
+          ]
+        },
+        {
+          "eyebrow": "Access",
+          "title": "Share",
+          "titleMuted": " and track",
+          "items": [
+            {
+              "title": "Short link",
+              "description": "rukny.io/username — one link to put in your resume, bio, or anywhere."
+            },
+            {
+              "title": "Flexible privacy",
+              "description": "Make your page public for everyone or private — and hide email or phone when needed."
+            },
+            {
+              "title": "Click analytics",
+              "description": "See which links your audience engages with — clearer decisions for your content and offers."
+            }
+          ]
+        }
+      ]
+    },
+    "analytics": {
+      "eyebrow": "Decisions",
+      "title": "Analytics",
+      "headline": "Track performance",
+      "headlineMuted": " with clarity",
+      "description": "Sales, visits, and responses in one dashboard — a clear picture before your next move.",
+      "ctaLabel": "Open analytics dashboard",
+      "secondaryCta": {
+        "label": "View pricing"
+      },
+      "features": [
+        {
+          "title": "Unified dashboard",
+          "description": "Store sales, page visits, and form responses together."
+        },
+        {
+          "title": "Faster decisions",
+          "description": "See the numbers that matter without switching between different tools."
+        },
+        {
+          "title": "Export and reports",
+          "description": "Export your data and share it with your team when needed."
+        }
+      ],
+      "highlights": [
+        "Sales analytics",
+        "Page visits",
+        "Form responses",
+        "Period comparison",
+        "CSV export"
+      ]
+    },
+    "ai": {
+      "eyebrow": "Coming soon",
+      "title": "Artificial intelligence",
+      "headline": "Smart tools",
+      "headlineMuted": " inside Rukny",
+      "description": "Smart tools to speed up content, replies, and your daily decisions inside the platform.",
+      "ctaLabel": "Join the waitlist",
+      "secondaryCta": {
+        "label": "Explore products"
+      },
+      "badge": "Coming soon",
+      "features": [
+        {
+          "title": "Faster content",
+          "description": "Help writing product descriptions and replies."
+        },
+        {
+          "title": "Smart replies",
+          "description": "Suggestions for responding to customers and inquiries."
+        },
+        {
+          "title": "Clearer decisions",
+          "description": "Summaries and analytics in plain language."
+        }
+      ],
+      "highlights": [
+        "Content assistance",
+        "Reply suggestions",
+        "Smart summaries",
+        "Integration with Rukny products",
+        "Coming soon for everyone"
+      ]
+    }
+  }
+}

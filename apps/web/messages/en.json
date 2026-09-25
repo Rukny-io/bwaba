@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "title": "Rukny — One platform for everything you need",
+    "description": "Rukny for online stores, smart forms, profiles, and analytics. Sync form submissions to Google Sheets when you connect your Google account.",
+    "pricingTitle": "Pricing — Rukny",
+    "pricingDescription": "Plans that grow with your project. Start free and upgrade when you need to, with prices in Iraqi dinar.",
+    "enterpriseTitle": "Enterprise — Rukny",
+    "enterpriseDescription": "Custom solutions for teams and organizations — developer portal, WhatsApp API, Email API, advanced customization, and dedicated support on the Rukny platform."
+  },
+  "locale": {
+    "label": "اللغة",
+    "ar": "العربية",
+    "en": "English",
+    "ckb": "کوردی"
+  },
+  "nav": {
+    "brand": "Rukny",
+    "homeAria": "Rukny — Home",
+    "mainAria": "Main navigation",
+    "mobileMenuAria": "Menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "products": "Products",
+    "productsLead": "Everything you need to launch your digital project",
+    "viewAll": "View all",
+    "viewAllProducts": "View all products",
+    "pricing": "Pricing",
+    "enterprise": "Enterprise",
+    "login": "Log in",
+    "startFree": "Start free",
+    "productItems": {
+      "stores": {
+        "title": "Online stores",
+        "description": "Digital and physical products, secure payments, and flexible customization — build your store and start selling"
+      },
+      "forms": {
+        "title": "Smart forms",
+        "description": "Surveys, registration, and Google Sheets sync"
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "One link for your links, store, and forms"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Track your business performance"
+      },
+      "ai": {
+        "title": "Artificial intelligence",
+        "description": "Smart tools to accelerate your work"
+      }
+    }
+  },
+  "footer": {
+    "cta": {
+      "eyebrow": "Start today",
+      "title": "One platform to launch your digital project",
+      "lead": "Store, forms, profile, and analytics — no credit card required to get started.",
+      "startFree": "Start free",
+      "enterprise": "Enterprise"
+    },
+    "brand": {
+      "name": "Rukny",
+      "tagline": "Store, forms, profile, and analytics — your tools in one place."
+    },
+    "contact": {
+      "eyebrow": "Contact us",
+      "email": "support@rukny.io",
+      "hint": "Questions about setup, billing, or enterprise solutions — we read every message."
+    },
+    "columns": {
+      "products": {
+        "title": "Products",
+        "links": {
+          "stores": "Online stores",
+          "forms": "Smart forms",
+          "profile": "Profile",
+          "analytics": "Analytics",
+          "ai": "Artificial intelligence",
+          "viewAll": "View all products"
+        }
+      },
+      "platform": {
+        "title": "Platform",
+        "links": {
+          "home": "Home",
+          "pricing": "Pricing",
+          "enterprise": "Enterprise",
+          "about": "About Rukny"
+        }
+      },
+      "resources": {
+        "title": "Resources",
+        "links": {
+          "docs": "Documentation",
+          "developers": "Developers",
+          "helpCenter": "Help center",
+          "faq": "FAQ"
+        }
+      },
+      "account": {
+        "title": "Account",
+        "links": {
+          "startFree": "Start free",
+          "login": "Log in",
+          "createStore": "Create a store",
+          "createForm": "Create a form"
+        }
+      },
+      "legal": {
+        "title": "Legal",
+        "links": {
+          "privacy": "Privacy policy",
+          "terms": "Terms of use"
+        }
+      }
+    },
+    "bottom": {
+      "copyright": "© {year} Rukny",
+      "tagline": "Digital tools in Arabic",
+      "privacy": "Privacy policy",
+      "terms": "Terms of use",
+      "backToTop": "Back to top"
+    }
+  },
+  "home": {
+    "hero": {
+      "brand": "Rukny",
+      "homeAria": "Rukny — Home",
+      "title": "One platform",
+      "titleMuted": "to launch your digital project",
+      "lead": "Your store, forms, profile, and analytics — a unified Arabic-first experience to get started fast.",
+      "startFree": "Start free",
+      "viewPricing": "View pricing",
+      "exploreProducts": "Explore products"
+    },
+    "intro": {
+      "eyebrow": "Why Rukny",
+      "headline": "Rukny — sell, collect, and track from one place.",
+      "lead": "Online store, smart forms, profile, and analytics — without jumping between different tools."
+    },
+    "products": {
+      "eyebrow": "Rukny products",
+      "title": "Everything you need",
+      "titleMuted": " in one place",
+      "lead": "From store to forms and analytics — everything in one place.",
+      "exploreCta": "Explore product",
+      "swipeHint": "Swipe to explore products",
+      "carouselAria": "Browse products",
+      "tabsAria": "Choose a product",
+      "listAria": "Product list",
+      "items": {
+        "stores": {
+          "title": "Online stores",
+          "subtitle": "Store",
+          "description": "Digital and physical products, secure payments, and flexible variants — start selling from day one."
+        },
+        "forms": {
+          "title": "Smart forms",
+          "subtitle": "Forms",
+          "description": "Diverse fields, Sheets sync, Webhooks, and analytics — professional forms for every need."
+        },
+        "profile": {
+          "title": "Profile",
+          "subtitle": "Identity",
+          "description": "One link that brings together your links, store, and forms — a professional page you share in one tap."
+        },
+        "analytics": {
+          "title": "Analytics",
+          "subtitle": "Decisions",
+          "description": "Sales, visits, and responses in one dashboard — a clear picture before your next move."
+        },
+        "ai": {
+          "title": "Artificial intelligence",
+          "subtitle": "Coming soon",
+          "description": "Smart tools to speed up content, replies, and daily decisions inside the platform."
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "Plans that fit",
+      "titleMuted": " your project's growth",
+      "lead": "Start free — upgrade when you need to with prices in Iraqi dinar.",
+      "billingAria": "Billing cycle",
+      "enterprise": {
+        "eyebrow": "Enterprise",
+        "title": "Custom solutions for your team",
+        "lead": "Custom integrations, direct support, and team onboarding.",
+        "cta": "Contact sales"
+      }
+    },
+    "about": {
+      "eyebrow": "About Rukny",
+      "title": "One platform",
+      "titleMuted": " — one identity — one dashboard",
+      "lead": "Rukny brings your store, forms, and profile together in one experience — with an Arabic touch.",
+      "privacy": "Privacy policy",
+      "terms": "Terms of use",
+      "whatIsTitle": "What is Rukny?",
+      "whatIsBody": "Rukny provides tools for online stores, smart forms, profile pages, links, and analytics.",
+      "googleDataTitle": "How does Rukny use Google user data?",
+      "googleDataItems": [
+        "Sync form submissions to Google Sheets chosen by the user",
+        "Save integration settings in the user's own Google Drive"
+      ]
+    },
+    "logoCloud": {
+      "eyebrow": "Integrations",
+      "title": "Works with your existing tools",
+      "lead": "Cloud infrastructure, Google, and productivity platforms — without extra complexity.",
+      "logos": {
+        "aws": "Amazon Web Services",
+        "microsoft": "Microsoft",
+        "notion": "Notion",
+        "udemy": "Udemy",
+        "meta": "Meta"
+      }
+    }
+  },
+  "pricing": {
+    "eyebrow": "Transparent pricing",
+    "title": "Plans that fit",
+    "titleMuted": " your project's growth",
+    "lead": "Start free — upgrade when you need to with prices in Iraqi dinar.",
+    "trustPills": [
+      "Forms",
+      "Store",
+      "Links",
+      "Analytics",
+      "Integrations"
+    ],
+    "billing": {
+      "aria": "Billing cycle",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "discount": "−{percent}%"
+    },
+    "currency": "IQD",
+    "faq": {
+      "eyebrow": "Help",
+      "title": "Frequently asked questions",
+      "items": [
+        {
+          "question": "Which plan is right for me?",
+          "answer": "The free plan is ideal for individuals and personal projects. Plus is for professionals and small businesses, Whale for growing teams, and Business for organizations that need maximum performance and security."
+        },
+        {
+          "question": "Can I change my plan later?",
+          "answer": "Yes, you can upgrade or downgrade at any time from your account settings, and the difference will be calculated automatically."
+        },
+        {
+          "question": "What is the difference between monthly and yearly billing?",
+          "answer": "Yearly billing saves you about 20% compared to monthly billing, charged as one payment for the full year."
+        },
+        {
+          "question": "Do I need a credit card to get started?",
+          "answer": "No, you can start on the free plan immediately without a card. You only need a payment method when upgrading to a paid plan."
+        },
+        {
+          "question": "Do prices include all products?",
+          "answer": "Yes, every plan includes forms, store, links, analytics, and integrations within the limits shown in the comparison table."
+        },
+        {
+          "question": "What currency are prices in?",
+          "answer": "All prices are in Iraqi dinar (IQD)."
+        }
+      ]
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "description": "The perfect start for your personal project or to try the platform. Free forever.",
+        "ctaLabel": "Start free",
+        "highlights": [
+          "Unlimited forms and responses",
+          "Google Sheets and Drive integration",
+          "Webhooks and external connections",
+          "Basic form analytics",
+          "Store with starter-friendly limits",
+          "5 GB storage"
+        ]
+      },
+      "pro": {
+        "name": "Plus",
+        "description": "Everything you need to build professional forms and grow your business.",
+        "ctaLabel": "Subscribe to Plus",
+        "badge": "Most popular",
+        "highlights": [
+          "Everything in Free, plus:",
+          "Multi-step forms",
+          "Basic conditional logic",
+          "Email and phone verification (OTP)",
+          "Remove watermark",
+          "Instagram and YouTube integration",
+          "50 GB storage and 24-hour support"
+        ]
+      },
+      "whale": {
+        "name": "Whale",
+        "description": "For growing teams that need deeper analytics and integrations.",
+        "ctaLabel": "Subscribe to Whale",
+        "highlights": [
+          "Everything in Plus, plus:",
+          "Advanced conditional logic",
+          "Advanced analytics and CSV export",
+          "Digital products and bilingual store",
+          "Google Calendar and LinkedIn integration",
+          "Suspicious activity detection and trusted devices",
+          "100 GB storage and 12-hour support"
+        ]
+      },
+      "business": {
+        "name": "Business",
+        "description": "Maximum performance, control, and security for enterprises and large teams.",
+        "ctaLabel": "Subscribe to Business",
+        "highlights": [
+          "Everything in Whale, plus:",
+          "Full conditional logic",
+          "Full analytics + PDF export",
+          "All integrations (Telegram and Google Analytics)",
+          "Custom domains",
+          "Period-over-period comparison",
+          "250 GB storage and priority support"
+        ]
+      }
+    },
+    "card": {
+      "freePrice": "Free",
+      "freeForever": "Free forever",
+      "perMonth": "/ month",
+      "monthly": "Billed monthly",
+      "yearly": "{price} {currency} per year",
+      "moreFeatures": "+{count} more features",
+      "exploreCta": "Explore product"
+    }
+  },
+  "enterprise": {
+    "hero": {
+      "eyebrow": "Enterprise",
+      "title": "Custom solutions",
+      "titleMuted": " for teams and organizations",
+      "lead": "For teams that need more than an off-the-shelf plan — developer portal, WhatsApp API, Email API, advanced customization, and dedicated support on the Rukny platform.",
+      "contactSales": "Contact sales",
+      "developers": "Developers",
+      "viewPricing": "View pricing",
+      "mailtoSubject": "Enterprise inquiry — Rukny"
+    },
+    "pills": [
+      "Teams and permissions",
+      "Developer portal",
+      "WhatsApp API",
+      "Email API",
+      "Advanced customization"
+    ],
+    "showcase": {
+      "title": "Rukny for Enterprise",
+      "lead": "From startups to large teams — store, forms, analytics, and APIs (WhatsApp, Email, Webhooks) in one platform.",
+      "exploreDevelopers": "Explore the developer portal",
+      "items": [
+        {
+          "title": "Developer portal",
+          "description": "API keys, apps, Webhooks, and technical documentation."
+        },
+        {
+          "title": "WhatsApp API",
+          "description": "Send messages, templates, and connect WhatsApp Business numbers."
+        },
+        {
+          "title": "Email API",
+          "description": "Send transactional email via SMTP/API with tracking and delivery."
+        }
+      ]
+    },
+    "sections": [
+      {
+        "eyebrow": "Teams",
+        "title": "Work",
+        "titleMuted": " with your team",
+        "items": [
+          {
+            "title": "Clear permissions",
+            "description": "Different roles for team members — from admin to editor — with precise control over what each person can do."
+          },
+          {
+            "title": "Forms team",
+            "description": "Share forms with colleagues — collaborative management of responses, Webhooks, and analytics."
+          },
+          {
+            "title": "Organized workspaces",
+            "description": "Store, forms, profile, and analytics — each team sees what they need in one dashboard."
+          }
+        ]
+      },
+      {
+        "eyebrow": "Developers",
+        "title": "APIs",
+        "titleMuted": " ready to use",
+        "items": [
+          {
+            "title": "Developer portal",
+            "description": "A dashboard for API keys, apps, logs, and environments — with docs and live request testing."
+          },
+          {
+            "title": "WhatsApp API",
+            "description": "Send text messages and templates, connect WhatsApp Business numbers, and track logs and delivery."
+          },
+          {
+            "title": "Email API",
+            "description": "Send transactional email and notifications via SMTP/API — ideal for alerts, OTP, and order confirmations."
+          }
+        ]
+      },
+      {
+        "eyebrow": "Integration",
+        "title": "Connect",
+        "titleMuted": " Rukny to your systems",
+        "items": [
+          {
+            "title": "Webhooks and APIs",
+            "description": "Send order, response, and form events to your CRM, ERP, or any system you use."
+          },
+          {
+            "title": "Google and social",
+            "description": "Sheets, Drive, Calendar, Instagram, YouTube — ready-made integrations for active teams."
+          },
+          {
+            "title": "Custom domains",
+            "description": "Connect your own domain — a professional presence that reflects your brand to customers."
+          }
+        ]
+      },
+      {
+        "eyebrow": "Customization",
+        "title": "Solutions",
+        "titleMuted": " tailored to your needs",
+        "items": [
+          {
+            "title": "Advanced customization",
+            "description": "Conditional logic, custom fields, workflows, and visual identity — we tailor the platform to your industry."
+          },
+          {
+            "title": "Security and compliance",
+            "description": "Two-factor authentication, security logs, suspicious activity detection, and clearer access controls for teams."
+          },
+          {
+            "title": "Dedicated support",
+            "description": "A dedicated communication channel, faster response times, and help with setup and operations."
+          }
+        ]
+      }
+    ],
+    "highlights": {
+      "eyebrow": "Details",
+      "title": "Everything",
+      "titleMuted": " you need",
+      "items": [
+        "Teams up to 10 members on the Business plan",
+        "Permissions and roles for every member",
+        "Developer portal and API keys",
+        "WhatsApp API — messages and templates",
+        "Email API — SMTP and transactional email",
+        "Webhooks and APIs",
+        "Google Sheets and Drive integration",
+        "Full analytics and PDF export",
+        "Custom domain and visual identity",
+        "Advanced customization by industry",
+        "Priority support and faster response"
+      ]
+    },
+    "steps": {
+      "eyebrow": "How we start",
+      "title": "Three steps",
+      "titleMuted": " to launch",
+      "items": [
+        {
+          "title": "Share your needs",
+          "description": "Tell us about your team, operational scale, and the integrations you need."
+        },
+        {
+          "title": "We design the solution",
+          "description": "We propose the plan, setup, and timeline — with no upfront commitment."
+        },
+        {
+          "title": "We launch with you",
+          "description": "Setup, training, and dedicated support until your team runs with confidence."
+        }
+      ]
+    },
+    "contact": {
+      "eyebrow": "Contact us",
+      "title": "Let's build the right solution for your team",
+      "lead": "Send us your team details and requirements — we reply within one business day with the next step.",
+      "email": "support@rukny.io",
+      "contactSales": "Contact sales",
+      "developerPortal": "Developer portal"
+    }
+  }
+}

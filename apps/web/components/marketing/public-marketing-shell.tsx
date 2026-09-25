@@ -1,8 +1,10 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { PublicAgFooter } from '@/components/marketing/public-ag-footer';
 import { PublicAgHeader } from '@/components/marketing/public-ag-header';
 import { PublicSmoothScroll } from '@/components/marketing/public-smooth-scroll';
+import { getDirection, type AppLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function PublicMarketingShell({
@@ -12,10 +14,13 @@ export function PublicMarketingShell({
   children: React.ReactNode;
   smoothScroll?: boolean;
 }) {
+  const locale = useLocale() as AppLocale;
+  const direction = getDirection(locale);
+
   const body = (
     <div
-      dir="rtl"
-      lang="ar"
+      dir={direction}
+      lang={locale}
       className={cn(
         'public-marketing relative isolate min-h-dvh bg-white text-[#1D1D1D]',
       )}

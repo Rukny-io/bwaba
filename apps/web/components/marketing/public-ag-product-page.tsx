@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowLeft,
+  ChevronRight,
   Banknote,
   BarChart3,
   Bell,
@@ -36,12 +36,13 @@ import {
   Webhook,
   type LucideIcon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
-  PRODUCT_PAGES,
   PRODUCT_SLUGS,
   type ProductFeature,
   type ProductSlug,
 } from '@/lib/public-marketing-pages';
+import { useLocalizedProductPage } from '@/lib/use-localized-product-page';
 import { agLayout } from '@/lib/public-antigravity-theme';
 import { cn } from '@/lib/utils';
 
@@ -117,6 +118,27 @@ function FeatureIcon({ icon }: { icon?: string }) {
   );
 }
 
+function RelatedProductCard({ itemSlug }: { itemSlug: ProductSlug }) {
+  const item = useLocalizedProductPage(itemSlug);
+  const ItemIcon = item.icon;
+
+  return (
+    <Link
+      href={`/products/${itemSlug}`}
+      className={cn(
+        'rounded-[2rem] p-6 transition-opacity hover:opacity-90 sm:p-7',
+        item.tint,
+      )}
+    >
+      <ItemIcon className="size-5 text-[#1D1D1D]/70" strokeWidth={1.5} />
+      <p className="mt-5 text-[1rem] font-medium text-[#1D1D1D]">{item.title}</p>
+      <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[#6B6F76]">
+        {item.description}
+      </p>
+    </Link>
+  );
+}
+
 function FeatureCard({
   feature,
   index,
@@ -152,7 +174,8 @@ function FeatureCard({
 }
 
 export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
-  const product = PRODUCT_PAGES[slug];
+  const t = useTranslations('products');
+  const product = useLocalizedProductPage(slug);
   const reduceMotion = useReducedMotion();
   const Icon = product.icon;
   const hasDetailSections = Boolean(product.detailSections?.length);
@@ -284,10 +307,10 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
       {!hasDetailSections ? (
         <section className="mt-16 sm:mt-20" aria-labelledby="product-features-heading">
           <div className="mb-8 max-w-2xl text-start sm:mb-10">
-            <p className={agLayout.eyebrow}>الميزات</p>
+            <p className={agLayout.eyebrow}>{t('featuresEyebrow')}</p>
             <h2 id="product-features-heading" className={`${agLayout.sectionTitle} mt-4`}>
-              ما الذي
-              <span className="text-[#9CA3AF]"> تحصل عليه</span>
+              {t('featuresTitle')}
+              <span className="text-[#9CA3AF]">{t('featuresTitleMuted')}</span>
             </h2>
           </div>
 
@@ -388,10 +411,10 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
         aria-labelledby="product-highlights-heading"
       >
         <div className="mb-8 max-w-2xl text-start sm:mb-10">
-          <p className={agLayout.eyebrow}>التفاصيل</p>
+          <p className={agLayout.eyebrow}>{t('highlightsEyebrow')}</p>
           <h2 id="product-highlights-heading" className={`${agLayout.sectionTitle} mt-4`}>
-            كل ما
-            <span className="text-[#9CA3AF]"> تحتاجه</span>
+            {t('highlightsTitle')}
+            <span className="text-[#9CA3AF]">{t('highlightsTitleMuted')}</span>
           </h2>
         </div>
 
@@ -414,42 +437,25 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
         <section className="mt-16 sm:mt-20" aria-labelledby="related-products-heading">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div className="text-start">
-              <p className={agLayout.eyebrow}>منتجات أخرى</p>
+              <p className={agLayout.eyebrow}>{t('relatedEyebrow')}</p>
               <h2 id="related-products-heading" className={`${agLayout.sectionTitle} mt-4`}>
-                استكشف
-                <span className="text-[#9CA3AF]"> المزيد</span>
+                {t('relatedTitle')}
+                <span className="text-[#9CA3AF]">{t('relatedTitleMuted')}</span>
               </h2>
             </div>
             <Link
               href="/#products"
               className="hidden items-center gap-1 text-[14px] font-medium text-[#1D1D1D] transition-opacity hover:opacity-70 sm:inline-flex"
             >
-              عرض الكل
-              <ArrowLeft className="size-4 opacity-60" aria-hidden />
+              {t('viewAll')}
+              <ChevronRight className="size-4 opacity-60 rtl:rotate-180" aria-hidden />
             </Link>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            {otherProducts.map((itemSlug) => {
-              const item = PRODUCT_PAGES[itemSlug];
-              const ItemIcon = item.icon;
-              return (
-                <Link
-                  key={itemSlug}
-                  href={`/products/${itemSlug}`}
-                  className={cn(
-                    'rounded-[2rem] p-6 transition-opacity hover:opacity-90 sm:p-7',
-                    item.tint,
-                  )}
-                >
-                  <ItemIcon className="size-5 text-[#1D1D1D]/70" strokeWidth={1.5} />
-                  <p className="mt-5 text-[1rem] font-medium text-[#1D1D1D]">{item.title}</p>
-                  <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[#6B6F76]">
-                    {item.description}
-                  </p>
-                </Link>
-              );
-            })}
+            {otherProducts.map((itemSlug) => (
+              <RelatedProductCard key={itemSlug} itemSlug={itemSlug} />
+            ))}
           </div>
         </section>
       ) : null}

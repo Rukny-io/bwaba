@@ -44,7 +44,6 @@ export function PublicAgUseCasesSection() {
   return (
     <section
       id="use-cases"
-      dir="rtl"
       className={`${agLayout.sectionMuted} overflow-hidden py-20 sm:py-24`}
       aria-labelledby="public-use-cases-heading"
     >

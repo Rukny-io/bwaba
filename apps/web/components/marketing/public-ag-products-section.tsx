@@ -3,90 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-  BarChart3,
-  BrainCircuit,
-  ClipboardList,
-  ShoppingBag,
-  UserCircle2,
-  type LucideIcon,
-} from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { getDirection, type AppLocale } from '@/lib/i18n';
 import { agLayout, productTints } from '@/lib/public-antigravity-theme';
+import { useProductBlocks, type ProductBlock } from '@/lib/use-product-blocks';
 import { cn } from '@/lib/utils';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-type ProductBlock = {
-  id: keyof typeof productTints;
-  index: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  href: string;
-  icon: LucideIcon;
-};
-
-const blocks: ProductBlock[] = [
-  {
-    id: 'stores',
-    index: '01',
-    title: 'المتاجر الإلكترونية',
-    subtitle: 'المتجر',
-    description:
-      'منتجات رقمية ومادية، بوابة دفع آمنة، ومتغيرات مرنة — أطلق البيع من أول يوم.',
-    href: '/products/stores',
-    icon: ShoppingBag,
-  },
-  {
-    id: 'forms',
-    index: '02',
-    title: 'النماذج الذكية',
-    subtitle: 'النماذج',
-    description:
-      'حقول متنوعة، مزامنة Sheets، Webhooks، وتحليلات — نماذج احترافية لكل احتياج.',
-    href: '/products/forms',
-    icon: ClipboardList,
-  },
-  {
-    id: 'profile',
-    index: '03',
-    title: 'الملف الشخصي',
-    subtitle: 'الهوية',
-    description:
-      'رابط واحد يجمع روابطك، متجرك، ونماذجك — صفحة احترافية تشاركها بضغطة واحدة.',
-    href: '/products/profile',
-    icon: UserCircle2,
-  },
-  {
-    id: 'analytics',
-    index: '04',
-    title: 'التحليلات',
-    subtitle: 'القرار',
-    description:
-      'مبيعات، زيارات، واستجابات في لوحة واحدة — صورة واضحة قبل الخطوة التالية.',
-    href: '/products/analytics',
-    icon: BarChart3,
-  },
-  {
-    id: 'ai',
-    index: '05',
-    title: 'الذكاء الاصطناعي',
-    subtitle: 'قريباً',
-    description:
-      'أدوات ذكية لتسريع المحتوى، الردود، وقراراتك اليومية داخل المنصة.',
-    href: '/products/ai',
-    icon: BrainCircuit,
-  },
-];
 
 function ProductShowcase({
   block,
   reduceMotion,
   layout = 'desktop',
+  exploreCta,
 }: {
   block: ProductBlock;
   reduceMotion: boolean | null;
   layout?: 'mobile' | 'desktop';
+  exploreCta: string;
 }) {
   const Icon = block.icon;
   const isMobile = layout === 'mobile';
@@ -172,7 +106,7 @@ function ProductShowcase({
               : 'mt-8',
           )}
         >
-          استكشف المنتج
+          {exploreCta}
         </Link>
       </div>
     </motion.div>
@@ -181,8 +115,20 @@ function ProductShowcase({
 
 function MobileProductsCarousel({
   reduceMotion,
+  blocks,
+  exploreCta,
+  carouselAria,
+  tabsAria,
+  swipeHint,
+  direction,
 }: {
   reduceMotion: boolean | null;
+  blocks: ProductBlock[];
+  exploreCta: string;
+  carouselAria: string;
+  tabsAria: string;
+  swipeHint: string;
+  direction: 'rtl' | 'ltr';
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -258,20 +204,21 @@ function MobileProductsCarousel({
         ref={scrollRef}
         className="products-mobile-carousel -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         dir="ltr"
-        aria-label="تصفح المنتجات"
+        aria-label={carouselAria}
       >
         {blocks.map((block, index) => (
           <article
             key={block.id}
             data-product-card={index}
             className="w-[min(88vw,22rem)] shrink-0 snap-center"
-            dir="rtl"
+            dir={direction}
             aria-label={block.title}
           >
             <ProductShowcase
               block={block}
               reduceMotion={reduceMotion}
               layout="mobile"
+              exploreCta={exploreCta}
             />
           </article>
         ))}
@@ -280,7 +227,7 @@ function MobileProductsCarousel({
       <div
         className="mt-4 flex items-center justify-center gap-2"
         role="tablist"
-        aria-label="اختر منتجاً"
+        aria-label={tabsAria}
       >
         {blocks.map((block, index) => (
           <button
@@ -300,17 +247,21 @@ function MobileProductsCarousel({
         ))}
       </div>
 
-      <p className="mt-3 text-center text-[12px] text-[#9CA3AF]">
-        اسحب لاستكشاف المنتجات
-      </p>
+      <p className="mt-3 text-center text-[12px] text-[#9CA3AF]">{swipeHint}</p>
     </div>
   );
 }
 
 function DesktopProductsExplorer({
   reduceMotion,
+  blocks,
+  exploreCta,
+  listAria,
 }: {
   reduceMotion: boolean | null;
+  blocks: ProductBlock[];
+  exploreCta: string;
+  listAria: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = blocks[activeIndex]!;
@@ -321,7 +272,7 @@ function DesktopProductsExplorer({
         className="flex flex-col gap-1"
         role="tablist"
         aria-orientation="vertical"
-        aria-label="قائمة المنتجات"
+        aria-label={listAria}
       >
         {blocks.map((block, index) => (
           <button
@@ -343,19 +294,27 @@ function DesktopProductsExplorer({
         ))}
       </div>
       <div role="tabpanel" className="relative z-[1] min-w-0">
-        <ProductShowcase block={active} reduceMotion={reduceMotion} layout="desktop" />
+        <ProductShowcase
+          block={active}
+          reduceMotion={reduceMotion}
+          layout="desktop"
+          exploreCta={exploreCta}
+        />
       </div>
     </div>
   );
 }
 
 export function PublicAgProductsSection() {
+  const t = useTranslations('home.products');
+  const locale = useLocale() as AppLocale;
+  const direction = getDirection(locale);
   const reduceMotion = useReducedMotion();
+  const blocks = useProductBlocks();
 
   return (
     <section
       id="products"
-      dir="rtl"
       className={`${agLayout.sectionWhite} pb-14 pt-16 sm:pb-20 sm:pt-24 md:pt-28`}
       aria-labelledby="public-products-heading"
     >
@@ -367,18 +326,29 @@ export function PublicAgProductsSection() {
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.7, ease: EASE }}
         >
-          <p className={agLayout.eyebrow}>منتجات ركني</p>
+          <p className={agLayout.eyebrow}>{t('eyebrow')}</p>
           <h2 id="public-products-heading" className={`${agLayout.sectionTitle} mt-4`}>
-            كل ما تحتاجه
-            <span className="text-[#9CA3AF]"> في مساحة واحدة</span>
+            {t('title')}
+            <span className="text-[#9CA3AF]">{t('titleMuted')}</span>
           </h2>
-          <p className={`${agLayout.lead} mt-4 max-w-xl sm:mt-5`}>
-            من المتجر إلى النماذج والتحليلات — كل شيء في مكان واحد.
-          </p>
+          <p className={`${agLayout.lead} mt-4 max-w-xl sm:mt-5`}>{t('lead')}</p>
         </motion.div>
 
-        <MobileProductsCarousel reduceMotion={reduceMotion} />
-        <DesktopProductsExplorer reduceMotion={reduceMotion} />
+        <MobileProductsCarousel
+          reduceMotion={reduceMotion}
+          blocks={blocks}
+          exploreCta={t('exploreCta')}
+          carouselAria={t('carouselAria')}
+          tabsAria={t('tabsAria')}
+          swipeHint={t('swipeHint')}
+          direction={direction}
+        />
+        <DesktopProductsExplorer
+          reduceMotion={reduceMotion}
+          blocks={blocks}
+          exploreCta={t('exploreCta')}
+          listAria={t('listAria')}
+        />
       </div>
     </section>
   );

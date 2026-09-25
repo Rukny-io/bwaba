@@ -6,11 +6,15 @@ const formsBase =
 
 const mailBase = process.env.NEXT_PUBLIC_MAIL_URL || 'https://mail.rukny.io';
 
+const developersBase =
+  process.env.NEXT_PUBLIC_DEVELOPERS_URL || 'http://localhost:3004';
+
 export const siteUrls = {
   home: 'https://rukny.io',
   accounts: accountsBase,
   forms: formsBase,
   mail: mailBase,
+  developers: developersBase,
   privacy: `${accountsBase}/privacy`,
   terms: `${accountsBase}/terms`,
   login: `${accountsBase}/login`,

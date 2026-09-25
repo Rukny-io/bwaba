@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
+import { PublicAgEnterpriseView } from '@/components/marketing/public-ag-enterprise-view';
 import { PublicMarketingShell } from '@/components/marketing/public-marketing-shell';
-import { PricingView } from '@/components/pricing/pricing-view';
 
 export const metadata: Metadata = {
-  title: 'الأسعار — ركني',
+  title: 'المؤسسات — ركني',
   description:
-    'باقات ركني لإنشاء النماذج والمتجر والروابط والتحليلات. ابدأ مجاناً وارتقِ متى احتجت — أسعار بالدينار العراقي.',
+    'حلول ركني للفرق والمؤسسات — صلاحيات، تكاملات، تحليلات متقدمة، ودعم مباشر.',
 };
 
-export default function PricingPage() {
+export default function EnterprisePage() {
   return (
     <PublicMarketingShell smoothScroll={false}>
       <main dir="rtl" lang="ar" className="overflow-x-clip bg-white pt-14 text-[#1D1D1D]">
-        <PricingView />
+        <PublicAgEnterpriseView />
       </main>
     </PublicMarketingShell>
   );

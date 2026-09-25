@@ -28,17 +28,15 @@ export type MarketingNavItem =
 
 export const marketingNavItems: MarketingNavItem[] = [
   { type: 'dropdown', label: 'المنتجات', panelId: 'product' },
-  { type: 'dropdown', label: 'حالات الاستخدام', panelId: 'use-cases' },
   { type: 'link', label: 'الأسعار', href: '/pricing' },
   { type: 'link', label: 'المؤسسات', href: '/enterprise' },
-  { type: 'dropdown', label: 'الموارد', panelId: 'resources' },
 ];
 
 export const marketingDropdownPanels: MarketingDropdownPanel[] = [
   {
     id: 'product',
-    title: 'استكشف منتجات الجيل القادم',
-    overviewHref: '/products',
+    title: 'منتجات ركني',
+    overviewHref: '/#products',
     overviewLabel: 'عرض الكل',
     subnavLabel: 'المنتجات',
     links: [
@@ -46,29 +44,7 @@ export const marketingDropdownPanels: MarketingDropdownPanel[] = [
       { label: 'النماذج الذكية', href: '/products/forms', icon: 'assignment' },
       { label: 'الملف الشخصي', href: '/products/profile', icon: 'account_circle' },
       { label: 'التحليلات', href: '/products/analytics', icon: 'monitoring' },
-    ],
-  },
-  {
-    id: 'use-cases',
-    title: 'مصممة لرواد الأعمال في العصر الرقمي',
-    overviewHref: '/use-cases',
-    overviewLabel: 'عرض الكل',
-    links: [
-      { label: 'التجارة الإلكترونية', href: '/use-cases/ecommerce' },
-      { label: 'العلامة الشخصية', href: '/use-cases/personal-brand' },
-      { label: 'جمع البيانات', href: '/use-cases/forms' },
-      { label: 'الفرق والمؤسسات', href: '/use-cases/teams' },
-    ],
-  },
-  {
-    id: 'resources',
-    title: 'كل ما تحتاجه للبقاء على اطلاع والحصول على المساعدة',
-    links: [
-      { label: 'الوثائق', href: '/docs', showArrow: true },
-      { label: 'المدونة', href: '/blog' },
-      { label: 'سجل التحديثات', href: '/changelog' },
-      { label: 'الدعم', href: '/support' },
-      { label: 'المطورون', href: '/developers' },
+      { label: 'الذكاء الاصطناعي', href: '/products/ai' },
     ],
   },
 ];

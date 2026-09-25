@@ -227,7 +227,7 @@ services:
   public:
     build:
       context: .
-      dockerfile: apps/public/Dockerfile
+      dockerfile: apps/web/Dockerfile
       args:
         API_BACKEND_URL: http://api:3001
         NEXT_PUBLIC_API_URL: /api/v1

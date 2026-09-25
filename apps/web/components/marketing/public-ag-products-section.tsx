@@ -1,0 +1,385 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  BarChart3,
+  BrainCircuit,
+  ClipboardList,
+  ShoppingBag,
+  UserCircle2,
+  type LucideIcon,
+} from 'lucide-react';
+import { agLayout, productTints } from '@/lib/public-antigravity-theme';
+import { cn } from '@/lib/utils';
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+type ProductBlock = {
+  id: keyof typeof productTints;
+  index: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+const blocks: ProductBlock[] = [
+  {
+    id: 'stores',
+    index: '01',
+    title: 'المتاجر الإلكترونية',
+    subtitle: 'المتجر',
+    description:
+      'منتجات رقمية ومادية، بوابة دفع آمنة، ومتغيرات مرنة — أطلق البيع من أول يوم.',
+    href: '/products/stores',
+    icon: ShoppingBag,
+  },
+  {
+    id: 'forms',
+    index: '02',
+    title: 'النماذج الذكية',
+    subtitle: 'النماذج',
+    description:
+      'حقول متنوعة، مزامنة Sheets، Webhooks، وتحليلات — نماذج احترافية لكل احتياج.',
+    href: '/products/forms',
+    icon: ClipboardList,
+  },
+  {
+    id: 'profile',
+    index: '03',
+    title: 'الملف الشخصي',
+    subtitle: 'الهوية',
+    description:
+      'رابط واحد يجمع روابطك، متجرك، ونماذجك — صفحة احترافية تشاركها بضغطة واحدة.',
+    href: '/products/profile',
+    icon: UserCircle2,
+  },
+  {
+    id: 'analytics',
+    index: '04',
+    title: 'التحليلات',
+    subtitle: 'القرار',
+    description:
+      'مبيعات، زيارات، واستجابات في لوحة واحدة — صورة واضحة قبل الخطوة التالية.',
+    href: '/products/analytics',
+    icon: BarChart3,
+  },
+  {
+    id: 'ai',
+    index: '05',
+    title: 'الذكاء الاصطناعي',
+    subtitle: 'قريباً',
+    description:
+      'أدوات ذكية لتسريع المحتوى، الردود، وقراراتك اليومية داخل المنصة.',
+    href: '/products/ai',
+    icon: BrainCircuit,
+  },
+];
+
+function ProductShowcase({
+  block,
+  reduceMotion,
+  layout = 'desktop',
+}: {
+  block: ProductBlock;
+  reduceMotion: boolean | null;
+  layout?: 'mobile' | 'desktop';
+}) {
+  const Icon = block.icon;
+  const isMobile = layout === 'mobile';
+
+  return (
+    <motion.div
+      key={block.id}
+      initial={reduceMotion ? false : { opacity: 0, y: isMobile ? 12 : 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: isMobile ? 0.45 : 0.8, ease: EASE }}
+      className={cn(
+        'relative flex h-full flex-col justify-between',
+        isMobile
+          ? 'min-h-[18.5rem] rounded-[1.5rem] p-5 sm:min-h-[19rem] sm:p-6'
+          : 'min-h-[24rem] rounded-[2rem] p-8 sm:min-h-[26rem] sm:p-10 md:min-h-[28rem] md:p-12',
+        productTints[block.id],
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none absolute select-none font-medium leading-none tracking-[-0.06em] text-[#1D1D1D]/[0.06]',
+          isMobile
+            ? 'bottom-0 end-0 text-[clamp(3rem,18vw,4.5rem)]'
+            : '-bottom-4 end-4 text-[clamp(5rem,16vw,9rem)]',
+        )}
+        aria-hidden
+      >
+        {block.index}
+      </span>
+
+      <div className="relative">
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-[1rem] bg-white/70',
+            isMobile ? 'size-12 sm:size-14' : 'size-16 sm:size-[4.5rem]',
+          )}
+        >
+          <Icon
+            className={cn('text-[#1D1D1D]/75', isMobile ? 'size-6' : 'size-8')}
+            strokeWidth={1.35}
+          />
+        </div>
+        <p
+          className={cn(
+            'font-medium tracking-[0.14em] text-[#6B6F76]',
+            isMobile ? 'mt-5 text-[11px]' : 'mt-8 text-[12px]',
+          )}
+        >
+          {block.subtitle}
+        </p>
+        <h3
+          className={cn(
+            'mt-1.5 font-medium leading-[1.15] tracking-[-0.03em] text-[#1D1D1D]',
+            isMobile
+              ? 'text-[1.35rem] sm:text-[1.5rem]'
+              : 'text-[clamp(1.5rem,3vw,2.25rem)]',
+          )}
+        >
+          {block.title}
+        </h3>
+      </div>
+
+      <div
+        className={cn(
+          'relative',
+          isMobile ? 'mt-5 flex flex-col items-start' : 'mt-8',
+        )}
+      >
+        <p
+          className={cn(
+            'leading-[1.75] text-[#6B6F76]',
+            isMobile ? 'max-w-[85%] text-[14px]' : 'max-w-md text-[15px] sm:text-[16px] sm:leading-[1.8]',
+          )}
+        >
+          {block.description}
+        </p>
+        <Link
+          href={block.href}
+          className={cn(
+            agLayout.btnPrimary,
+            isMobile
+              ? 'mt-4 h-9 self-start px-4 text-[13px]'
+              : 'mt-8',
+          )}
+        >
+          استكشف المنتج
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
+function MobileProductsCarousel({
+  reduceMotion,
+}: {
+  reduceMotion: boolean | null;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const updateActiveFromScroll = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const cards = Array.from(
+      container.querySelectorAll<HTMLElement>('[data-product-card]'),
+    );
+    if (cards.length === 0) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const containerCenter = containerRect.left + containerRect.width / 2;
+
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.left + rect.width / 2;
+      const distance = Math.abs(cardCenter - containerCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setActiveIndex(closestIndex);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    updateActiveFromScroll();
+
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateActiveFromScroll);
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updateActiveFromScroll);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      container.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateActiveFromScroll);
+    };
+  }, [updateActiveFromScroll]);
+
+  const scrollToIndex = (index: number) => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const card = container.querySelector<HTMLElement>(
+      `[data-product-card="${index}"]`,
+    );
+    card?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    });
+    setActiveIndex(index);
+  };
+
+  return (
+    <div className="lg:hidden">
+      <div
+        ref={scrollRef}
+        className="products-mobile-carousel -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        dir="ltr"
+        aria-label="تصفح المنتجات"
+      >
+        {blocks.map((block, index) => (
+          <article
+            key={block.id}
+            data-product-card={index}
+            className="w-[min(88vw,22rem)] shrink-0 snap-center"
+            dir="rtl"
+            aria-label={block.title}
+          >
+            <ProductShowcase
+              block={block}
+              reduceMotion={reduceMotion}
+              layout="mobile"
+            />
+          </article>
+        ))}
+      </div>
+
+      <div
+        className="mt-4 flex items-center justify-center gap-2"
+        role="tablist"
+        aria-label="اختر منتجاً"
+      >
+        {blocks.map((block, index) => (
+          <button
+            key={block.id}
+            type="button"
+            role="tab"
+            aria-selected={index === activeIndex}
+            aria-label={block.title}
+            onClick={() => scrollToIndex(index)}
+            className={cn(
+              'rounded-full transition-all duration-300',
+              index === activeIndex
+                ? 'h-2.5 w-6 bg-[#1D1D1D]'
+                : 'size-2 bg-[#D1D5DB]',
+            )}
+          />
+        ))}
+      </div>
+
+      <p className="mt-3 text-center text-[12px] text-[#9CA3AF]">
+        اسحب لاستكشاف المنتجات
+      </p>
+    </div>
+  );
+}
+
+function DesktopProductsExplorer({
+  reduceMotion,
+}: {
+  reduceMotion: boolean | null;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const active = blocks[activeIndex]!;
+
+  return (
+    <div className="hidden lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10">
+      <div
+        className="flex flex-col gap-1"
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label="قائمة المنتجات"
+      >
+        {blocks.map((block, index) => (
+          <button
+            key={block.id}
+            type="button"
+            role="tab"
+            aria-selected={index === activeIndex}
+            onClick={() => setActiveIndex(index)}
+            className={cn(
+              'cursor-pointer rounded-[1.25rem] px-5 py-5 text-start transition-colors',
+              'min-h-11 touch-manipulation',
+              index === activeIndex ? 'bg-[#FAFAFA]' : 'hover:bg-[#FAFAFA]/70',
+            )}
+          >
+            <span className="block text-[15px] font-medium leading-snug text-[#1D1D1D]">
+              {block.index} — {block.title}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" className="relative z-[1] min-w-0">
+        <ProductShowcase block={active} reduceMotion={reduceMotion} layout="desktop" />
+      </div>
+    </div>
+  );
+}
+
+export function PublicAgProductsSection() {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <section
+      id="products"
+      dir="rtl"
+      className={`${agLayout.sectionWhite} pb-14 pt-16 sm:pb-20 sm:pt-24 md:pt-28`}
+      aria-labelledby="public-products-heading"
+    >
+      <div className={agLayout.container}>
+        <motion.div
+          className="mb-8 max-w-2xl sm:mb-12"
+          initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+          whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.7, ease: EASE }}
+        >
+          <p className={agLayout.eyebrow}>منتجات ركني</p>
+          <h2 id="public-products-heading" className={`${agLayout.sectionTitle} mt-4`}>
+            كل ما تحتاجه
+            <span className="text-[#9CA3AF]"> في مساحة واحدة</span>
+          </h2>
+          <p className={`${agLayout.lead} mt-4 max-w-xl sm:mt-5`}>
+            من المتجر إلى النماذج والتحليلات — كل شيء في مكان واحد.
+          </p>
+        </motion.div>
+
+        <MobileProductsCarousel reduceMotion={reduceMotion} />
+        <DesktopProductsExplorer reduceMotion={reduceMotion} />
+      </div>
+    </section>
+  );
+}

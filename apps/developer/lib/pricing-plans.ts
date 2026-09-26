@@ -1,7 +1,7 @@
 /**
  * Developer portal pricing — Free + Pro + product usage.
  * Platform prices align with apps/api DEVELOPER_PRO_PRICING (10,000 / 100,000 IQD).
- * Email API Starter: 6,000 IQD / month for 10,000 messages.
+ * Email API tiers compete with Resend — priced in IQD (USD ≈ 1,320 IQD).
  */
 
 export type PlanId = 'free' | 'pro';
@@ -38,7 +38,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Up to 10 apps',
       '5 API keys per account',
       'WhatsApp API — wallet-based billing',
-      'Email API — 1,000 free messages once',
+      'Email API — 3,000 free messages / month',
       'Up to 3 webhooks per app',
       '14-day log retention',
       '60 API requests / minute',
@@ -149,28 +149,34 @@ export const FEATURE_SECTIONS: FeatureSection[] = [
     id: 'email',
     title: 'Email API',
     description:
-      'Transactional email from a verified domain. One-time free allowance, then Email Starter for the product.',
+      'Transactional email from a verified domain. Free monthly tier, then Pro / Scale plans with overage packs.',
     rows: [
       {
         label: 'Product install',
         values: { free: true, pro: true },
       },
       {
-        label: 'Free allowance',
-        hint: 'Once per account',
-        values: { free: '1,000 messages', pro: '1,000 messages' },
+        label: 'Free tier',
+        hint: '3,000 / month · 100 / day',
+        values: { free: '3,000 messages / month', pro: '3,000 messages / month' },
       },
       {
-        label: 'Email API Starter',
-        hint: '6,000 IQD / month',
-        values: { free: '10,000 messages / month', pro: '10,000 messages / month' },
+        label: 'Paid transactional plans',
+        hint: 'From 5,000 IQD / month',
+        values: { free: 'Pro & Scale tiers', pro: 'Pro & Scale tiers' },
       },
       {
-        label: 'Domain verify + sender authorize',
+        label: 'Overage packs',
+        hint: '700 IQD / 1,000 emails',
         values: { free: true, pro: true },
       },
       {
-        label: 'Test / live keys',
+        label: 'Marketing contacts',
+        hint: 'From 1,500 free contacts',
+        values: { free: true, pro: true },
+      },
+      {
+        label: 'Domain verify + sender authorize',
         values: { free: true, pro: true },
       },
       {
@@ -264,54 +270,106 @@ export const USAGE_SECTION_COPY = {
     'Prices include Meta conversation fees and Rukny platform margin. Billed per delivered message category.',
 } as const;
 
-export const EMAIL_PRODUCT_PLANS = [
-  {
-    id: 'email-free',
-    name: 'Free allowance',
-    nameEn: 'Free',
-    priceLabel: 'Free',
-    priceNote: 'Once per account',
-    volume: '1,000 messages',
-    description: 'Start integrating after you install Email API.',
-    highlights: [
-      'Verified domain and authorized sender',
-      'Test and live keys',
-      'SDK and REST',
-      'Does not renew monthly',
-    ],
-  },
-  {
-    id: 'email-starter',
-    name: 'Email API Starter',
-    nameEn: 'Starter',
-    priceLabel: '6,000',
-    priceNote: `${CURRENCY} / month`,
-    volume: '10,000 messages / month',
-    description: 'Fixed monthly allowance for transactional email in production.',
-    highlights: [
-      '10,000 messages every billing cycle',
-      'Same API and SDK surface',
-      'Request from the developer portal',
-      'No unlimited sending in the MVP',
-    ],
-    popular: true,
-  },
+export function formatPrice(amount: number): string {
+  return amount.toLocaleString('en-US');
+}
+
+export function monthlyEquivalentFromYearly(yearly: number): number {
+  return Math.round(yearly / 12);
+}
+
+export const EMAIL_TRANSACTIONAL_PLANS = [
+  { id: 'FREE', name: 'Free', priceMonthly: 0, volume: 3_000, overagePer1k: null, dailyLimit: 100 },
+  { id: 'PRO_10K', name: 'Pro 10K', priceMonthly: 5_000, volume: 10_000, overagePer1k: 700, popular: true },
+  { id: 'PRO_50K', name: 'Pro 50K', priceMonthly: 16_000, volume: 50_000, overagePer1k: 700 },
+  { id: 'PRO_100K', name: 'Pro 100K', priceMonthly: 28_000, volume: 100_000, overagePer1k: 700 },
+  { id: 'SCALE_100K', name: 'Scale 100K', priceMonthly: 72_000, volume: 100_000, overagePer1k: 650 },
+  { id: 'SCALE_200K', name: 'Scale 200K', priceMonthly: 125_000, volume: 200_000, overagePer1k: 600 },
+  { id: 'SCALE_500K', name: 'Scale 500K', priceMonthly: 275_000, volume: 500_000, overagePer1k: 550 },
+  { id: 'SCALE_1M', name: 'Scale 1M', priceMonthly: 500_000, volume: 1_000_000, overagePer1k: 500 },
 ] as const;
+
+export const EMAIL_MARKETING_PLANS = [
+  { id: 'FREE', name: 'Marketing Free', priceMonthly: 0, contacts: 1_500 },
+  { id: 'PRO_5K', name: 'Marketing 5K', priceMonthly: 35_000, contacts: 5_000 },
+  { id: 'PRO_10K', name: 'Marketing 10K', priceMonthly: 65_000, contacts: 10_000 },
+  { id: 'PRO_25K', name: 'Marketing 25K', priceMonthly: 140_000, contacts: 25_000 },
+  { id: 'PRO_50K', name: 'Marketing 50K', priceMonthly: 190_000, contacts: 50_000 },
+  { id: 'PRO_100K', name: 'Marketing 100K', priceMonthly: 340_000, contacts: 100_000 },
+] as const;
+
+export const EMAIL_ADDON_PLANS = [
+  { id: 'domains', name: '+100 domains', priceMonthly: 20_000 },
+  { id: 'dedicated-ip', name: 'Dedicated IP', priceMonthly: 30_000 },
+  { id: 'sso', name: 'Single Sign-On', priceMonthly: 120_000 },
+] as const;
+
+export const EMAIL_AUTOMATION_PRICING = {
+  includedRuns: 15_000,
+  overagePerRun: 1,
+} as const;
+
+export const EMAIL_OVERAGE_PACK = {
+  emails: 1_000,
+  priceIqd: 700,
+} as const;
+
+export const EMAIL_PRODUCT_PLANS = EMAIL_TRANSACTIONAL_PLANS.filter(
+  (p) => p.id === 'FREE' || p.id === 'PRO_10K' || p.id === 'PRO_50K',
+).map((plan) => ({
+  id: plan.id.toLowerCase().replace('_', '-'),
+  name: plan.name,
+  nameEn: plan.name,
+  priceLabel: plan.priceMonthly === 0 ? 'Free' : formatPrice(plan.priceMonthly),
+  priceNote: plan.priceMonthly === 0 ? 'Monthly · 100/day cap' : `${CURRENCY} / month`,
+  volume:
+    plan.volume >= 1_000
+      ? `${formatPrice(plan.volume)} messages / month`
+      : `${plan.volume} messages / month`,
+  description:
+    plan.id === 'FREE'
+      ? 'Start integrating after you install Email API.'
+      : 'Fixed monthly allowance for transactional email in production.',
+  highlights:
+    plan.id === 'FREE'
+      ? [
+          '3,000 messages every month',
+          '100 emails per day cap',
+          '3 verified domains',
+          'SDK and REST',
+        ]
+      : [
+          `${formatPrice(plan.volume)} messages every billing cycle`,
+          `Overage ${formatPrice(plan.overagePer1k ?? 700)} IQD / 1,000`,
+          'Request from the developer portal',
+          'Annual billing −17%',
+        ],
+  popular: 'popular' in plan ? plan.popular : false,
+}));
 
 export const EMAIL_SECTION_COPY = {
   eyebrow: 'Email API',
   title: 'Email API pricing',
   subtitle:
-    'Separate from Free / Pro platform plans. Start with the free allowance, then enable Starter when you need more volume.',
+    'Separate from Free / Pro platform plans. Resend-style tiers in IQD — typically 15–40% lower at scale.',
   docsCta: 'Read Email API docs',
   docsHref: '/documentation/email-api/quotas',
+  compareCta: 'Compare with Resend',
+  compareHref: '/pricing/compare-resend',
 } as const;
+
+export const RESEND_COMPARE_HIGHLIGHTS = [
+  { volume: '50K/mo', resend: '$20', rukny: '16,000 IQD (~$12)' },
+  { volume: '100K/mo', resend: '$35', rukny: '28,000 IQD (~$21)' },
+  { volume: '500K/mo', resend: '$350', rukny: '275,000 IQD (~$208)' },
+  { volume: '1M/mo', resend: '$650', rukny: '500,000 IQD (~$379)' },
+] as const;
 
 export const PRICING_FAQS = [
   {
     question: 'Are messages included in Pro?',
     answer:
-      'No. Pro unlocks platform ceilings (apps, keys, webhooks…). WhatsApp messages are charged from the app wallet by usage. Email API has a one-time free allowance, then a separate Email Starter product plan.',
+      'No. Pro unlocks platform ceilings (apps, keys, webhooks…). WhatsApp messages are charged from the app wallet by usage. Email API has a separate free tier (3,000/mo) and paid Pro / Scale plans.',
   },
   {
     question: 'What is the difference between Free and Pro?',
@@ -321,7 +379,7 @@ export const PRICING_FAQS = [
   {
     question: 'How is Email API priced?',
     answer:
-      'Every account gets 1,000 free messages once. After that you can request Email API Starter for 6,000 IQD per month for 10,000 messages per cycle. Unlimited sending is not available in the MVP.',
+      'Every account gets 3,000 free transactional emails per month (100/day cap). Paid plans start at 5,000 IQD for 10K messages. Overage packs are 700 IQD per 1,000 emails. Marketing contacts and automations are billed separately.',
   },
   {
     question: 'Do I need Pro to use Email API?',
@@ -336,7 +394,7 @@ export const PRICING_FAQS = [
   {
     question: 'How do I top up the wallet?',
     answer:
-      'Open each app → Wallet. IQD balance is used for WhatsApp messages. Email Starter is requested from the product page in the portal.',
+      'Open each app → Wallet. IQD balance is used for WhatsApp messages and Email overage packs. Paid Email plans are requested from the Email API subscription card.',
   },
   {
     question: 'Can I upgrade or cancel anytime?',
@@ -344,11 +402,3 @@ export const PRICING_FAQS = [
       'Yes. Upgrading to Pro is immediate. If you cancel, you stay on Free with its limits; remaining wallet balance stays available.',
   },
 ];
-
-export function formatPrice(amount: number): string {
-  return amount.toLocaleString('en-US');
-}
-
-export function monthlyEquivalentFromYearly(yearly: number): number {
-  return Math.round(yearly / 12);
-}

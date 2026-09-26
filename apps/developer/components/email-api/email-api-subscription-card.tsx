@@ -2,8 +2,20 @@
 
 import { Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { appToast } from "@/lib/app-toast";
-import { getEmailSubscription, requestEmailStarter } from "@/lib/api/email-api";
+import {
+  getEmailSubscription,
+  purchaseEmailOverage,
+  requestEmailPlan,
+} from "@/lib/api/email-api";
+import { EMAIL_OVERAGE_PACK, formatPrice } from "@/lib/pricing-plans";
+
+const UPGRADE_PLANS = [
+  { id: "PRO_10K", label: "Pro 10K", price: 5_000, quota: 10_000 },
+  { id: "PRO_50K", label: "Pro 50K", price: 16_000, quota: 50_000 },
+  { id: "PRO_100K", label: "Pro 100K", price: 28_000, quota: 100_000 },
+] as const;
 
 export function EmailApiSubscriptionCard() {
   const queryClient = useQueryClient();
@@ -12,7 +24,7 @@ export function EmailApiSubscriptionCard() {
     queryFn: getEmailSubscription,
   });
   const request = useMutation({
-    mutationFn: requestEmailStarter,
+    mutationFn: (plan: string) => requestEmailPlan(plan),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({
         queryKey: ["email-api", "subscription"],
@@ -22,46 +34,95 @@ export function EmailApiSubscriptionCard() {
       );
     },
     onError: (error) =>
-      appToast.fromError(error, "Could not request Email API Starter."),
+      appToast.fromError(error, "Could not request Email API plan."),
+  });
+  const buyOverage = useMutation({
+    mutationFn: () => purchaseEmailOverage(1),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["email-api", "subscription"],
+      });
+      appToast.success("Overage pack added to your account.");
+    },
+    onError: (error) =>
+      appToast.fromError(error, "Could not purchase overage pack."),
   });
   const data = subscription.data;
+
   return (
     <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold">Email API Starter</h2>
+          <h2 className="text-base font-semibold">Email API plan</h2>
           <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
-            6,000 IQD/month · 10,000 messages each month
+            {data
+              ? `${data.plan.name} · ${formatPrice(data.plan.priceIqd)} IQD/mo · ${formatPrice(data.subscription.quota || data.free.quota)} msgs`
+              : "3,000 free emails / month · paid Pro & Scale tiers"}
           </p>
         </div>
+        <Link
+          href="/pricing/compare-resend"
+          className="text-[13px] font-medium underline underline-offset-2"
+        >
+          Compare with Resend
+        </Link>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {UPGRADE_PLANS.map((plan) => (
+          <button
+            key={plan.id}
+            type="button"
+            disabled={request.isPending}
+            onClick={() => request.mutate(plan.id)}
+            className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] px-3 text-[12px] font-medium disabled:opacity-60"
+          >
+            Request {plan.label}
+          </button>
+        ))}
         <button
           type="button"
-          disabled={request.isPending}
-          onClick={() => request.mutate()}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)] disabled:opacity-60"
+          disabled={buyOverage.isPending}
+          onClick={() => buyOverage.mutate()}
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-[12px] font-medium text-[var(--background)] disabled:opacity-60"
         >
-          {request.isPending ? (
+          {buyOverage.isPending ? (
             <Loader2 className="size-3.5 animate-spin" />
           ) : null}
-          Request activation
+          Buy {formatPrice(EMAIL_OVERAGE_PACK.emails)} pack ·{" "}
+          {formatPrice(EMAIL_OVERAGE_PACK.priceIqd)} IQD
         </button>
       </div>
+
       {data ? (
-        <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
-            <p className="text-[var(--muted-foreground)]">
-              One-time free allowance
-            </p>
+            <p className="text-[var(--muted-foreground)]">Free tier</p>
             <p className="mt-1 font-semibold">
-              {data.trial.remaining.toLocaleString()} /{" "}
-              {data.trial.quota.toLocaleString()} remaining
+              {data.free.remaining.toLocaleString()} /{" "}
+              {data.free.quota.toLocaleString()} · daily{" "}
+              {data.free.dailyRemaining}/{data.free.dailyLimit}
             </p>
           </div>
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
-            <p className="text-[var(--muted-foreground)]">Subscription</p>
+            <p className="text-[var(--muted-foreground)]">Paid subscription</p>
             <p className="mt-1 font-semibold capitalize">
               {data.subscription.status} ·{" "}
-              {data.subscription.remaining.toLocaleString()} messages remaining
+              {data.subscription.remaining.toLocaleString()} remaining
+            </p>
+          </div>
+          <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
+            <p className="text-[var(--muted-foreground)]">Marketing contacts</p>
+            <p className="mt-1 font-semibold">
+              {data.marketing.contactsRemaining.toLocaleString()} /{" "}
+              {data.marketing.contactsLimit.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
+            <p className="text-[var(--muted-foreground)]">Automations</p>
+            <p className="mt-1 font-semibold">
+              {data.automations.remaining.toLocaleString()} /{" "}
+              {data.automations.included.toLocaleString()} runs
             </p>
           </div>
         </div>

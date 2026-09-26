@@ -59,8 +59,8 @@ export default function EmailApiErrorsDocsPage() {
               'Send an 8–128 character key on every live POST.',
             ],
             [
-              '403 quota exceeded',
-              'Upgrade plan or wait for the next cycle. Use test keys meanwhile.',
+              '402 quota exceeded',
+              'Upgrade plan, buy an overage pack, or wait for the next cycle. Use test keys meanwhile.',
             ],
           ]}
         />

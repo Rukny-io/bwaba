@@ -127,6 +127,10 @@ model User {
   developerEmailDomains     DeveloperEmailDomain[]
   developerEmailSuppression DeveloperEmailSuppression[]
   developerEmailEntitlement DeveloperEmailEntitlement?
+  developerEmailContacts    DeveloperEmailContact[]
+  developerEmailBroadcasts  DeveloperEmailBroadcast[]
+  developerEmailAutomations DeveloperEmailAutomation[]
+  developerEmailAutomationRuns DeveloperEmailAutomationRun[]
   developerApiRequestLogs   ApiRequestLog[]
   developerSubscription     DeveloperSubscription?      @relation("developer_subscription")
   developerWallet           DeveloperWallet?            @relation("developer_wallet")
@@ -2741,6 +2745,50 @@ enum DeveloperEmailSubscriptionStatus {
   CANCELED
 }
 
+enum DeveloperEmailPlan {
+  FREE
+  PRO_10K
+  PRO_50K
+  PRO_100K
+  SCALE_100K
+  SCALE_200K
+  SCALE_500K
+  SCALE_1M
+  ENTERPRISE
+}
+
+enum DeveloperEmailMarketingPlan {
+  FREE
+  PRO_5K
+  PRO_10K
+  PRO_25K
+  PRO_50K
+  PRO_100K
+  ENTERPRISE
+}
+
+enum DeveloperEmailBroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  CANCELED
+}
+
+enum DeveloperEmailBroadcastRecipientStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum DeveloperEmailAutomationStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
 /// Domain is owned and verified once by the customer, then explicitly bound
 /// to one or more Developer Apps through DeveloperEmailSender.
 model DeveloperEmailDomain {
@@ -2831,23 +2879,135 @@ model DeveloperEmailSuppression {
 /// Billing entitlement is account-scoped, not app-scoped. Payment activation
 /// will set the active period and monthly quota without duplicating trial quota.
 model DeveloperEmailEntitlement {
-  id                 String                           @id @default(uuid())
-  userId             String                           @unique
-  trialGrantedAt     DateTime?
-  trialQuota         Int                              @default(0)
-  trialUsed          Int                              @default(0)
-  subscriptionStatus DeveloperEmailSubscriptionStatus @default(INACTIVE)
-  periodStartsAt     DateTime?
-  periodEndsAt       DateTime?
-  monthlyQuota       Int                              @default(0)
-  monthlyUsed        Int                              @default(0)
-  createdAt          DateTime                         @default(now())
-  updatedAt          DateTime                         @updatedAt
+  id                     String                           @id @default(uuid())
+  userId                 String                           @unique
+  plan                   DeveloperEmailPlan               @default(FREE)
+  trialGrantedAt         DateTime?
+  trialQuota             Int                              @default(0)
+  trialUsed              Int                              @default(0)
+  subscriptionStatus     DeveloperEmailSubscriptionStatus @default(INACTIVE)
+  periodStartsAt         DateTime?
+  periodEndsAt           DateTime?
+  monthlyQuota           Int                              @default(0)
+  monthlyUsed            Int                              @default(0)
+  overagePackCredits     Int                              @default(0)
+  freePeriodStart        DateTime?
+  freePeriodEnd          DateTime?
+  freeMonthlyUsed        Int                              @default(0)
+  freeDailyUsed          Int                              @default(0)
+  freeDailyDate          DateTime?
+  marketingPlan          DeveloperEmailMarketingPlan      @default(FREE)
+  marketingContactsLimit Int                              @default(1500)
+  marketingContactsUsed  Int                              @default(0)
+  automationRunsIncluded Int                              @default(15000)
+  automationRunsUsed     Int                              @default(0)
+  addonDomainsExtra      Int                              @default(0)
+  dedicatedIpEnabled     Boolean                          @default(false)
+  ssoEnabled             Boolean                          @default(false)
+  enterpriseMonthlyQuota Int?
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionStatus, periodEndsAt])
+  @@index([freePeriodEnd])
   @@map("developer_email_entitlements")
+}
+
+model DeveloperEmailContact {
+  id             String    @id @default(uuid())
+  userId         String
+  email          String
+  emailHash      String
+  firstName      String?
+  lastName       String?
+  tags           String[]  @default([])
+  source         String    @default("manual")
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user        User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients  DeveloperEmailBroadcastRecipient[]
+
+  @@unique([userId, emailHash])
+  @@index([userId, unsubscribedAt])
+  @@map("developer_email_contacts")
+}
+
+model DeveloperEmailBroadcast {
+  id          String                        @id @default(uuid())
+  userId      String
+  subject     String
+  bodyHtml    String?
+  bodyText    String?
+  status      DeveloperEmailBroadcastStatus @default(DRAFT)
+  sentCount   Int                           @default(0)
+  failedCount Int                           @default(0)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
+
+  user        User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients  DeveloperEmailBroadcastRecipient[]
+
+  @@index([userId, status, createdAt])
+  @@map("developer_email_broadcasts")
+}
+
+model DeveloperEmailBroadcastRecipient {
+  id          String                               @id @default(uuid())
+  broadcastId String
+  contactId   String
+  status      DeveloperEmailBroadcastRecipientStatus @default(PENDING)
+  errorCode   String?
+  sentAt      DateTime?
+  createdAt   DateTime                             @default(now())
+  updatedAt   DateTime                             @updatedAt
+
+  broadcast DeveloperEmailBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  contact   DeveloperEmailContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, contactId])
+  @@index([broadcastId, status])
+  @@map("developer_email_broadcast_recipients")
+}
+
+model DeveloperEmailAutomation {
+  id          String                        @id @default(uuid())
+  userId      String
+  name        String
+  triggerType String                        @default("webhook")
+  actionType  String                        @default("send_email")
+  configJson  Json                          @default("{}")
+  status      DeveloperEmailAutomationStatus @default(ACTIVE)
+  runsTotal   Int                           @default(0)
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
+
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs        DeveloperEmailAutomationRun[]
+
+  @@index([userId, status])
+  @@map("developer_email_automations")
+}
+
+model DeveloperEmailAutomationRun {
+  id           String   @id @default(uuid())
+  automationId String
+  userId       String
+  status       String   @default("completed")
+  billed       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  automation DeveloperEmailAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([automationId, createdAt])
+  @@map("developer_email_automation_runs")
 }
 
 // ============================================
@@ -3308,6 +3468,8 @@ enum WalletTransactionStatus {
 enum WalletTransactionType {
   TOP_UP /// شحن رصيد
   MESSAGE_CHARGE /// خصم رسالة
+  EMAIL_OVERAGE_PACK /// حزمة رسائل Email API إضافية
+  EMAIL_AUTOMATION_RUN /// تشغيل أتمتة Email API
   REFUND /// استرداد
   AUTO_RECHARGE /// شحن تلقائي
   ADJUSTMENT /// تعديل يدوي (من الإدارة)

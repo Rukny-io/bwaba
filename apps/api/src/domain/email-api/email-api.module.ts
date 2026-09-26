@@ -11,10 +11,16 @@ import { EmailDomainsPortalController } from './domains/email-domains-portal.con
 import { SupportTicketsModule } from '../support-tickets/support-tickets.module';
 import { EmailBillingController } from './billing/email-billing.controller';
 import { EmailBillingService } from './billing/email-billing.service';
+import { EmailBillingPeriodService } from './billing/email-billing-period.service';
 import { EmailSesEventsController } from './events/email-ses-events.controller';
 import { EmailSesEventsService } from './events/email-ses-events.service';
 import { EmailApiTryController } from './try/email-api-try.controller';
 import { EmailApiTryService } from './try/email-api-try.service';
+import { EmailMarketingController } from './marketing/email-marketing.controller';
+import { EmailMarketingContactsService } from './marketing/email-marketing-contacts.service';
+import { EmailMarketingBroadcastsService } from './marketing/email-marketing-broadcasts.service';
+import { EmailAutomationController } from './automations/email-automation.controller';
+import { EmailAutomationService } from './automations/email-automation.service';
 
 @Module({
   imports: [PrismaModule, DeveloperModule, MailModule, SupportTicketsModule],
@@ -25,14 +31,20 @@ import { EmailApiTryService } from './try/email-api-try.service';
     EmailBillingController,
     EmailSesEventsController,
     EmailApiTryController,
+    EmailMarketingController,
+    EmailAutomationController,
   ],
   providers: [
     EmailMessagesService,
     EmailDomainsService,
     EmailEntitlementService,
     EmailBillingService,
+    EmailBillingPeriodService,
     EmailSesEventsService,
     EmailApiTryService,
+    EmailMarketingContactsService,
+    EmailMarketingBroadcastsService,
+    EmailAutomationService,
   ],
   exports: [EmailEntitlementService, EmailMessagesService],
 })

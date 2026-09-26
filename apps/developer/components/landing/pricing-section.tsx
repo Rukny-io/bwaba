@@ -8,6 +8,10 @@ import {
   CURRENCY,
   EMAIL_PRODUCT_PLANS,
   EMAIL_SECTION_COPY,
+  EMAIL_TRANSACTIONAL_PLANS,
+  EMAIL_AUTOMATION_PRICING,
+  EMAIL_OVERAGE_PACK,
+  RESEND_COMPARE_HIGHLIGHTS,
   FEATURE_SECTIONS,
   PRICING_FAQS,
   PRICING_PLANS,
@@ -413,7 +417,7 @@ export function PricingSection() {
           subtitle={EMAIL_SECTION_COPY.subtitle}
         />
 
-        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {EMAIL_PRODUCT_PLANS.map((plan) => (
             <div
               key={plan.id}
@@ -457,13 +461,82 @@ export function PricingSection() {
           ))}
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="mx-auto mt-10 max-w-4xl overflow-x-auto rounded-2xl bg-[var(--surface-secondary)] p-4 sm:p-6">
+          <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
+            Transactional tiers
+          </h3>
+          <table className="mt-4 w-full min-w-[36rem] border-collapse text-sm">
+            <thead>
+              <tr className="text-[12px] text-[var(--muted-foreground)]">
+                <th className="py-2 text-start">Plan</th>
+                <th className="py-2 text-end">Price / mo</th>
+                <th className="py-2 text-end">Emails / mo</th>
+                <th className="py-2 text-end">Overage / 1K</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EMAIL_TRANSACTIONAL_PLANS.map((plan) => (
+                <tr key={plan.id} className="border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)]">
+                  <td className="py-2.5 font-medium">{plan.name}</td>
+                  <td className="py-2.5 text-end tabular-nums">
+                    {plan.priceMonthly === 0 ? 'Free' : `${formatPrice(plan.priceMonthly)} IQD`}
+                  </td>
+                  <td className="py-2.5 text-end tabular-nums">{formatPrice(plan.volume)}</td>
+                  <td className="py-2.5 text-end tabular-nums">
+                    {plan.overagePer1k ? `${formatPrice(plan.overagePer1k)} IQD` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-4 text-[12px] text-[var(--muted-foreground)]">
+            Overage packs: {formatPrice(EMAIL_OVERAGE_PACK.emails)} emails for{' '}
+            {formatPrice(EMAIL_OVERAGE_PACK.priceIqd)} IQD. Automations:{' '}
+            {formatPrice(EMAIL_AUTOMATION_PRICING.includedRuns)} runs included, then{' '}
+            {EMAIL_AUTOMATION_PRICING.overagePerRun} IQD/run.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-4">
           <Link
             href={EMAIL_SECTION_COPY.docsHref}
             className="text-sm font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
           >
             {EMAIL_SECTION_COPY.docsCta}
           </Link>
+          <Link
+            href={EMAIL_SECTION_COPY.compareHref}
+            className="text-sm font-medium text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4 transition-colors hover:decoration-[var(--foreground)]"
+          >
+            {EMAIL_SECTION_COPY.compareCta}
+          </Link>
+        </div>
+      </section>
+
+      {/* Resend comparison band */}
+      <section className="mt-16 sm:mt-20">
+        <SectionHeader
+          eyebrow="Competitive pricing"
+          title="Lower than Resend at every tier"
+          subtitle="Same tier structure — priced in IQD for the local market."
+        />
+        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2">
+          {RESEND_COMPARE_HIGHLIGHTS.map((row) => (
+            <div
+              key={row.volume}
+              className="rounded-2xl bg-[var(--surface-secondary)] p-5"
+            >
+              <p className="text-[13px] font-semibold">{row.volume}</p>
+              <div className="mt-3 flex justify-between text-[13px]">
+                <span className="text-[var(--muted-foreground)]">Resend</span>
+                <span>{row.resend}</span>
+              </div>
+              <div className="mt-1 flex justify-between text-[13px] font-medium">
+                <span className="text-[var(--muted-foreground)]">Rukny</span>
+                <span>{row.rukny}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

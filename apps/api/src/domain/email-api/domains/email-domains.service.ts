@@ -7,12 +7,15 @@ import {
 import { DeveloperEmailDomainStatus } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MailSesService } from '../../mail/mail-ses.service';
+import { EmailEntitlementService } from '../shared/email-entitlement.service';
+import { emailApiDomainLimit } from '../billing/email-api-plan-limits.config';
 
 @Injectable()
 export class EmailDomainsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ses: MailSesService,
+    private readonly entitlements: EmailEntitlementService,
   ) {}
 
   async list(userId: string) {
@@ -57,6 +60,23 @@ export class EmailDomainsService {
 
   async create(userId: string, rawDomain: string) {
     const domain = this.normalizeDomain(rawDomain);
+    const entitlement = await this.entitlements.ensureEntitlement(userId);
+    const domainCount = await this.prisma.developerEmailDomain.count({
+      where: { userId },
+    });
+    const limit = emailApiDomainLimit(
+      entitlement.plan,
+      entitlement.addonDomainsExtra,
+    );
+    const existing = await this.prisma.developerEmailDomain.findUnique({
+      where: { userId_domain: { userId, domain } },
+    });
+    if (!existing && domainCount >= limit) {
+      throw new BadRequestException(
+        `Domain limit reached (${limit}). Upgrade your plan or add a domains pack.`,
+      );
+    }
+
     const identity = await this.ses.createEmailIdentity(domain);
     const status = identity.sending
       ? DeveloperEmailDomainStatus.VERIFIED

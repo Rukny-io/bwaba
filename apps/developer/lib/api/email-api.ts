@@ -17,15 +17,52 @@ export interface EmailSender {
 }
 
 export interface EmailSubscriptionSummary {
-  trial: { quota: number; used: number; remaining: number };
+  plan: {
+    id: string;
+    name: string;
+    priceIqd: number;
+    monthlyQuota: number;
+    overagePer1kIqd: number;
+    domainsIncluded: number;
+  };
+  free: {
+    quota: number;
+    used: number;
+    remaining: number;
+    dailyLimit: number;
+    dailyUsed: number;
+    dailyRemaining: number;
+    periodEndsAt: string | null;
+  };
   subscription: {
     status: string;
     priceIqd: number;
     quota: number;
     used: number;
     remaining: number;
+    packCredits: number;
     periodEndsAt: string | null;
   };
+  marketing: {
+    plan: string;
+    contactsLimit: number;
+    contactsUsed: number;
+    contactsRemaining: number;
+    priceIqd: number;
+  };
+  automations: {
+    included: number;
+    used: number;
+    remaining: number;
+    overagePriceIqd: number;
+  };
+  addons: {
+    domainsExtraPacks: number;
+    dedicatedIpEnabled: boolean;
+    ssoEnabled: boolean;
+  };
+  /** Legacy */
+  trial: { quota: number; used: number; remaining: number };
 }
 
 export interface EmailApiTryResponse {
@@ -84,13 +121,34 @@ export async function getEmailSubscription(): Promise<EmailSubscriptionSummary> 
   return data;
 }
 
-export async function requestEmailStarter(): Promise<{
+export async function getEmailPlans() {
+  const { data } = await api.get("/developer/email/plans");
+  return data;
+}
+
+export async function requestEmailPlan(plan: string): Promise<{
   ticketId: string;
   ticketNumber: string;
 }> {
   const { data } = await api.post<{ ticketId: string; ticketNumber: string }>(
     "/developer/email/subscription/request",
+    { plan },
   );
+  return data;
+}
+
+/** @deprecated Use requestEmailPlan('PRO_10K') */
+export async function requestEmailStarter(): Promise<{
+  ticketId: string;
+  ticketNumber: string;
+}> {
+  return requestEmailPlan("PRO_10K");
+}
+
+export async function purchaseEmailOverage(packs: number) {
+  const { data } = await api.post("/developer/email/subscription/overage/purchase", {
+    packs,
+  });
   return data;
 }
 

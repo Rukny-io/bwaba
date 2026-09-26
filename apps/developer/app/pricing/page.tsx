@@ -5,7 +5,7 @@ import { PricingSection } from '@/components/landing/pricing-section';
 export const metadata: Metadata = {
   title: 'Pricing | Rukny Developers',
   description:
-    'Free and Pro developer plans (Pro from 10,000 IQD/mo), WhatsApp usage pricing, and Email API Starter at 6,000 IQD per month.',
+    'Free and Pro developer plans (Pro from 10,000 IQD/mo), WhatsApp usage pricing, and Email API tiers from 3,000 free emails/month — priced to compete with Resend.',
 };
 
 export default function PricingPage() {

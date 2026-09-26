@@ -2623,6 +2623,7 @@ model DeveloperApp {
   emailSenders      DeveloperEmailSender[]
   emailEntitlement  DeveloperEmailEntitlement?
   emailDomains      DeveloperEmailDomain[]
+  linkedMailApps    MailApp[]                   @relation("mail_linked_developer_app")
 
   @@index([userId])
   @@index([appId])
@@ -2913,6 +2914,10 @@ model DeveloperEmailEntitlement {
   dedicatedIpEnabled     Boolean                          @default(false)
   ssoEnabled             Boolean                          @default(false)
   enterpriseMonthlyQuota Int?
+  webhooksIncluded       Int                              @default(0)
+  aiCreditsMonthly       Int                              @default(0)
+  aiCreditsUsed          Int                              @default(0)
+  slackChannelEnabled    Boolean                          @default(false)
   createdAt              DateTime                         @default(now())
   updatedAt              DateTime                         @updatedAt
 
@@ -3713,10 +3718,13 @@ model MailApp {
   domainTrustReason  String?
   /// When true (and MAIL_BODY_ENCRYPTION_ENABLED), new mail bodies are envelope-encrypted.
   bodyEncryptionEnabled Boolean           @default(false)
+  /// Optional link to a Developer app for unified Mail + Email API billing.
+  linkedDeveloperAppId  String?
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
   user                       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedDeveloperApp         DeveloperApp?                   @relation("mail_linked_developer_app", fields: [linkedDeveloperAppId], references: [id], onDelete: SetNull)
   domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
   mailboxes                  MailMailbox[]
   members                    MailAppMember[]
@@ -3737,6 +3745,7 @@ model MailApp {
   @@index([domainStatus])
   @@index([domainTrustStatus])
   @@index([domainReviewedById])
+  @@index([linkedDeveloperAppId])
   @@index([createdAt])
   @@map("mail_apps")
 }

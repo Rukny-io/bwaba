@@ -17,17 +17,12 @@ export type EmailApiVolumeStop = {
   planId: DeveloperEmailPlanId;
 };
 
-/** Resend-aligned slider stops for transactional volume (IQD catalog). */
+/** Public self-serve slider stops (Free · Growth · Enterprise). */
 export const EMAIL_API_TRANSACTIONAL_VOLUME_STOPS: EmailApiVolumeStop[] = [
   { volume: 3_000, label: '3K', planId: DeveloperEmailPlanId.FREE },
   { volume: 50_000, label: '50K', planId: DeveloperEmailPlanId.PRO_50K },
   { volume: 100_000, label: '100K', planId: DeveloperEmailPlanId.PRO_100K },
-  { volume: 200_000, label: '200K', planId: DeveloperEmailPlanId.SCALE_200K },
-  { volume: 500_000, label: '500K', planId: DeveloperEmailPlanId.SCALE_500K },
-  { volume: 1_000_000, label: '1M', planId: DeveloperEmailPlanId.SCALE_1M },
-  { volume: 1_500_000, label: '1.5M', planId: DeveloperEmailPlanId.SCALE_1_5M },
-  { volume: 2_500_000, label: '2.5M', planId: DeveloperEmailPlanId.SCALE_2_5M },
-  { volume: 3_000_000, label: '3M+', planId: DeveloperEmailPlanId.ENTERPRISE },
+  { volume: 250_000, label: '250K+', planId: DeveloperEmailPlanId.ENTERPRISE },
 ];
 
 export type EmailApiContactsStop = {
@@ -190,7 +185,7 @@ export function emailApiTransactionalTierAnchor(
     case 'pro':
       return getEmailApiPlan(DeveloperEmailPlanId.PRO_50K);
     case 'scale':
-      return getEmailApiPlan(DeveloperEmailPlanId.SCALE_100K);
+      return getEmailApiPlan(DeveloperEmailPlanId.PRO_100K);
     default:
       return getEmailApiPlan(DeveloperEmailPlanId.ENTERPRISE);
   }

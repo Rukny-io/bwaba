@@ -25,6 +25,7 @@ import {
   emailApiOveragePer1kIqd,
   getEmailApiMarketingPlan,
   getEmailApiPlan,
+  getEmailApiPlanPerks,
   startOfUtcDay,
 } from '../billing/email-api-plan-limits.config';
 
@@ -85,6 +86,7 @@ export class EmailEntitlementService {
           DeveloperEmailMarketingPlanId.FREE,
         ).contactsLimit,
         automationRunsIncluded: EMAIL_API_AUTOMATION.includedRunsPerMonth,
+        ...this.planPerkPayload(DeveloperEmailPlanId.FREE),
       },
       update: {},
     });
@@ -301,6 +303,21 @@ export class EmailEntitlementService {
         dedicatedIpEnabled: fresh.dedicatedIpEnabled,
         ssoEnabled: fresh.ssoEnabled,
       },
+      perks: {
+        webhooksIncluded: fresh.webhooksIncluded,
+        webhooksRemaining: Math.max(
+          0,
+          fresh.webhooksIncluded -
+            (await this.countActiveWebhooks(developerAppId)),
+        ),
+        aiCreditsMonthly: fresh.aiCreditsMonthly,
+        aiCreditsUsed: fresh.aiCreditsUsed,
+        aiCreditsRemaining: Math.max(
+          0,
+          fresh.aiCreditsMonthly - fresh.aiCreditsUsed,
+        ),
+        slackChannelEnabled: fresh.slackChannelEnabled,
+      },
       trial: {
         quota: EMAIL_API_FREE.monthlyQuota,
         used: fresh.freeMonthlyUsed,
@@ -325,16 +342,37 @@ export class EmailEntitlementService {
     return this.getSummary(userId, developerAppId);
   }
 
+  private async countActiveWebhooks(developerAppId: string): Promise<number> {
+    return this.prisma.developerWebhook.count({
+      where: { developerAppId, status: 'ACTIVE' },
+    });
+  }
+
+  private planPerkPayload(planId: DeveloperEmailPlanId | string) {
+    const perks = getEmailApiPlanPerks(planId);
+    return {
+      webhooksIncluded: perks.webhooksIncluded,
+      aiCreditsMonthly: perks.aiCreditsMonthly,
+      aiCreditsUsed: 0,
+      slackChannelEnabled: perks.slackChannelEnabled,
+    };
+  }
+
   async activatePlan(
     userId: string,
     developerAppId: string,
     planId: DeveloperEmailPlanId | DeveloperEmailPlan,
     periodEndsAt?: Date,
     enterpriseMonthlyQuota?: number,
+    options?: { allowLegacy?: boolean },
   ) {
     const planKey = String(planId) as DeveloperEmailPlanId;
     const planDef = getEmailApiPlan(planKey);
-    if (!planDef.selfServe && planKey !== DeveloperEmailPlanId.ENTERPRISE) {
+    if (
+      !planDef.selfServe &&
+      planKey !== DeveloperEmailPlanId.ENTERPRISE &&
+      !options?.allowLegacy
+    ) {
       throw new HttpException('Plan is not self-serve.', HttpStatus.BAD_REQUEST);
     }
 
@@ -364,9 +402,42 @@ export class EmailEntitlementService {
         monthlyUsed: 0,
         enterpriseMonthlyQuota:
           planKey === DeveloperEmailPlanId.ENTERPRISE ? monthlyQuota : null,
+        ...this.planPerkPayload(planKey),
       },
     });
     return this.getSummary(userId, developerAppId);
+  }
+
+  async reserveAiCredit(
+    userId: string,
+    developerAppId: string,
+  ): Promise<void> {
+    await this.ensureEntitlement(userId, developerAppId);
+    const row = await this.prisma.developerEmailEntitlement.findUnique({
+      where: { developerAppId },
+    });
+    if (!row || row.aiCreditsMonthly <= 0) {
+      throw new HttpException(
+        {
+          code: 'ai_credits_unavailable',
+          message: 'AI credits are not included on this plan.',
+        },
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+    if (row.aiCreditsUsed >= row.aiCreditsMonthly) {
+      throw new HttpException(
+        {
+          code: 'ai_credits_exhausted',
+          message: 'Monthly AI credits exhausted.',
+        },
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+    await this.prisma.developerEmailEntitlement.update({
+      where: { developerAppId },
+      data: { aiCreditsUsed: { increment: 1 } },
+    });
   }
 
   activateStarter(

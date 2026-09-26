@@ -59,11 +59,12 @@ export class EmailBillingController {
         dto.plan,
         dto.periodEndsAt ? new Date(dto.periodEndsAt) : undefined,
         dto.enterpriseMonthlyQuota,
+        { allowLegacy: true },
       );
     }
     const developerAppId =
       await this.billing.resolveDefaultDeveloperAppId(userId);
-    return this.billing.activatePlan(
+    return this.billing.activatePlanAdmin(
       userId,
       developerAppId,
       dto.plan,

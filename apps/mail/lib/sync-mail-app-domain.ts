@@ -14,6 +14,7 @@ export async function syncMailAppDomainToNest(
   input: {
     primaryDomain: string | null;
     domainStatus: NestMailDomainStatus;
+    dkimTokens?: string[];
   },
 ): Promise<SyncMailAppDomainResult> {
   const result = await apiFetchJson<{
@@ -26,11 +27,12 @@ export async function syncMailAppDomainToNest(
       primaryDomain: input.primaryDomain,
       domainStatus: input.domainStatus,
       domainCheckedAt: new Date().toISOString(),
+      ...(input.dkimTokens?.length ? { dkimTokens: input.dkimTokens } : {}),
     }),
   });
 
   if (!result.ok) {
-    return {};
+    throw new Error(result.error);
   }
 
   return {
@@ -44,4 +46,36 @@ export async function syncMailAppDomainToNest(
         ? result.data.checkoutSessionId
         : undefined,
   };
+}
+
+export async function fetchMailDomainQuota(
+  appId: string,
+  domain?: string,
+): Promise<{
+  used: number;
+  limit: number;
+  remaining: number;
+  planId: string;
+  marketingNameEn: string;
+  domains: string[];
+  canAttach?: boolean;
+}> {
+  const path = domain
+    ? `/mail/apps/${encodeURIComponent(appId)}/domain-quota?domain=${encodeURIComponent(domain)}`
+    : `/mail/apps/${encodeURIComponent(appId)}/domain-quota`;
+  const result = await apiFetchJson<{
+    used: number;
+    limit: number;
+    remaining: number;
+    planId: string;
+    marketingNameEn: string;
+    domains: string[];
+    canAttach?: boolean;
+  }>(path);
+
+  if (!result.ok) {
+    throw new Error(result.error);
+  }
+
+  return result.data;
 }

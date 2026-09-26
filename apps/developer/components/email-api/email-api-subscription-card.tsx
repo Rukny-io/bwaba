@@ -66,11 +66,11 @@ export function EmailApiSubscriptionCard() {
     <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold">Email API plan</h2>
+          <h2 className="text-base font-semibold">Mail + Email API plan</h2>
           <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
             {data
               ? `${planLabel} · ${formatPrice(planPrice)} IQD/mo · ${formatPrice(planQuota)} msgs`
-              : "3,000 free emails / month · Growth from 5,000 IQD/mo"}
+              : "3,000 free emails / month · Growth 16,000 IQD/mo"}
           </p>
         </div>
         <Link

@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -77,6 +78,11 @@ export class UpdateMailAppDto {
   @IsOptional()
   @IsEmail()
   contactEmail?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  dkimTokens?: string[];
 }
 
 export class SendMailAppOtpDto {

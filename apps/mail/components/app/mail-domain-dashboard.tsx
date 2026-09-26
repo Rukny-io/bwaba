@@ -20,6 +20,7 @@ import {
 } from "@/lib/verify-domain-client";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { mailFeatureFlags } from "@/lib/mail-feature-flags";
+import { MailDomainQuotaBanner } from "@/components/app/mail-domain-quota-banner";
 
 function Pill({
   children,
@@ -178,6 +179,8 @@ export function MailDomainDashboard({
           </div>
         </div>
       </div>
+
+      <MailDomainQuotaBanner domain={setup.domain} compact />
 
       <DnsRecordsTable
         domain={setup.domain}

@@ -3,9 +3,13 @@ import {
   DeveloperEmailPlanId,
   EMAIL_API_AUTOMATION,
   EMAIL_API_MARKETING_PLANS,
+  EMAIL_API_OVERAGE_PACK,
   EMAIL_API_TRANSACTIONAL_PLANS,
+  EMAIL_API_UNIFIED_OVERAGE_PER_1K,
   getEmailApiPlan,
+  getEmailApiPlanPerks,
   getEmailApiPlanTier,
+  listSelfServeTransactionalPlans,
 } from '../src/catalog';
 import {
   formatEmailApiInvoiceLine,
@@ -13,34 +17,54 @@ import {
 } from '../src/format';
 
 describe('@rukny/email-api-pricing catalog', () => {
-  it('keeps Resend-aligned free tier', () => {
+  it('keeps unified free tier', () => {
     const free = getEmailApiPlan(DeveloperEmailPlanId.FREE);
     expect(free.monthlyQuota).toBe(3_000);
     expect(free.dailyLimit).toBe(100);
     expect(free.priceMonthlyIqd).toBe(0);
   });
 
-  it('keeps competitive Pro 50K tier', () => {
-    const pro50k = getEmailApiPlan(DeveloperEmailPlanId.PRO_50K);
-    expect(pro50k.priceMonthlyIqd).toBe(16_000);
-    expect(pro50k.monthlyQuota).toBe(50_000);
-    expect(pro50k.overagePer1kIqd).toBe(700);
+  it('exposes three self-serve paid tiers', () => {
+    const selfServe = listSelfServeTransactionalPlans();
+    expect(selfServe.map((plan) => plan.id)).toEqual([
+      DeveloperEmailPlanId.PRO_50K,
+      DeveloperEmailPlanId.PRO_100K,
+    ]);
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_50K).priceMonthlyIqd).toBe(
+      16_000,
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_100K).priceMonthlyIqd).toBe(
+      130_000,
+    );
   });
 
-  it('includes high-volume scale tiers', () => {
-    const ids = EMAIL_API_TRANSACTIONAL_PLANS.map((plan) => plan.id);
-    expect(ids).toContain(DeveloperEmailPlanId.SCALE_1_5M);
-    expect(ids).toContain(DeveloperEmailPlanId.SCALE_2_5M);
-    expect(getEmailApiPlan(DeveloperEmailPlanId.SCALE_1_5M).priceMonthlyIqd).toBe(660_000);
-    expect(getEmailApiPlan(DeveloperEmailPlanId.SCALE_2_5M).priceMonthlyIqd).toBe(920_000);
+  it('uses unified overage pricing', () => {
+    expect(EMAIL_API_OVERAGE_PACK.priceIqd).toBe(
+      EMAIL_API_UNIFIED_OVERAGE_PER_1K,
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_50K).overagePer1kIqd).toBe(
+      1_000,
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_100K).overagePer1kIqd).toBe(
+      1_000,
+    );
+  });
+
+  it('keeps legacy scale tiers admin-only', () => {
+    expect(getEmailApiPlan(DeveloperEmailPlanId.SCALE_500K).selfServe).toBe(
+      false,
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_10K).selfServe).toBe(false);
   });
 
   it('aligns marketing free tier to 1,000 contacts', () => {
-    const marketingFree = EMAIL_API_MARKETING_PLANS.find((plan) => plan.id === 'FREE');
+    const marketingFree = EMAIL_API_MARKETING_PLANS.find(
+      (plan) => plan.id === 'FREE',
+    );
     expect(marketingFree?.contactsLimit).toBe(1_000);
   });
 
-  it('uses Resend-style automation allowance', () => {
+  it('uses automation allowance', () => {
     expect(EMAIL_API_AUTOMATION.includedRunsPerMonth).toBe(10_000);
     expect(EMAIL_API_AUTOMATION.overagePriceIqdPerRun).toBe(2);
   });
@@ -52,18 +76,33 @@ describe('@rukny/email-api-pricing catalog', () => {
       expect(plan.invoiceLabelEn.trim().length).toBeGreaterThan(0);
       expect(plan.invoiceLabelAr.trim().length).toBeGreaterThan(0);
       expect(plan.slug.trim().length).toBeGreaterThan(0);
-      expect(['starter', 'growth', 'business', 'enterprise']).toContain(plan.tier);
+      expect(['starter', 'growth', 'business', 'enterprise']).toContain(
+        plan.tier,
+      );
       expect(formatEmailApiPlanTitle(plan, 'en')).toBe(plan.marketingNameEn);
       expect(formatEmailApiInvoiceLine(plan, 'ar')).toBe(plan.invoiceLabelAr);
       expect(getEmailApiPlanTier(plan.id)).toBe(plan.tier);
     }
   });
 
-  it('maps growth tier to PRO plans and business tier to SCALE plans', () => {
-    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_50K).marketingNameEn).toBe('Growth');
-    expect(getEmailApiPlan(DeveloperEmailPlanId.SCALE_500K).marketingNameEn).toBe('Business');
-    expect(getEmailApiPlan(DeveloperEmailPlanId.FREE).marketingNameEn).toBe('Starter');
-    expect(getEmailApiPlan(DeveloperEmailPlanId.ENTERPRISE).marketingNameEn).toBe('Enterprise');
+  it('maps public tiers to Starter, Growth, and Enterprise', () => {
+    expect(getEmailApiPlan(DeveloperEmailPlanId.FREE).marketingNameEn).toBe(
+      'Starter',
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_50K).marketingNameEn).toBe(
+      'Growth',
+    );
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_100K).marketingNameEn).toBe(
+      'Enterprise',
+    );
+  });
+
+  it('assigns enterprise perks to PRO_100K', () => {
+    expect(getEmailApiPlanPerks(DeveloperEmailPlanId.PRO_100K)).toEqual({
+      webhooksIncluded: 10,
+      aiCreditsMonthly: 500,
+      slackChannelEnabled: true,
+    });
   });
 
   it('defines marketing names and invoice labels for every marketing plan', () => {

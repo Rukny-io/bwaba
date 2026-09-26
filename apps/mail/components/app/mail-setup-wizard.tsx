@@ -22,6 +22,7 @@ import {
 import { createDomainRequest, verifyDomainRequest } from "@/lib/verify-domain-client";
 import { readPendingMailbox } from "@/lib/mail-pending-mailbox";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
+import { MailDomainQuotaBanner } from "@/components/app/mail-domain-quota-banner";
 
 type Step = 1 | 2 | 3;
 
@@ -208,6 +209,7 @@ export function MailSetupWizard() {
 
           {step === 1 ? (
             <div className="space-y-4">
+              <MailDomainQuotaBanner domain={normalized || undefined} />
               <div className="rounded-2xl bg-[var(--background)] p-5">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">

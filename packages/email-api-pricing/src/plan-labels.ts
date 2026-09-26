@@ -14,7 +14,7 @@ export function emailApiTransactionalTierFromId(
   planId: string,
 ): EmailApiPlanTier {
   if (planId === 'FREE') return 'starter';
-  if (planId === 'ENTERPRISE') return 'enterprise';
+  if (planId === 'ENTERPRISE' || planId === 'PRO_100K') return 'enterprise';
   if (planId.startsWith('SCALE')) return 'business';
   return 'growth';
 }

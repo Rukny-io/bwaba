@@ -58,8 +58,26 @@ export type MailPendingPlanRequest = {
   createdAt: string;
 };
 
+export type MailUnifiedPlanSnapshot = {
+  id: string;
+  marketingNameEn: string;
+  priceMonthlyIqd: number;
+  monthlyQuota: number;
+};
+
+export type MailDomainQuotaSnapshot = {
+  used: number;
+  limit: number;
+  remaining: number;
+  planId: string;
+  marketingNameEn: string;
+  domains: string[];
+};
+
 export type MailAppSubscriptionSnapshot = {
   app: { appId: string; name: string; primaryDomain: string | null } | null;
+  unifiedPlan?: MailUnifiedPlanSnapshot | null;
+  domainQuota?: MailDomainQuotaSnapshot | null;
   subscription: MailSubscriptionView | null;
   pendingRequest: MailPendingPlanRequest | null;
   needsApp: boolean;
@@ -211,6 +229,8 @@ export async function fetchMailSubscription(
   );
   const data = await readJson<{
     app?: MailAppSubscriptionSnapshot["app"];
+    unifiedPlan?: MailUnifiedPlanSnapshot | null;
+    domainQuota?: MailDomainQuotaSnapshot | null;
     subscription?: MailSubscriptionView | null;
     pendingRequest?: MailPendingPlanRequest | null;
     canManageBilling?: boolean;
@@ -223,6 +243,8 @@ export async function fetchMailSubscription(
   const sub = data.subscription ?? null;
   return {
     app: data.app ?? null,
+    unifiedPlan: data.unifiedPlan ?? null,
+    domainQuota: data.domainQuota ?? null,
     subscription: sub ? normalizeSubscription(sub) : null,
     pendingRequest: data.pendingRequest ?? null,
     needsApp: false,

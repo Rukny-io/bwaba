@@ -44,10 +44,17 @@ describe('EmailEntitlementService', () => {
       dedicatedIpEnabled: false,
       ssoEnabled: false,
       enterpriseMonthlyQuota: null,
+      webhooksIncluded: 0,
+      aiCreditsMonthly: 0,
+      aiCreditsUsed: 0,
+      slackChannelEnabled: false,
       ...state,
     };
 
     const prisma = {
+      developerWebhook: {
+        count: jest.fn().mockResolvedValue(0),
+      },
       developerEmailEntitlement: {
         upsert: jest.fn().mockResolvedValue(row),
         findUnique: jest.fn().mockResolvedValue(row),
@@ -124,20 +131,21 @@ describe('EmailEntitlementService', () => {
     });
   });
 
-  it('activates PRO_10K plan with catalog quota', async () => {
+  it('activates Growth plan with catalog quota and perks', async () => {
     const { service, prisma } = createService();
     await service.activatePlan(
       'user_1',
       developerAppId,
-      DeveloperEmailPlanId.PRO_10K,
+      DeveloperEmailPlanId.PRO_50K,
       periodEnd,
     );
     expect(prisma.developerEmailEntitlement.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { developerAppId },
         data: expect.objectContaining({
-          plan: DeveloperEmailPlan.PRO_10K,
-          monthlyQuota: 10_000,
+          plan: DeveloperEmailPlan.PRO_50K,
+          monthlyQuota: 50_000,
+          webhooksIncluded: 3,
         }),
       }),
     );

@@ -130,15 +130,19 @@ function TabPanel({
 }) {
   if (tab === "mailboxes") {
     return (
-      <div className="grid gap-4 sm:grid-cols-3">
-        {plans.map((plan) => (
-          <MailRevealItem key={plan.id}>
-            <PlanCard
-              plan={plan}
-              highlight={`${plan.limits.mailboxesIncluded} mailbox${plan.limits.mailboxesIncluded > 1 ? "es" : ""} · ${plan.limits.storageGbPerMailbox} GB each`}
-            />
-          </MailRevealItem>
-        ))}
+      <div className={cn(cfLayout.card, "p-6 sm:p-8")}>
+        <h3 className="text-[16px] font-semibold">Free · Growth · Enterprise</h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-[#6B6F76]">
+          One monthly plan covers hosted mailboxes, transactional API sends, domains,
+          and automations. Start free with 3,000 emails per month.
+        </p>
+        <Link
+          href="/pricing"
+          className="mt-6 inline-flex items-center gap-1 text-[14px] font-semibold text-[#F6821F]"
+        >
+          View unified pricing
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
       </div>
     );
   }

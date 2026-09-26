@@ -1,14 +1,17 @@
 import {
+  ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
-  ForbiddenException,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { randomBytes, createHmac } from 'crypto';
 import { assertUrlSafe } from '../../../core/common/utils/ssrf-guard';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
+import { EmailEntitlementService } from '../../email-api/shared/email-entitlement.service';
 import { resolveLimitValue } from '../subscriptions/dev-plan-limits.config';
 import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 
@@ -19,6 +22,8 @@ export class DevWebhooksService {
   constructor(
     private prisma: PrismaService,
     private devSubscriptions: DevSubscriptionsService,
+    @Inject(forwardRef(() => EmailEntitlementService))
+    private readonly emailEntitlements: EmailEntitlementService,
   ) {}
 
   private async resolveDeveloperAppId(
@@ -38,10 +43,9 @@ export class DevWebhooksService {
   }
 
   async create(userId: string, dto: CreateWebhookDto) {
-    await this.checkWebhookLimit(userId);
-    await assertUrlSafe(dto.url);
-
     const developerAppId = await this.resolveDeveloperAppId(userId, dto.appId);
+    await this.checkWebhookLimit(userId, developerAppId);
+    await assertUrlSafe(dto.url);
     const secret = `whsec_${randomBytes(32).toString('hex')}`;
 
     const webhook = await this.prisma.developerWebhook.create({
@@ -213,7 +217,29 @@ export class DevWebhooksService {
     return createHmac('sha256', secret).update(payload).digest('hex');
   }
 
-  private async checkWebhookLimit(userId: string) {
+  private async checkWebhookLimit(
+    userId: string,
+    developerAppId: string | null,
+  ) {
+    if (developerAppId) {
+      const entitlement =
+        await this.prisma.developerEmailEntitlement.findUnique({
+          where: { developerAppId },
+          select: { webhooksIncluded: true },
+        });
+      if (entitlement && entitlement.webhooksIncluded > 0) {
+        const active = await this.prisma.developerWebhook.count({
+          where: { developerAppId, status: 'ACTIVE' },
+        });
+        if (active >= entitlement.webhooksIncluded) {
+          throw new ForbiddenException(
+            `Webhook limit reached (${entitlement.webhooksIncluded}). Upgrade your Email plan for more.`,
+          );
+        }
+        return;
+      }
+    }
+
     const allowed = await this.devSubscriptions.checkResourceLimit(
       userId,
       'webhooks',

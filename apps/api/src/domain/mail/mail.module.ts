@@ -52,12 +52,15 @@ import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
 import { MailKmsClient } from './crypto/mail-kms.client';
 import { MailAppPasswordsController } from './mail-app-passwords.controller';
 import { MailAppPasswordsService } from './mail-app-passwords.service';
+import { EmailApiModule } from '../email-api/email-api.module';
+import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 
 @Module({
   imports: [
     PrismaModule,
     RedisModule,
     ConfigModule,
+    forwardRef(() => EmailApiModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -118,6 +121,7 @@ import { MailAppPasswordsService } from './mail-app-passwords.service';
     MailRealtimeService,
     MailDomainVerificationService,
     MailAppPasswordsService,
+    MailUnifiedEntitlementService,
   ],
   exports: [
     MailSesModule,
@@ -145,6 +149,7 @@ import { MailAppPasswordsService } from './mail-app-passwords.service';
     MailRealtimeService,
     MailDomainVerificationService,
     MailAppPasswordsService,
+    MailUnifiedEntitlementService,
   ],
 })
 export class MailModule {}

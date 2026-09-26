@@ -60,6 +60,12 @@ export function MailPlanSettingsSection() {
   const router = useRouter();
   const [plans, setPlans] = useState<PlanOption[]>([]);
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
+  const [unifiedPlan, setUnifiedPlan] = useState<
+    import("@/lib/mail-subscription-client").MailUnifiedPlanSnapshot | null
+  >(null);
+  const [domainQuota, setDomainQuota] = useState<
+    import("@/lib/mail-subscription-client").MailDomainQuotaSnapshot | null
+  >(null);
   const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
     null,
   );
@@ -98,6 +104,8 @@ export function MailPlanSettingsSection() {
     setNeedsApp(current.needsApp);
     setAppName(current.app?.name ?? null);
     setSubscription(current.subscription);
+    setUnifiedPlan(current.unifiedPlan ?? null);
+    setDomainQuota(current.domainQuota ?? null);
     setPendingRequest(current.pendingRequest);
     setCanManageBilling(Boolean(current.canManageBilling));
 
@@ -317,10 +325,23 @@ export function MailPlanSettingsSection() {
         </div>
       ) : (
         <p className="text-sm text-[var(--muted-foreground)]">
-          No paid plan on this workspace yet. Starter starts after DNS is verified.
-          Request Standard or Premium below — an admin will activate it.
+          {unifiedPlan
+            ? `Unified plan: ${unifiedPlan.marketingNameEn} · ${unifiedPlan.monthlyQuota.toLocaleString("en-IQ")} emails/mo. Upgrade via the developer portal checkout.`
+            : "No paid plan on this workspace yet. Use Free, Growth, or Enterprise from the unified catalog."}
         </p>
       )}
+
+      {unifiedPlan ? (
+        <BillingNotice
+          tone="info"
+          title="Mail + Email API"
+          description={`This workspace shares the ${unifiedPlan.marketingNameEn} plan with your linked developer app. Mailbox sends count against the same ${unifiedPlan.monthlyQuota.toLocaleString("en-IQ")} email quota.${
+            domainQuota
+              ? ` Domains on your account: ${domainQuota.used} / ${domainQuota.limit}.`
+              : ""
+          }`}
+        />
+      ) : null}
 
       {pendingRequest ? (
         <BillingNotice

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { MailPlan, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 import {
   MAIL_INCLUDED_OUTBOUND,
   MAIL_OUTBOUND_PACK_EMAILS,
@@ -33,7 +34,10 @@ export type MailOutboundUsageView = {
 export class MailOutboundUsageService {
   private readonly logger = new Logger(MailOutboundUsageService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly unifiedEntitlement: MailUnifiedEntitlementService,
+  ) {}
 
   async getUsageForMailApp(mailAppUuid: string): Promise<MailOutboundUsageView | null> {
     const sub = await this.prisma.mailSubscription.findUnique({
@@ -79,6 +83,12 @@ export class MailOutboundUsageService {
     mailAppUuid: string,
     count: number,
   ): Promise<{ remaining: number }> {
+    const unified = await this.unifiedEntitlement.reserveOutbound(
+      mailAppUuid,
+      count,
+    );
+    if (unified) return unified;
+
     const n = Math.max(1, Math.floor(count));
     const sub = await this.prisma.mailSubscription.findUnique({
       where: { mailAppId: mailAppUuid },

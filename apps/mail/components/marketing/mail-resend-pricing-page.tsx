@@ -4,7 +4,6 @@ import {
   EMAIL_API_AUTOMATION,
   EMAIL_API_MARKETING_PLANS,
   EMAIL_API_OVERAGE_PACK,
-  EMAIL_API_TRANSACTIONAL_PLANS,
   type EmailApiPlanDefinition,
   formatEmailApiContacts,
   formatEmailApiIqD,
@@ -12,7 +11,6 @@ import {
   formatEmailApiVolume,
 } from "@rukny/email-api-pricing";
 import {
-  FEATURED_TRANSACTIONAL_PLAN_IDS,
   FEATURED_TRANSACTIONAL_PLANS,
   featuredPlanCopy,
   type FeaturedTransactionalPlanId,
@@ -27,18 +25,14 @@ import { MailReveal } from "@/components/marketing/mail-reveal";
 import { agLayout } from "@/lib/mail-antigravity-theme";
 import { getCurrentMailUser } from "@/lib/current-user";
 
-const FEATURED_TRANSACTIONAL_IDS: ReadonlySet<string> = new Set(
-  FEATURED_TRANSACTIONAL_PLAN_IDS,
-);
-
 const FAQ = [
   {
-    q: "Is Email API separate from mailbox hosting?",
-    a: "Yes. This page covers transactional and marketing email from your apps. Hosted mailboxes are managed inside the Mail console billing — not listed here.",
+    q: "Does one plan cover Mail and Email API?",
+    a: "Yes. Free, Growth, and Enterprise include hosted mailboxes and transactional API sends from the same monthly email quota.",
   },
   {
     q: "How does overage work?",
-    a: `When you exceed your plan quota, prepaid packs are ${EMAIL_API_OVERAGE_PACK.priceIqd.toLocaleString("en-IQ")} IQD per ${EMAIL_API_OVERAGE_PACK.emails.toLocaleString("en-IQ")} emails.`,
+    a: `When you exceed your plan quota, prepaid packs are ${EMAIL_API_OVERAGE_PACK.priceIqd.toLocaleString("en-IQ")} IQD per ${EMAIL_API_OVERAGE_PACK.emails.toLocaleString("en-IQ")} emails on all paid tiers.`,
   },
   {
     q: "Do marketing plans limit sends?",
@@ -122,9 +116,6 @@ export async function MailResendPricingPage() {
   const signedIn = Boolean(user);
   const developer = resolveDeveloperUrl();
   const featuredTransactional = FEATURED_TRANSACTIONAL_PLANS;
-  const scaleTransactional = EMAIL_API_TRANSACTIONAL_PLANS.filter(
-    (plan) => plan.selfServe && !FEATURED_TRANSACTIONAL_IDS.has(plan.id),
-  );
   const marketingPlans = EMAIL_API_MARKETING_PLANS.filter((plan) => plan.selfServe);
   const startHref = signedIn ? `${developer}/apps` : `${developer}/login?next=/apps`;
 
@@ -135,15 +126,15 @@ export async function MailResendPricingPage() {
           <div className={`${agLayout.container} text-center`}>
             <MailReveal className="mx-auto max-w-2xl">
               <p className="text-[12px] font-medium tracking-[0.14em] text-[#9CA3AF]">
-                Email API pricing
+                Rukny Mail + Email API
               </p>
               <h1 className={`${agLayout.heroTitle} mt-6`}>
-                Send email at scale
+                One plan for mailboxes and API sends
                 <span className="text-[#9CA3AF]"> — in IQD</span>
               </h1>
               <p className={`${agLayout.lead} mx-auto mt-5 max-w-xl`}>
-                Transactional, marketing contacts, automations, and add-ons — one catalog,
-                billed monthly. Start free with 3,000 emails per month.
+                Free, Growth, and Enterprise — hosted mail, transactional API, domains,
+                and automations on one monthly quota. Start free with 3,000 emails per month.
               </p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
                 <a href={startHref} className={agLayout.btnPrimary}>
@@ -184,7 +175,7 @@ export async function MailResendPricingPage() {
             />
 
             <div className="mx-auto mt-14 max-w-6xl">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {featuredTransactional.map((plan) => (
                   <TransactionalPlanCard
                     key={plan.id}
@@ -194,22 +185,6 @@ export async function MailResendPricingPage() {
                 ))}
               </div>
             </div>
-
-            {scaleTransactional.length > 0 ? (
-              <ul className="mx-auto mt-12 max-w-3xl">
-                <li className="mb-4 text-center text-[12px] font-medium tracking-[0.12em] text-[#9CA3AF]">
-                  More volume
-                </li>
-                {scaleTransactional.map((plan) => (
-                  <PricingRow
-                    key={plan.id}
-                    label={formatEmailApiPlanTitle(plan)}
-                    price={`${formatEmailApiIqD(plan.priceMonthlyIqd)}${plan.priceMonthlyIqd > 0 ? " / mo" : ""}`}
-                    detail={`${formatEmailApiVolume(plan)} · Overage ${plan.overagePer1kIqd.toLocaleString("en-IQ")} IQD / 1K`}
-                  />
-                ))}
-              </ul>
-            ) : null}
           </div>
         </section>
 

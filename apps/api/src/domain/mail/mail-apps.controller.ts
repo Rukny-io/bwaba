@@ -71,6 +71,18 @@ export class MailAppsController {
     return this.mailApps.createApp(user.id, dto);
   }
 
+  @Get(':appId/domain-quota')
+  @ApiOperation({
+    summary: 'Domain quota for the linked billing account (Mail + Email API)',
+  })
+  domainQuota(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Query('domain') domain?: string,
+  ) {
+    return this.mailApps.getDomainQuota(user.id, appId, domain);
+  }
+
   @Get(':appId')
   @ApiOperation({ summary: 'Get one Mail app' })
   getOne(

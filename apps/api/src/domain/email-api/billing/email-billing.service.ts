@@ -51,7 +51,9 @@ export class EmailBillingService {
 
   getPlans() {
     return {
-      transactional: EMAIL_API_TRANSACTIONAL_PLANS,
+      transactional: EMAIL_API_TRANSACTIONAL_PLANS.filter(
+        (plan) => plan.selfServe || plan.id === 'FREE',
+      ),
       marketing: EMAIL_API_MARKETING_PLANS,
       overagePack: EMAIL_API_OVERAGE_PACK,
       addons: EMAIL_API_ADDONS,
@@ -104,6 +106,7 @@ export class EmailBillingService {
     plan: DeveloperEmailPlan,
     periodEndsAt?: Date,
     enterpriseMonthlyQuota?: number,
+    options?: { allowLegacy?: boolean },
   ) {
     return this.entitlements.activatePlan(
       userId,
@@ -111,6 +114,24 @@ export class EmailBillingService {
       plan as DeveloperEmailPlanId,
       periodEndsAt,
       enterpriseMonthlyQuota,
+      options,
+    );
+  }
+
+  activatePlanAdmin(
+    userId: string,
+    developerAppId: string,
+    plan: DeveloperEmailPlan,
+    periodEndsAt?: Date,
+    enterpriseMonthlyQuota?: number,
+  ) {
+    return this.activatePlan(
+      userId,
+      developerAppId,
+      plan,
+      periodEndsAt,
+      enterpriseMonthlyQuota,
+      { allowLegacy: true },
     );
   }
 
@@ -120,6 +141,7 @@ export class EmailBillingService {
     plan: DeveloperEmailPlan,
     periodEndsAt?: Date,
     enterpriseMonthlyQuota?: number,
+    options?: { allowLegacy?: boolean },
   ) {
     return this.entitlements
       .resolveOwnedApp(userId, publicAppId)
@@ -130,6 +152,7 @@ export class EmailBillingService {
           plan,
           periodEndsAt,
           enterpriseMonthlyQuota,
+          options,
         ),
       );
   }

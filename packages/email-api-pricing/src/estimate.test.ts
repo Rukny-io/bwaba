@@ -8,14 +8,19 @@ import {
 } from './estimate';
 
 describe('email-api-pricing estimate', () => {
-  it('maps slider stops to catalog tiers', () => {
-    expect(EMAIL_API_TRANSACTIONAL_VOLUME_STOPS).toHaveLength(9);
+  it('maps slider stops to public tiers', () => {
+    expect(EMAIL_API_TRANSACTIONAL_VOLUME_STOPS).toHaveLength(4);
     expect(estimateTransactionalAtStop(0).plan.id).toBe(DeveloperEmailPlanId.FREE);
-    expect(estimateTransactionalAtStop(1).plan.id).toBe(DeveloperEmailPlanId.PRO_50K);
-    expect(estimateTransactionalAtStop(8).tier).toBe('enterprise');
+    expect(estimateTransactionalAtStop(1).plan.id).toBe(
+      DeveloperEmailPlanId.PRO_50K,
+    );
+    expect(estimateTransactionalAtStop(2).plan.id).toBe(
+      DeveloperEmailPlanId.PRO_100K,
+    );
+    expect(estimateTransactionalAtStop(3).tier).toBe('enterprise');
   });
 
-  it('recommends cheapest plan for arbitrary volume', () => {
+  it('recommends cheapest self-serve plan for arbitrary volume', () => {
     expect(recommendTransactionalPlanForVolume(45_000).id).toBe(
       DeveloperEmailPlanId.PRO_50K,
     );
@@ -29,7 +34,10 @@ describe('email-api-pricing estimate', () => {
 
   it('classifies plan families', () => {
     expect(emailApiPlanTier(DeveloperEmailPlanId.PRO_50K)).toBe('pro');
+    expect(emailApiPlanTier(DeveloperEmailPlanId.PRO_100K)).toBe('pro');
     expect(emailApiPlanTier(DeveloperEmailPlanId.SCALE_1M)).toBe('scale');
-    expect(emailApiPlanTier(DeveloperEmailPlanId.ENTERPRISE)).toBe('enterprise');
+    expect(emailApiPlanTier(DeveloperEmailPlanId.ENTERPRISE)).toBe(
+      'enterprise',
+    );
   });
 });

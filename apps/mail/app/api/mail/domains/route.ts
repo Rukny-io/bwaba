@@ -16,7 +16,10 @@ import {
 } from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { apiFetchJson } from "@/lib/server-api";
-import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
+import {
+  fetchMailDomainQuota,
+  syncMailAppDomainToNest,
+} from "@/lib/sync-mail-app-domain";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
 import {
   mailSetupCacheKey,
@@ -73,6 +76,21 @@ export async function POST(request: Request) {
       await deleteMailDomainBinding(owner);
     }
 
+    try {
+      const quota = await fetchMailDomainQuota(session.appId, domain);
+      if (quota.canAttach === false) {
+        return jsonError(
+          `Domain limit reached (${quota.limit} on ${quota.marketingNameEn}). Upgrade your plan to add more domains.`,
+          402,
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not verify domain quota.";
+      const status = message.includes("limit reached") ? 402 : 502;
+      return jsonError(message, status);
+    }
+
     if (!process.env.AWS_ACCESS_KEY_ID?.trim() || !process.env.AWS_SECRET_ACCESS_KEY?.trim()) {
       return jsonError(
         "AWS credentials are not configured for Mail. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, then restart the mail service.",
@@ -91,10 +109,18 @@ export async function POST(request: Request) {
     });
     await redisDel(mailSetupCacheKey(session.appId));
     await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
-    await syncMailAppDomainToNest(session.appId, {
-      primaryDomain: setup.domain,
-      domainStatus: setup.status,
-    });
+    try {
+      await syncMailAppDomainToNest(session.appId, {
+        primaryDomain: setup.domain,
+        domainStatus: setup.status,
+        dkimTokens: tokens,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not save domain to workspace.";
+      const status = message.includes("limit reached") ? 402 : 502;
+      return jsonError(message, status);
+    }
 
     return NextResponse.json(
       { setup },
@@ -103,7 +129,11 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = formatSesError(error);
     console.error("[mail/domains POST]", message, error);
-    const status = message.includes("already connected") ? 409 : 502;
+    const status = message.includes("already connected")
+      ? 409
+      : message.includes("limit reached")
+        ? 402
+        : 502;
     return jsonError(message, status);
   }
 }

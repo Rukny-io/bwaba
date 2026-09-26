@@ -86,10 +86,19 @@ export async function POST(request: Request) {
       await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
     }
 
-    const sync = await syncMailAppDomainToNest(session.appId, {
-      primaryDomain: normalized,
-      domainStatus: status,
-    });
+    let sync: Awaited<ReturnType<typeof syncMailAppDomainToNest>>;
+    try {
+      sync = await syncMailAppDomainToNest(session.appId, {
+        primaryDomain: normalized,
+        domainStatus: status,
+        dkimTokens: tokens,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not save domain status.";
+      const httpStatus = message.includes("limit reached") ? 402 : 502;
+      return NextResponse.json({ error: message }, { status: httpStatus });
+    }
 
     if (result.verified) {
       response.cookies.set(MAIL_READY_COOKIE, "1", {

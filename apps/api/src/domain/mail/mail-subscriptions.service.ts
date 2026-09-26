@@ -46,8 +46,10 @@ import {
   mailPlanHighlights,
 } from './mail-plan-limits.config';
 import { MailOutboundUsageService } from './mail-outbound-usage.service';
+import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 import { isMailAppPublicId } from './mail-app-id.util';
 import { storageQuotaBytesForPlan } from './mail-storage.util';
+import { EMAIL_API_TRANSACTIONAL_PLANS } from '@rukny/email-api-pricing';
 import {
   maskEmail,
   maskPhone,
@@ -145,6 +147,7 @@ export class MailSubscriptionsService {
     private readonly mailSes: MailSesService,
     private readonly whatsappBusiness: WhatsAppBusinessService,
     private readonly outboundUsage: MailOutboundUsageService,
+    private readonly unifiedEntitlement: MailUnifiedEntitlementService,
   ) {}
 
   getPlansOverview() {
@@ -156,6 +159,34 @@ export class MailSubscriptionsService {
         status: cardReady ? ('available' as const) : ('unavailable' as const),
         provider: 'al_qaseh' as const,
       },
+      unifiedPlans: EMAIL_API_TRANSACTIONAL_PLANS.filter(
+        (plan) => plan.selfServe || plan.id === 'FREE',
+      ).map((plan) => ({
+        id: plan.id,
+        slug: plan.slug,
+        name: plan.marketingNameEn,
+        priceMonthly: plan.priceMonthlyIqd,
+        monthlyQuota: plan.monthlyQuota,
+        overagePer1kIqd: plan.overagePer1kIqd,
+        domainsIncluded: plan.domainsIncluded,
+      })),
+      legacyPlans: MAIL_PLAN_ORDER.map((id) => {
+        const plan = MAIL_PLAN_DEFINITIONS[id];
+        return {
+          id: plan.id,
+          planId: plan.id.toLowerCase(),
+          name: plan.name,
+          bestFor: plan.bestFor,
+          priceMonthly: plan.priceMonthly,
+          priceExtraMailbox: plan.priceExtraMailbox,
+          priceLabel: `${plan.priceMonthly.toLocaleString('en-IQ')} IQD/mo`,
+          priceNote: 'Legacy admin-only plan.',
+          popular: plan.popular,
+          limits: plan.limits,
+          benefits: plan.benefits,
+          highlights: mailPlanHighlights(plan),
+        };
+      }),
       plans: MAIL_PLAN_ORDER.map((id) => {
         const plan = MAIL_PLAN_DEFINITIONS[id];
         return {
@@ -185,10 +216,16 @@ export class MailSubscriptionsService {
       name: access.app.name,
       primaryDomain: access.app.primaryDomain,
     } satisfies MailAppRow;
+    await this.unifiedEntitlement.ensureLinkedDeveloperApp(app.id, userId);
+    const unified = await this.unifiedEntitlement.getLimitsForMailApp(app.id);
+    const domainQuota =
+      await this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId);
     const { subscription } = await this.getSubscriptionForApp(app.id);
     const pendingRequest = await this.findPendingRequest(app.appId);
     return {
       app: this.toAppView(app),
+      unifiedPlan: unified?.emailPlan ?? null,
+      domainQuota,
       subscription,
       pendingRequest,
       canManageBilling: this.access.canManageBilling(access),
@@ -210,6 +247,29 @@ export class MailSubscriptionsService {
       } catch {
         /* fall through */
       }
+    }
+
+    const unified = await this.unifiedEntitlement.getLimitsForMailApp(
+      mailAppUuid,
+    );
+    if (unified) {
+      const payload = {
+        planId: unified.planId,
+        plan: unified.plan,
+        mailboxCount: unified.mailboxCount,
+        limits: unified.limits,
+        storageQuotaBytesPerMailbox: unified.storageQuotaBytesPerMailbox,
+        unified: true as const,
+        emailPlan: unified.emailPlan,
+      };
+      await this.redis
+        .set(
+          `${this.CACHE_PREFIX}${mailAppUuid}`,
+          JSON.stringify(payload),
+          this.CACHE_TTL,
+        )
+        .catch(() => {});
+      return payload;
     }
 
     const { subscription } = await this.getSubscriptionForApp(mailAppUuid);

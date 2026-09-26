@@ -21,6 +21,7 @@ import {
   setCachedUserSlotMap,
   type MailSlotMap,
 } from "@/lib/mail-slot-map";
+import { secureNext, secureResponse } from "@/lib/secure-response";
 
 const AUTH_PAGES = ["/login", "/callback"];
 const PUBLIC_PREFIXES = ["/login", "/callback", "/invite"];
@@ -122,11 +123,13 @@ function clearMailAppCookie(response: NextResponse) {
 function redirectToApps(request: NextRequest, reason?: string) {
   const url = new URL(DEFAULT_APP_PATH, resolveMailRequestOrigin(request));
   if (reason) url.searchParams.set("error", reason);
-  return NextResponse.redirect(url);
+  return secureResponse(NextResponse.redirect(url));
 }
 
 function redirectPath(request: NextRequest, path: string) {
-  return NextResponse.redirect(new URL(path, resolveMailRequestOrigin(request)));
+  return secureResponse(
+    NextResponse.redirect(new URL(path, resolveMailRequestOrigin(request))),
+  );
 }
 
 const API_BACKEND_URL =
@@ -174,12 +177,12 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.includes(".")
   ) {
-    return NextResponse.next();
+    return secureResponse(NextResponse.next());
   }
 
   // Marketing pages are public for signed-out and signed-in visitors.
   if (isMailMarketingPath(pathname)) {
-    return NextResponse.next();
+    return secureNext(request);
   }
 
   if (matchesPrefix(pathname, PUBLIC_PREFIXES)) {
@@ -191,7 +194,7 @@ export async function proxy(request: NextRequest) {
       // Recoverable session (access expired but refresh present): keep cookies.
       if (auth.isAuthenticated && auth.user) {
         if (session === "expired" || session === "invalid" || session === "logout") {
-          return NextResponse.next();
+          return secureNext(request);
         }
         const nextParam = request.nextUrl.searchParams.get("next");
         const target = resolveClientNext(nextParam, DEFAULT_APP_PATH);
@@ -200,13 +203,13 @@ export async function proxy(request: NextRequest) {
 
       // Dead session on login — clear leftovers immediately.
       if (session === "expired" || session === "invalid" || session === "logout") {
-        const response = clearAuthCookies(NextResponse.next());
+        const response = clearAuthCookies(secureNext(request));
         clearMailAppCookie(response);
         return response;
       }
     }
 
-    return NextResponse.next();
+    return secureNext(request);
   }
 
   const auth = await checkMailAuth(request);
@@ -221,7 +224,7 @@ export async function proxy(request: NextRequest) {
     if (auth.tokenExpired) {
       loginUrl.searchParams.set("session", "expired");
     }
-    const response = NextResponse.redirect(loginUrl);
+    const response = secureResponse(NextResponse.redirect(loginUrl));
     // Fully dead session (no refresh): clear leftover cookies immediately.
     if (auth.tokenExpired) {
       clearAuthCookies(response);
@@ -268,7 +271,7 @@ export async function proxy(request: NextRequest) {
 
     const url = request.nextUrl.clone();
     url.pathname = rewritePath;
-    const response = NextResponse.rewrite(url);
+    const response = secureResponse(NextResponse.rewrite(url));
     response.cookies.set(MAIL_APP_ID_COOKIE, appId, {
       path: "/",
       maxAge: 60 * 60 * 24 * 90,
@@ -315,7 +318,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const response = NextResponse.next();
+  const response = secureNext(request);
   if (auth.user) {
     response.headers.set("x-user-id", auth.user.id);
     response.headers.set("x-user-email", auth.user.email);

@@ -11,10 +11,12 @@ describe('EmailBillingService', () => {
   let service: EmailBillingService;
   const entitlements = {
     getSummary: jest.fn(),
+    getSummaryByPublicAppId: jest.fn(),
     creditOveragePack: jest.fn(),
     activatePlan: jest.fn(),
     activateMarketingPlan: jest.fn(),
     ensureEntitlement: jest.fn(),
+    resolveOwnedApp: jest.fn(),
   };
   const supportTickets = { createTicket: jest.fn() };
   const wallet = { getWallet: jest.fn() };
@@ -52,15 +54,26 @@ describe('EmailBillingService', () => {
   });
 
   it('creates support ticket for plan request', async () => {
+    entitlements.resolveOwnedApp.mockResolvedValue({
+      id: 'app_internal_1',
+      appId: '1234567890123456',
+    });
     supportTickets.createTicket.mockResolvedValue({ id: 't1', number: '100' });
-    const result = await service.requestPlan('user_1', DeveloperEmailPlan.PRO_50K);
+    const result = await service.requestPlan(
+      'user_1',
+      '1234567890123456',
+      DeveloperEmailPlan.PRO_50K,
+    );
     expect(result.ticketNumber).toBe('100');
     expect(supportTickets.createTicket).toHaveBeenCalledWith(
       'user_1',
       expect.objectContaining({
         subject: expect.stringContaining('نمو'),
         description: expect.stringContaining('Email API Growth'),
-        context: expect.objectContaining({ plan: DeveloperEmailPlan.PRO_50K }),
+        context: expect.objectContaining({
+          plan: DeveloperEmailPlan.PRO_50K,
+          publicAppId: '1234567890123456',
+        }),
       }),
     );
   });

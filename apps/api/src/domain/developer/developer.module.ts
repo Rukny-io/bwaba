@@ -58,6 +58,7 @@ import { FormsModule } from '../forms/forms.module';
 // Products
 import { DevProductsController } from './products/dev-products.controller';
 import { DevProductsService } from './products/dev-products.service';
+import { EmailApiModule } from '../email-api/email-api.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { DevProductsService } from './products/dev-products.service';
     WorkspaceModule,
     forwardRef(() => FormsModule),
     forwardRef(() => QasehPaymentModule),
+    forwardRef(() => EmailApiModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

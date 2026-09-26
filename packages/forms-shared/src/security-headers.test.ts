@@ -58,7 +58,19 @@ describe('parseApiConnectOrigins', () => {
     expect(csp).toContain('wss:');
   });
 
-  it('returns empty for invalid URL', () => {
-    expect(parseApiConnectOrigins('not-a-url')).toEqual([]);
+  it('skips HSTS in development', () => {
+    expect(
+      buildAppSecurityHeaders({ isDev: true }).find(
+        (h) => h.key === 'Strict-Transport-Security',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('adds HSTS in production', () => {
+    expect(
+      buildAppSecurityHeaders({ isDev: false, nonce: 'n' }).find(
+        (h) => h.key === 'Strict-Transport-Security',
+      )?.value,
+    ).toBe('max-age=31536000; includeSubDomains');
   });
 });

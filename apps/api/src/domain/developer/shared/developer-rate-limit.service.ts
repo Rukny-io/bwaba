@@ -25,15 +25,25 @@ export class DeveloperRateLimitService {
     clientIp: string,
   ): Promise<void> {
     const now = new Date();
-    const active = await this.prisma.developerEmailEntitlement.findFirst({
-      where: {
-        userId,
-        subscriptionStatus: 'ACTIVE',
-        periodStartsAt: { lte: now },
-        periodEndsAt: { gt: now },
-      },
-      select: { id: true },
-    });
+    const active = developerAppId
+      ? await this.prisma.developerEmailEntitlement.findFirst({
+          where: {
+            developerAppId,
+            subscriptionStatus: 'ACTIVE',
+            periodStartsAt: { lte: now },
+            periodEndsAt: { gt: now },
+          },
+          select: { id: true },
+        })
+      : await this.prisma.developerEmailEntitlement.findFirst({
+          where: {
+            userId,
+            subscriptionStatus: 'ACTIVE',
+            periodStartsAt: { lte: now },
+            periodEndsAt: { gt: now },
+          },
+          select: { id: true },
+        });
     const limit = active ? 30 : 10;
     const keys = [
       `ratelimit:email:key:${apiKeyId}`,

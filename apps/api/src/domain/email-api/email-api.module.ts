@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { DeveloperModule } from '../developer/developer.module';
 import { MailModule } from '../mail/mail.module';
@@ -10,6 +10,7 @@ import { EmailDomainsService } from './domains/email-domains.service';
 import { EmailDomainsPortalController } from './domains/email-domains-portal.controller';
 import { SupportTicketsModule } from '../support-tickets/support-tickets.module';
 import { EmailBillingController } from './billing/email-billing.controller';
+import { EmailAppBillingController } from './billing/email-app-billing.controller';
 import { EmailBillingService } from './billing/email-billing.service';
 import { EmailBillingPeriodService } from './billing/email-billing-period.service';
 import { EmailSesEventsController } from './events/email-ses-events.controller';
@@ -23,12 +24,18 @@ import { EmailAutomationController } from './automations/email-automation.contro
 import { EmailAutomationService } from './automations/email-automation.service';
 
 @Module({
-  imports: [PrismaModule, DeveloperModule, MailModule, SupportTicketsModule],
+  imports: [
+    PrismaModule,
+    forwardRef(() => DeveloperModule),
+    MailModule,
+    SupportTicketsModule,
+  ],
   controllers: [
     EmailMessagesController,
     EmailDomainsController,
     EmailDomainsPortalController,
     EmailBillingController,
+    EmailAppBillingController,
     EmailSesEventsController,
     EmailApiTryController,
     EmailMarketingController,
@@ -46,6 +53,6 @@ import { EmailAutomationService } from './automations/email-automation.service';
     EmailMarketingBroadcastsService,
     EmailAutomationService,
   ],
-  exports: [EmailEntitlementService, EmailMessagesService],
+  exports: [EmailEntitlementService, EmailMessagesService, EmailBillingService],
 })
 export class EmailApiModule {}

@@ -36,8 +36,17 @@ export class EmailBillingService {
     private readonly prisma: PrismaService,
   ) {}
 
-  getSummary(userId: string) {
-    return this.entitlements.getSummary(userId);
+  getSummary(userId: string, publicAppId: string) {
+    return this.entitlements.getSummaryByPublicAppId(userId, publicAppId);
+  }
+
+  /** @deprecated Use getSummary(userId, appId) */
+  getSummaryLegacy(userId: string) {
+    return this.entitlements.getSummaryLegacy(userId);
+  }
+
+  resolveDefaultDeveloperAppId(userId: string) {
+    return this.entitlements.resolveDefaultDeveloperAppId(userId);
   }
 
   getPlans() {
@@ -50,7 +59,12 @@ export class EmailBillingService {
     };
   }
 
-  async requestPlan(userId: string, plan: DeveloperEmailPlan) {
+  async requestPlan(
+    userId: string,
+    publicAppId: string,
+    plan: DeveloperEmailPlan,
+  ) {
+    const app = await this.entitlements.resolveOwnedApp(userId, publicAppId);
     const planDef = getEmailApiPlan(plan);
     if (!planDef.selfServe) {
       throw new BadRequestException('Contact sales for Enterprise pricing.');
@@ -60,6 +74,7 @@ export class EmailBillingService {
       subject: `طلب اشتراك ${planDef.invoiceLabelAr}`,
       description: [
         `طلب تفعيل ${planDef.invoiceLabelAr}.`,
+        `التطبيق: ${publicAppId}`,
         '',
         `السعر الشهري: ${planDef.priceMonthlyIqd.toLocaleString('en-IQ')} IQD`,
         `الحصة الشهرية: ${planDef.monthlyQuota.toLocaleString('en-IQ')} رسالة`,
@@ -71,37 +86,56 @@ export class EmailBillingService {
         kind: 'email_api_subscription',
         product: 'email',
         plan,
+        developerAppId: app.id,
+        publicAppId,
         locale: 'ar',
       },
     });
     return { ticketId: ticket.id, ticketNumber: ticket.number };
   }
 
-  /** @deprecated Use requestPlan */
-  requestStarter(userId: string) {
-    return this.requestPlan(userId, DeveloperEmailPlan.PRO_10K);
+  requestStarter(userId: string, publicAppId: string) {
+    return this.requestPlan(userId, publicAppId, DeveloperEmailPlan.PRO_10K);
   }
 
   activatePlan(
     userId: string,
+    developerAppId: string,
     plan: DeveloperEmailPlan,
     periodEndsAt?: Date,
     enterpriseMonthlyQuota?: number,
   ) {
     return this.entitlements.activatePlan(
       userId,
+      developerAppId,
       plan as DeveloperEmailPlanId,
       periodEndsAt,
       enterpriseMonthlyQuota,
     );
   }
 
-  /** @deprecated Use activatePlan */
-  activateStarter(userId: string, periodEndsAt?: Date) {
-    return this.activatePlan(userId, DeveloperEmailPlan.PRO_10K, periodEndsAt);
+  activatePlanByPublicAppId(
+    userId: string,
+    publicAppId: string,
+    plan: DeveloperEmailPlan,
+    periodEndsAt?: Date,
+    enterpriseMonthlyQuota?: number,
+  ) {
+    return this.entitlements
+      .resolveOwnedApp(userId, publicAppId)
+      .then((app) =>
+        this.activatePlan(
+          userId,
+          app.id,
+          plan,
+          periodEndsAt,
+          enterpriseMonthlyQuota,
+        ),
+      );
   }
 
-  async purchaseOverage(userId: string, packs: number) {
+  async purchaseOverage(userId: string, publicAppId: string, packs: number) {
+    const app = await this.entitlements.resolveOwnedApp(userId, publicAppId);
     const n = Math.max(1, Math.floor(packs));
     const totalIqd = n * EMAIL_API_OVERAGE_PACK.priceIqd;
     const emails = n * EMAIL_API_OVERAGE_PACK.emails;
@@ -133,27 +167,41 @@ export class EmailBillingService {
             packs: n,
             emails,
             priceIqd: totalIqd,
+            developerAppId: app.id,
+            publicAppId,
           },
         },
       });
     });
 
-    await this.entitlements.creditOveragePack(userId, emails);
-    return this.getSummary(userId);
+    await this.entitlements.creditOveragePack(userId, app.id, emails);
+    return this.getSummary(userId, publicAppId);
   }
 
-  activateMarketingPlan(userId: string, plan: DeveloperEmailMarketingPlan) {
+  activateMarketingPlan(
+    userId: string,
+    publicAppId: string,
+    plan: DeveloperEmailMarketingPlan,
+  ) {
     const planDef = getEmailApiMarketingPlan(plan);
     if (!planDef.selfServe) {
       throw new BadRequestException('Contact sales for Enterprise marketing.');
     }
-    return this.entitlements.activateMarketingPlan(
-      userId,
-      plan as DeveloperEmailMarketingPlanId,
-    );
+    return this.entitlements
+      .resolveOwnedApp(userId, publicAppId)
+      .then((app) =>
+        this.entitlements.activateMarketingPlan(
+          userId,
+          app.id,
+          plan as DeveloperEmailMarketingPlanId,
+        ),
+      );
   }
 
-  async requestMarketingPlan(userId: string, plan: DeveloperEmailMarketingPlan) {
+  async requestMarketingPlan(
+    userId: string,
+    plan: DeveloperEmailMarketingPlan,
+  ) {
     const planDef = getEmailApiMarketingPlan(plan);
     const ticket = await this.supportTickets.createTicket(userId, {
       subject: `طلب Email Marketing ${planDef.name}`,
@@ -174,15 +222,17 @@ export class EmailBillingService {
 
   async updateAddons(
     userId: string,
+    publicAppId: string,
     input: {
       domainsExtraPacks?: number;
       dedicatedIpEnabled?: boolean;
       ssoEnabled?: boolean;
     },
   ) {
-    await this.entitlements.ensureEntitlement(userId);
+    const app = await this.entitlements.resolveOwnedApp(userId, publicAppId);
+    await this.entitlements.ensureEntitlement(userId, app.id);
     const updated = await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId: app.id },
       data: {
         addonDomainsExtra:
           input.domainsExtraPacks != null
@@ -193,7 +243,7 @@ export class EmailBillingService {
       },
     });
     if (!updated) throw new NotFoundException('Entitlement not found');
-    return this.getSummary(userId);
+    return this.getSummary(userId, publicAppId);
   }
 
   async requestEnterprise(userId: string, volumeMonthly?: number) {

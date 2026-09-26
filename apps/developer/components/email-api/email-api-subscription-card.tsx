@@ -4,12 +4,13 @@ import { Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { appToast } from "@/lib/app-toast";
+import { useCurrentApp } from "@/components/providers/app-context";
 import {
   getEmailSubscription,
   purchaseEmailOverage,
-  requestEmailPlan,
 } from "@/lib/api/email-api";
 import { EMAIL_OVERAGE_PACK, formatPrice } from "@/lib/pricing-plans";
+import { redirectToDeveloperCheckout } from "@/lib/developer-checkout";
 
 type UpgradePlan = {
   id: string;
@@ -19,29 +20,17 @@ type UpgradePlan = {
 };
 
 export function EmailApiSubscriptionCard() {
+  const { app } = useCurrentApp();
   const queryClient = useQueryClient();
   const subscription = useQuery({
-    queryKey: ["email-api", "subscription"],
-    queryFn: getEmailSubscription,
-  });
-  const request = useMutation({
-    mutationFn: (plan: string) => requestEmailPlan(plan),
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({
-        queryKey: ["email-api", "subscription"],
-      });
-      appToast.success(
-        `Subscription request #${result.ticketNumber} was sent.`,
-      );
-    },
-    onError: (error) =>
-      appToast.fromError(error, "Could not request Email API plan."),
+    queryKey: ["email-api", app.appId, "subscription"],
+    queryFn: () => getEmailSubscription(app.appId),
   });
   const buyOverage = useMutation({
-    mutationFn: () => purchaseEmailOverage(1),
+    mutationFn: () => purchaseEmailOverage(app.appId, 1),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: ["email-api", "subscription"],
+        queryKey: ["email-api", app.appId, "subscription"],
       });
       appToast.success("Overage pack added to your account.");
     },
@@ -97,11 +86,18 @@ export function EmailApiSubscriptionCard() {
           <button
             key={plan.id}
             type="button"
-            disabled={request.isPending}
-            onClick={() => request.mutate(plan.id)}
+            onClick={() =>
+              void redirectToDeveloperCheckout({
+                kind: "EMAIL_API_PLAN",
+                appId: app.appId,
+                planId: plan.id,
+              }).catch((error) =>
+                appToast.fromError(error, "Could not start checkout."),
+              )
+            }
             className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] px-3 text-[12px] font-medium disabled:opacity-60"
           >
-            Request {plan.label}
+            Upgrade to {plan.label}
           </button>
         ))}
         <button
@@ -143,6 +139,15 @@ export function EmailApiSubscriptionCard() {
               {data.marketing.contactsRemaining.toLocaleString()} remaining
             </p>
           </div>
+          ) : null}
+          {data.domains ? (
+            <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
+              <p className="text-[var(--muted-foreground)]">Sending domains</p>
+              <p className="mt-1 font-semibold">
+                {data.domains.used.toLocaleString()} /{" "}
+                {data.domains.limit.toLocaleString()} used
+              </p>
+            </div>
           ) : null}
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
             <p className="text-[var(--muted-foreground)]">Automation runs</p>

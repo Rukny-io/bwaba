@@ -20,6 +20,7 @@ import { appToast } from "@/lib/app-toast";
 import {
   createEmailDomain,
   createEmailSender,
+  getEmailSubscription,
   listEmailDomains,
   listEmailSenders,
   refreshEmailDomain,
@@ -67,6 +68,10 @@ export function EmailApiDomainManager() {
   const senders = useQuery({
     queryKey: [...key, "senders"],
     queryFn: () => listEmailSenders(app.appId),
+  });
+  const subscription = useQuery({
+    queryKey: [...key, "subscription"],
+    queryFn: () => getEmailSubscription(app.appId),
   });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
   const addDomain = useMutation({
@@ -119,6 +124,10 @@ export function EmailApiDomainManager() {
 
   const verifiedCount =
     domains.data?.filter((item) => item.status === "verified").length ?? 0;
+  const domainQuota = subscription.data?.domains;
+  const domainCount = domains.data?.length ?? domainQuota?.used ?? 0;
+  const domainLimit = domainQuota?.limit ?? 3;
+  const atDomainCap = domainCount >= domainLimit;
 
   return (
     <div className="space-y-5">
@@ -157,7 +166,7 @@ export function EmailApiDomainManager() {
                 />
               </div>
               <button
-                disabled={addDomain.isPending || !domain.trim()}
+                disabled={addDomain.isPending || !domain.trim() || atDomainCap}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {addDomain.isPending ? (
@@ -168,6 +177,12 @@ export function EmailApiDomainManager() {
                 Add domain
               </button>
             </form>
+            {atDomainCap ? (
+              <p className="mt-3 text-xs text-[var(--muted-foreground)]">
+                This app has reached its domain limit ({domainLimit}). Upgrade
+                your Email API plan or remove an existing domain to add another.
+              </p>
+            ) : null}
           </div>
 
           <div className="bg-[var(--surface-secondary)]/60 p-5 sm:p-7">
@@ -175,6 +190,17 @@ export function EmailApiDomainManager() {
               Sending readiness
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-[var(--surface)] p-4">
+                <p className="text-2xl font-semibold">
+                  {domainCount}
+                  <span className="text-sm font-normal text-[var(--muted-foreground)]">
+                    /{domainLimit}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                  Domains on this app
+                </p>
+              </div>
               <div className="rounded-2xl bg-[var(--surface)] p-4">
                 <p className="text-2xl font-semibold">{verifiedCount}</p>
                 <p className="mt-1 text-xs text-[var(--muted-foreground)]">

@@ -13,6 +13,7 @@ const repoRoot = path.resolve(appDir, "../..");
 const workspaceDeps = [
   { name: "@rukny/auth", src: "packages/auth" },
   { name: "@rukny/email-api-pricing", src: "packages/email-api-pricing" },
+  { name: "@rukny/forms-shared", src: "packages/forms-shared" },
   { name: "@rukny/thmanyah-font", src: "packages/Thmanyah-Font-Family" },
 ];
 

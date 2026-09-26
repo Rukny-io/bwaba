@@ -18,9 +18,9 @@ export class EmailDomainsService {
     private readonly entitlements: EmailEntitlementService,
   ) {}
 
-  async list(userId: string) {
+  async list(userId: string, developerAppId: string) {
     const domains = await this.prisma.developerEmailDomain.findMany({
-      where: { userId },
+      where: { userId, developerAppId },
       orderBy: { createdAt: 'desc' },
       select: {
         domain: true,
@@ -38,7 +38,7 @@ export class EmailDomainsService {
       where: {
         developerAppId,
         developerApp: { userId },
-        emailDomain: { userId },
+        emailDomain: { userId, developerAppId },
       },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -58,18 +58,21 @@ export class EmailDomainsService {
     }));
   }
 
-  async create(userId: string, rawDomain: string) {
+  async create(userId: string, developerAppId: string, rawDomain: string) {
     const domain = this.normalizeDomain(rawDomain);
-    const entitlement = await this.entitlements.ensureEntitlement(userId);
+    const entitlement = await this.entitlements.ensureEntitlement(
+      userId,
+      developerAppId,
+    );
     const domainCount = await this.prisma.developerEmailDomain.count({
-      where: { userId },
+      where: { developerAppId },
     });
     const limit = emailApiDomainLimit(
       entitlement.plan,
       entitlement.addonDomainsExtra,
     );
     const existing = await this.prisma.developerEmailDomain.findUnique({
-      where: { userId_domain: { userId, domain } },
+      where: { developerAppId_domain: { developerAppId, domain } },
     });
     if (!existing && domainCount >= limit) {
       throw new BadRequestException(
@@ -82,9 +85,10 @@ export class EmailDomainsService {
       ? DeveloperEmailDomainStatus.VERIFIED
       : DeveloperEmailDomainStatus.PENDING;
     const saved = await this.prisma.developerEmailDomain.upsert({
-      where: { userId_domain: { userId, domain } },
+      where: { developerAppId_domain: { developerAppId, domain } },
       create: {
         userId,
+        developerAppId,
         domain,
         status,
         dkimTokens: identity.tokens,
@@ -106,10 +110,10 @@ export class EmailDomainsService {
     return this.publicDomain(saved);
   }
 
-  async get(userId: string, rawDomain: string) {
+  async get(userId: string, developerAppId: string, rawDomain: string) {
     const domain = this.normalizeDomain(rawDomain);
     const record = await this.prisma.developerEmailDomain.findUnique({
-      where: { userId_domain: { userId, domain } },
+      where: { developerAppId_domain: { developerAppId, domain } },
       select: {
         id: true,
         domain: true,
@@ -117,9 +121,12 @@ export class EmailDomainsService {
         dkimTokens: true,
         verifiedAt: true,
         createdAt: true,
+        userId: true,
       },
     });
-    if (!record) throw new NotFoundException('Email domain not found.');
+    if (!record || record.userId !== userId) {
+      throw new NotFoundException('Email domain not found.');
+    }
     const identity = await this.ses.getEmailIdentity(domain);
     const status = identity.sending
       ? DeveloperEmailDomainStatus.VERIFIED
@@ -142,23 +149,50 @@ export class EmailDomainsService {
     return this.publicDomain(updated);
   }
 
+  async delete(userId: string, developerAppId: string, rawDomain: string) {
+    const domain = this.normalizeDomain(rawDomain);
+    const record = await this.prisma.developerEmailDomain.findUnique({
+      where: { developerAppId_domain: { developerAppId, domain } },
+      select: { id: true, userId: true },
+    });
+    if (!record || record.userId !== userId) {
+      throw new NotFoundException('Email domain not found.');
+    }
+    await this.prisma.developerEmailSender.deleteMany({
+      where: { emailDomainId: record.id },
+    });
+    await this.prisma.developerEmailDomain.delete({
+      where: { id: record.id },
+    });
+    return { success: true };
+  }
+
   async createSender(userId: string, developerAppId: string, rawEmail: string) {
     const email = rawEmail.trim().toLowerCase();
     const [localPart, domain] = this.splitAddress(email);
     const ownedDomain = await this.prisma.developerEmailDomain.findFirst({
-      where: { userId, domain, status: DeveloperEmailDomainStatus.VERIFIED },
+      where: {
+        userId,
+        developerAppId,
+        domain,
+        status: DeveloperEmailDomainStatus.VERIFIED,
+      },
       select: { id: true },
     });
-    if (!ownedDomain)
-      throw new BadRequestException('Domain is not verified for this account.');
+    if (!ownedDomain) {
+      throw new BadRequestException(
+        'Domain is not verified for this app.',
+      );
+    }
     const app = await this.prisma.developerApp.findFirst({
       where: { id: developerAppId, userId },
       select: { id: true },
     });
-    if (!app)
+    if (!app) {
       throw new ForbiddenException(
         'Developer app does not belong to this account.',
       );
+    }
     const sender = await this.prisma.developerEmailSender.upsert({
       where: {
         developerAppId_emailDomainId_localPart: {

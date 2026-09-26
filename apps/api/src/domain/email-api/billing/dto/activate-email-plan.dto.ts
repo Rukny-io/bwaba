@@ -1,7 +1,11 @@
-import { IsDateString, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { DeveloperEmailPlan } from '@prisma/client';
 
 export class ActivateEmailPlanDto {
+  @IsOptional()
+  @IsString()
+  publicAppId?: string;
+
   @IsEnum(DeveloperEmailPlan)
   plan!: DeveloperEmailPlan;
 

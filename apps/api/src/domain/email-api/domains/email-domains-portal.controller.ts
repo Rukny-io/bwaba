@@ -35,8 +35,8 @@ export class EmailDomainsPortalController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
   ) {
-    await this.requireOwnedApp(user.id, appId);
-    return this.domains.list(user.id);
+    const app = await this.requireOwnedApp(user.id, appId);
+    return this.domains.list(user.id, app.id);
   }
 
   @Post('domains')
@@ -45,8 +45,8 @@ export class EmailDomainsPortalController {
     @Param('appId') appId: string,
     @Body() dto: CreateEmailDomainDto,
   ) {
-    await this.requireOwnedApp(user.id, appId);
-    return this.domains.create(user.id, dto.domain);
+    const app = await this.requireOwnedApp(user.id, appId);
+    return this.domains.create(user.id, app.id, dto.domain);
   }
 
   @Get('domains/:domain')
@@ -55,8 +55,18 @@ export class EmailDomainsPortalController {
     @Param('appId') appId: string,
     @Param('domain') domain: string,
   ) {
-    await this.requireOwnedApp(user.id, appId);
-    return this.domains.get(user.id, domain);
+    const app = await this.requireOwnedApp(user.id, appId);
+    return this.domains.get(user.id, app.id, domain);
+  }
+
+  @Post('domains/:domain/delete')
+  async deleteDomain(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('domain') domain: string,
+  ) {
+    const app = await this.requireOwnedApp(user.id, appId);
+    return this.domains.delete(user.id, app.id, domain);
   }
 
   @Get('senders')

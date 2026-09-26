@@ -1,11 +1,14 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { DeveloperAppStatus } from '@prisma/client';
+import { EmailEntitlementService } from '../../email-api/shared/email-entitlement.service';
 import {
   isInstallableProductId,
   type DeveloperProductId,
@@ -20,7 +23,11 @@ export interface InstalledProductDto {
 export class DevProductsService {
   private static readonly APP_ID_PATTERN = /^\d{16}$/;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => EmailEntitlementService))
+    private readonly emailEntitlements: EmailEntitlementService,
+  ) {}
 
   private assertValidPublicAppId(publicAppId: string): void {
     if (!DevProductsService.APP_ID_PATTERN.test(publicAppId)) {
@@ -132,6 +139,10 @@ export class DevProductsService {
       },
       select: { productId: true, installedAt: true },
     });
+
+    if (productId === 'emailApi') {
+      await this.emailEntitlements.ensureEntitlement(userId, app.id);
+    }
 
     if (productId === 'whatsapp') {
       await this.prisma.developerAppProduct.upsert({

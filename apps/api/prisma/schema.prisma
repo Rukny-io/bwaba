@@ -126,7 +126,7 @@ model User {
   developerEmailMessages    DeveloperEmailMessage[]
   developerEmailDomains     DeveloperEmailDomain[]
   developerEmailSuppression DeveloperEmailSuppression[]
-  developerEmailEntitlement DeveloperEmailEntitlement?
+  developerEmailEntitlements DeveloperEmailEntitlement[]
   developerEmailContacts    DeveloperEmailContact[]
   developerEmailBroadcasts  DeveloperEmailBroadcast[]
   developerEmailAutomations DeveloperEmailAutomation[]
@@ -2621,6 +2621,8 @@ model DeveloperApp {
   installedProducts DeveloperAppProduct[]
   emailMessages     DeveloperEmailMessage[]
   emailSenders      DeveloperEmailSender[]
+  emailEntitlement  DeveloperEmailEntitlement?
+  emailDomains      DeveloperEmailDomain[]
 
   @@index([userId])
   @@index([appId])
@@ -2793,23 +2795,25 @@ enum DeveloperEmailAutomationStatus {
   ARCHIVED
 }
 
-/// Domain is owned and verified once by the customer, then explicitly bound
-/// to one or more Developer Apps through DeveloperEmailSender.
+/// Verified sending domain scoped to one Developer App (plan limits apply per app).
 model DeveloperEmailDomain {
-  id         String                     @id @default(uuid())
-  userId     String
-  domain     String
-  status     DeveloperEmailDomainStatus @default(PENDING)
-  dkimTokens String[]                   @default([])
-  verifiedAt DateTime?
-  createdAt  DateTime                   @default(now())
-  updatedAt  DateTime                   @updatedAt
+  id             String                     @id @default(uuid())
+  userId         String
+  developerAppId String
+  domain         String
+  status         DeveloperEmailDomainStatus @default(PENDING)
+  dkimTokens     String[]                   @default([])
+  verifiedAt     DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
 
-  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  senders DeveloperEmailSender[]
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  senders      DeveloperEmailSender[]
 
-  @@unique([userId, domain])
+  @@unique([developerAppId, domain])
   @@index([userId, status])
+  @@index([developerAppId, status])
   @@map("developer_email_domains")
 }
 
@@ -2880,11 +2884,11 @@ model DeveloperEmailSuppression {
   @@map("developer_email_suppressions")
 }
 
-/// Billing entitlement is account-scoped, not app-scoped. Payment activation
-/// will set the active period and monthly quota without duplicating trial quota.
+/// Email API billing entitlement — one row per Developer App (plan, quotas, addons).
 model DeveloperEmailEntitlement {
   id                     String                           @id @default(uuid())
-  userId                 String                           @unique
+  userId                 String
+  developerAppId         String                           @unique
   plan                   DeveloperEmailPlan               @default(FREE)
   trialGrantedAt         DateTime?
   trialQuota             Int                              @default(0)
@@ -2912,8 +2916,10 @@ model DeveloperEmailEntitlement {
   createdAt              DateTime                         @default(now())
   updatedAt              DateTime                         @updatedAt
 
-  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@index([subscriptionStatus, periodEndsAt])
   @@index([freePeriodEnd])
   @@map("developer_email_entitlements")

@@ -28,21 +28,24 @@ export class EmailDomainsController {
   @RequireScopes('email:domains:read')
   @ApiOperation({ summary: 'List email domains' })
   list(@Req() request: EmailApiRequest) {
-    return this.domains.list(request.userId);
+    const developerAppId = this.requireAppId(request);
+    return this.domains.list(request.userId, developerAppId);
   }
 
   @Post('domains')
   @RequireScopes('email:domains:write')
   @ApiOperation({ summary: 'Start domain verification' })
   create(@Req() request: EmailApiRequest, @Body() dto: CreateEmailDomainDto) {
-    return this.domains.create(request.userId, dto.domain);
+    const developerAppId = this.requireAppId(request);
+    return this.domains.create(request.userId, developerAppId, dto.domain);
   }
 
   @Get('domains/:domain')
   @RequireScopes('email:domains:read')
   @ApiOperation({ summary: 'Refresh domain verification status' })
   get(@Req() request: EmailApiRequest, @Param('domain') domain: string) {
-    return this.domains.get(request.userId, domain);
+    const developerAppId = this.requireAppId(request);
+    return this.domains.get(request.userId, developerAppId, domain);
   }
 
   @Post('senders')
@@ -59,5 +62,12 @@ export class EmailDomainsController {
       request.apiKey.developerAppId,
       dto.email,
     );
+  }
+
+  private requireAppId(request: EmailApiRequest) {
+    if (!request.apiKey?.developerAppId) {
+      throw new ForbiddenException('API key is not linked to a developer app.');
+    }
+    return request.apiKey.developerAppId;
   }
 }

@@ -27,7 +27,9 @@ import { MailReveal } from "@/components/marketing/mail-reveal";
 import { agLayout } from "@/lib/mail-antigravity-theme";
 import { getCurrentMailUser } from "@/lib/current-user";
 
-const FEATURED_TRANSACTIONAL_IDS = new Set(FEATURED_TRANSACTIONAL_PLAN_IDS);
+const FEATURED_TRANSACTIONAL_IDS: ReadonlySet<string> = new Set(
+  FEATURED_TRANSACTIONAL_PLAN_IDS,
+);
 
 const FAQ = [
   {

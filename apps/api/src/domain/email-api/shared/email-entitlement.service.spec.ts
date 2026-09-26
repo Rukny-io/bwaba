@@ -13,11 +13,13 @@ import {
 describe('EmailEntitlementService', () => {
   const now = new Date('2026-09-26T12:00:00.000Z');
   const periodEnd = new Date('2026-10-26T12:00:00.000Z');
+  const developerAppId = 'app_internal_1';
 
   function createService(state: Record<string, unknown> = {}) {
     const row = {
       id: 'ent_1',
       userId: 'user_1',
+      developerAppId,
       plan: DeveloperEmailPlan.FREE,
       trialGrantedAt: now,
       trialQuota: EMAIL_API_FREE.monthlyQuota,
@@ -50,8 +52,15 @@ describe('EmailEntitlementService', () => {
         upsert: jest.fn().mockResolvedValue(row),
         findUnique: jest.fn().mockResolvedValue(row),
         findUniqueOrThrow: jest.fn().mockResolvedValue(row),
+        findFirst: jest.fn().mockResolvedValue(null),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         update: jest.fn().mockResolvedValue(row),
+      },
+      developerEmailDomain: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      developerApp: {
+        findFirst: jest.fn().mockResolvedValue({ id: developerAppId }),
       },
     };
     return {
@@ -63,10 +72,12 @@ describe('EmailEntitlementService', () => {
 
   it('creates free monthly entitlement with 3,000 quota', async () => {
     const { service, prisma } = createService();
-    await service.ensureEntitlement('user_1');
+    await service.ensureEntitlement('user_1', developerAppId);
     expect(prisma.developerEmailEntitlement.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: { developerAppId },
         create: expect.objectContaining({
+          developerAppId,
           trialQuota: EMAIL_API_FREE.monthlyQuota,
         }),
       }),
@@ -82,7 +93,9 @@ describe('EmailEntitlementService', () => {
       monthlyQuota: 50_000,
       monthlyUsed: 10,
     });
-    await expect(service.reserveLiveSend('user_1')).resolves.toBe('monthly');
+    await expect(
+      service.reserveLiveSend('user_1', developerAppId),
+    ).resolves.toBe('monthly');
     expect(prisma.developerEmailEntitlement.updateMany).toHaveBeenCalled();
   });
 
@@ -90,7 +103,9 @@ describe('EmailEntitlementService', () => {
     const { service } = createService({
       freeMonthlyUsed: 100,
     });
-    await expect(service.reserveLiveSend('user_1')).resolves.toBe('free');
+    await expect(
+      service.reserveLiveSend('user_1', developerAppId),
+    ).resolves.toBe('free');
   });
 
   it('returns 402 when quota is exhausted', async () => {
@@ -99,20 +114,28 @@ describe('EmailEntitlementService', () => {
       freeDailyUsed: EMAIL_API_FREE.dailyLimit,
     });
     prisma.developerEmailEntitlement.updateMany.mockResolvedValue({ count: 0 });
-    await expect(service.reserveLiveSend('user_1')).rejects.toBeInstanceOf(
-      HttpException,
-    );
-    await expect(service.reserveLiveSend('user_1')).rejects.toMatchObject({
+    await expect(
+      service.reserveLiveSend('user_1', developerAppId),
+    ).rejects.toBeInstanceOf(HttpException);
+    await expect(
+      service.reserveLiveSend('user_1', developerAppId),
+    ).rejects.toMatchObject({
       status: 402,
     });
   });
 
   it('activates PRO_10K plan with catalog quota', async () => {
     const { service, prisma } = createService();
-    await service.activatePlan('user_1', DeveloperEmailPlanId.PRO_10K, periodEnd);
-    expect(prisma.developerEmailEntitlement.upsert).toHaveBeenCalledWith(
+    await service.activatePlan(
+      'user_1',
+      developerAppId,
+      DeveloperEmailPlanId.PRO_10K,
+      periodEnd,
+    );
+    expect(prisma.developerEmailEntitlement.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: expect.objectContaining({
+        where: { developerAppId },
+        data: expect.objectContaining({
           plan: DeveloperEmailPlan.PRO_10K,
           monthlyQuota: 10_000,
         }),
@@ -120,14 +143,16 @@ describe('EmailEntitlementService', () => {
     );
   });
 
-  it('summary includes overage pack and marketing usage', async () => {
-    const { service } = createService({
+  it('summary includes overage pack, marketing usage, and domain quota', async () => {
+    const { service, prisma } = createService({
       overagePackCredits: 2000,
       marketingContactsUsed: 10,
     });
-    const summary = await service.getSummary('user_1');
+    prisma.developerEmailDomain.count.mockResolvedValue(2);
+    const summary = await service.getSummary('user_1', developerAppId);
     expect(summary.subscription.packCredits).toBe(2000);
     expect(summary.marketing.contactsUsed).toBe(10);
+    expect(summary.domains).toEqual({ used: 2, limit: 3, remaining: 1 });
     expect(summary.catalog.overagePack).toEqual(EMAIL_API_OVERAGE_PACK);
   });
 });

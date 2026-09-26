@@ -35,14 +35,16 @@ export class EmailMarketingContactsService {
     if (!email.includes('@')) {
       throw new BadRequestException('Invalid email address.');
     }
-    await this.entitlements.ensureEntitlement(userId);
+    const developerAppId =
+      await this.entitlements.resolveDefaultDeveloperAppId(userId);
+    await this.entitlements.ensureEntitlement(userId, developerAppId);
 
     const emailHash = this.entitlements.hashContactEmail(email);
     const existing = await this.prisma.developerEmailContact.findUnique({
       where: { userId_emailHash: { userId, emailHash } },
     });
     if (!existing) {
-      await this.reserveContactSlot(userId);
+      await this.reserveContactSlot(userId, developerAppId);
     }
 
     const contact = await this.prisma.developerEmailContact.upsert({
@@ -95,9 +97,9 @@ export class EmailMarketingContactsService {
     return { success: true };
   }
 
-  private async reserveContactSlot(userId: string) {
+  private async reserveContactSlot(userId: string, developerAppId: string) {
     const entitlement = await this.prisma.developerEmailEntitlement.findUnique({
-      where: { userId },
+      where: { developerAppId },
     });
     if (!entitlement) {
       throw new BadRequestException('Email entitlement not found.');
@@ -108,7 +110,7 @@ export class EmailMarketingContactsService {
       );
     }
     await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId },
       data: { marketingContactsUsed: { increment: 1 } },
     });
   }

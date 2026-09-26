@@ -3,8 +3,10 @@ import {
   ForbiddenException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentStatus } from '@prisma/client';
@@ -14,11 +16,13 @@ import { RedisService } from '../../../core/cache/redis.service';
 import { QasehPaymentService } from '../../../integrations/qaseh-payment/qaseh-payment.service';
 import type { QasehPaymentContextResponse } from '../../../integrations/qaseh-payment/qaseh-payment.types';
 import { getEmailApiPlan } from '../../email-api/billing/email-api-plan-limits.config';
+import { EmailBillingService } from '../../email-api/billing/email-billing.service';
 import { DEVELOPER_PRO_PRICING } from '../subscriptions/dev-plan-limits.config';
 import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 import { WalletService } from '../wallet/wallet.service';
 import { DeveloperCheckoutKind } from './dto/developer-checkout.dto';
 import type { DeveloperEmailPlan } from '@prisma/client';
+import { addOneEmailBillingMonth } from '../../email-api/billing/email-api-plan-limits.config';
 
 const CHECKOUT_SESSION_TTL_SECONDS = 60 * 15;
 const CHECKOUT_SESSION_PREFIX = 'developer:checkout:';
@@ -33,6 +37,7 @@ type DeveloperCheckoutSessionPayload = {
   billingCycle?: 'MONTHLY' | 'YEARLY';
   appId?: string | null;
   emailApiPlanId?: DeveloperEmailPlan | null;
+  emailApiDeveloperAppId?: string | null;
   returnUrl: string;
   createdAt: number;
   expiresAt: number;
@@ -52,6 +57,8 @@ export class DeveloperCheckoutService {
     private readonly qaseh: QasehPaymentService,
     private readonly wallet: WalletService,
     private readonly subscriptions: DevSubscriptionsService,
+    @Inject(forwardRef(() => EmailBillingService))
+    private readonly emailBilling: EmailBillingService,
   ) {}
 
   async createCheckoutSession(
@@ -69,6 +76,7 @@ export class DeveloperCheckoutService {
     let title = '';
     let billingCycle: 'MONTHLY' | 'YEARLY' | undefined;
     let returnUrl = this.developersReturnUrl('/settings/platform');
+    let emailApiDeveloperAppId: string | null = null;
 
     if (kind === DeveloperCheckoutKind.WALLET_TOPUP) {
       amount = Math.trunc(Number(input.amount) || 0);
@@ -104,6 +112,16 @@ export class DeveloperCheckoutService {
       if (!input.planId) {
         throw new BadRequestException('planId is required for Email API checkout.');
       }
+      if (!input.appId) {
+        throw new BadRequestException('appId is required for Email API checkout.');
+      }
+      const ownedApp = await this.prisma.developerApp.findFirst({
+        where: { userId, appId: input.appId, status: 'ACTIVE' },
+        select: { id: true, appId: true },
+      });
+      if (!ownedApp) {
+        throw new BadRequestException('Developer app not found.');
+      }
       const planDef = getEmailApiPlan(input.planId);
       if (!planDef.selfServe) {
         throw new BadRequestException('Contact sales for Enterprise pricing.');
@@ -113,7 +131,10 @@ export class DeveloperCheckoutService {
       }
       amount = planDef.priceMonthlyIqd;
       title = planDef.invoiceLabelEn;
-      returnUrl = this.developersReturnUrl('/settings/email');
+      returnUrl = this.developersReturnUrl(
+        `/apps/${encodeURIComponent(ownedApp.appId)}/email-api`,
+      );
+      emailApiDeveloperAppId = ownedApp.id;
     } else {
       throw new BadRequestException('Invalid checkout kind.');
     }
@@ -132,6 +153,7 @@ export class DeveloperCheckoutService {
       appId: input.appId ?? null,
       emailApiPlanId:
         kind === DeveloperCheckoutKind.EMAIL_API_PLAN ? input.planId ?? null : null,
+      emailApiDeveloperAppId,
       returnUrl,
       createdAt,
       expiresAt,
@@ -298,6 +320,9 @@ export class DeveloperCheckoutService {
             kind: session.kind,
             billingCycle: session.billingCycle,
             emailApiPlanId: session.emailApiPlanId ?? undefined,
+            emailApiDeveloperAppId: session.emailApiDeveloperAppId ?? undefined,
+            publicAppId: session.appId ?? undefined,
+            returnUrl: session.returnUrl,
             checkoutSessionId: session.sessionId,
             source: 'qaseh_card',
           },
@@ -409,7 +434,12 @@ export class DeveloperCheckoutService {
       },
     });
     if (payment) {
-      return { kind: DeveloperCheckoutKind.PRO_UPGRADE as const, payment };
+      const meta = (payment.metadata || {}) as Record<string, unknown>;
+      const kind =
+        meta.kind === DeveloperCheckoutKind.EMAIL_API_PLAN
+          ? DeveloperCheckoutKind.EMAIL_API_PLAN
+          : DeveloperCheckoutKind.PRO_UPGRADE;
+      return { kind, payment };
     }
     return null;
   }
@@ -481,16 +511,66 @@ export class DeveloperCheckoutService {
         };
       }
 
+      const meta = (found.payment.metadata || {}) as Record<string, unknown>;
+      const paymentReturnUrl =
+        typeof meta.returnUrl === 'string'
+          ? meta.returnUrl
+          : this.developersReturnUrl('/settings/platform');
+
       if (found.payment.status === PaymentStatus.COMPLETED) {
         return {
           handled: true,
           status: 'already_completed',
           kind: found.kind,
-          returnUrl: this.developersReturnUrl('/settings/platform'),
+          returnUrl: paymentReturnUrl,
         };
       }
 
-      const meta = (found.payment.metadata || {}) as Record<string, unknown>;
+      if (found.kind === DeveloperCheckoutKind.EMAIL_API_PLAN) {
+        const developerAppId = meta.emailApiDeveloperAppId;
+        const emailApiPlanId = meta.emailApiPlanId;
+        if (
+          typeof developerAppId !== 'string' ||
+          !emailApiPlanId ||
+          typeof emailApiPlanId !== 'string'
+        ) {
+          this.logger.error(
+            `Email API checkout missing metadata for payment ${found.payment.id}`,
+          );
+          return {
+            handled: true,
+            status: 'metadata_missing',
+            kind: found.kind,
+            returnUrl: paymentReturnUrl,
+          };
+        }
+
+        const now = new Date();
+        const periodEnd = addOneEmailBillingMonth(now);
+        await this.prisma.$transaction([
+          this.prisma.developerPayment.update({
+            where: { id: found.payment.id },
+            data: {
+              status: PaymentStatus.COMPLETED,
+              paidAt: now,
+              paymentMethod: found.payment.paymentMethod || 'card',
+            },
+          }),
+        ]);
+        await this.emailBilling.activatePlan(
+          found.payment.subscription.userId,
+          developerAppId,
+          emailApiPlanId as DeveloperEmailPlan,
+          periodEnd,
+        );
+        return {
+          handled: true,
+          status: 'completed',
+          kind: found.kind,
+          returnUrl: paymentReturnUrl,
+        };
+      }
+
       const cycle =
         meta.billingCycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
       await this.subscriptions.activateProAfterPayment(
@@ -502,7 +582,7 @@ export class DeveloperCheckoutService {
         handled: true,
         status: 'completed',
         kind: found.kind,
-        returnUrl: this.developersReturnUrl('/settings/platform'),
+        returnUrl: paymentReturnUrl,
       };
     }
 

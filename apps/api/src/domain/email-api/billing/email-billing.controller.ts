@@ -9,10 +9,7 @@ import {
   CurrentUser,
 } from '../../../core/common/decorators/auth/current-user.decorator';
 import { ActivateEmailPlanDto } from './dto/activate-email-plan.dto';
-import { ActivateEmailStarterDto } from './dto/activate-email-starter.dto';
 import { ActivateEmailMarketingPlanDto } from './dto/activate-email-marketing-plan.dto';
-import { PurchaseEmailOverageDto } from './dto/purchase-email-overage.dto';
-import { RequestEmailPlanDto } from './dto/request-email-plan.dto';
 import { EmailBillingService } from './email-billing.service';
 
 @ApiTags('Developer Portal - Email API billing')
@@ -26,35 +23,11 @@ export class EmailBillingController {
     return this.billing.getPlans();
   }
 
+  /** @deprecated Use GET developer/apps/:appId/email/subscription */
   @UseGuards(JwtAuthGuard)
   @Get('subscription')
   getSummary(@CurrentUser() user: AuthenticatedUser) {
-    return this.billing.getSummary(user.id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('subscription/request')
-  requestPlan(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: RequestEmailPlanDto,
-  ) {
-    return this.billing.requestPlan(user.id, dto.plan);
-  }
-
-  /** @deprecated Use POST subscription/request with plan PRO_10K */
-  @UseGuards(JwtAuthGuard)
-  @Post('subscription/request-starter')
-  requestStarter(@CurrentUser() user: AuthenticatedUser) {
-    return this.billing.requestStarter(user.id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('subscription/overage/purchase')
-  purchaseOverage(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: PurchaseEmailOverageDto,
-  ) {
-    return this.billing.purchaseOverage(user.id, dto.packs);
+    return this.billing.getSummaryLegacy(user.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -75,39 +48,27 @@ export class EmailBillingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post('subscription/admin/users/:userId/activate')
-  activatePlan(
+  async activatePlan(
     @Param('userId') userId: string,
     @Body() dto: ActivateEmailPlanDto,
   ) {
+    if (dto.publicAppId) {
+      return this.billing.activatePlanByPublicAppId(
+        userId,
+        dto.publicAppId,
+        dto.plan,
+        dto.periodEndsAt ? new Date(dto.periodEndsAt) : undefined,
+        dto.enterpriseMonthlyQuota,
+      );
+    }
+    const developerAppId =
+      await this.billing.resolveDefaultDeveloperAppId(userId);
     return this.billing.activatePlan(
       userId,
+      developerAppId,
       dto.plan,
       dto.periodEndsAt ? new Date(dto.periodEndsAt) : undefined,
       dto.enterpriseMonthlyQuota,
     );
-  }
-
-  /** @deprecated Use admin activate with plan PRO_10K */
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @Post('subscription/admin/users/:userId/activate-starter')
-  activateStarter(
-    @Param('userId') userId: string,
-    @Body() dto: ActivateEmailStarterDto,
-  ) {
-    return this.billing.activateStarter(
-      userId,
-      dto.periodEndsAt ? new Date(dto.periodEndsAt) : undefined,
-    );
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @Post('subscription/admin/users/:userId/marketing/activate')
-  activateMarketingPlan(
-    @Param('userId') userId: string,
-    @Body() dto: ActivateEmailMarketingPlanDto,
-  ) {
-    return this.billing.activateMarketingPlan(userId, dto.plan);
   }
 }

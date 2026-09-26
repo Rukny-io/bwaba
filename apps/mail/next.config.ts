@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import fs from "node:fs";
 import path from "node:path";
 import { authResolveAliases } from "../../packages/auth/next-resolve-aliases";
+import { formsSharedResolveAliases } from "../../packages/forms-shared/next-resolve-aliases";
 import { thmanyahFontResolveAliases } from "../../packages/Thmanyah-Font-Family/next-resolve-aliases";
 
 const appRoot = __dirname;
@@ -40,6 +41,7 @@ loadRootEnv();
 
 const monorepoAliases = {
   ...authAliases,
+  ...formsSharedResolveAliases(),
   ...thmanyahAliases,
   ...herouiAliases,
   jose: "./node_modules/jose",
@@ -60,6 +62,7 @@ const nextConfig: NextConfig = {
     "@heroui/styles",
     "@rukny/auth",
     "@rukny/email-api-pricing",
+    "@rukny/forms-shared",
     "@rukny/thmanyah-font",
   ],
   // Keep ioredis outside the bundle (CJS). Bundle @aws-sdk/client-sesv2 into

@@ -133,6 +133,13 @@ export function buildAppSecurityHeaders(
     headers.splice(1, 0, { key: 'X-Frame-Options', value: 'DENY' });
   }
 
+  if (!isDev) {
+    headers.push({
+      key: 'Strict-Transport-Security',
+      value: 'max-age=31536000; includeSubDomains',
+    });
+  }
+
   return headers;
 }
 

@@ -74,6 +74,11 @@ export interface EmailSubscriptionSummary {
     dedicatedIpEnabled: boolean;
     ssoEnabled: boolean;
   };
+  domains?: {
+    used: number;
+    limit: number;
+    remaining: number;
+  };
   /** Legacy */
   trial: { quota: number; used: number; remaining: number };
   catalog?: {
@@ -137,9 +142,11 @@ export async function createEmailSender(
   return data;
 }
 
-export async function getEmailSubscription(): Promise<EmailSubscriptionSummary> {
+export async function getEmailSubscription(
+  appId: string,
+): Promise<EmailSubscriptionSummary> {
   const { data } = await api.get<EmailSubscriptionSummary>(
-    "/developer/email/subscription",
+    `${base(appId)}/subscription`,
   );
   return data;
 }
@@ -149,29 +156,41 @@ export async function getEmailPlans() {
   return data;
 }
 
-export async function requestEmailPlan(plan: string): Promise<{
+export async function requestEmailPlan(
+  appId: string,
+  plan: string,
+): Promise<{
   ticketId: string;
   ticketNumber: string;
 }> {
   const { data } = await api.post<{ ticketId: string; ticketNumber: string }>(
-    "/developer/email/subscription/request",
+    `${base(appId)}/subscription/request`,
     { plan },
   );
   return data;
 }
 
 /** @deprecated Use requestEmailPlan('PRO_10K') */
-export async function requestEmailStarter(): Promise<{
+export async function requestEmailStarter(
+  appId: string,
+): Promise<{
   ticketId: string;
   ticketNumber: string;
 }> {
-  return requestEmailPlan("PRO_10K");
+  return requestEmailPlan(appId, "PRO_10K");
 }
 
-export async function purchaseEmailOverage(packs: number) {
-  const { data } = await api.post("/developer/email/subscription/overage/purchase", {
+export async function purchaseEmailOverage(appId: string, packs: number) {
+  const { data } = await api.post(`${base(appId)}/subscription/overage/purchase`, {
     packs,
   });
+  return data;
+}
+
+export async function deleteEmailDomain(appId: string, domain: string) {
+  const { data } = await api.post(
+    `${base(appId)}/domains/${encodeURIComponent(domain)}/delete`,
+  );
   return data;
 }
 

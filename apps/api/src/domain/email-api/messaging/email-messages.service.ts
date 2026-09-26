@@ -87,12 +87,15 @@ export class EmailMessagesService {
       from,
     );
     if (environment === 'test') {
-      await this.requireTestRecipient(userId, recipient);
+      await this.requireTestRecipient(userId, developerAppId, recipient);
     }
 
     let reservation: EmailQuotaReservation | undefined;
     if (environment === 'live') {
-      reservation = await this.entitlements.reserveLiveSend(userId);
+      reservation = await this.entitlements.reserveLiveSend(
+        userId,
+        developerAppId,
+      );
     }
 
     const externalId = `em_${randomUUID().replace(/-/g, '')}`;
@@ -120,7 +123,11 @@ export class EmailMessagesService {
       });
     } catch (error) {
       if (reservation)
-        await this.entitlements.releaseLiveSend(userId, reservation);
+        await this.entitlements.releaseLiveSend(
+          userId,
+          developerAppId,
+          reservation,
+        );
       if (this.isUniqueViolation(error)) {
         const replay = await this.prisma.developerEmailMessage.findUnique({
           where: { apiKeyId_idempotencyKey: { apiKeyId, idempotencyKey } },
@@ -156,7 +163,11 @@ export class EmailMessagesService {
         },
       });
       if (reservation)
-        await this.entitlements.releaseLiveSend(userId, reservation);
+        await this.entitlements.releaseLiveSend(
+          userId,
+          developerAppId,
+          reservation,
+        );
       throw new ServiceUnavailableException(
         'Email provider could not accept the message. The quota reservation was released.',
       );
@@ -217,7 +228,7 @@ export class EmailMessagesService {
         developerAppId,
         localPart,
         status: 'ACTIVE',
-        emailDomain: { userId, domain, status: 'VERIFIED' },
+        emailDomain: { developerAppId, domain, status: 'VERIFIED' },
       },
       select: { id: true },
     });
@@ -229,7 +240,11 @@ export class EmailMessagesService {
     return sender.id;
   }
 
-  private async requireTestRecipient(userId: string, recipient: string) {
+  private async requireTestRecipient(
+    userId: string,
+    developerAppId: string,
+    recipient: string,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
@@ -241,7 +256,7 @@ export class EmailMessagesService {
     const [, domain] = this.splitAddress(recipient);
     const ownedDomain = await this.prisma.developerEmailDomain.findFirst({
       where: {
-        userId,
+        developerAppId,
         domain,
         status: 'VERIFIED',
       },

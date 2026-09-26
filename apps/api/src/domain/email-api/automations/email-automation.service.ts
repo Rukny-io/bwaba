@@ -47,7 +47,9 @@ export class EmailAutomationService {
   ) {
     const name = input.name?.trim();
     if (!name) throw new BadRequestException('Automation name is required.');
-    await this.entitlements.ensureEntitlement(userId);
+    const developerAppId =
+      await this.entitlements.resolveDefaultDeveloperAppId(userId);
+    await this.entitlements.ensureEntitlement(userId, developerAppId);
     const row = await this.prisma.developerEmailAutomation.create({
       data: {
         userId,

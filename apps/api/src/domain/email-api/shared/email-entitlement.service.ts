@@ -3,6 +3,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   DeveloperEmailPlan,
@@ -20,6 +21,7 @@ import {
   DeveloperEmailMarketingPlanId,
   DeveloperEmailPlanId,
   addOneEmailBillingMonth,
+  emailApiDomainLimit,
   emailApiOveragePer1kIqd,
   getEmailApiMarketingPlan,
   getEmailApiPlan,
@@ -55,13 +57,25 @@ export class EmailEntitlementService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async ensureEntitlement(userId: string) {
+  async resolveOwnedApp(userId: string, publicAppId: string) {
+    const app = await this.prisma.developerApp.findFirst({
+      where: { userId, appId: publicAppId, status: 'ACTIVE' },
+      select: { id: true, appId: true },
+    });
+    if (!app) {
+      throw new NotFoundException('Developer app not found.');
+    }
+    return app;
+  }
+
+  async ensureEntitlement(userId: string, developerAppId: string) {
     const now = new Date();
     const periodEnd = addOneEmailBillingMonth(now);
     return this.prisma.developerEmailEntitlement.upsert({
-      where: { userId },
+      where: { developerAppId },
       create: {
         userId,
+        developerAppId,
         plan: DeveloperEmailPlan.FREE,
         trialGrantedAt: now,
         trialQuota: EMAIL_API_FREE.monthlyQuota,
@@ -76,13 +90,43 @@ export class EmailEntitlementService {
     });
   }
 
-  async reserveLiveSend(userId: string): Promise<EmailQuotaReservation> {
-    await this.ensureEntitlement(userId);
-    await this.refreshFreePeriodIfNeeded(userId);
+  /** Legacy account-level callers without an app context. */
+  async resolveDefaultDeveloperAppId(userId: string): Promise<string> {
+    const row = await this.prisma.developerEmailEntitlement.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { developerAppId: true },
+    });
+    if (row) return row.developerAppId;
+
+    const app = await this.prisma.developerApp.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        installedProducts: { some: { productId: 'emailApi' } },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!app) {
+      throw new NotFoundException(
+        'No Email API app found. Install Email API on a developer app first.',
+      );
+    }
+    await this.ensureEntitlement(userId, app.id);
+    return app.id;
+  }
+
+  async reserveLiveSend(
+    userId: string,
+    developerAppId: string,
+  ): Promise<EmailQuotaReservation> {
+    await this.ensureEntitlement(userId, developerAppId);
+    await this.refreshFreePeriodIfNeeded(developerAppId);
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const current = await this.prisma.developerEmailEntitlement.findUnique({
-        where: { userId },
+        where: { developerAppId },
       });
       if (!current) break;
 
@@ -147,12 +191,20 @@ export class EmailEntitlementService {
     );
   }
 
-  async getSummary(userId: string) {
-    const entitlement = await this.ensureEntitlement(userId);
-    await this.refreshFreePeriodIfNeeded(userId);
+  async getSummary(userId: string, developerAppId: string) {
+    await this.ensureEntitlement(userId, developerAppId);
+    await this.refreshFreePeriodIfNeeded(developerAppId);
     const fresh = await this.prisma.developerEmailEntitlement.findUniqueOrThrow({
-      where: { userId: entitlement.userId },
+      where: { developerAppId },
     });
+    const domainCount = await this.prisma.developerEmailDomain.count({
+      where: { developerAppId },
+    });
+    const domainLimit = emailApiDomainLimit(
+      fresh.plan,
+      fresh.addonDomainsExtra,
+    );
+
     const now = new Date();
     const subscriptionActive = this.isSubscriptionActive(fresh, now);
     const planDef = getEmailApiPlan(fresh.plan);
@@ -175,6 +227,7 @@ export class EmailEntitlementService {
     );
 
     return {
+      developerAppId,
       plan: {
         id: fresh.plan,
         name: planDef.marketingNameEn,
@@ -188,6 +241,11 @@ export class EmailEntitlementService {
         monthlyQuota: planDef.monthlyQuota,
         overagePer1kIqd: emailApiOveragePer1kIqd(fresh.plan),
         domainsIncluded: planDef.domainsIncluded,
+      },
+      domains: {
+        used: domainCount,
+        limit: domainLimit,
+        remaining: Math.max(0, domainLimit - domainCount),
       },
       free: {
         quota: EMAIL_API_FREE.monthlyQuota,
@@ -243,7 +301,6 @@ export class EmailEntitlementService {
         dedicatedIpEnabled: fresh.dedicatedIpEnabled,
         ssoEnabled: fresh.ssoEnabled,
       },
-      /** Legacy shape for existing portal clients */
       trial: {
         quota: EMAIL_API_FREE.monthlyQuota,
         used: fresh.freeMonthlyUsed,
@@ -257,8 +314,20 @@ export class EmailEntitlementService {
     };
   }
 
+  async getSummaryByPublicAppId(userId: string, publicAppId: string) {
+    const app = await this.resolveOwnedApp(userId, publicAppId);
+    return this.getSummary(userId, app.id);
+  }
+
+  /** @deprecated Use getSummaryByPublicAppId */
+  async getSummaryLegacy(userId: string) {
+    const developerAppId = await this.resolveDefaultDeveloperAppId(userId);
+    return this.getSummary(userId, developerAppId);
+  }
+
   async activatePlan(
     userId: string,
+    developerAppId: string,
     planId: DeveloperEmailPlanId | DeveloperEmailPlan,
     periodEndsAt?: Date,
     enterpriseMonthlyQuota?: number,
@@ -283,25 +352,10 @@ export class EmailEntitlementService {
         ? Math.max(0, enterpriseMonthlyQuota ?? 0)
         : planDef.monthlyQuota;
 
-    await this.prisma.developerEmailEntitlement.upsert({
-      where: { userId },
-      create: {
-        userId,
-        plan: planKey as DeveloperEmailPlan,
-        trialGrantedAt: startsAt,
-        trialQuota: EMAIL_API_FREE.monthlyQuota,
-        freePeriodStart: startsAt,
-        freePeriodEnd: addOneEmailBillingMonth(startsAt),
-        subscriptionStatus: DeveloperEmailSubscriptionStatus.ACTIVE,
-        periodStartsAt: startsAt,
-        periodEndsAt: endsAt,
-        monthlyQuota,
-        enterpriseMonthlyQuota:
-          planKey === DeveloperEmailPlanId.ENTERPRISE
-            ? monthlyQuota
-            : undefined,
-      },
-      update: {
+    await this.ensureEntitlement(userId, developerAppId);
+    await this.prisma.developerEmailEntitlement.update({
+      where: { developerAppId },
+      data: {
         plan: planKey as DeveloperEmailPlan,
         subscriptionStatus: DeveloperEmailSubscriptionStatus.ACTIVE,
         periodStartsAt: startsAt,
@@ -309,18 +363,20 @@ export class EmailEntitlementService {
         monthlyQuota,
         monthlyUsed: 0,
         enterpriseMonthlyQuota:
-          planKey === DeveloperEmailPlanId.ENTERPRISE
-            ? monthlyQuota
-            : null,
+          planKey === DeveloperEmailPlanId.ENTERPRISE ? monthlyQuota : null,
       },
     });
-    return this.getSummary(userId);
+    return this.getSummary(userId, developerAppId);
   }
 
-  /** @deprecated Use activatePlan(PRO_10K) */
-  activateStarter(userId: string, periodEndsAt?: Date) {
+  activateStarter(
+    userId: string,
+    developerAppId: string,
+    periodEndsAt?: Date,
+  ) {
     return this.activatePlan(
       userId,
+      developerAppId,
       DeveloperEmailPlanId.PRO_10K,
       periodEndsAt,
     );
@@ -328,40 +384,51 @@ export class EmailEntitlementService {
 
   async activateMarketingPlan(
     userId: string,
+    developerAppId: string,
     planId: DeveloperEmailMarketingPlanId,
   ) {
     const planDef = getEmailApiMarketingPlan(planId);
-    await this.ensureEntitlement(userId);
+    await this.ensureEntitlement(userId, developerAppId);
     await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId },
       data: {
         marketingPlan: planId as DeveloperEmailMarketingPlan,
         marketingContactsLimit: planDef.contactsLimit,
       },
     });
-    return this.getSummary(userId);
+    return this.getSummary(userId, developerAppId);
   }
 
-  async creditOveragePack(userId: string, emails: number) {
+  async creditOveragePack(
+    userId: string,
+    developerAppId: string,
+    emails: number,
+  ) {
     const n = Math.max(0, Math.floor(emails));
     if (n <= 0) return;
+    await this.ensureEntitlement(userId, developerAppId);
     await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId },
       data: { overagePackCredits: { increment: n } },
     });
   }
 
-  async reserveAutomationRun(userId: string): Promise<'included' | 'overage'> {
-    await this.ensureEntitlement(userId);
+  async reserveAutomationRun(
+    userId: string,
+    developerAppId?: string,
+  ): Promise<'included' | 'overage'> {
+    const appId =
+      developerAppId ?? (await this.resolveDefaultDeveloperAppId(userId));
+    await this.ensureEntitlement(userId, appId);
     const current = await this.prisma.developerEmailEntitlement.findUnique({
-      where: { userId },
+      where: { developerAppId: appId },
     });
     if (!current) {
       throw new HttpException('Entitlement not found.', HttpStatus.NOT_FOUND);
     }
     if (current.automationRunsUsed < current.automationRunsIncluded) {
       await this.prisma.developerEmailEntitlement.update({
-        where: { userId },
+        where: { developerAppId: appId },
         data: { automationRunsUsed: { increment: 1 } },
       });
       return 'included';
@@ -371,6 +438,7 @@ export class EmailEntitlementService {
 
   async releaseLiveSend(
     userId: string,
+    developerAppId: string,
     reservation: EmailQuotaReservation,
   ): Promise<void> {
     const data =
@@ -378,7 +446,7 @@ export class EmailEntitlementService {
         ? { monthlyUsed: { decrement: 1 } }
         : { freeMonthlyUsed: { decrement: 1 }, freeDailyUsed: { decrement: 1 } };
     await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId },
       data,
     });
   }
@@ -473,15 +541,15 @@ export class EmailEntitlementService {
     return used < EMAIL_API_FREE.dailyLimit;
   }
 
-  private async refreshFreePeriodIfNeeded(userId: string) {
+  private async refreshFreePeriodIfNeeded(developerAppId: string) {
     const now = new Date();
     const row = await this.prisma.developerEmailEntitlement.findUnique({
-      where: { userId },
+      where: { developerAppId },
       select: { freePeriodEnd: true },
     });
     if (!row?.freePeriodEnd || row.freePeriodEnd > now) return;
     await this.prisma.developerEmailEntitlement.update({
-      where: { userId },
+      where: { developerAppId },
       data: {
         freeMonthlyUsed: 0,
         freeDailyUsed: 0,

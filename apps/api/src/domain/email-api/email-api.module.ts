@@ -1,7 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { DeveloperModule } from '../developer/developer.module';
-import { MailModule } from '../mail/mail.module';
+import { MailSesModule } from '../mail/mail-ses.module';
 import { EmailMessagesController } from './messaging/email-messages.controller';
 import { EmailMessagesService } from './messaging/email-messages.service';
 import { EmailEntitlementService } from './shared/email-entitlement.service';
@@ -27,7 +27,7 @@ import { EmailAutomationService } from './automations/email-automation.service';
   imports: [
     PrismaModule,
     forwardRef(() => DeveloperModule),
-    MailModule,
+    MailSesModule,
     SupportTicketsModule,
   ],
   controllers: [

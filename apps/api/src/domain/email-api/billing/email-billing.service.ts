@@ -57,14 +57,14 @@ export class EmailBillingService {
     }
 
     const ticket = await this.supportTickets.createTicket(userId, {
-      subject: `طلب اشتراك Email API ${planDef.nameEn}`,
+      subject: `طلب اشتراك ${planDef.invoiceLabelAr}`,
       description: [
-        `طلب تفعيل باقة Email API ${planDef.nameEn}.`,
+        `طلب تفعيل ${planDef.invoiceLabelAr}.`,
         '',
         `السعر الشهري: ${planDef.priceMonthlyIqd.toLocaleString('en-IQ')} IQD`,
         `الحصة الشهرية: ${planDef.monthlyQuota.toLocaleString('en-IQ')} رسالة`,
         '',
-        `Email API ${planDef.nameEn} subscription activation request.`,
+        `${planDef.invoiceLabelEn} subscription activation request.`,
       ].join('\n'),
       category: SupportTicketCategory.BILLING,
       context: {

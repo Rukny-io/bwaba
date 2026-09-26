@@ -114,48 +114,6 @@ export function PublicAgDevelopersView() {
           </ul>
         </div>
       </section>
-
-      <section className="mt-16 sm:mt-20" aria-labelledby="developer-email-pricing-heading">
-        <div className="mb-8 text-start sm:mb-10">
-          <p className={agLayout.eyebrow}>{t('emailPricing.eyebrow')}</p>
-          <h2 id="developer-email-pricing-heading" className={`${agLayout.sectionTitle} mt-4`}>
-            {t('emailPricing.title')}
-            <span className="text-[#9CA3AF]">{t('emailPricing.titleMuted')}</span>
-          </h2>
-          <p className={`${agLayout.lead} mt-4 max-w-2xl`}>{t('emailPricing.lead')}</p>
-        </div>
-
-        <div className="overflow-x-auto rounded-[2rem] bg-[#FAFAFA] p-6 sm:p-8">
-          <table className="w-full min-w-[32rem] border-collapse text-start text-[14px]">
-            <thead>
-              <tr className="text-[#6B6F76]">
-                <th className="pb-3 font-medium">Plan</th>
-                <th className="pb-3 font-medium">Price</th>
-                <th className="pb-3 font-medium">Volume</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(t.raw('emailPricing.rows') as Array<{ plan: string; price: string; volume: string }>).map(
-                (row) => (
-                  <tr key={row.plan} className="border-t border-[#ECECEC]">
-                    <td className="py-3 font-medium text-[#1D1D1D]">{row.plan}</td>
-                    <td className="py-3 text-[#1D1D1D]">{row.price}</td>
-                    <td className="py-3 text-[#6B6F76]">{row.volume}</td>
-                  </tr>
-                ),
-              )}
-            </tbody>
-          </table>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a href={`${siteUrls.developers}/pricing/compare-resend`} className={agLayout.btnSecondary}>
-              {t('emailPricing.compareCta')}
-            </a>
-            <a href={`${siteUrls.developers}/pricing`} className={agLayout.btnPrimary}>
-              {t('emailPricing.portalCta')}
-            </a>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

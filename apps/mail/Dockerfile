@@ -10,6 +10,7 @@ WORKDIR /app
 
 # file: dependency needs the shared package present before npm install
 COPY packages/auth ./packages/auth
+COPY packages/email-api-pricing ./packages/email-api-pricing
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/mail/package.json apps/mail/package-lock.json* ./apps/mail/
 # Only the file: packages referenced by package.json (skip storybook/vitest)
@@ -22,7 +23,9 @@ WORKDIR /app/apps/mail
 # Strip workspace:* from nested package manifests (npm cannot resolve them outside a workspace).
 # Keep devDependencies — Next/Tailwind build needs @tailwindcss/postcss, typescript, etc.
 RUN --mount=type=cache,id=npm-mail,target=/root/.npm \
-  node -e "const fs=require('fs');const path=require('path');function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.name==='package.json'){const pkg=JSON.parse(fs.readFileSync(p,'utf8'));for(const field of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){if(!pkg[field])continue;for(const [k,v] of Object.entries(pkg[field])){if(String(v).startsWith('workspace:'))delete pkg[field][k];}}fs.writeFileSync(p,JSON.stringify(pkg,null,2)+'\n');}}}walk('packages');" \
+  npm --prefix /app/packages/email-api-pricing install --no-audit --no-fund \
+  && npm --prefix /app/packages/email-api-pricing run build \
+  && node -e "const fs=require('fs');const path=require('path');function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.name==='package.json'){const pkg=JSON.parse(fs.readFileSync(p,'utf8'));for(const field of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){if(!pkg[field])continue;for(const [k,v] of Object.entries(pkg[field])){if(String(v).startsWith('workspace:'))delete pkg[field][k];}}fs.writeFileSync(p,JSON.stringify(pkg,null,2)+'\n');}}}walk('packages');" \
   && npm config set fetch-retries 10 \
   && npm config set fetch-timeout 600000 \
   && npm install --no-audit --no-fund
@@ -36,6 +39,7 @@ COPY apps/mail .
 RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/mail/node_modules ./node_modules
 COPY --from=deps /app/packages/auth /app/packages/auth
+COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
 # Materialize file: packages (Turbopack rejects outbound symlinks)

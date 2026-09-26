@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { MailPricingMarketingPage } from "@/components/marketing/mail-pricing-marketing-page";
+import { MailResendPricingPage } from "@/components/marketing/mail-resend-pricing-page";
 
 export const metadata: Metadata = {
-  title: "Pricing — Rukny Mail",
+  title: "Pricing — Rukny Mail Email API",
   description:
-    "Plans per workspace, billed monthly in IQD. Starter activates after DNS and checkout; Standard and Premium are requested in Billing.",
+    "Email API pricing in IQD — transactional tiers, marketing contacts, automations, and add-ons. Start with 3,000 free emails per month.",
 };
 
 export default function PricingPage() {
-  return <MailPricingMarketingPage />;
+  return <MailResendPricingPage />;
 }

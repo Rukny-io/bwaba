@@ -6,6 +6,7 @@ import {
   getLocalizedProductPage,
   getProductNotFoundTitle,
 } from '@/lib/get-localized-product-page';
+import { getMessages } from '@/lib/i18n';
 import { getLocale } from '@/lib/i18n-server';
 import { PRODUCT_SLUGS } from '@/lib/public-marketing-pages';
 
@@ -20,6 +21,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
+  const messages = getMessages(locale);
   const product = getLocalizedProductPage(slug, locale);
 
   if (!product) {
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${product.title} — ركني`,
+    title: `${product.title} ${messages.meta.productTitleSuffix}`,
     description: product.description,
   };
 }

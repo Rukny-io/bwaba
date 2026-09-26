@@ -43,6 +43,8 @@ const monorepoAliases = {
   ...thmanyahAliases,
   ...herouiAliases,
   jose: "./node_modules/jose",
+  "@rukny/email-api-pricing":
+    "./node_modules/@rukny/email-api-pricing/dist/index.js",
 };
 
 const API_BACKEND_URL =
@@ -57,6 +59,7 @@ const nextConfig: NextConfig = {
     "@heroui/react",
     "@heroui/styles",
     "@rukny/auth",
+    "@rukny/email-api-pricing",
     "@rukny/thmanyah-font",
   ],
   // Keep ioredis outside the bundle (CJS). Bundle @aws-sdk/client-sesv2 into
@@ -89,6 +92,10 @@ const nextConfig: NextConfig = {
       "@heroui/react": path.resolve(appRoot, "packages/react/src/index.ts"),
       "@heroui/styles": path.resolve(appRoot, "packages/styles/src/index.ts"),
       "@heroui/styles/css": path.resolve(appRoot, "packages/styles/index.css"),
+      "@rukny/email-api-pricing": path.resolve(
+        appRoot,
+        "node_modules/@rukny/email-api-pricing/dist/index.js",
+      ),
     };
     return config;
   },

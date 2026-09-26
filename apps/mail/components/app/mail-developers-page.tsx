@@ -216,11 +216,7 @@ export function MailDevelopersPage() {
             size="sm"
             variant="ghost"
             onPress={() =>
-              window.open(
-                `${developer}/pricing`,
-                "_blank",
-                "noopener,noreferrer",
-              )
+              window.open("/pricing#email-api", "_self")
             }
           >
             Email API pricing

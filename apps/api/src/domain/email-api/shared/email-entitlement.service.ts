@@ -177,7 +177,13 @@ export class EmailEntitlementService {
     return {
       plan: {
         id: fresh.plan,
-        name: planDef.nameEn,
+        name: planDef.marketingNameEn,
+        marketingNameEn: planDef.marketingNameEn,
+        marketingNameAr: planDef.marketingNameAr,
+        invoiceLabelEn: planDef.invoiceLabelEn,
+        invoiceLabelAr: planDef.invoiceLabelAr,
+        tier: planDef.tier,
+        slug: planDef.slug,
         priceIqd: planDef.priceMonthlyIqd,
         monthlyQuota: planDef.monthlyQuota,
         overagePer1kIqd: emailApiOveragePer1kIqd(fresh.plan),
@@ -207,6 +213,13 @@ export class EmailEntitlementService {
       },
       marketing: {
         plan: fresh.marketingPlan,
+        name: marketingDef.marketingNameEn,
+        marketingNameEn: marketingDef.marketingNameEn,
+        marketingNameAr: marketingDef.marketingNameAr,
+        invoiceLabelEn: marketingDef.invoiceLabelEn,
+        invoiceLabelAr: marketingDef.invoiceLabelAr,
+        tier: marketingDef.tier,
+        slug: marketingDef.slug,
         contactsLimit: fresh.marketingContactsLimit || marketingDef.contactsLimit,
         contactsUsed: fresh.marketingContactsUsed,
         contactsRemaining: Math.max(

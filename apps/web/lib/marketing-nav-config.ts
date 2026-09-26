@@ -23,9 +23,19 @@ export const PRODUCT_NAV_CONFIG: ProductNavConfig[] = [
   { id: 'ai', href: '/products/ai', icon: BrainCircuit },
 ];
 
-export const MAIN_NAV_LINKS = [
-  { key: 'pricing' as const, href: '/pricing' },
-  { key: 'enterprise' as const, href: '/enterprise' },
+export type MainNavLinkKey = 'pricing' | 'enterprise' | 'developers' | 'news';
+
+export type MainNavLink = {
+  key: MainNavLinkKey;
+  href: string;
+  isNew?: boolean;
+};
+
+export const MAIN_NAV_LINKS: MainNavLink[] = [
+  { key: 'pricing', href: '/pricing' },
+  { key: 'enterprise', href: '/enterprise' },
+  { key: 'developers', href: '/developers' },
+  { key: 'news', href: '/blog', isNew: true },
 ];
 
 export const FOOTER_LINK_HREFS = {

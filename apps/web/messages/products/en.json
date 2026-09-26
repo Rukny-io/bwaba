@@ -12,6 +12,12 @@
   "relatedEyebrow": "Other products",
   "relatedTitle": "Explore",
   "relatedTitleMuted": " more",
+  "defaults": {
+    "showcaseDescription": "Everything you need in one integrated experience — ready to share instantly.",
+    "workflowEyebrow": "How it works",
+    "workflowTitle": "Three steps",
+    "workflowTitleMuted": " to get started"
+  },
   "pages": {
     "stores": {
       "eyebrow": "Store",
@@ -24,6 +30,56 @@
         "label": "View pricing"
       },
       "showcaseDescription": "Everything you need to sell — from adding products to receiving payment — in one integrated experience.",
+      "journey": {
+        "eyebrow": "Store journey",
+        "title": "From sign-up",
+        "titleMuted": " to your first sale",
+        "lead": "Four simple steps — register your store, list products, receive orders, and get paid online.",
+        "steps": {
+          "register": {
+            "title": "Register your store",
+            "description": "Create your account and pick a store name — your page is ready to share in minutes."
+          },
+          "products": {
+            "title": "Show your products",
+            "description": "Add digital or physical products with photos and prices — a polished storefront appears automatically."
+          },
+          "sell": {
+            "title": "Receive orders",
+            "description": "Customers order from your store page — track every order and its status from your dashboard."
+          },
+          "payment": {
+            "title": "Online payment",
+            "description": "Built-in payment gateway — card or cash on delivery, with secure confirmation for every transaction."
+          }
+        },
+        "visuals": {
+          "register": {
+            "storeName": "Store name",
+            "storeNameValue": "My Store",
+            "email": "Email",
+            "cta": "Create store"
+          },
+          "products": {
+            "items": [
+              { "name": "Cotton shirt", "price": "25,000 IQD" },
+              { "name": "Design course", "price": "45,000 IQD" },
+              { "name": "Consultation", "price": "30,000 IQD" }
+            ]
+          },
+          "sell": {
+            "orderLabel": "New order",
+            "orderNumber": "#1247",
+            "product": "Cotton shirt — Blue",
+            "status": "Processing"
+          },
+          "payment": {
+            "paidLabel": "Payment successful",
+            "amount": "25,000 IQD",
+            "method": "Bank card · Visa"
+          }
+        }
+      },
       "features": [
         {
           "title": "Three product types",

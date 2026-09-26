@@ -2,6 +2,7 @@
  * Replace file: junctions with real copies so Turbopack (app-scoped root)
  * can resolve @rukny/* without following symlinks outside the project.
  */
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,7 @@ const repoRoot = path.resolve(appDir, '../..');
 
 const workspaceDeps = [
   { name: '@rukny/auth', src: 'packages/auth' },
+  { name: '@rukny/email-api-pricing', src: 'packages/email-api-pricing' },
   { name: '@rukny/thmanyah-font', src: 'packages/Thmanyah-Font-Family' },
 ];
 
@@ -23,12 +25,29 @@ function isReparsePoint(targetPath) {
   }
 }
 
+function ensurePackageBuilt(source) {
+  const distIndex = path.join(source, 'dist', 'index.js');
+  if (fs.existsSync(distIndex)) return true;
+
+  const pkgJson = path.join(source, 'package.json');
+  if (!fs.existsSync(pkgJson)) return false;
+
+  console.log(`[materialize-workspace-deps] building ${path.basename(source)}…`);
+  execSync('npm run build', { cwd: source, stdio: 'inherit' });
+  return fs.existsSync(distIndex);
+}
+
 function materializePackage({ name, src }) {
   const source = path.join(repoRoot, src);
   const target = path.join(appDir, 'node_modules', name);
 
   if (!fs.existsSync(source)) {
     console.warn(`[materialize-workspace-deps] skip ${name}: missing ${source}`);
+    return false;
+  }
+
+  if (src === 'packages/email-api-pricing' && !ensurePackageBuilt(source)) {
+    console.warn(`[materialize-workspace-deps] skip ${name}: dist build failed`);
     return false;
   }
 

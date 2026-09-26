@@ -11,7 +11,6 @@ import {
   EMAIL_TRANSACTIONAL_PLANS,
   EMAIL_AUTOMATION_PRICING,
   EMAIL_OVERAGE_PACK,
-  RESEND_COMPARE_HIGHLIGHTS,
   FEATURE_SECTIONS,
   PRICING_FAQS,
   PRICING_PLANS,
@@ -510,33 +509,6 @@ export function PricingSection() {
           >
             {EMAIL_SECTION_COPY.compareCta}
           </Link>
-        </div>
-      </section>
-
-      {/* Resend comparison band */}
-      <section className="mt-16 sm:mt-20">
-        <SectionHeader
-          eyebrow="Competitive pricing"
-          title="Lower than Resend at every tier"
-          subtitle="Same tier structure — priced in IQD for the local market."
-        />
-        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2">
-          {RESEND_COMPARE_HIGHLIGHTS.map((row) => (
-            <div
-              key={row.volume}
-              className="rounded-2xl bg-[var(--surface-secondary)] p-5"
-            >
-              <p className="text-[13px] font-semibold">{row.volume}</p>
-              <div className="mt-3 flex justify-between text-[13px]">
-                <span className="text-[var(--muted-foreground)]">Resend</span>
-                <span>{row.resend}</span>
-              </div>
-              <div className="mt-1 flex justify-between text-[13px] font-medium">
-                <span className="text-[var(--muted-foreground)]">Rukny</span>
-                <span>{row.rukny}</span>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

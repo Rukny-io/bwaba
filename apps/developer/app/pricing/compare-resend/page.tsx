@@ -6,6 +6,7 @@ import {
   EMAIL_AUTOMATION_PRICING,
   EMAIL_OVERAGE_PACK,
   RESEND_COMPARE_HIGHLIGHTS,
+  CURRENCY,
   formatPrice,
 } from '@/lib/pricing-plans';
 
@@ -103,12 +104,14 @@ export default function CompareResendPricingPage() {
             </thead>
             <tbody>
               {[
-                ['1,500 / 1,000', 'Free $0', 'Free'],
+                ['1,000', 'Free $0', 'Free'],
                 ['5,000', '$40', '35,000 IQD'],
                 ['10,000', '$80', '65,000 IQD'],
+                ['15,000', '$120', '95,000 IQD'],
                 ['25,000', '$180', '140,000 IQD'],
                 ['50,000', '$250', '190,000 IQD'],
                 ['100,000', '$450', '340,000 IQD'],
+                ['150,000', '$650', '490,000 IQD'],
               ].map(([contacts, resend, rukny]) => (
                 <tr
                   key={contacts}

@@ -9,6 +9,8 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const monorepoAliases = {
   ...formsSharedResolveAliases(),
   ...thmanyahFontResolveAliases(),
+  '@rukny/email-api-pricing':
+    './node_modules/@rukny/email-api-pricing/dist/index.js',
 };
 
 const API_BACKEND_URL =
@@ -16,7 +18,11 @@ const API_BACKEND_URL =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  transpilePackages: ['@rukny/forms-shared', '@rukny/thmanyah-font'],
+  transpilePackages: [
+    '@rukny/forms-shared',
+    '@rukny/email-api-pricing',
+    '@rukny/thmanyah-font',
+  ],
   turbopack: {
     root: path.resolve(__dirname),
     resolveAlias: monorepoAliases,

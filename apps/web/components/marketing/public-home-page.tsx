@@ -6,6 +6,7 @@ import { PublicAgIntroSection } from '@/components/marketing/public-ag-intro-sec
 import { PublicAgLogoCloud } from '@/components/marketing/public-ag-logo-cloud';
 import { PublicAgPricingBand } from '@/components/marketing/public-ag-pricing-band';
 import { PublicAgProductsSection } from '@/components/marketing/public-ag-products-section';
+import { PublicAgStoreJourney } from '@/components/marketing/public-ag-store-journey';
 import { PublicMarketingShell } from '@/components/marketing/public-marketing-shell';
 
 export function PublicHomePage() {
@@ -16,6 +17,7 @@ export function PublicHomePage() {
         <PublicAgIntroSection />
         <PublicAgLogoCloud />
         <PublicAgProductsSection />
+        <PublicAgStoreJourney variant="page" />
         <PublicAgPricingBand />
         <PublicAgAboutSection />
       </main>

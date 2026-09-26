@@ -280,6 +280,7 @@
       "متجر",
       "روابط",
       "تحليلات",
+      "Email API",
       "تكاملات"
     ],
     "billing": {
@@ -385,6 +386,29 @@
       "yearly": "{price} {currency} سنوياً",
       "moreFeatures": "+{count} مزايا أخرى",
       "exploreCta": "استكشف المنتج"
+    },
+    "emailApi": {
+      "eyebrow": "Email API",
+      "title": "بريد معاملاتي",
+      "titleMuted": " لتطبيقاتك",
+      "lead": "منفصل عن باقات النماذج والمتجر. ابدأ بـ 3,000 رسالة مجانية شهرياً، ثم باقات Pro وScale بالدينار.",
+      "table": {
+        "plan": "الباقة",
+        "price": "السعر",
+        "volume": "الحجم"
+      },
+      "footnote": "Marketing contacts والأتمتة والإضافات تُفوتر بشكل منفصل. Overage: 700 د.ع لكل 1,000 رسالة.",
+      "scaleEyebrow": "حجم أعلى",
+      "mailPricingCta": "الأسعار الكاملة على Mail",
+      "developersCta": "توثيق المطورين",
+      "rows": [
+        { "plan": "مجاني", "price": "0 د.ع", "volume": "3,000 / شهر · 100 / يوم" },
+        { "plan": "Pro 10K", "price": "5,000 د.ع", "volume": "10,000 / شهر" },
+        { "plan": "Pro 50K", "price": "16,000 د.ع", "volume": "50,000 / شهر" },
+        { "plan": "Pro 100K", "price": "28,000 د.ع", "volume": "100,000 / شهر" },
+        { "plan": "Scale 500K", "price": "275,000 د.ع", "volume": "500,000 / شهر" },
+        { "plan": "Scale 1M", "price": "500,000 د.ع", "volume": "1,000,000 / شهر" }
+      ]
     }
   },
   "enterprise": {
@@ -959,6 +983,7 @@
       "title": "تنافس Resend",
       "titleMuted": " — بالدينار العراقي",
       "lead": "3,000 رسالة مجانية شهرياً. باقات Pro وScale أرخص من Resend بنسبة 15–40%.",
+      "publicPricingCta": "عرض الأسعار الكاملة",
       "compareCta": "قارن مع Resend",
       "portalCta": "أسعار المطورين",
       "rows": [

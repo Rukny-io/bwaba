@@ -3,7 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeveloperEmailAutomationStatus } from '@prisma/client';
+import {
+  DeveloperEmailAutomationStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { EmailEntitlementService } from '../shared/email-entitlement.service';
 import { EMAIL_API_AUTOMATION } from '../billing/email-api-plan-limits.config';
@@ -51,7 +54,7 @@ export class EmailAutomationService {
         name,
         triggerType: input.triggerType ?? 'webhook',
         actionType: input.actionType ?? 'send_email',
-        configJson: input.configJson ?? {},
+        configJson: (input.configJson ?? {}) as Prisma.InputJsonValue,
       },
     });
     return { id: row.id, name: row.name, status: row.status.toLowerCase() };

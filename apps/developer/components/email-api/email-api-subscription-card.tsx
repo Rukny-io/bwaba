@@ -11,11 +11,12 @@ import {
 } from "@/lib/api/email-api";
 import { EMAIL_OVERAGE_PACK, formatPrice } from "@/lib/pricing-plans";
 
-const UPGRADE_PLANS = [
-  { id: "PRO_10K", label: "Pro 10K", price: 5_000, quota: 10_000 },
-  { id: "PRO_50K", label: "Pro 50K", price: 16_000, quota: 50_000 },
-  { id: "PRO_100K", label: "Pro 100K", price: 28_000, quota: 100_000 },
-] as const;
+type UpgradePlan = {
+  id: string;
+  label: string;
+  price: number;
+  quota: number;
+};
 
 export function EmailApiSubscriptionCard() {
   const queryClient = useQueryClient();
@@ -48,9 +49,29 @@ export function EmailApiSubscriptionCard() {
       appToast.fromError(error, "Could not purchase overage pack."),
   });
   const data = subscription.data;
-  const planLabel = data?.plan?.name ?? "Free";
+  const planLabel = data?.plan?.name ?? "Starter";
   const planPrice = data?.plan?.priceIqd ?? 0;
   const planQuota = data?.subscription?.quota || data?.free?.quota || 3_000;
+
+  const upgradePlans: UpgradePlan[] = (data?.catalog?.transactional ?? [])
+    .filter(
+      (plan: { id: string; priceMonthlyIqd: number }) =>
+        plan.id !== "FREE" && plan.priceMonthlyIqd > 0,
+    )
+    .slice(0, 3)
+    .map(
+      (plan: {
+        id: string;
+        marketingNameEn: string;
+        priceMonthlyIqd: number;
+        monthlyQuota: number;
+      }) => ({
+        id: plan.id,
+        label: plan.marketingNameEn,
+        price: plan.priceMonthlyIqd,
+        quota: plan.monthlyQuota,
+      }),
+    );
 
   return (
     <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
@@ -60,7 +81,7 @@ export function EmailApiSubscriptionCard() {
           <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
             {data
               ? `${planLabel} · ${formatPrice(planPrice)} IQD/mo · ${formatPrice(planQuota)} msgs`
-              : "3,000 free emails / month · Pro from 5,000 IQD/mo"}
+              : "3,000 free emails / month · Growth from 5,000 IQD/mo"}
           </p>
         </div>
         <Link
@@ -72,7 +93,7 @@ export function EmailApiSubscriptionCard() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {UPGRADE_PLANS.map((plan) => (
+        {upgradePlans.map((plan) => (
           <button
             key={plan.id}
             type="button"
@@ -118,26 +139,24 @@ export function EmailApiSubscriptionCard() {
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
             <p className="text-[var(--muted-foreground)]">Marketing contacts</p>
             <p className="mt-1 font-semibold">
-              {data.marketing.contactsRemaining.toLocaleString()} /{" "}
-              {data.marketing.contactsLimit.toLocaleString()}
+              {(data.marketing.name ?? data.marketing.plan).toString()} ·{" "}
+              {data.marketing.contactsRemaining.toLocaleString()} remaining
             </p>
           </div>
           ) : null}
-          {data.automations ? (
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
-            <p className="text-[var(--muted-foreground)]">Automations</p>
+            <p className="text-[var(--muted-foreground)]">Automation runs</p>
             <p className="mt-1 font-semibold">
               {data.automations.remaining.toLocaleString()} /{" "}
-              {data.automations.included.toLocaleString()} runs
+              {data.automations.included.toLocaleString()}
             </p>
           </div>
-          ) : null}
         </div>
-      ) : (
-        <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-          Loading allowance…
+      ) : subscription.isLoading ? (
+        <p className="mt-4 text-[13px] text-[var(--muted-foreground)]">
+          Loading subscription…
         </p>
-      )}
+      ) : null}
     </section>
   );
 }

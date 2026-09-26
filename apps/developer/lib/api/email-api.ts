@@ -20,6 +20,12 @@ export interface EmailSubscriptionSummary {
   plan: {
     id: string;
     name: string;
+    marketingNameEn: string;
+    marketingNameAr: string;
+    invoiceLabelEn: string;
+    invoiceLabelAr: string;
+    tier: string;
+    slug: string;
     priceIqd: number;
     monthlyQuota: number;
     overagePer1kIqd: number;
@@ -45,6 +51,13 @@ export interface EmailSubscriptionSummary {
   };
   marketing: {
     plan: string;
+    name?: string;
+    marketingNameEn?: string;
+    marketingNameAr?: string;
+    invoiceLabelEn?: string;
+    invoiceLabelAr?: string;
+    tier?: string;
+    slug?: string;
     contactsLimit: number;
     contactsUsed: number;
     contactsRemaining: number;
@@ -63,6 +76,16 @@ export interface EmailSubscriptionSummary {
   };
   /** Legacy */
   trial: { quota: number; used: number; remaining: number };
+  catalog?: {
+    transactional: Array<{
+      id: string;
+      marketingNameEn: string;
+      priceMonthlyIqd: number;
+      monthlyQuota: number;
+    }>;
+    marketing: unknown[];
+    overagePack: { emails: number; priceIqd: number };
+  };
 }
 
 export interface EmailApiTryResponse {

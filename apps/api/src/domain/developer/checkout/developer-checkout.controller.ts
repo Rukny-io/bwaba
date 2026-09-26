@@ -46,6 +46,7 @@ export class DeveloperCheckoutController {
       amount: dto.amount,
       billingCycle: dto.billingCycle,
       appId: dto.appId,
+      planId: dto.planId,
     });
   }
 

@@ -19,6 +19,23 @@ import { cn } from '@/lib/utils';
 
 type DropdownId = 'product' | null;
 
+function NavNewBadge({
+  label,
+  ariaLabel,
+}: {
+  label: string;
+  ariaLabel: string;
+}) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ECFDF5] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[#047857]"
+      aria-label={ariaLabel}
+    >
+      {label}
+    </span>
+  );
+}
+
 type NavItem = {
   href: string;
   title: string;
@@ -195,11 +212,17 @@ export function PublicAgHeader() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'inline-flex h-9 items-center rounded-full px-3.5 text-[13px] font-medium transition-colors',
+                    'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors',
                     isActive(link.href) ? agLayout.navActive : agLayout.navIdle,
                   )}
                 >
                   {t(link.key)}
+                  {link.isNew ? (
+                    <NavNewBadge
+                      label={t('newBadge')}
+                      ariaLabel={t('newBadgeAria')}
+                    />
+                  ) : null}
                 </Link>
               ))}
             </nav>
@@ -335,10 +358,16 @@ export function PublicAgHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex h-11 items-center rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
+                  className="flex h-11 items-center gap-2 rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
                   onClick={closeMenus}
                 >
                   {t(link.key)}
+                  {link.isNew ? (
+                    <NavNewBadge
+                      label={t('newBadge')}
+                      ariaLabel={t('newBadgeAria')}
+                    />
+                  ) : null}
                 </Link>
               ))}
 

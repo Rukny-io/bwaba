@@ -280,6 +280,7 @@
       "فرۆشگا",
       "بەستەر",
       "شیکاری",
+      "Email API",
       "هاوپێچکردن"
     ],
     "billing": {
@@ -385,6 +386,29 @@
       "yearly": "{price} {currency} ساڵانە",
       "moreFeatures": "+{count} تایبەتمەندی تر",
       "exploreCta": "گەڕان لە بەرهەم"
+    },
+    "emailApi": {
+      "eyebrow": "Email API",
+      "title": "ئیمەیڵی مامەڵەیی",
+      "titleMuted": " بۆ ئەپەکانت",
+      "lead": "جیا لە پلانەکانی فۆرم/فرۆشگا. بە 3,000 ئیمەیڵی بەخۆڕایی لە مانگێکدا دەست پێ بکە، دواتر پلانی Pro و Scale بە دینار.",
+      "table": {
+        "plan": "پلان",
+        "price": "نرخ",
+        "volume": "قەبارە"
+      },
+      "footnote": "Marketing contacts، automation و add-onەکان بە جیا دەدرێت. Overage: 700 د.ع بۆ هەر 1,000 ئیمەیڵ.",
+      "scaleEyebrow": "قەبارەی بەرزتر",
+      "mailPricingCta": "نرخە تەواوەکان لە Mail",
+      "developersCta": "بەڵگەنامەی گەشەپێدەران",
+      "rows": [
+        { "plan": "بەخۆڕایی", "price": "0 د.ع", "volume": "3,000 / مانگ · 100 / ڕۆژ" },
+        { "plan": "Pro 10K", "price": "5,000 د.ع", "volume": "10,000 / مانگ" },
+        { "plan": "Pro 50K", "price": "16,000 د.ع", "volume": "50,000 / مانگ" },
+        { "plan": "Pro 100K", "price": "28,000 د.ع", "volume": "100,000 / مانگ" },
+        { "plan": "Scale 500K", "price": "275,000 د.ع", "volume": "500,000 / مانگ" },
+        { "plan": "Scale 1M", "price": "500,000 د.ع", "volume": "1,000,000 / مانگ" }
+      ]
     }
   },
   "enterprise": {
@@ -959,6 +983,7 @@
       "title": "ڕکابەری Resend",
       "titleMuted": " — بە دیناری عێراقی",
       "lead": "3,000 ئیمەیڵی بەخۆڕایی مانگانە. باقەکانی Pro و Scale بەزۆری 15–40% هەرزانترن لە Resend.",
+      "publicPricingCta": "بینینی نرخە تەواوەکان",
       "compareCta": "بەراورد لەگەڵ Resend",
       "portalCta": "نرخی گەشەپێدەران",
       "rows": [

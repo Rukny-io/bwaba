@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { motion, useReducedMotion } from 'framer-motion';
 import { YEARLY_DISCOUNT_PERCENT, type BillingPeriod } from '@rukny/forms-shared/pricing-plans';
 import { PricingPlanCard } from '@/components/pricing/pricing-plan-card';
+import { PublicEmailApiPricingSection } from '@/components/pricing/public-email-api-pricing-section';
 import { useLocalizedPricingPlans } from '@/lib/use-localized-pricing';
 import { agLayout } from '@/lib/public-antigravity-theme';
 import { cn } from '@/lib/utils';
@@ -108,6 +109,8 @@ export function PublicAgPricingBand() {
             </motion.div>
           ))}
         </div>
+
+        <PublicEmailApiPricingSection compact />
 
         <motion.div
           className="mt-6 sm:mt-8"

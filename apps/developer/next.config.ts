@@ -31,6 +31,7 @@ loadRootEnv();
 const monorepoAliases = {
   ...authResolveAliases(),
   ...thmanyahFontResolveAliases(),
+  '@rukny/email-api-pricing': './node_modules/@rukny/email-api-pricing/dist/index.js',
 };
 
 const API_BACKEND_URL =
@@ -45,7 +46,13 @@ const nextConfig: NextConfig = {
     // App icon / profile uploads (max 2MB) through BFF route handler
     proxyClientMaxBodySize: '3mb',
   },
-  transpilePackages: ['@heroui/react', '@heroui/styles', '@rukny/auth', '@rukny/thmanyah-font'],
+  transpilePackages: [
+    '@heroui/react',
+    '@heroui/styles',
+    '@rukny/auth',
+    '@rukny/email-api-pricing',
+    '@rukny/thmanyah-font',
+  ],
   turbopack: {
     // Pin app root only (not the whole monorepo) so Turbopack does not index every app/package.
     root: path.resolve(__dirname),

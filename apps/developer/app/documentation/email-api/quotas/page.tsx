@@ -42,17 +42,19 @@ export default function EmailApiQuotasPage() {
             ['Scale 200K', '200,000 / month', '125,000', ''],
             ['Scale 500K', '500,000 / month', '275,000', ''],
             ['Scale 1M', '1,000,000 / month', '500,000', ''],
+            ['Scale 1.5M', '1,500,000 / month', '660,000', ''],
+            ['Scale 2.5M', '2,500,000 / month', '920,000', ''],
           ]}
         />
         <p>
           Usage and plan status appear on the Email API overview card in the
           dashboard. Full public pricing lives on{' '}
-          <Link
-            href="/pricing"
+          <a
+            href="https://mail.rukny.io/pricing"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            /pricing
-          </Link>{' '}
+            mail.rukny.io/pricing
+          </a>{' '}
           and{' '}
           <Link
             href="/pricing/compare-resend"
@@ -77,8 +79,8 @@ export default function EmailApiQuotasPage() {
         <DocTable
           headers={['Product', 'Free tier', 'Paid from']}
           rows={[
-            ['Marketing contacts', '1,500 contacts', '35,000 IQD / mo (5K contacts)'],
-            ['Automations', '15,000 runs / month', '1 IQD / run overage'],
+            ['Marketing contacts', '1,000 contacts', '35,000 IQD / mo (5K contacts)'],
+            ['Automations', '10,000 runs / month', '2 IQD / run overage'],
             ['Add-on: +100 domains', '—', '20,000 IQD / mo'],
             ['Add-on: Dedicated IP', '—', '30,000 IQD / mo'],
             ['Add-on: SSO', '—', '120,000 IQD / mo'],

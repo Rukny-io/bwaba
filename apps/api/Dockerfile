@@ -1,5 +1,6 @@
 # ============================================
 # PRODUCTION Dockerfile for NestJS API
+# Build context: repository root (see docker-compose.yml)
 # ============================================
 FROM node:20-alpine AS base
 
@@ -8,13 +9,18 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-COPY package*.json ./
-COPY prisma ./prisma/
+COPY packages/email-api-pricing ./packages/email-api-pricing
+COPY apps/api/package.json apps/api/package-lock.json* ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma/
+
+WORKDIR /app/apps/api
 RUN --mount=type=cache,id=npm-api,target=/root/.npm \
   --mount=type=cache,id=prisma-api,target=/root/.cache/prisma \
   npm config set fetch-retries 10 \
   && npm config set fetch-timeout 600000 \
   && npm install --ignore-scripts --no-audit --no-fund \
+  && npm --prefix /app/packages/email-api-pricing install --no-audit --no-fund \
+  && npm --prefix /app/packages/email-api-pricing run build \
   && for attempt in 1 2 3 4 5; do \
        npx prisma generate --config prisma/prisma.config.ts && break; \
        if [ "$attempt" -eq 5 ]; then exit 1; fi; \
@@ -25,10 +31,17 @@ RUN --mount=type=cache,id=npm-api,target=/root/.npm \
 
 # --- Builder ---
 FROM base AS builder
-WORKDIR /app
+WORKDIR /app/apps/api
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY apps/api .
+RUN rm -rf node_modules
+COPY --from=deps /app/apps/api/node_modules ./node_modules
+COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
+
+RUN rm -rf node_modules/@rukny/email-api-pricing \
+  && mkdir -p node_modules/@rukny \
+  && cp -a /app/packages/email-api-pricing node_modules/@rukny/email-api-pricing \
+  && test -f node_modules/@rukny/email-api-pricing/dist/index.js
 
 RUN NODE_OPTIONS="--max-old-space-size=4096" npx nest build
 
@@ -42,10 +55,10 @@ RUN apk add --no-cache openssl ffmpeg \
  && addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nestjs
 
-COPY --from=builder /app/dist ./dist
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/apps/api/node_modules ./node_modules
+COPY --from=builder /app/apps/api/prisma ./prisma
+COPY --from=builder /app/apps/api/package*.json ./
 
 # Regenerate prisma client + clean all caches
 RUN --mount=type=cache,id=prisma-api-runner,target=/root/.cache/prisma \

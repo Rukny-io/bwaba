@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "postinstall": "node scripts/materialize-workspace-deps.mjs",
+    "predev": "node scripts/materialize-workspace-deps.mjs",
+    "prebuild": "node scripts/materialize-workspace-deps.mjs",
     "dev": "next dev -p 3007",
     "build": "next build",
     "start": "next start -p 3007",
@@ -12,6 +14,7 @@
   "dependencies": {
     "@heroui/react": "^3.2.1",
     "@rukny/forms-shared": "file:../../packages/forms-shared",
+    "@rukny/email-api-pricing": "file:../../packages/email-api-pricing",
     "@rukny/thmanyah-font": "file:../../packages/Thmanyah-Font-Family",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

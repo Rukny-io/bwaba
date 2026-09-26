@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "node scripts/materialize-workspace-deps.mjs && next dev -p 3004",
     "dev:https": "node scripts/materialize-workspace-deps.mjs && node scripts/generate-dev-cert.mjs && next dev --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem -p 3004",
+    "prebuild": "node scripts/materialize-workspace-deps.mjs",
+    "predev": "node scripts/materialize-workspace-deps.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,6 +21,7 @@
     "@radix-ui/react-select": "^2.3.7",
     "@radix-ui/react-slot": "^1.3.3",
     "@rukny/auth": "file:../../packages/auth",
+    "@rukny/email-api-pricing": "file:../../packages/email-api-pricing",
     "@rukny/thmanyah-font": "file:../../packages/Thmanyah-Font-Family",
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-table": "^8.21.3",

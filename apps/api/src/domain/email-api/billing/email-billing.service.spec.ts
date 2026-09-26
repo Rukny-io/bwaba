@@ -39,6 +39,16 @@ describe('EmailBillingService', () => {
     expect(plans.transactional.length).toBeGreaterThan(5);
     expect(plans.marketing.length).toBeGreaterThan(3);
     expect(plans.overagePack).toEqual(EMAIL_API_OVERAGE_PACK);
+
+    const pro50k = plans.transactional.find((plan) => plan.id === 'PRO_50K');
+    expect(pro50k).toMatchObject({
+      marketingNameEn: 'Growth',
+      marketingNameAr: 'نمو',
+      tier: 'growth',
+      slug: expect.any(String),
+      invoiceLabelEn: expect.stringContaining('Growth'),
+      invoiceLabelAr: expect.stringContaining('نمو'),
+    });
   });
 
   it('creates support ticket for plan request', async () => {
@@ -48,6 +58,8 @@ describe('EmailBillingService', () => {
     expect(supportTickets.createTicket).toHaveBeenCalledWith(
       'user_1',
       expect.objectContaining({
+        subject: expect.stringContaining('نمو'),
+        description: expect.stringContaining('Email API Growth'),
         context: expect.objectContaining({ plan: DeveloperEmailPlan.PRO_50K }),
       }),
     );

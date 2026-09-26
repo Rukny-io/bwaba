@@ -1,8 +1,16 @@
 /**
  * Developer portal pricing — Free + Pro + product usage.
  * Platform prices align with apps/api DEVELOPER_PRO_PRICING (10,000 / 100,000 IQD).
- * Email API tiers compete with Resend — priced in IQD (USD ≈ 1,320 IQD).
+ * Email API tiers from @rukny/email-api-pricing (shared catalog).
  */
+
+import {
+  EMAIL_API_ADDONS,
+  EMAIL_API_AUTOMATION,
+  EMAIL_API_MARKETING_PLANS,
+  EMAIL_API_OVERAGE_PACK,
+  EMAIL_API_TRANSACTIONAL_PLANS,
+} from '@rukny/email-api-pricing';
 
 export type PlanId = 'free' | 'pro';
 export type BillingPeriod = 'monthly' | 'yearly';
@@ -172,7 +180,7 @@ export const FEATURE_SECTIONS: FeatureSection[] = [
       },
       {
         label: 'Marketing contacts',
-        hint: 'From 1,500 free contacts',
+        hint: 'From 1,000 free contacts',
         values: { free: true, pro: true },
       },
       {
@@ -278,41 +286,39 @@ export function monthlyEquivalentFromYearly(yearly: number): number {
   return Math.round(yearly / 12);
 }
 
-export const EMAIL_TRANSACTIONAL_PLANS = [
-  { id: 'FREE', name: 'Free', priceMonthly: 0, volume: 3_000, overagePer1k: null, dailyLimit: 100 },
-  { id: 'PRO_10K', name: 'Pro 10K', priceMonthly: 5_000, volume: 10_000, overagePer1k: 700, popular: true },
-  { id: 'PRO_50K', name: 'Pro 50K', priceMonthly: 16_000, volume: 50_000, overagePer1k: 700 },
-  { id: 'PRO_100K', name: 'Pro 100K', priceMonthly: 28_000, volume: 100_000, overagePer1k: 700 },
-  { id: 'SCALE_100K', name: 'Scale 100K', priceMonthly: 72_000, volume: 100_000, overagePer1k: 650 },
-  { id: 'SCALE_200K', name: 'Scale 200K', priceMonthly: 125_000, volume: 200_000, overagePer1k: 600 },
-  { id: 'SCALE_500K', name: 'Scale 500K', priceMonthly: 275_000, volume: 500_000, overagePer1k: 550 },
-  { id: 'SCALE_1M', name: 'Scale 1M', priceMonthly: 500_000, volume: 1_000_000, overagePer1k: 500 },
-] as const;
+export const EMAIL_TRANSACTIONAL_PLANS = EMAIL_API_TRANSACTIONAL_PLANS.filter(
+  (plan) => plan.id !== 'ENTERPRISE',
+).map((plan) => ({
+  id: plan.id,
+  name: plan.nameEn,
+  priceMonthly: plan.priceMonthlyIqd,
+  volume: plan.monthlyQuota,
+  overagePer1k: plan.overagePer1kIqd > 0 ? plan.overagePer1kIqd : null,
+  dailyLimit: plan.dailyLimit,
+  popular: plan.id === 'PRO_10K',
+}));
 
-export const EMAIL_MARKETING_PLANS = [
-  { id: 'FREE', name: 'Marketing Free', priceMonthly: 0, contacts: 1_500 },
-  { id: 'PRO_5K', name: 'Marketing 5K', priceMonthly: 35_000, contacts: 5_000 },
-  { id: 'PRO_10K', name: 'Marketing 10K', priceMonthly: 65_000, contacts: 10_000 },
-  { id: 'PRO_25K', name: 'Marketing 25K', priceMonthly: 140_000, contacts: 25_000 },
-  { id: 'PRO_50K', name: 'Marketing 50K', priceMonthly: 190_000, contacts: 50_000 },
-  { id: 'PRO_100K', name: 'Marketing 100K', priceMonthly: 340_000, contacts: 100_000 },
-] as const;
+export const EMAIL_MARKETING_PLANS = EMAIL_API_MARKETING_PLANS.filter(
+  (plan) => plan.id !== 'ENTERPRISE',
+).map((plan) => ({
+  id: plan.id,
+  name: plan.name,
+  priceMonthly: plan.priceMonthlyIqd,
+  contacts: plan.contactsLimit,
+}));
 
 export const EMAIL_ADDON_PLANS = [
-  { id: 'domains', name: '+100 domains', priceMonthly: 20_000 },
-  { id: 'dedicated-ip', name: 'Dedicated IP', priceMonthly: 30_000 },
-  { id: 'sso', name: 'Single Sign-On', priceMonthly: 120_000 },
+  { id: 'domains', name: '+100 domains', priceMonthly: EMAIL_API_ADDONS.domainsPack.priceMonthlyIqd },
+  { id: 'dedicated-ip', name: 'Dedicated IP', priceMonthly: EMAIL_API_ADDONS.dedicatedIp.priceMonthlyIqd },
+  { id: 'sso', name: 'Single Sign-On', priceMonthly: EMAIL_API_ADDONS.sso.priceMonthlyIqd },
 ] as const;
 
 export const EMAIL_AUTOMATION_PRICING = {
-  includedRuns: 15_000,
-  overagePerRun: 1,
+  includedRuns: EMAIL_API_AUTOMATION.includedRunsPerMonth,
+  overagePerRun: EMAIL_API_AUTOMATION.overagePriceIqdPerRun,
 } as const;
 
-export const EMAIL_OVERAGE_PACK = {
-  emails: 1_000,
-  priceIqd: 700,
-} as const;
+export const EMAIL_OVERAGE_PACK = EMAIL_API_OVERAGE_PACK;
 
 export const EMAIL_PRODUCT_PLANS = EMAIL_TRANSACTIONAL_PLANS.filter(
   (p) => p.id === 'FREE' || p.id === 'PRO_10K' || p.id === 'PRO_50K',
@@ -351,7 +357,7 @@ export const EMAIL_SECTION_COPY = {
   eyebrow: 'Email API',
   title: 'Email API pricing',
   subtitle:
-    'Separate from Free / Pro platform plans. Resend-style tiers in IQD — typically 15–40% lower at scale.',
+    'Separate from Free / Pro platform plans. Monthly tiers in IQD — see mail.rukny.io/pricing for the full catalog.',
   docsCta: 'Read Email API docs',
   docsHref: '/documentation/email-api/quotas',
   compareCta: 'Compare with Resend',

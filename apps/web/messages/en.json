@@ -280,6 +280,7 @@
       "Store",
       "Links",
       "Analytics",
+      "Email API",
       "Integrations"
     ],
     "billing": {
@@ -385,6 +386,29 @@
       "yearly": "{price} {currency} per year",
       "moreFeatures": "+{count} more features",
       "exploreCta": "Explore product"
+    },
+    "emailApi": {
+      "eyebrow": "Email API",
+      "title": "Transactional email",
+      "titleMuted": " for your apps",
+      "lead": "Separate from Forms/Store platform plans. Start with 3,000 free emails per month, then Pro and Scale tiers in IQD.",
+      "table": {
+        "plan": "Plan",
+        "price": "Price",
+        "volume": "Volume"
+      },
+      "footnote": "Marketing contacts, automations, and add-ons are billed separately. Overage packs: 700 IQD per 1,000 emails.",
+      "scaleEyebrow": "Higher volume",
+      "mailPricingCta": "Full pricing on Mail",
+      "developersCta": "Developer docs",
+      "rows": [
+        { "plan": "Free", "price": "0 IQD", "volume": "3,000 / mo · 100 / day" },
+        { "plan": "Pro 10K", "price": "5,000 IQD", "volume": "10,000 / mo" },
+        { "plan": "Pro 50K", "price": "16,000 IQD", "volume": "50,000 / mo" },
+        { "plan": "Pro 100K", "price": "28,000 IQD", "volume": "100,000 / mo" },
+        { "plan": "Scale 500K", "price": "275,000 IQD", "volume": "500,000 / mo" },
+        { "plan": "Scale 1M", "price": "500,000 IQD", "volume": "1,000,000 / mo" }
+      ]
     }
   },
   "enterprise": {
@@ -959,6 +983,7 @@
       "title": "Competitive with Resend",
       "titleMuted": " — priced in IQD",
       "lead": "3,000 free emails per month. Pro and Scale tiers typically 15–40% lower than Resend.",
+      "publicPricingCta": "View full pricing",
       "compareCta": "Compare with Resend",
       "portalCta": "Developer pricing",
       "rows": [

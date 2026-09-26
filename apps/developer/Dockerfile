@@ -12,6 +12,7 @@ WORKDIR /app
 
 # file: dependencies need shared packages present before npm install
 COPY packages/auth ./packages/auth
+COPY packages/email-api-pricing ./packages/email-api-pricing
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/developer/package.json apps/developer/package-lock.json* ./apps/developer/
 # postinstall runs scripts/materialize-workspace-deps.mjs
@@ -19,7 +20,9 @@ COPY apps/developer/scripts ./apps/developer/scripts
 
 WORKDIR /app/apps/developer
 RUN --mount=type=cache,id=npm-developer,target=/root/.npm \
-  npm config set fetch-retries 10 \
+  npm --prefix /app/packages/email-api-pricing install --no-audit --no-fund \
+  && npm --prefix /app/packages/email-api-pricing run build \
+  && npm config set fetch-retries 10 \
   && npm config set fetch-retry-mintimeout 30000 \
   && npm config set fetch-retry-maxtimeout 300000 \
   && npm config set fetch-timeout 600000 \
@@ -34,11 +37,14 @@ COPY apps/developer .
 RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/developer/node_modules ./node_modules
 COPY --from=deps /app/packages/auth /app/packages/auth
+COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
 # Materialize file: dependencies (symlinks can confuse Turbopack package exports)
 RUN rm -rf node_modules/@rukny/auth \
   && cp -a /app/packages/auth node_modules/@rukny/auth \
+  && rm -rf node_modules/@rukny/email-api-pricing \
+  && cp -a /app/packages/email-api-pricing node_modules/@rukny/email-api-pricing \
   && rm -rf node_modules/@rukny/thmanyah-font \
   && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 

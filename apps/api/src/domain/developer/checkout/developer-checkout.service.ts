@@ -13,10 +13,12 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
 import { QasehPaymentService } from '../../../integrations/qaseh-payment/qaseh-payment.service';
 import type { QasehPaymentContextResponse } from '../../../integrations/qaseh-payment/qaseh-payment.types';
+import { getEmailApiPlan } from '../../email-api/billing/email-api-plan-limits.config';
 import { DEVELOPER_PRO_PRICING } from '../subscriptions/dev-plan-limits.config';
 import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
 import { WalletService } from '../wallet/wallet.service';
 import { DeveloperCheckoutKind } from './dto/developer-checkout.dto';
+import type { DeveloperEmailPlan } from '@prisma/client';
 
 const CHECKOUT_SESSION_TTL_SECONDS = 60 * 15;
 const CHECKOUT_SESSION_PREFIX = 'developer:checkout:';
@@ -30,6 +32,7 @@ type DeveloperCheckoutSessionPayload = {
   title: string;
   billingCycle?: 'MONTHLY' | 'YEARLY';
   appId?: string | null;
+  emailApiPlanId?: DeveloperEmailPlan | null;
   returnUrl: string;
   createdAt: number;
   expiresAt: number;
@@ -58,6 +61,7 @@ export class DeveloperCheckoutService {
       amount?: number;
       billingCycle?: 'MONTHLY' | 'YEARLY';
       appId?: string;
+      planId?: DeveloperEmailPlan;
     },
   ) {
     const kind = input.kind;
@@ -96,6 +100,20 @@ export class DeveloperCheckoutService {
       if (sub?.plan === 'PRO' || sub?.effectivePlan === 'PRO') {
         throw new ForbiddenException('You are already on the Pro plan.');
       }
+    } else if (kind === DeveloperCheckoutKind.EMAIL_API_PLAN) {
+      if (!input.planId) {
+        throw new BadRequestException('planId is required for Email API checkout.');
+      }
+      const planDef = getEmailApiPlan(input.planId);
+      if (!planDef.selfServe) {
+        throw new BadRequestException('Contact sales for Enterprise pricing.');
+      }
+      if (planDef.priceMonthlyIqd <= 0) {
+        throw new BadRequestException('This plan does not require checkout.');
+      }
+      amount = planDef.priceMonthlyIqd;
+      title = planDef.invoiceLabelEn;
+      returnUrl = this.developersReturnUrl('/settings/email');
     } else {
       throw new BadRequestException('Invalid checkout kind.');
     }
@@ -112,6 +130,8 @@ export class DeveloperCheckoutService {
       title,
       billingCycle,
       appId: input.appId ?? null,
+      emailApiPlanId:
+        kind === DeveloperCheckoutKind.EMAIL_API_PLAN ? input.planId ?? null : null,
       returnUrl,
       createdAt,
       expiresAt,
@@ -277,6 +297,7 @@ export class DeveloperCheckoutService {
             product: 'developer',
             kind: session.kind,
             billingCycle: session.billingCycle,
+            emailApiPlanId: session.emailApiPlanId ?? undefined,
             checkoutSessionId: session.sessionId,
             source: 'qaseh_card',
           },

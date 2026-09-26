@@ -2754,6 +2754,8 @@ enum DeveloperEmailPlan {
   SCALE_200K
   SCALE_500K
   SCALE_1M
+  SCALE_1_5M
+  SCALE_2_5M
   ENTERPRISE
 }
 
@@ -2761,9 +2763,11 @@ enum DeveloperEmailMarketingPlan {
   FREE
   PRO_5K
   PRO_10K
+  PRO_15K
   PRO_25K
   PRO_50K
   PRO_100K
+  PRO_150K
   ENTERPRISE
 }
 

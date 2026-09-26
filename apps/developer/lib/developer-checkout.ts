@@ -1,6 +1,9 @@
 import { api, ApiException } from '@/lib/api-client';
 
-export type DeveloperCheckoutKind = 'WALLET_TOPUP' | 'PRO_UPGRADE';
+export type DeveloperCheckoutKind =
+  | 'WALLET_TOPUP'
+  | 'PRO_UPGRADE'
+  | 'EMAIL_API_PLAN';
 
 export type DeveloperCheckoutSessionResponse = {
   sessionId: string;
@@ -24,6 +27,8 @@ export async function startDeveloperCheckoutSession(input: {
   amount?: number;
   billingCycle?: 'MONTHLY' | 'YEARLY';
   appId?: string;
+  /** Required when kind is EMAIL_API_PLAN — amount/title resolved server-side */
+  planId?: string;
 }): Promise<DeveloperCheckoutSessionResponse> {
   try {
     const { data } = await api.post<DeveloperCheckoutSessionResponse>(
@@ -33,6 +38,7 @@ export async function startDeveloperCheckoutSession(input: {
         amount: input.amount,
         billingCycle: input.billingCycle,
         appId: input.appId,
+        planId: input.planId,
       },
     );
 
@@ -61,6 +67,7 @@ export async function redirectToDeveloperCheckout(input: {
   amount?: number;
   billingCycle?: 'MONTHLY' | 'YEARLY';
   appId?: string;
+  planId?: string;
 }): Promise<void> {
   const session = await startDeveloperCheckoutSession(input);
   window.location.href = session.checkoutUrl;

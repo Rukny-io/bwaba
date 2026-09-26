@@ -42,6 +42,7 @@ import {
   type ProductFeature,
   type ProductSlug,
 } from '@/lib/public-marketing-pages';
+import { PublicAgStoreJourney } from '@/components/marketing/public-ag-store-journey';
 import { useLocalizedProductPage } from '@/lib/use-localized-product-page';
 import { agLayout } from '@/lib/public-antigravity-theme';
 import { cn } from '@/lib/utils';
@@ -257,7 +258,9 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
             </div>
           </div>
         </motion.div>
-      ) : (
+      ) : null}
+
+      {hasDetailSections ? (
         <motion.div
           className={cn(
             'mt-12 overflow-hidden rounded-[2rem] sm:mt-16',
@@ -276,8 +279,7 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
                 {product.title}
               </h2>
               <p className="mt-3 max-w-md text-[15px] leading-[1.85] text-[#6B6F76]">
-                {product.showcaseDescription ??
-                  'كل ما تحتاجه في تجربة واحدة متكاملة — جاهزة للمشاركة فوراً.'}
+                {product.showcaseDescription ?? t('defaults.showcaseDescription')}
               </p>
             </div>
 
@@ -302,7 +304,9 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
             </div>
           </div>
         </motion.div>
-      )}
+      ) : null}
+
+      {product.slug === 'stores' ? <PublicAgStoreJourney /> : null}
 
       {!hasDetailSections ? (
         <section className="mt-16 sm:mt-20" aria-labelledby="product-features-heading">
@@ -377,12 +381,14 @@ export function PublicAgProductPage({ slug }: { slug: ProductSlug }) {
             </span>
             <div>
               <p className={agLayout.eyebrow}>
-                {product.workflowEyebrow ?? 'كيف يعمل'}
+                {product.workflowEyebrow ?? t('defaults.workflowEyebrow')}
               </p>
               <h2 id="product-workflow-heading" className={`${agLayout.sectionTitle} mt-4`}>
-                {product.workflowTitle ?? 'ثلاث خطوات'}
-                {product.workflowTitleMuted ? (
-                  <span className="text-[#9CA3AF]">{product.workflowTitleMuted}</span>
+                {product.workflowTitle ?? t('defaults.workflowTitle')}
+                {(product.workflowTitleMuted ?? t('defaults.workflowTitleMuted')) ? (
+                  <span className="text-[#9CA3AF]">
+                    {product.workflowTitleMuted ?? t('defaults.workflowTitleMuted')}
+                  </span>
                 ) : null}
               </h2>
             </div>

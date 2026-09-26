@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { agLayout } from '@/lib/public-antigravity-theme';
@@ -15,24 +14,6 @@ export function PublicAgHero() {
       aria-labelledby="public-hero-title"
     >
       <div className="mx-auto flex max-w-[820px] flex-col items-center px-5 pb-24 pt-14 text-center sm:px-8 sm:pb-32 sm:pt-16">
-        <Link
-          href="/"
-          className="home-hero-enter mb-12 inline-flex items-center gap-2.5 sm:mb-14"
-          aria-label={t('homeAria')}
-        >
-          <Image
-            src="/rukny-logo.svg"
-            alt=""
-            width={28}
-            height={28}
-            priority
-            className="size-7"
-          />
-          <span className="text-[1.35rem] font-medium tracking-[-0.03em] text-[#1D1D1D]">
-            {t('brand')}
-          </span>
-        </Link>
-
         <h1
           id="public-hero-title"
           className={`${agLayout.heroTitle} home-hero-enter`}

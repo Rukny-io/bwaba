@@ -11,6 +11,7 @@ import {
 } from '@rukny/forms-shared/pricing-plans';
 import { useLocalizedPricingPlans } from '@/lib/use-localized-pricing';
 import { PricingPlanCard } from './pricing-plan-card';
+import { PublicEmailApiPricingSection } from './public-email-api-pricing-section';
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -137,6 +138,8 @@ export function PricingView() {
           ))}
         </div>
       </div>
+
+      <PublicEmailApiPricingSection />
 
       <section className="mt-12 sm:mt-16" aria-labelledby="faq-heading">
         <div className="mb-5 text-center sm:mb-6">

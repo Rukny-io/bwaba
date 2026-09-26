@@ -10,13 +10,16 @@ FROM base AS deps
 WORKDIR /app
 
 COPY packages/forms-shared ./packages/forms-shared
+COPY packages/email-api-pricing ./packages/email-api-pricing
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/web/package.json apps/web/package-lock.json* ./apps/web/
 COPY apps/web/scripts ./apps/web/scripts/
 
 WORKDIR /app/apps/web
 RUN --mount=type=cache,id=npm-web,target=/root/.npm \
-  npm config set fetch-retries 10 \
+  npm --prefix /app/packages/email-api-pricing install --no-audit --no-fund \
+  && npm --prefix /app/packages/email-api-pricing run build \
+  && npm config set fetch-retries 10 \
   && npm config set fetch-timeout 600000 \
   && npm install --no-audit --no-fund
 
@@ -27,10 +30,13 @@ COPY apps/web .
 RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/web/node_modules ./node_modules
 COPY --from=deps /app/packages/forms-shared /app/packages/forms-shared
+COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
 RUN rm -rf node_modules/@rukny/forms-shared \
   && cp -a /app/packages/forms-shared node_modules/@rukny/forms-shared \
+  && rm -rf node_modules/@rukny/email-api-pricing \
+  && cp -a /app/packages/email-api-pricing node_modules/@rukny/email-api-pricing \
   && rm -rf node_modules/@rukny/thmanyah-font \
   && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 

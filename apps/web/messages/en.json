@@ -5,10 +5,19 @@
     "pricingTitle": "Pricing — Rukny",
     "pricingDescription": "Plans that grow with your project. Start free and upgrade when you need to, with prices in Iraqi dinar.",
     "enterpriseTitle": "Enterprise — Rukny",
-    "enterpriseDescription": "Custom solutions for teams and organizations — developer portal, WhatsApp API, Email API, advanced customization, and dedicated support on the Rukny platform."
+    "enterpriseDescription": "Custom solutions for teams and organizations — developer portal, WhatsApp API, Email API, advanced customization, and dedicated support on the Rukny platform.",
+    "docsTitle": "Documentation — Rukny",
+    "docsDescription": "Getting started guides for stores, forms, profiles, and analytics on Rukny.",
+    "supportTitle": "Help Center — Rukny",
+    "supportDescription": "FAQs, useful links, and a direct line to the Rukny team.",
+    "developersTitle": "Developers — Rukny",
+    "developersDescription": "Webhooks, APIs, and embeds — connect Rukny to your apps.",
+    "blogTitle": "Blog — Rukny",
+    "blogDescription": "The latest Rukny news, updates, and product launches.",
+    "productTitleSuffix": "— Rukny"
   },
   "locale": {
-    "label": "اللغة",
+    "label": "Language",
     "ar": "العربية",
     "en": "English",
     "ckb": "کوردی"
@@ -26,6 +35,10 @@
     "viewAllProducts": "View all products",
     "pricing": "Pricing",
     "enterprise": "Enterprise",
+    "developers": "Developers",
+    "news": "Blog",
+    "newBadge": "New",
+    "newBadgeAria": "New section",
     "login": "Log in",
     "startFree": "Start free",
     "productItems": {
@@ -176,6 +189,45 @@
           "description": "Smart tools to speed up content, replies, and daily decisions inside the platform."
         }
       }
+    },
+    "news": {
+      "eyebrow": "News",
+      "title": "Latest",
+      "titleMuted": " news and updates",
+      "lead": "What's new at Rukny? Updates, launches, and everything that matters — in one place.",
+      "readMore": "Read more",
+      "viewAll": "View all news",
+      "scrollBack": "Previous",
+      "scrollForward": "Next",
+      "carouselAria": "Latest news",
+      "swipeHint": "Swipe to explore news",
+      "items": [
+        {
+          "category": "Launch",
+          "title": "Online stores are live",
+          "excerpt": "Launch your digital or physical store with secure payments and flexible customization."
+        },
+        {
+          "category": "Update",
+          "title": "Smart forms with Google Sheets sync",
+          "excerpt": "Connect your forms to Google Sheets and track responses automatically."
+        },
+        {
+          "category": "Enterprise",
+          "title": "Rukny solutions for teams",
+          "excerpt": "Developer portal, WhatsApp API, and dedicated enterprise support."
+        },
+        {
+          "category": "Developers",
+          "title": "Webhooks and APIs",
+          "excerpt": "Connect Rukny to your apps and receive events instantly."
+        },
+        {
+          "category": "Analytics",
+          "title": "Unified analytics dashboard",
+          "excerpt": "Sales, visits, and responses in one place."
+        }
+      ]
     },
     "pricing": {
       "eyebrow": "Pricing",
@@ -494,6 +546,429 @@
       "email": "support@rukny.io",
       "contactSales": "Contact sales",
       "developerPortal": "Developer portal"
+    }
+  },
+  "docs": {
+    "eyebrow": "Documentation",
+    "title": "Getting started",
+    "titleMuted": " guides",
+    "lead": "Clear steps to set up your store, forms, profile, and analytics.",
+    "readGuide": "Read guide",
+    "cta": {
+      "eyebrow": "Need help?",
+      "title": "Didn't find what you're looking for?",
+      "lead": "Visit the help center or email us directly.",
+      "supportCenter": "Help center"
+    },
+    "guides": [
+      {
+        "category": "Start",
+        "title": "Get started with Rukny",
+        "description": "Create your account and launch your first product in minutes."
+      },
+      {
+        "category": "Store",
+        "title": "Set up your first store",
+        "description": "Steps to add products and enable payments."
+      },
+      {
+        "category": "Forms",
+        "title": "Build your first form",
+        "description": "Fields, steps, and collecting responses."
+      },
+      {
+        "category": "Integration",
+        "title": "Sync Google Sheets",
+        "description": "Connect forms to Google Sheets tables."
+      },
+      {
+        "category": "Identity",
+        "title": "Profile page",
+        "description": "Bring your links and products together on one page."
+      },
+      {
+        "category": "Analytics",
+        "title": "Understand analytics",
+        "description": "Read your numbers and make clearer decisions."
+      }
+    ]
+  },
+  "support": {
+    "eyebrow": "Support",
+    "title": "How can we",
+    "titleMuted": " help you?",
+    "lead": "Quick answers, useful links, and a direct channel to the Rukny team.",
+    "quickLinks": [
+      {
+        "title": "Documentation",
+        "text": "Getting started guides for every product"
+      },
+      {
+        "title": "Pricing",
+        "text": "Plans and frequently asked questions"
+      },
+      {
+        "title": "Enterprise",
+        "text": "Solutions for teams and companies"
+      }
+    ],
+    "faq": {
+      "eyebrow": "Help",
+      "title": "Frequently asked questions",
+      "items": [
+        {
+          "question": "How do I get started with Rukny?",
+          "answer": "Sign up for a free account, choose what you want to create — a store, form, or profile page — and follow the setup steps in your dashboard."
+        },
+        {
+          "question": "Do I need a credit card to start?",
+          "answer": "No. The free plan is available without a credit card."
+        },
+        {
+          "question": "How do I contact support?",
+          "answer": "Email us at support@rukny.io — we read every message and reply within one business day."
+        },
+        {
+          "question": "Do you support teams and enterprises?",
+          "answer": "Yes. Contact us through the enterprise page for custom team solutions."
+        },
+        {
+          "question": "Where can I find documentation?",
+          "answer": "The docs page brings together getting started guides for every product — store, forms, profile, and analytics."
+        }
+      ]
+    },
+    "contact": {
+      "eyebrow": "Direct contact",
+      "title": "Still need help?",
+      "lead": "Email us at {email} — we reply within one business day.",
+      "emailSupport": "Email support",
+      "startFree": "Start free"
+    }
+  },
+  "blog": {
+    "eyebrow": "News",
+    "title": "Latest",
+    "titleMuted": " news and updates",
+    "lead": "What's new at Rukny? Updates, launches, and everything that matters — in one place.",
+    "readMore": "Read more",
+    "featured": "Latest story",
+    "filterAll": "All",
+    "filterAria": "Filter articles",
+    "articlesEyebrow": "Articles",
+    "articlesHeading": "All news",
+    "articlesCount": "{count} articles",
+    "empty": "No articles in this category yet.",
+    "readTime": "{minutes} min read",
+    "categories": {
+      "launch": "Launch",
+      "update": "Update",
+      "enterprise": "Enterprise",
+      "developers": "Developers",
+      "analytics": "Analytics"
+    },
+    "cta": {
+      "eyebrow": "Stay in the loop",
+      "title": "Launch your digital project today",
+      "lead": "Store, forms, profile, and analytics — one platform built for Arabic-first teams.",
+      "startFree": "Start free",
+      "developers": "Developers"
+    },
+    "posts": [
+      {
+        "slug": "online-stores-launch",
+        "categoryKey": "launch",
+        "title": "Online stores are live",
+        "excerpt": "Launch your digital or physical store with secure payments and flexible customization — from design to first order.",
+        "date": "Mar 2026",
+        "readMinutes": 7,
+        "coverAlt": "Merchant managing an online store on a laptop",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "Online stores are now live on Rukny — a complete product that lets you sell digital and physical goods from one dashboard, built with an Arabic-first experience."
+          },
+          {
+            "type": "paragraph",
+            "text": "After months of testing with merchants in Iraq, we brought together everything a seller needs: products, orders, payments, and sharing — without stitching together separate tools."
+          },
+          {
+            "type": "heading",
+            "text": "Why launch on Rukny?"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Physical, digital, and service products — each with the right fields",
+              "Secure checkout with cash on delivery",
+              "A store page ready to share with one link",
+              "Coupons, variants, and order tracking in one place"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "Add physical products that ship to customers, or digital products delivered automatically after payment. Every order follows a clear path: confirm, pay, notify — you and your customer always know the status."
+          },
+          {
+            "type": "quote",
+            "text": "Our goal is to get you from store idea to first order in hours — not weeks."
+          },
+          {
+            "type": "heading",
+            "text": "Payments and trust"
+          },
+          {
+            "type": "paragraph",
+            "text": "Enable card payments for digital and physical orders, or choose cash on delivery when it fits your business. OTP verification reduces fake orders and improves data quality."
+          },
+          {
+            "type": "paragraph",
+            "text": "Customization stays flexible: size and color variants, category-specific fields, and Arabic copy that reflects your brand. If you have been planning your first store, now is the time — create a free account and add your first product in minutes."
+          }
+        ]
+      },
+      {
+        "slug": "smart-forms-google-sheets",
+        "categoryKey": "update",
+        "title": "Smart forms with Google Sheets sync",
+        "excerpt": "Connect your forms to Google Sheets and track responses automatically — no manual exports.",
+        "date": "Feb 2026",
+        "readMinutes": 6,
+        "coverAlt": "Person filling a digital form with a spreadsheet on screen",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "Smart forms on Rukny now support Google Sheets sync — every submission appears in the spreadsheet you choose without copy, paste, or nightly exports."
+          },
+          {
+            "type": "paragraph",
+            "text": "Marketing, HR, and support teams asked for this from day one. Today it is part of the workflow: submit the form, see the new row in the sheet."
+          },
+          {
+            "type": "heading",
+            "text": "How to get started"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Open form settings and choose Google Sheets",
+              "Pick a spreadsheet or create a new one",
+              "Map each field to a column",
+              "Turn on instant notifications for your team"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "With webhooks and instant notifications, route responses into your team's workflow — from CRM to internal sheets — in real time."
+          },
+          {
+            "type": "quote",
+            "text": "No more 'export CSV every evening' — data moves with you."
+          },
+          {
+            "type": "paragraph",
+            "text": "Try sync on your next form: a satisfaction survey, hiring form, or service request. Spend less time chasing data manually and more time reading answers."
+          }
+        ]
+      },
+      {
+        "slug": "enterprise-solutions",
+        "categoryKey": "enterprise",
+        "title": "Rukny solutions for teams",
+        "excerpt": "Developer portal, WhatsApp API, and dedicated enterprise support — everything your team needs to scale.",
+        "date": "Jan 2026",
+        "readMinutes": 8,
+        "coverAlt": "Business team reviewing dashboards in a meeting",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "Rukny for enterprise brings stores, forms, analytics, and developer tools into one platform — with dedicated support for teams that need more than the standard plan."
+          },
+          {
+            "type": "paragraph",
+            "text": "Companies running multiple channels — store, surveys, and identity page — were losing time across separate tools. Enterprise unifies the experience and gives each team what they need."
+          },
+          {
+            "type": "heading",
+            "text": "What's included?"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Developer portal with API keys and webhooks",
+              "WhatsApp API and Email API for automated messaging",
+              "Team permissions and shared workspaces",
+              "Direct support and custom onboarding"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "WhatsApp API and Email API help you reach customers inside your workflow — from order confirmations to survey follow-ups — without leaving the platform."
+          },
+          {
+            "type": "quote",
+            "text": "We build with you — not sell you a black box."
+          },
+          {
+            "type": "paragraph",
+            "text": "Contact sales to define team size, required integrations, and launch plan. We reply within one business day with the next step."
+          }
+        ]
+      },
+      {
+        "slug": "webhooks-and-apis",
+        "categoryKey": "developers",
+        "title": "Webhooks and APIs",
+        "excerpt": "Connect Rukny to your apps and receive events instantly — orders, forms, and updates in real time.",
+        "date": "Jan 2026",
+        "readMinutes": 7,
+        "coverAlt": "Developer integrating apps via APIs",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "We launched webhooks and APIs that connect Rukny to your systems — every new order, form submission, or status change can reach your app instantly."
+          },
+          {
+            "type": "paragraph",
+            "text": "Developers want reliable events, signature verification, and clear docs. We built the developer portal around those needs — from sandbox to production."
+          },
+          {
+            "type": "heading",
+            "text": "Available events"
+          },
+          {
+            "type": "list",
+            "items": [
+              "New order or order status update",
+              "New form submission",
+              "Inventory or product update",
+              "Custom events per application"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "Register an endpoint in the developer portal, choose the events you care about, and verify signatures to keep data secure. Use the APIs to read orders, sync inventory, or build custom dashboards."
+          },
+          {
+            "type": "quote",
+            "text": "Connect once — receive everything that happens in Rukny."
+          },
+          {
+            "type": "paragraph",
+            "text": "Review the docs in the developer portal and start in the sandbox before going to production. Technical support is ready to help with your first integration."
+          }
+        ]
+      },
+      {
+        "slug": "unified-analytics",
+        "categoryKey": "analytics",
+        "title": "Unified analytics dashboard",
+        "excerpt": "Sales, visits, and responses in one place — faster decisions with clear data.",
+        "date": "Dec 2025",
+        "readMinutes": 6,
+        "coverAlt": "Analyst reviewing performance charts on a monitor",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "The unified analytics dashboard brings store sales, page visits, and form responses together — one picture before any decision."
+          },
+          {
+            "type": "paragraph",
+            "text": "Instead of opening three different tools every morning, you see in Rukny: what you sold, who visited your page, and how many people completed the form — in one place."
+          },
+          {
+            "type": "heading",
+            "text": "What can you measure?"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Store revenue and orders",
+              "Profile and store visits",
+              "Form completion rate and field analysis",
+              "Period comparison and trends"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "Compare periods, watch completion rates, and see which product or form performs best. When you need detail, export CSV and share with your team."
+          },
+          {
+            "type": "quote",
+            "text": "One decision needs one number — not ten tabs."
+          },
+          {
+            "type": "paragraph",
+            "text": "Open analytics from your account and start tracking your numbers today. Every Rukny product feeds the dashboard automatically."
+          }
+        ]
+      }
+    ],
+    "article": {
+      "backToBlog": "Back to blog",
+      "readTime": "{minutes} min read",
+      "relatedCta": "Learn more"
+    },
+    "notFound": "Article not found"
+  },
+  "developers": {
+    "eyebrow": "Developers",
+    "title": "Connect Rukny",
+    "titleMuted": " to your apps",
+    "lead": "Webhooks, APIs, and embeds — build connected experiences with Rukny products.",
+    "openPortal": "Open developer portal",
+    "docs": "Documentation",
+    "showcase": {
+      "title": "Developer environment",
+      "lead": "Build apps, connect webhooks, and embed forms and stores in your products."
+    },
+    "features": {
+      "eyebrow": "Capabilities",
+      "title": "What you can",
+      "titleMuted": " build",
+      "items": [
+        {
+          "title": "Webhooks",
+          "description": "Receive form and order events in your systems instantly."
+        },
+        {
+          "title": "APIs",
+          "description": "Connect Rukny with your existing apps and services."
+        },
+        {
+          "title": "Form embeds",
+          "description": "Embed forms in your website or app with ease."
+        },
+        {
+          "title": "Developer portal",
+          "description": "A dashboard for API keys, apps, and integrations."
+        }
+      ]
+    },
+    "links": {
+      "title": "Quick links",
+      "items": {
+        "webhooks": "Webhooks",
+        "embedForms": "Embed forms",
+        "docs": "Documentation",
+        "support": "Technical support"
+      }
+    },
+    "emailPricing": {
+      "eyebrow": "Email API pricing",
+      "title": "Competitive with Resend",
+      "titleMuted": " — priced in IQD",
+      "lead": "3,000 free emails per month. Pro and Scale tiers typically 15–40% lower than Resend.",
+      "compareCta": "Compare with Resend",
+      "portalCta": "Developer pricing",
+      "rows": [
+        { "plan": "Free", "price": "0 IQD", "volume": "3,000 / mo" },
+        { "plan": "Pro 10K", "price": "5,000 IQD", "volume": "10,000 / mo" },
+        { "plan": "Pro 50K", "price": "16,000 IQD", "volume": "50,000 / mo" },
+        { "plan": "Pro 100K", "price": "28,000 IQD", "volume": "100,000 / mo" },
+        { "plan": "Scale 500K", "price": "275,000 IQD", "volume": "500,000 / mo" },
+        { "plan": "Overage", "price": "700 IQD", "volume": "per 1,000 emails" }
+      ]
     }
   }
 }

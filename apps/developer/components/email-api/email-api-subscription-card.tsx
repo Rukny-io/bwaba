@@ -48,6 +48,9 @@ export function EmailApiSubscriptionCard() {
       appToast.fromError(error, "Could not purchase overage pack."),
   });
   const data = subscription.data;
+  const planLabel = data?.plan?.name ?? "Free";
+  const planPrice = data?.plan?.priceIqd ?? 0;
+  const planQuota = data?.subscription?.quota || data?.free?.quota || 3_000;
 
   return (
     <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
@@ -56,8 +59,8 @@ export function EmailApiSubscriptionCard() {
           <h2 className="text-base font-semibold">Email API plan</h2>
           <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
             {data
-              ? `${data.plan.name} · ${formatPrice(data.plan.priceIqd)} IQD/mo · ${formatPrice(data.subscription.quota || data.free.quota)} msgs`
-              : "3,000 free emails / month · paid Pro & Scale tiers"}
+              ? `${planLabel} · ${formatPrice(planPrice)} IQD/mo · ${formatPrice(planQuota)} msgs`
+              : "3,000 free emails / month · Pro from 5,000 IQD/mo"}
           </p>
         </div>
         <Link
@@ -99,9 +102,9 @@ export function EmailApiSubscriptionCard() {
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
             <p className="text-[var(--muted-foreground)]">Free tier</p>
             <p className="mt-1 font-semibold">
-              {data.free.remaining.toLocaleString()} /{" "}
-              {data.free.quota.toLocaleString()} · daily{" "}
-              {data.free.dailyRemaining}/{data.free.dailyLimit}
+              {(data.free?.remaining ?? data.trial?.remaining ?? 0).toLocaleString()} /{" "}
+              {(data.free?.quota ?? data.trial?.quota ?? 3000).toLocaleString()} · daily{" "}
+              {data.free?.dailyRemaining ?? "100"}/{data.free?.dailyLimit ?? 100}
             </p>
           </div>
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
@@ -111,6 +114,7 @@ export function EmailApiSubscriptionCard() {
               {data.subscription.remaining.toLocaleString()} remaining
             </p>
           </div>
+          {data.marketing ? (
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
             <p className="text-[var(--muted-foreground)]">Marketing contacts</p>
             <p className="mt-1 font-semibold">
@@ -118,6 +122,8 @@ export function EmailApiSubscriptionCard() {
               {data.marketing.contactsLimit.toLocaleString()}
             </p>
           </div>
+          ) : null}
+          {data.automations ? (
           <div className="rounded-xl bg-[var(--surface-secondary)] p-3">
             <p className="text-[var(--muted-foreground)]">Automations</p>
             <p className="mt-1 font-semibold">
@@ -125,6 +131,7 @@ export function EmailApiSubscriptionCard() {
               {data.automations.included.toLocaleString()} runs
             </p>
           </div>
+          ) : null}
         </div>
       ) : (
         <p className="mt-4 text-sm text-[var(--muted-foreground)]">

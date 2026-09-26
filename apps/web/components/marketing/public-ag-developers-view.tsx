@@ -3,20 +3,20 @@
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, Code2 } from 'lucide-react';
-import { DEVELOPER_FEATURES } from '@/lib/public-marketing-pages';
+import { useTranslations } from 'next-intl';
+import {
+  useDeveloperFeatures,
+  useDeveloperLinks,
+} from '@/lib/use-localized-marketing-content';
 import { agLayout } from '@/lib/public-antigravity-theme';
 import { siteUrls } from '@/lib/site-urls';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-const DEV_LINKS = [
-  { label: 'Webhooks', href: `${siteUrls.developers}/documentation` },
-  { label: 'تضمين النماذج', href: '/products/forms' },
-  { label: 'الوثائق', href: '/docs' },
-  { label: 'الدعم التقني', href: '/support' },
-] as const;
-
 export function PublicAgDevelopersView() {
+  const t = useTranslations('developers');
+  const features = useDeveloperFeatures();
+  const links = useDeveloperLinks();
   const reduceMotion = useReducedMotion();
 
   return (
@@ -27,20 +27,18 @@ export function PublicAgDevelopersView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: EASE }}
       >
-        <p className={agLayout.eyebrow}>المطورون</p>
+        <p className={agLayout.eyebrow}>{t('eyebrow')}</p>
         <h1 className={`${agLayout.sectionTitle} mt-4`}>
-          اربط ركني
-          <span className="text-[#9CA3AF]"> بتطبيقاتك</span>
+          {t('title')}
+          <span className="text-[#9CA3AF]">{t('titleMuted')}</span>
         </h1>
-        <p className={`${agLayout.lead} mx-auto mt-5 max-w-2xl`}>
-          Webhooks، واجهات برمجية، وتضمين — لبناء تجارب متصلة مع منتجات ركني.
-        </p>
+        <p className={`${agLayout.lead} mx-auto mt-5 max-w-2xl`}>{t('lead')}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <a href={siteUrls.developers} className={agLayout.btnPrimary}>
-            فتح بوابة المطورين
+            {t('openPortal')}
           </a>
           <Link href="/docs" className={agLayout.btnSecondary}>
-            الوثائق
+            {t('docs')}
           </Link>
         </div>
       </motion.header>
@@ -57,10 +55,10 @@ export function PublicAgDevelopersView() {
           </div>
           <div className="text-start">
             <h2 className="text-[1.35rem] font-medium tracking-[-0.02em] text-[#1D1D1D]">
-              بيئة المطورين
+              {t('showcase.title')}
             </h2>
             <p className="mt-2 text-[15px] leading-[1.8] text-[#6B6F76]">
-              أنشئ تطبيقات، اربط Webhooks، وادمج النماذج والمتاجر في منتجاتك.
+              {t('showcase.lead')}
             </p>
           </div>
         </div>
@@ -68,15 +66,15 @@ export function PublicAgDevelopersView() {
 
       <section className="mt-16 sm:mt-20" aria-labelledby="developer-features-heading">
         <div className="mb-8 text-start sm:mb-10">
-          <p className={agLayout.eyebrow}>الإمكانيات</p>
+          <p className={agLayout.eyebrow}>{t('features.eyebrow')}</p>
           <h2 id="developer-features-heading" className={`${agLayout.sectionTitle} mt-4`}>
-            ما يمكنك
-            <span className="text-[#9CA3AF]"> بناؤه</span>
+            {t('features.title')}
+            <span className="text-[#9CA3AF]">{t('features.titleMuted')}</span>
           </h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {DEVELOPER_FEATURES.map((feature, index) => (
+          {features.map((feature, index) => (
             <motion.div
               key={feature.title}
               initial={reduceMotion ? false : { opacity: 0, y: 16 }}
@@ -99,21 +97,63 @@ export function PublicAgDevelopersView() {
       <section className="mt-16 sm:mt-20" aria-labelledby="developer-links-heading">
         <div className="rounded-[2rem] bg-[#FAFAFA] p-7 sm:p-8">
           <h2 id="developer-links-heading" className="text-start text-[1.05rem] font-medium text-[#1D1D1D]">
-            روابط سريعة
+            {t('links.title')}
           </h2>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {DEV_LINKS.map((link) => (
-              <li key={link.label}>
+            {links.map((link) => (
+              <li key={link.href}>
                 <Link
                   href={link.href}
                   className="inline-flex items-center gap-1 text-[14px] text-[#6B6F76] transition-colors hover:text-[#1D1D1D]"
                 >
                   {link.label}
-                  <ArrowLeft className="size-3.5 opacity-50" aria-hidden />
+                  <ArrowLeft className="size-3.5 opacity-50 rtl:rotate-180" aria-hidden />
                 </Link>
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="mt-16 sm:mt-20" aria-labelledby="developer-email-pricing-heading">
+        <div className="mb-8 text-start sm:mb-10">
+          <p className={agLayout.eyebrow}>{t('emailPricing.eyebrow')}</p>
+          <h2 id="developer-email-pricing-heading" className={`${agLayout.sectionTitle} mt-4`}>
+            {t('emailPricing.title')}
+            <span className="text-[#9CA3AF]">{t('emailPricing.titleMuted')}</span>
+          </h2>
+          <p className={`${agLayout.lead} mt-4 max-w-2xl`}>{t('emailPricing.lead')}</p>
+        </div>
+
+        <div className="overflow-x-auto rounded-[2rem] bg-[#FAFAFA] p-6 sm:p-8">
+          <table className="w-full min-w-[32rem] border-collapse text-start text-[14px]">
+            <thead>
+              <tr className="text-[#6B6F76]">
+                <th className="pb-3 font-medium">Plan</th>
+                <th className="pb-3 font-medium">Price</th>
+                <th className="pb-3 font-medium">Volume</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(t.raw('emailPricing.rows') as Array<{ plan: string; price: string; volume: string }>).map(
+                (row) => (
+                  <tr key={row.plan} className="border-t border-[#ECECEC]">
+                    <td className="py-3 font-medium text-[#1D1D1D]">{row.plan}</td>
+                    <td className="py-3 text-[#1D1D1D]">{row.price}</td>
+                    <td className="py-3 text-[#6B6F76]">{row.volume}</td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href={`${siteUrls.developers}/pricing/compare-resend`} className={agLayout.btnSecondary}>
+              {t('emailPricing.compareCta')}
+            </a>
+            <a href={`${siteUrls.developers}/pricing`} className={agLayout.btnPrimary}>
+              {t('emailPricing.portalCta')}
+            </a>
+          </div>
         </div>
       </section>
     </div>

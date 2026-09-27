@@ -1,7 +1,10 @@
 'use client';
 
+import { FileText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { PublicProfileForm } from './types';
-import { PublicFormCard } from './public-form-card';
+import { ProfileLinkChevron } from './profile-platform-icon';
+import { linkCardClass } from './profile-link-button';
 
 interface ProfileFormsSectionProps {
   forms: PublicProfileForm[];
@@ -11,13 +14,56 @@ interface ProfileFormsSectionProps {
   emptyMessage?: string;
 }
 
+function FormLinkCard({
+  form,
+  preview,
+}: {
+  form: PublicProfileForm;
+  preview?: boolean;
+}) {
+  const className = linkCardClass(preview);
+
+  const content = (
+    <>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--profile-accent-soft)] ring-1 ring-[var(--border)]">
+        <FileText className="size-[1.15rem] text-[var(--primary)]" />
+      </div>
+      <div className="min-w-0 flex-1 text-start">
+        <p className="truncate font-semibold text-[var(--foreground)]">{form.title}</p>
+        {form.description ? (
+          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--muted-foreground)]">
+            {form.description}
+          </p>
+        ) : null}
+      </div>
+      <ProfileLinkChevron />
+    </>
+  );
+
+  if (preview) {
+    return (
+      <div className={className} aria-label={form.title}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <a href={`/f/${form.slug}`} className={className} aria-label={form.title}>
+      {content}
+    </a>
+  );
+}
+
 export function ProfileFormsSection({
   forms,
   preview,
-  showHeading = false,
-  heading = 'النماذج',
+  showHeading = true,
+  heading,
   emptyMessage,
 }: ProfileFormsSectionProps) {
+  const t = useTranslations('publicProfile.sections');
+  const resolvedHeading = heading ?? t('forms');
   if (forms.length === 0) {
     if (!emptyMessage) return null;
     return (
@@ -28,15 +74,15 @@ export function ProfileFormsSection({
   }
 
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-2.5" aria-label={resolvedHeading}>
       {showHeading ? (
         <p className="px-1 text-center text-[11px] font-bold tracking-wide text-[var(--muted-foreground)]">
-          {heading}
+          {resolvedHeading}
         </p>
       ) : null}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+      <div className="flex flex-col gap-2.5">
         {forms.map((form) => (
-          <PublicFormCard key={form.id} form={form} preview={preview} />
+          <FormLinkCard key={form.id} form={form} preview={preview} />
         ))}
       </div>
     </section>

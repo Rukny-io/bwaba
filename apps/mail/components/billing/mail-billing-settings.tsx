@@ -19,6 +19,7 @@ import {
   mailPlanMonthlyTotal,
   type MailPlanId,
 } from "@/lib/mail-plans";
+import { resolveDeveloperUrl } from "@rukny/auth/client/env-urls";
 import {
   fetchMailPlans,
   fetchMailSubscription,
@@ -81,6 +82,7 @@ export function MailPlanSettingsSection() {
     available: false,
     status: "unavailable",
   });
+  const [unifiedBillingOnly, setUnifiedBillingOnly] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<MailPlanId>("standard");
   const [seats, setSeats] = useState(3);
 
@@ -100,6 +102,7 @@ export function MailPlanSettingsSection() {
         plan.limits?.mailboxesIncluded ?? getMailPlan(plan.id).limits.mailboxesIncluded,
     }));
     setPlans(nextPlans);
+    setUnifiedBillingOnly(Boolean(plansData.unifiedBillingOnly));
     setCardPayments(plansData.cardPayments);
     setNeedsApp(current.needsApp);
     setAppName(current.app?.name ?? null);
@@ -343,6 +346,21 @@ export function MailPlanSettingsSection() {
         />
       ) : null}
 
+      {unifiedBillingOnly && !needsApp ? (
+        <BillingPanel className="flex min-w-0 flex-col gap-3">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Upgrade your account plan in the developer portal. The same subscription
+            covers hosted mailboxes and Email API sends.
+          </p>
+          <a
+            href={`${resolveDeveloperUrl()}/apps`}
+            className="inline-flex h-10 w-fit items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)]"
+          >
+            Open developer portal
+          </a>
+        </BillingPanel>
+      ) : null}
+
       {pendingRequest ? (
         <BillingNotice
           tone="warning"
@@ -355,7 +373,7 @@ export function MailPlanSettingsSection() {
         />
       ) : null}
 
-      {!needsApp && canManageBilling && plans.length > 0 ? (
+      {!needsApp && canManageBilling && plans.length > 0 && !unifiedBillingOnly ? (
         <BillingPanel className="flex min-w-0 flex-col gap-4">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--foreground)]">

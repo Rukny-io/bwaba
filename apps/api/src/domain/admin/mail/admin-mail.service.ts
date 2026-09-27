@@ -53,6 +53,7 @@ const APP_LIST_SELECT = {
   createdAt: true,
   updatedAt: true,
   user: { select: OWNER_SELECT },
+  linkedDeveloperAppId: true,
   subscription: {
     select: {
       plan: true,
@@ -615,6 +616,18 @@ export class AdminMailService {
         ? storageQuotaBytes(app.subscription.plan, app.subscription.mailboxCount)
         : 0;
 
+    const unifiedEntitlement = app.linkedDeveloperAppId
+      ? await this.prisma.developerEmailEntitlement.findUnique({
+          where: { developerAppId: app.linkedDeveloperAppId },
+          select: {
+            plan: true,
+            subscriptionStatus: true,
+            monthlyQuota: true,
+            periodEndsAt: true,
+          },
+        })
+      : null;
+
     return {
       ...this.mapAppListItem(app, usedBytes),
       contactEmail: app.contactEmail,
@@ -623,6 +636,15 @@ export class AdminMailService {
       slotIndex: app.slotIndex,
       userId: app.userId,
       updatedAt: app.updatedAt.toISOString(),
+      linkedDeveloperAppId: app.linkedDeveloperAppId,
+      unifiedEmailPlan: unifiedEntitlement
+        ? {
+            plan: unifiedEntitlement.plan,
+            status: unifiedEntitlement.subscriptionStatus,
+            monthlyQuota: unifiedEntitlement.monthlyQuota,
+            periodEndsAt: unifiedEntitlement.periodEndsAt?.toISOString() ?? null,
+          }
+        : null,
       subscription: app.subscription
         ? {
             plan: app.subscription.plan,

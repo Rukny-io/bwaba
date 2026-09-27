@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import S3Service from '../../services/s3.service';
 import { getStaticStoreCategory } from './store-category-catalog';
 import { normalizeStoreCategorySlug } from './store-category-slugs';
+import { resolveMediaProxyUrl } from '../../core/common/utils/media-path.util';
 
 @Injectable()
 export class StoresService {
@@ -832,11 +833,14 @@ export class StoresService {
         orderBy: { createdAt: 'desc' },
         include: {
           product_images: {
-            select: { imagePath: true },
+            select: { imagePath: true, createdAt: true },
             orderBy: { displayOrder: 'asc' },
           },
           product_categories: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, nameAr: true },
+          },
+          productAttributes: {
+            select: { key: true, value: true, valueAr: true },
           },
           variants: {
             where: { isActive: true },
@@ -856,36 +860,25 @@ export class StoresService {
       this.prisma.products.count({ where }),
     ]);
 
-    // تحويل الصور إلى presigned URLs
-    const formattedProducts = await Promise.all(
-      products.map(async (product) => {
-        const images = await Promise.all(
-          product.product_images.map(async (img) => {
-            let url = img.imagePath;
-            // إذا لم يكن رابط كامل، نحوله إلى presigned URL
-            if (!img.imagePath.startsWith('http')) {
-              try {
-                url = await this.s3Service.getPresignedGetUrl(
-                  this.bucket,
-                  img.imagePath,
-                  3600,
-                );
-              } catch (error) {
-                this.logger.warn(
-                  `Failed to generate presigned URL for ${img.imagePath}`,
-                );
-                // Fallback to public S3 URL
-                url = `https://${this.bucket}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${img.imagePath}`;
-              }
-            }
-            return url;
-          }),
-        );
+    const formattedProducts = products.map((product) => {
+        const images = product.product_images.map((img) => {
+          const base =
+            resolveMediaProxyUrl(img.imagePath) ?? img.imagePath;
+          if (!base || base.startsWith('http')) return base;
+          const version = img.createdAt
+            ? new Date(img.createdAt).getTime()
+            : NaN;
+          if (!Number.isFinite(version)) return base;
+          const separator = base.includes('?') ? '&' : '?';
+          return `${base}${separator}v=${version}`;
+        });
+
+        const category = product.product_categories;
 
         return {
           id: product.id,
-          name: product.name,
-          description: product.description,
+          name: product.nameAr?.trim() || product.name,
+          description: product.descriptionAr?.trim() || product.description,
           price: Number(product.price),
           salePrice: product.salePrice ? Number(product.salePrice) : null,
           currency: product.currency,
@@ -894,7 +887,15 @@ export class StoresService {
           sku: product.sku,
           isDigital: product.isDigital,
           images,
-          category: product.product_categories,
+          category: category
+            ? category.nameAr?.trim() || category.name
+            : null,
+          attributes: product.productAttributes
+            .map((attr) => ({
+              key: attr.key,
+              value: attr.valueAr?.trim() || attr.value,
+            }))
+            .filter((attr) => Boolean(attr.value?.trim())),
           hasVariants: product.variants.length > 0,
           variants: product.variants.map((v) => ({
             id: v.id,
@@ -903,11 +904,10 @@ export class StoresService {
             compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
             stock: v.stock,
             attributes: v.attributes,
-            imageUrl: v.imageUrl,
+            imageUrl: resolveMediaProxyUrl(v.imageUrl) ?? v.imageUrl,
           })),
         };
-      }),
-    );
+      });
 
     return {
       products: formattedProducts,

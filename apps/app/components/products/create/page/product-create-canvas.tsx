@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { CreateProductForm } from '@/components/products/create/create-product-form';
 import { CreateProductChrome } from '@/components/products/create/page/create-product-chrome';
@@ -21,6 +21,9 @@ interface ProductCreateCanvasProps {
 
 export function ProductCreateCanvas({ kind }: ProductCreateCanvasProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editProductId = searchParams.get('edit');
+  const isEditing = Boolean(editProductId);
   const catalogItem = getProductKindCatalogItem(kind);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,7 +36,15 @@ export function ProductCreateCanvas({ kind }: ProductCreateCanvasProps) {
       <ProductCreateToolbar
         backHref={PRODUCTS_CREATE_PATH}
         backLabel="نوع المنتج"
-        submitLabel={submitting ? 'جاري الإنشاء…' : 'إنشاء المنتج'}
+        submitLabel={
+          submitting
+            ? isEditing
+              ? 'جاري الحفظ…'
+              : 'جاري الإنشاء…'
+            : isEditing
+              ? 'حفظ التعديلات'
+              : 'إنشاء المنتج'
+        }
         submitFormId={PRODUCT_CREATE_FORM_ID}
         submitting={submitting}
         submitDisabled={submitting}
@@ -45,7 +56,8 @@ export function ProductCreateCanvas({ kind }: ProductCreateCanvasProps) {
           catalogItem={catalogItem}
           layout="page"
           formId={PRODUCT_CREATE_FORM_ID}
-          onBack={() => router.push(PRODUCTS_CREATE_PATH)}
+          productId={editProductId}
+          onBack={() => router.push(PRODUCTS_BASE_PATH)}
           onSubmittingChange={setSubmitting}
           onCreated={() => router.push(PRODUCTS_BASE_PATH)}
         />

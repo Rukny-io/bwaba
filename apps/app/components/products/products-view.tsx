@@ -7,8 +7,18 @@ import { ProductDetailSheet } from '@/components/products/product-detail-sheet';
 import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { ProductsToolbar } from '@/components/products/products-toolbar';
 import type { ProductsSortOption } from '@/components/products/products-view-mode';
-import { fetchStoreProducts, updateProductStatus } from '@/lib/products/api';
-import { PRODUCTS_CREATE_PATH } from '@/lib/products/paths';
+import {
+  deleteProduct,
+  fetchStoreProducts,
+  getProductDisplayName,
+  updateProductStatus,
+} from '@/lib/products/api';
+import {
+  readCachedStoreProducts,
+  writeCachedStoreProducts,
+} from '@/lib/products/products-cache';
+import { getProductCreateKindPath, PRODUCTS_CREATE_PATH } from '@/lib/products/paths';
+import { resolveProductKind } from '@/lib/products/product-display';
 import type { StoreProduct } from '@/lib/products/types';
 import { ApiException } from '@/lib/api-client';
 import { exportProductsToCsv } from '@/lib/products/export';
@@ -30,16 +40,39 @@ export function ProductsView() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const cached = readCachedStoreProducts();
+    if (cached.length > 0) {
+      setProducts(cached);
+    }
+  }, []);
+
   const loadProducts = useCallback(async () => {
     setError(null);
     try {
       const rows = await fetchStoreProducts();
       setProducts(rows);
+      writeCachedStoreProducts(rows);
     } catch (err) {
-      setError(
-        err instanceof ApiException ? err.message : 'تعذّر تحميل المنتجات',
-      );
-      setProducts([]);
+      const message =
+        err instanceof ApiException ? err.message : 'تعذّر تحميل المنتجات';
+      const cached = readCachedStoreProducts();
+
+      setProducts((current) => {
+        if (current.length > 0) return current;
+        if (cached.length > 0) return cached;
+        return [];
+      });
+
+      if (
+        cached.length > 0 &&
+        typeof navigator !== 'undefined' &&
+        !navigator.onLine
+      ) {
+        setError('أنت غير متصل — عرض آخر نسخة محفوظة');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -88,6 +121,48 @@ export function ProductsView() {
   const handleDetailOpenChange = useCallback((open: boolean) => {
     setDetailOpen(open);
   }, []);
+
+  const handleEdit = useCallback(
+    (product: StoreProduct) => {
+      setDetailOpen(false);
+      router.push(
+        `${getProductCreateKindPath(resolveProductKind(product))}?edit=${product.id}`,
+      );
+    },
+    [router],
+  );
+
+  const handleDelete = useCallback(async (product: StoreProduct) => {
+    const label = getProductDisplayName(product);
+    if (!window.confirm(`حذف «${label}»؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+      return;
+    }
+
+    setBusyId(product.id);
+    setActionError(null);
+
+    const previous = products;
+    const next = products.filter((row) => row.id !== product.id);
+    setProducts(next);
+    writeCachedStoreProducts(next);
+
+    if (detailProduct?.id === product.id) {
+      setDetailOpen(false);
+      setDetailProduct(null);
+    }
+
+    try {
+      await deleteProduct(product.id);
+    } catch (err) {
+      setProducts(previous);
+      writeCachedStoreProducts(previous);
+      setActionError(
+        err instanceof ApiException ? err.message : 'تعذّر حذف المنتج',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }, [products, detailProduct?.id]);
 
   const handleToggleVisibility = useCallback(async (product: StoreProduct) => {
     const previous = product.status;
@@ -185,13 +260,27 @@ export function ProductsView() {
           busyId={busyId}
           onOpenDetails={handleOpenDetails}
           onToggleVisibility={handleToggleVisibility}
+          onDelete={handleDelete}
         />
       )}
 
       <ProductDetailSheet
         product={detailProduct}
         isOpen={detailOpen}
+        isBusy={detailProduct ? busyId === detailProduct.id : false}
         onOpenChange={handleDetailOpenChange}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onProductUpdated={(updated) => {
+          setProducts((rows) => {
+            const next = rows.map((row) =>
+              row.id === updated.id ? updated : row,
+            );
+            writeCachedStoreProducts(next);
+            return next;
+          });
+          setDetailProduct(updated);
+        }}
       />
     </section>
   );
@@ -203,18 +292,20 @@ function ProductsGrid({
   busyId,
   onOpenDetails,
   onToggleVisibility,
+  onDelete,
 }: {
   products: StoreProduct[];
   sortBy: ProductsSortOption;
   busyId: string | null;
   onOpenDetails: (product: StoreProduct) => void;
   onToggleVisibility: (product: StoreProduct) => void;
+  onDelete: (product: StoreProduct) => void;
 }) {
   return (
     <div
       className={cn(
-        'product-grid-dnd grid gap-x-5 gap-y-7',
-        'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
+        'product-grid-dnd grid gap-x-3 gap-y-4 sm:gap-x-3.5 sm:gap-y-5',
+        'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
       )}
       aria-label="شبكة المنتجات"
       data-sort={sortBy}
@@ -230,6 +321,7 @@ function ProductsGrid({
             isBusy={busyId === product.id}
             onOpenDetails={onOpenDetails}
             onToggleVisibility={onToggleVisibility}
+            onDelete={onDelete}
           />
         </div>
       ))}
@@ -239,7 +331,7 @@ function ProductsGrid({
 
 function ProductsGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-2 sm:gap-x-3.5 sm:gap-y-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {Array.from({ length: 10 }).map((_, index) => (
         <ProductCardSkeleton key={index} />
       ))}

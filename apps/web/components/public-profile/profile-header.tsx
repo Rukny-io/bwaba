@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { BadgeCheck, Mail, Phone } from 'lucide-react';
-import { useMediaUrl } from './media-url-context';
+import { resolveAvatarUrl } from '@/lib/media-url';
 import type { PublicProfile, PublicSocialLink } from './types';
 import { cn } from './utils';
 
@@ -62,8 +63,8 @@ function resolvePublicContact(profile: PublicProfile): {
 }
 
 export function ProfileHeader({ profile, compact }: ProfileHeaderProps) {
-  const resolveMediaUrl = useMediaUrl();
-  const avatarUrl = resolveMediaUrl(profile.avatar);
+  const t = useTranslations('publicProfile.header');
+  const avatarUrl = resolveAvatarUrl(profile.avatar);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const displayName = profile.name?.trim() || profile.username;
   const showAvatar = Boolean(avatarUrl) && !avatarFailed;
@@ -110,7 +111,7 @@ export function ProfileHeader({ profile, compact }: ProfileHeaderProps) {
               'shrink-0 fill-sky-500 text-white',
               compact ? 'size-4' : 'size-5',
             )}
-            aria-label="موثّق"
+            aria-label={t('verified')}
           />
         ) : null}
       </div>

@@ -14,6 +14,7 @@ describe('MailOutboundUsageService', () => {
     };
   }) {
     const unifiedEntitlement = {
+      getOutboundUsageForMailApp: jest.fn().mockResolvedValue(null),
       reserveOutbound: jest.fn().mockResolvedValue(null),
     };
     return new MailOutboundUsageService(prisma as never, unifiedEntitlement as never);
@@ -109,6 +110,44 @@ describe('MailOutboundUsageService', () => {
       status: HttpStatus.PAYMENT_REQUIRED,
     } as Partial<HttpException>);
     expect(prisma.mailSubscription.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('getUsageForMailApp prefers unified entitlement when present', async () => {
+    const prisma = {
+      mailSubscription: {
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    const unifiedEntitlement = {
+      getOutboundUsageForMailApp: jest.fn().mockResolvedValue({
+        planId: 'free',
+        planName: 'Free',
+        status: 'ACTIVE',
+        included: 3000,
+        used: 120,
+        packCredits: 0,
+        allowance: 3000,
+        remaining: 2880,
+        percentUsed: 4,
+        periodStart: '2026-09-01T00:00:00.000Z',
+        periodEnd: '2026-10-01T00:00:00.000Z',
+      }),
+      reserveOutbound: jest.fn(),
+    };
+    const service = new MailOutboundUsageService(
+      prisma as never,
+      unifiedEntitlement as never,
+    );
+    const usage = await service.getUsageForMailApp(mailAppUuid);
+    expect(usage).toMatchObject({
+      unified: true,
+      included: 3000,
+      used: 120,
+      packsAvailable: false,
+    });
+    expect(prisma.mailSubscription.findUnique).not.toHaveBeenCalled();
   });
 
   it('creditPackEmails increments pack credits', async () => {

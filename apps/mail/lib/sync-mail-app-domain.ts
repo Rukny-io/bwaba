@@ -6,6 +6,7 @@ export type NestMailDomainStatus = MailDomainStatus | "NONE";
 export type SyncMailAppDomainResult = {
   needsCheckout?: boolean;
   checkoutUrl?: string;
+  activated?: boolean;
   checkoutSessionId?: string;
 };
 
@@ -21,6 +22,7 @@ export async function syncMailAppDomainToNest(
     needsCheckout?: boolean;
     checkoutUrl?: string;
     checkoutSessionId?: string;
+    activated?: boolean;
   }>(`/mail/apps/${encodeURIComponent(appId)}`, {
     method: "PATCH",
     body: JSON.stringify({
@@ -45,6 +47,7 @@ export async function syncMailAppDomainToNest(
       typeof result.data.checkoutSessionId === "string"
         ? result.data.checkoutSessionId
         : undefined,
+    activated: Boolean(result.data.activated),
   };
 }
 

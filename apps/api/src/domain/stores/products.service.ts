@@ -23,6 +23,8 @@ import { nanoid } from 'nanoid';
 import { CacheManager } from '../../core/cache/cache.manager';
 import S3Service from '../../services/s3.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { resolveMediaProxyUrl } from '../../core/common/utils/media-path.util';
+import { invalidateMyProductsCache } from './products-cache.util';
 
 @Injectable()
 export class ProductsService {
@@ -195,14 +197,11 @@ export class ProductsService {
       return newProduct;
     });
 
-    // Invalidate dashboard cache for store owner
-    try {
-      if (store && store.userId) {
-        await this.redisService.del(`dashboard:stats:${store.userId}`);
-      }
-    } catch (err) {
-      this.logger.warn(
-        'Redis del error (product create): ' + (err?.message || err),
+    if (store?.userId) {
+      await invalidateMyProductsCache(
+        this.redisService,
+        store.userId,
+        this.logger,
       );
     }
 
@@ -286,14 +285,10 @@ export class ProductsService {
   private async resolveProductImageUrls<
     T extends { product_images: { imagePath: string }[] },
   >(product: T): Promise<T> {
-    const imagesWithUrls = product.product_images.map((img) => {
-      let url = img.imagePath;
-      if (!img.imagePath.startsWith('http')) {
-        // Use stable proxy URL instead of expiring presigned URL
-        url = `/api/media/${img.imagePath}`;
-      }
-      return { ...img, imagePath: url };
-    });
+    const imagesWithUrls = product.product_images.map((img) => ({
+      ...img,
+      imagePath: resolveMediaProxyUrl(img.imagePath) ?? img.imagePath,
+    }));
     return { ...product, product_images: imagesWithUrls };
   }
 
@@ -534,16 +529,9 @@ export class ProductsService {
       }
     }
 
-    // Invalidate dashboard cache for store owner
-    try {
-      const ownerId = updatedProduct.stores?.userId;
-      if (ownerId) {
-        await this.redisService.del(`dashboard:stats:${ownerId}`);
-      }
-    } catch (err) {
-      this.logger.warn(
-        'Redis del error (product update): ' + (err?.message || err),
-      );
+    const ownerId = updatedProduct.stores?.userId;
+    if (ownerId) {
+      await invalidateMyProductsCache(this.redisService, ownerId, this.logger);
     }
 
     return this.findOne(id, userId);
@@ -609,21 +597,9 @@ export class ProductsService {
       this.logger.log(`Hard-deleted product ${id}`);
     }
 
-    // Invalidate caches for store owner
-    try {
-      const ownerId = product.stores?.userId;
-      if (ownerId) {
-        await this.redisService.del(`dashboard:stats:${ownerId}`);
-        // Invalidate products cache
-        const keys = await this.redisService.keys(`products:my:${ownerId}:*`);
-        for (const key of keys) {
-          await this.redisService.del(key);
-        }
-      }
-    } catch (err) {
-      this.logger.warn(
-        'Redis del error (product delete): ' + (err?.message || err),
-      );
+    const ownerId = product.stores?.userId;
+    if (ownerId) {
+      await invalidateMyProductsCache(this.redisService, ownerId, this.logger);
     }
 
     return { message: 'Product deleted successfully' };

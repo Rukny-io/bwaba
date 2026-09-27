@@ -7,6 +7,7 @@ import {
   BillingPanel,
   BillingSection,
 } from "@/components/billing/billing-ui";
+import { resolveDeveloperUrl } from "@rukny/auth/client/env-urls";
 import { startMailOutboundPackCheckout } from "@/lib/mail-checkout";
 import { formatMailIqD } from "@/lib/mail-plans";
 import {
@@ -79,8 +80,8 @@ export function MailUsageSection() {
       >
         <BillingNotice
           tone="info"
-          title="No active plan"
-          description="Activate a Mail plan to track outbound usage."
+          title="No usage data"
+          description="Verify DNS to activate your workspace and start tracking email usage."
         />
         {error ? (
           <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>
@@ -94,7 +95,11 @@ export function MailUsageSection() {
   return (
     <BillingSection
       title="Usage"
-      description="Outbound emails sent this billing period (per recipient)."
+      description={
+        usage.unified
+          ? "Email sends from mailboxes and API share one account quota."
+          : "Outbound emails sent this billing period (per recipient)."
+      }
     >
       {error ? (
         <BillingNotice tone="danger" title="Usage" description={error} />
@@ -155,7 +160,23 @@ export function MailUsageSection() {
         />
       ) : null}
 
-      {usage.packsAvailable && packPrice != null ? (
+      {usage.unified ? (
+        <div className="rounded-2xl bg-[var(--surface-secondary)] px-4 py-3.5">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {usage.planName
+              ? `${usage.planName} plan`
+              : "Unified Email API plan"}
+            . Buy overage packs or upgrade in the developer portal when you need
+            more volume.
+          </p>
+          <a
+            href={`${resolveDeveloperUrl()}/apps`}
+            className="mt-3 inline-flex text-sm font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+          >
+            Open developer portal
+          </a>
+        </div>
+      ) : usage.packsAvailable && packPrice != null ? (
         <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface-secondary)] px-4 py-3.5">
           <div>
             <p className="text-sm font-medium text-[var(--foreground)]">

@@ -11,6 +11,8 @@ export interface SecurityHeadersOptions {
   apiConnectOrigins?: string[];
   /** Per-request nonce for script-src (production) */
   nonce?: string;
+  /** Skip nonce (Next.js/Turbopack apps that cannot tag every script yet) */
+  disableNonce?: boolean;
   /**
    * Extra origins allowed in frame-src (e.g. public profile preview iframe).
    */
@@ -35,7 +37,7 @@ export function generateCspNonce(): string {
 
 /**
  * Baseline security headers for Forms / Public Next.js apps.
- * With `nonce`, production script-src uses nonce + strict-dynamic (no unsafe-inline).
+ * With `nonce`, production script-src includes nonce + unsafe-inline (no strict-dynamic).
  */
 export function buildAppSecurityHeaders(
   options: SecurityHeadersOptions = {},
@@ -54,9 +56,11 @@ export function buildAppSecurityHeaders(
 
   const scriptSrc = [
     "'self'",
-    ...(useNonce
-      ? [`'nonce-${nonce}'`, "'strict-dynamic'"]
-      : ["'unsafe-inline'"]),
+    ...(useNonce ? [`'nonce-${nonce}'`] : []),
+    // Next.js App Router may emit same-origin chunks without a nonce (Turbopack
+    // boundary scripts). Do not use strict-dynamic — it disables 'self' and
+    // blocks those scripts on full page loads.
+    "'unsafe-inline'",
     ...(isDev ? ["'unsafe-eval'"] : []),
     ...(allowTurnstile ? ['https://challenges.cloudflare.com'] : []),
   ];

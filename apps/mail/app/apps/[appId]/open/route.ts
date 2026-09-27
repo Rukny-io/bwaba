@@ -107,9 +107,13 @@ export async function GET(request: Request, ctx: RouteCtx) {
   // Check active subscription — required before console tools after DNS.
   const subResult = await apiFetchJson<{
     subscription?: { status?: string } | null;
+    hasWorkspaceAccess?: boolean;
+    unifiedLimits?: { mailboxCount: number } | null;
   }>(`/mail/apps/${encodeURIComponent(appId)}/subscription`);
   const hasActivePlan =
-    subResult.ok && subResult.data.subscription?.status === "ACTIVE";
+    subResult.ok &&
+    (Boolean(subResult.data.hasWorkspaceAccess) ||
+      subResult.data.subscription?.status === "ACTIVE");
 
   // Always land on mailboxes overview (/app), never inbox.
   const landing = `/u${slotIndex}/app`;

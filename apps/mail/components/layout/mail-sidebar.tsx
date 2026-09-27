@@ -164,9 +164,11 @@ export function MailSidebar() {
       try {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
-        const planId = snap.subscription?.planId;
-        const consoleSeats = snap.subscription?.limits?.consoleMembersIncluded ?? 0;
-        setTeamSupported(planId !== "starter" && consoleSeats > 0);
+        const consoleSeats =
+          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
+          snap.subscription?.limits?.consoleMembersIncluded ??
+          0;
+        setTeamSupported(consoleSeats > 0);
       } catch {
         if (!cancelled) setTeamSupported(true);
       }

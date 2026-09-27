@@ -1144,7 +1144,7 @@ export function MailTeamPage() {
                 <MailNotice
                   status="warning"
                   title="Invites locked"
-                  description="Upgrade to Standard or Premium to invite teammates."
+                  description="Upgrade to PRO_25K or higher in the developer portal to invite teammates."
                   action={{
                     label: "View plans",
                     onPress: () => router.push("/pricing"),

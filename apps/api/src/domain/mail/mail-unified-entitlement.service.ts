@@ -403,6 +403,67 @@ export class MailUnifiedEntitlementService {
     };
   }
 
+  async getOutboundUsageForMailApp(mailAppUuid: string) {
+    const link = await this.resolveLinkedEntitlement(mailAppUuid);
+    if (!link) return null;
+
+    const summary = await this.emailEntitlements.getSummary(
+      link.mailApp.userId,
+      link.entitlement.developerAppId,
+    );
+    const planDef = getEmailApiPlan(link.entitlement.plan);
+    const subscriptionActive =
+      link.entitlement.subscriptionStatus ===
+        DeveloperEmailSubscriptionStatus.ACTIVE &&
+      (!link.entitlement.periodEndsAt ||
+        link.entitlement.periodEndsAt > new Date());
+    const isFree = link.entitlement.plan === DeveloperEmailPlan.FREE;
+
+    let used: number;
+    let included: number;
+    let packCredits: number;
+    let remaining: number;
+    let periodEnd: string | null;
+    let status: string;
+
+    if (isFree || !subscriptionActive) {
+      used = summary.free.used;
+      included = summary.free.quota;
+      packCredits = 0;
+      remaining = summary.free.remaining;
+      periodEnd = summary.free.periodEndsAt;
+      status = 'active';
+    } else {
+      used = summary.subscription.used;
+      included = summary.subscription.quota;
+      packCredits = summary.subscription.packCredits;
+      remaining = summary.subscription.remaining;
+      periodEnd = summary.subscription.periodEndsAt;
+      status = summary.subscription.status;
+    }
+
+    const allowance = included + packCredits;
+    const percentUsed =
+      allowance > 0
+        ? Math.min(100, Math.round((used / allowance) * 1000) / 10)
+        : 0;
+
+    return {
+      planId: planDef.slug,
+      planName: planDef.marketingNameEn,
+      status,
+      included,
+      used,
+      packCredits,
+      allowance,
+      remaining,
+      percentUsed,
+      periodStart: link.entitlement.periodStartsAt?.toISOString() ?? null,
+      periodEnd,
+      unified: true as const,
+    };
+  }
+
   async reserveOutbound(
     mailAppUuid: string,
     count: number,

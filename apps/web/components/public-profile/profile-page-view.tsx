@@ -1,14 +1,25 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { FileText, Home, Link2 } from 'lucide-react';
+import './profile-themes.css';
+import './profile-product-dialog.css';
+import { Link2, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { MediaUrlProvider } from './media-url-context';
 import { getProfileThemeClass } from './profile-themes';
-import type { MediaUrlResolver, PublicProfile, PublicProfileForm, PublicSocialLink } from './types';
+import type {
+  MediaUrlResolver,
+  PublicProfile,
+  PublicProfileForm,
+  PublicProfileProduct,
+  PublicSocialLink,
+} from './types';
+import { resolveProfileMediaUrl } from '@/lib/media-url';
 import { cn } from './utils';
 import { ProfileFormsSection } from './profile-forms-section';
 import { ProfileHeader } from './profile-header';
+import { ProfileLanguageSwitcher } from './profile-language-switcher';
 import { ProfileLinkButton } from './profile-link-button';
+import { ProfileProductsSection } from './profile-products-section';
 import { InstagramRichLink } from './instagram-rich-link';
 import { SocialProfileCard } from './social-profile-card';
 
@@ -24,12 +35,9 @@ function isInstagramMediaGrid(link: PublicSocialLink): boolean {
   return link.platform === 'instagram' && link.layout === 'media_grid';
 }
 
-/** Home showcase: profile cards + Instagram posts grid */
 function isHomeShowcaseLink(link: PublicSocialLink): boolean {
   return isProfileCard(link) || isInstagramMediaGrid(link);
 }
-
-type ProfileTab = 'home' | 'links' | 'forms';
 
 type LinkRow =
   | { type: 'cards'; links: PublicSocialLink[] }
@@ -56,6 +64,17 @@ function groupProfileCards(links: PublicSocialLink[]): LinkRow[] {
   flushCards();
 
   return rows;
+}
+
+function formSlugFromLink(link: PublicSocialLink): string | null {
+  if (link.username) return link.username;
+  try {
+    const url = new URL(link.url);
+    const match = url.pathname.match(/\/f\/([a-z0-9]{6})$/i);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function renderLinkItem(
@@ -107,52 +126,12 @@ function renderLinkItem(
   );
 }
 
-function pickFeaturedForms(
-  forms: PublicProfileForm[],
-  featured: PublicProfileForm | null | undefined,
-  limit = 4,
-): PublicProfileForm[] {
-  if (forms.length === 0) return [];
-  const ordered: PublicProfileForm[] = [];
-  const seen = new Set<string>();
-
-  if (featured) {
-    ordered.push(featured);
-    seen.add(featured.id);
-  }
-
-  for (const form of forms) {
-    if (seen.has(form.id)) continue;
-    if (form.coverImage) {
-      ordered.push(form);
-      seen.add(form.id);
-    }
-    if (ordered.length >= limit) return ordered;
-  }
-
-  for (const form of forms) {
-    if (seen.has(form.id)) continue;
-    ordered.push(form);
-    seen.add(form.id);
-    if (ordered.length >= limit) break;
-  }
-
-  return ordered;
-}
-
-function EmptyTab({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="px-4 py-12 text-center">
-      <p className="text-sm font-semibold text-[var(--foreground)]">{title}</p>
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{hint}</p>
-    </div>
-  );
-}
-
 export interface ProfilePageViewProps {
   profile: PublicProfile;
   forms?: PublicProfileForm[];
-  featuredForm?: PublicProfileForm | null;
+  products?: PublicProfileProduct[];
+  /** يفتح حوار تفاصيل المنتج عند ?product=id */
+  initialProductId?: string | null;
   preview?: boolean;
   /** @deprecated Prefer `constrained` for phone preview */
   embedded?: boolean;
@@ -165,41 +144,47 @@ export interface ProfilePageViewProps {
 export function ProfilePageView({
   profile,
   forms = [],
-  featuredForm = null,
+  products = [],
+  initialProductId = null,
   preview = false,
   embedded = false,
   constrained = false,
   fillHeight = false,
-  resolveMediaUrl = (path) => path ?? null,
+  resolveMediaUrl = resolveProfileMediaUrl,
   onTrackClick,
 }: ProfilePageViewProps) {
+  const t = useTranslations('publicProfile');
   const themeClass = getProfileThemeClass(profile.themeKey);
   const usePublicLayout = !embedded || constrained;
   const links = [...profile.socialLinks].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  const homeLinks = links.filter(isHomeShowcaseLink);
+  const showcaseLinks = links.filter(isHomeShowcaseLink);
   const listLinks = links.filter(
     (l) => !isHomeShowcaseLink(l) && !isFormLink(l.platform),
   );
-  const homeCardRows = groupProfileCards(homeLinks.filter(isProfileCard));
-  const homeMediaGrids = homeLinks.filter(isInstagramMediaGrid);
-  const featuredForms = pickFeaturedForms(forms, featuredForm, 4);
+  const showcaseCardRows = groupProfileCards(showcaseLinks.filter(isProfileCard));
+  const showcaseMediaGrids = showcaseLinks.filter(isInstagramMediaGrid);
 
-  const hasHome =
-    homeCardRows.length > 0 || homeMediaGrids.length > 0 || featuredForms.length > 0;
-  const hasLinks = listLinks.length > 0;
-  const hasForms = forms.length > 0;
-  const isEmpty = !hasHome && !hasLinks && !hasForms;
+  const linkedFormSlugs = new Set(
+    links
+      .filter((l) => isFormLink(l.platform))
+      .map(formSlugFromLink)
+      .filter((slug): slug is string => Boolean(slug)),
+  );
+  const profileForms = forms.filter((form) => !linkedFormSlugs.has(form.slug));
 
-  const defaultTab: ProfileTab = hasHome ? 'home' : hasLinks ? 'links' : 'forms';
-  const [tab, setTab] = useState<ProfileTab>(defaultTab);
-  const showTabs = !isEmpty;
+  const hasContent =
+    listLinks.length > 0 ||
+    showcaseCardRows.length > 0 ||
+    showcaseMediaGrids.length > 0 ||
+    products.length > 0 ||
+    profileForms.length > 0;
 
-  const tabs: Array<{ id: ProfileTab; label: string; icon: typeof Home }> = [
-    { id: 'home', label: 'الرئيسية', icon: Home },
-    { id: 'links', label: 'الروابط', icon: Link2 },
-    { id: 'forms', label: 'النماذج', icon: FileText },
-  ];
+  const productsCompact = constrained || preview;
+  const pageColumnClass = cn(
+    'mx-auto w-full space-y-6',
+    usePublicLayout ? 'max-w-lg px-4 sm:max-w-xl sm:px-5' : 'max-w-md px-3',
+  );
 
   return (
     <MediaUrlProvider resolve={resolveMediaUrl}>
@@ -216,126 +201,89 @@ export function ProfilePageView({
             : 'min-h-screen',
         )}
       >
-        <div
-          className={cn(
-            'relative z-[1] mx-auto w-full',
-            usePublicLayout ? 'max-w-md px-4 pb-12' : 'max-w-md px-3 pb-8',
-          )}
-        >
-          <ProfileHeader profile={profile} compact={embedded && !constrained} />
-
-          {showTabs ? (
-            <nav
-              className="mt-6 flex items-center justify-center gap-2"
-              aria-label="أقسام الصفحة"
-            >
-              {tabs.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={cn(
-                    'profile-tab-pill',
-                    tab === id ? 'profile-tab-pill-active' : 'profile-tab-pill-idle',
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {label}
-                </button>
-              ))}
-            </nav>
+        <div className={cn('relative z-[1] pb-12 pt-1', pageColumnClass)}>
+          {usePublicLayout && !preview && !constrained ? (
+            <div className="absolute top-1 end-0 z-20 sm:top-2">
+              <ProfileLanguageSwitcher variant="compact" />
+            </div>
           ) : null}
 
-          <div className={cn('space-y-3', showTabs ? 'mt-4' : 'mt-6')}>
-            {showTabs && tab === 'home' ? (
-              hasHome ? (
-                <div className="space-y-3" aria-label="الرئيسية">
-                  {homeCardRows.length > 0 ? (
-                    <section className="space-y-2" aria-label="البطاقات التعريفية">
-                      {homeCardRows.map((row) =>
-                        row.type === 'cards' ? (
-                          <div
-                            key={`cards-${row.links.map((l) => l.id).join('-')}`}
-                            className="grid grid-cols-2 gap-2"
-                          >
-                            {row.links.map((link) =>
-                              renderLinkItem(link, { preview, onTrackClick }),
-                            )}
-                          </div>
-                        ) : (
-                          <div key={row.link.id}>
-                            {renderLinkItem(row.link, { preview, onTrackClick })}
-                          </div>
-                        ),
-                      )}
-                    </section>
-                  ) : null}
+          <ProfileHeader profile={profile} compact={embedded && !constrained} />
 
-                  {homeMediaGrids.length > 0 ? (
-                    <section className="space-y-2" aria-label="منشورات إنستغرام">
-                      {homeMediaGrids.map((link) =>
-                        renderLinkItem(link, { preview, onTrackClick }),
-                      )}
-                    </section>
-                  ) : null}
-
-                  {featuredForms.length > 0 ? (
-                    <ProfileFormsSection
-                      forms={featuredForms}
-                      preview={preview}
-                      showHeading
-                      heading="نماذج مميزة"
-                    />
-                  ) : null}
+          {listLinks.length > 0 ? (
+            <section className="space-y-2.5" aria-label={t('sections.links')}>
+              {listLinks.map((link) => (
+                <div key={link.id}>
+                  {renderLinkItem(link, { preview, onTrackClick })}
                 </div>
-              ) : (
-                <EmptyTab
-                  title="لا يوجد محتوى بعد"
-                  hint="أضف بطاقة تعريف أو نموذجاً للصفحة الرئيسية"
-                />
-              )
-            ) : null}
+              ))}
+            </section>
+          ) : null}
 
-            {showTabs && tab === 'links' ? (
-              hasLinks ? (
-                <section className="space-y-2" aria-label="الروابط">
-                  {listLinks.map((link) => (
-                    <div key={link.id}>{renderLinkItem(link, { preview, onTrackClick })}</div>
-                  ))}
-                </section>
-              ) : (
-                <EmptyTab title="لا توجد روابط" hint="أضف روابطك من لوحة التحكم" />
-              )
-            ) : null}
+          {showcaseCardRows.length > 0 ? (
+            <section className="space-y-2" aria-label={t('sections.profileCards')}>
+              {showcaseCardRows.map((row) =>
+                row.type === 'cards' ? (
+                  <div
+                    key={`cards-${row.links.map((l) => l.id).join('-')}`}
+                    className="grid grid-cols-2 gap-2.5 sm:gap-3"
+                  >
+                    {row.links.map((link) =>
+                      renderLinkItem(link, { preview, onTrackClick }),
+                    )}
+                  </div>
+                ) : (
+                  <div key={row.link.id}>
+                    {renderLinkItem(row.link, { preview, onTrackClick })}
+                  </div>
+                ),
+              )}
+            </section>
+          ) : null}
 
-            {showTabs && tab === 'forms' ? (
-              hasForms ? (
-                <ProfileFormsSection forms={forms} preview={preview} />
-              ) : (
-                <EmptyTab title="لا توجد نماذج" hint="انشر نموذجاً ليظهر هنا" />
-              )
-            ) : null}
+          {showcaseMediaGrids.length > 0 ? (
+            <section className="space-y-2" aria-label={t('sections.instagramPosts')}>
+              {showcaseMediaGrids.map((link) =>
+                renderLinkItem(link, { preview, onTrackClick }),
+              )}
+            </section>
+          ) : null}
 
-            {isEmpty ? (
-              <div className="px-4 py-14 text-center">
-                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
-                  <Link2 className="size-5" />
-                </div>
-                <p className="text-sm font-semibold text-[var(--foreground)]">لا توجد روابط بعد</p>
-                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                  ستظهر روابطك ونماذجك هنا
-                </p>
+          {products.length > 0 ? (
+            <ProfileProductsSection
+              products={products}
+              storeSlug={profile.username}
+              storeName={profile.name}
+              storeAvatar={profile.avatar}
+              initialProductId={initialProductId}
+              preview={preview}
+              compact={productsCompact}
+            />
+          ) : null}
+
+          {!hasContent ? (
+            <div className="rounded-2xl bg-[var(--surface)]/60 px-6 py-12 text-center ring-1 ring-[var(--border)]">
+              <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--profile-accent-soft)] text-[var(--primary)]">
+                <Link2 className="size-5" />
               </div>
-            ) : null}
-          </div>
+              <p className="text-sm font-medium text-[var(--foreground)]">{t('empty.title')}</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                {t('empty.description')}
+              </p>
+            </div>
+          ) : null}
+
+          {profileForms.length > 0 ? (
+            <ProfileFormsSection forms={profileForms} preview={preview} />
+          ) : null}
 
           {usePublicLayout && !preview && !constrained ? (
-            <footer className="mt-12 text-center">
+            <footer className="pt-2 text-center">
               <a
                 href="/"
                 className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-4 py-2 text-[11px] font-semibold text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
               >
-                أنشئ صفحتك على ركني
+                {t('footer.createPage')}
               </a>
             </footer>
           ) : null}

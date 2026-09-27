@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { connection } from "next/server";
 import { thmanyahSans } from "@rukny/thmanyah-font/next";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -22,11 +23,13 @@ export const metadata: Metadata = {
 
 const themeBootScript = `(function(){try{var t=localStorage.getItem('heroui-theme')||'light';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await connection();
+
   return (
     <html
       lang="en"

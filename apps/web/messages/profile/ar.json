@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "notFoundTitle": "الملف غير موجود",
+    "descriptionFallback": "صفحة {username} على ركني"
+  },
+  "sections": {
+    "links": "الروابط",
+    "profileCards": "البطاقات التعريفية",
+    "instagramPosts": "منشورات إنستغرام",
+    "products": "المنتجات",
+    "productsGrid": "شبكة المنتجات",
+    "forms": "النماذج"
+  },
+  "empty": {
+    "title": "لا يوجد محتوى بعد",
+    "description": "ستظهر روابطك ومنتجاتك ونماذجك هنا"
+  },
+  "footer": {
+    "createPage": "أنشئ صفحتك على ركني",
+    "language": "اللغة"
+  },
+  "header": {
+    "verified": "موثّق"
+  },
+  "forms": {
+    "open": "افتح",
+    "types": {
+      "CONTACT": "تواصل",
+      "SURVEY": "استبيان",
+      "REGISTRATION": "تسجيل",
+      "ORDER": "طلب",
+      "FEEDBACK": "ملاحظات",
+      "QUIZ": "اختبار",
+      "APPLICATION": "طلب التحاق",
+      "OTHER": "أخرى"
+    }
+  },
+  "instagram": {
+    "loadError": "تعذر تحميل بطاقة إنستغرام",
+    "openOnInstagram": "فتح على إنستغرام",
+    "follow": "متابعة",
+    "following": "يتابع",
+    "followers": "متابع",
+    "posts": "منشور"
+  },
+  "product": {
+    "currencyShort": "د.ع",
+    "currencyCode": "IQD",
+    "kind": {
+      "digital": "رقمي",
+      "physical": "مادي"
+    },
+    "stock": {
+      "outOfStock": "نفد المخزون",
+      "remaining": "{count} متبقي",
+      "inStock": "متوفر"
+    },
+    "attributes": {
+      "serviceType": "نوع الخدمة",
+      "duration": "المدة",
+      "deliveryMethod": "طريقة التقديم",
+      "brand": "العلامة التجارية",
+      "condition": "الحالة",
+      "warranty": "الضمان",
+      "model": "الموديل",
+      "material": "الخامة",
+      "gender": "الفئة",
+      "season": "الموسم",
+      "ingredients": "المكونات",
+      "weight": "الوزن",
+      "calories": "السعرات",
+      "allergens": "مسببات الحساسية"
+    },
+    "variants": {
+      "color": "اللون",
+      "size": "المقاس",
+      "flavour": "النكهة",
+      "flavor": "النكهة",
+      "fallback": "متغير",
+      "chooseOption": "اختر خياراً",
+      "chooseToContinue": "اختر متغيراً للمتابعة"
+    },
+    "dialog": {
+      "close": "إغلاق",
+      "imageAlt": "صورة {index}",
+      "category": "التصنيف:",
+      "noCategory": "لم يتم إضافته إلى أي تصنيف",
+      "sku": "رمز المنتج",
+      "saved": "وفّرت",
+      "shippingNote": "تُحسب تكلفة الشحن عند الدفع",
+      "description": "الوصف",
+      "productPage": "صفحة المنتج",
+      "copyLink": "نسخ الرابط",
+      "copied": "تم النسخ",
+      "copyLinkAriaCopied": "تم نسخ الرابط",
+      "copyLinkAria": "نسخ الرابط",
+      "outOfStock": "هذا المنتج غير متوفر حالياً",
+      "addToCart": "أضف إلى السلة",
+      "addToCartAria": "أضف {name} إلى السلة",
+      "cartTotal": "المبلغ الكلي",
+      "cartTitle": "سلة الطلب",
+      "cartItems": "{count} منتج",
+      "cartItems_plural": "{count} منتجات",
+      "proceedToCheckout": "عرض السلة",
+      "proceedToCheckoutAria": "إتمام شراء {count} منتج",
+      "quantity": "الكمية",
+      "decreaseQuantity": "تقليل الكمية",
+      "increaseQuantity": "زيادة الكمية",
+      "removeFromCart": "إزالة من السلة"
+    }
+  }
+}

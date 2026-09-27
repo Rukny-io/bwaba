@@ -4,6 +4,7 @@ import {
   SERVICE_TYPE_OPTIONS,
 } from '@/lib/products/types';
 import { getProductKindLabel } from '@/lib/products/api';
+import { formatDate, formatNumber } from '@/lib/dashboard-format';
 
 export interface ProductCategoryRef {
   id: string;
@@ -54,7 +55,7 @@ export function getProductStockDisplay(product: StoreProduct): ProductStockDispl
   }
 
   if (quantity <= 10) {
-    return { label: `${quantity} متبقي`, variant: 'low' };
+    return { label: `${formatNumber(quantity)} متبقي`, variant: 'low' };
   }
 
   return { label: 'غير محدود', variant: 'unlimited' };
@@ -114,13 +115,24 @@ export function formatProductDate(iso?: string | null): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('ar-IQ', { dateStyle: 'medium' }).format(date);
+  return formatDate(date);
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
   serviceType: 'نوع الخدمة',
   duration: 'المدة',
   deliveryMethod: 'طريقة التقديم',
+  brand: 'العلامة التجارية',
+  condition: 'الحالة',
+  warranty: 'الضمان',
+  model: 'الموديل',
+  material: 'الخامة',
+  gender: 'الفئة',
+  season: 'الموسم',
+  ingredients: 'المكونات',
+  weight: 'الوزن',
+  calories: 'السعرات',
+  allergens: 'مسببات الحساسية',
 };
 
 function optionLabel(

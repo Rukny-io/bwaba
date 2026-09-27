@@ -152,24 +152,43 @@ export class MailSubscriptionsService {
 
   getPlansOverview() {
     const cardReady = this.qaseh.isConfigured();
+    const unifiedOnly = this.isUnifiedBillingOnly();
+    const unifiedPlans = EMAIL_API_TRANSACTIONAL_PLANS.filter(
+      (plan) => plan.selfServe || plan.id === 'FREE',
+    ).map((plan) => ({
+      id: plan.id,
+      slug: plan.slug,
+      name: plan.marketingNameEn,
+      priceMonthly: plan.priceMonthlyIqd,
+      monthlyQuota: plan.monthlyQuota,
+      overagePer1kIqd: plan.overagePer1kIqd,
+      domainsIncluded: plan.domainsIncluded,
+    }));
+
+    if (unifiedOnly) {
+      return {
+        currency: 'IQD',
+        unifiedBillingOnly: true,
+        cardPayments: {
+          available: false,
+          status: 'unavailable' as const,
+          provider: 'al_qaseh' as const,
+        },
+        unifiedPlans,
+        plans: unifiedPlans,
+        legacyPlans: [],
+      };
+    }
+
     return {
       currency: 'IQD',
+      unifiedBillingOnly: false,
       cardPayments: {
         available: cardReady,
         status: cardReady ? ('available' as const) : ('unavailable' as const),
         provider: 'al_qaseh' as const,
       },
-      unifiedPlans: EMAIL_API_TRANSACTIONAL_PLANS.filter(
-        (plan) => plan.selfServe || plan.id === 'FREE',
-      ).map((plan) => ({
-        id: plan.id,
-        slug: plan.slug,
-        name: plan.marketingNameEn,
-        priceMonthly: plan.priceMonthlyIqd,
-        monthlyQuota: plan.monthlyQuota,
-        overagePer1kIqd: plan.overagePer1kIqd,
-        domainsIncluded: plan.domainsIncluded,
-      })),
+      unifiedPlans,
       legacyPlans: MAIL_PLAN_ORDER.map((id) => {
         const plan = MAIL_PLAN_DEFINITIONS[id];
         return {
@@ -222,12 +241,27 @@ export class MailSubscriptionsService {
       await this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId);
     const { subscription } = await this.getSubscriptionForApp(app.id);
     const pendingRequest = await this.findPendingRequest(app.appId);
+    const hasWorkspaceAccess =
+      Boolean(unified) ||
+      (!this.isUnifiedBillingOnly() &&
+        subscription?.status === SubscriptionStatus.ACTIVE);
+
     return {
       app: this.toAppView(app),
       unifiedPlan: unified?.emailPlan ?? null,
+      unifiedLimits: unified
+        ? {
+            planId: unified.planId,
+            plan: unified.plan,
+            mailboxCount: unified.mailboxCount,
+            limits: unified.limits,
+            storageQuotaBytesPerMailbox: unified.storageQuotaBytesPerMailbox,
+          }
+        : null,
       domainQuota,
       subscription,
       pendingRequest,
+      hasWorkspaceAccess,
       canManageBilling: this.access.canManageBilling(access),
       isOwner: access.isOwner,
       role: access.role,
@@ -272,6 +306,10 @@ export class MailSubscriptionsService {
       return payload;
     }
 
+    if (this.isUnifiedBillingOnly()) {
+      return null;
+    }
+
     const { subscription } = await this.getSubscriptionForApp(mailAppUuid);
     if (!subscription || subscription.status !== 'ACTIVE') {
       return null;
@@ -294,6 +332,11 @@ export class MailSubscriptionsService {
     plan: MailPlan,
     mailboxCount: number,
   ) {
+    if (this.isUnifiedBillingOnly()) {
+      throw new BadRequestException(
+        'Mail plan requests are disabled. Upgrade your Email API plan in the developer portal.',
+      );
+    }
     const { app, access } = await this.requireBillingApp(userId, publicAppId);
     await this.assertPlanRequestRateLimit(userId, app.appId);
 
@@ -372,11 +415,65 @@ export class MailSubscriptionsService {
     };
   }
 
+  private isUnifiedBillingOnly(): boolean {
+    const raw = this.config.get<string>('MAIL_UNIFIED_BILLING_ONLY');
+    return raw === 'true' || raw === '1';
+  }
+
   /**
-   * After DNS is verified: do NOT auto-activate Starter for free.
-   * Returns a checkout URL so the owner pays via apps/checkout first.
+   * After DNS is verified: link Email API entitlement (FREE by default) and
+   * activate hosted mail limits — no legacy Starter checkout.
    */
+  async provisionFreeAfterDomainVerified(userId: string, publicAppId: string) {
+    const app = await this.prisma.mailApp.findFirst({
+      where: { userId, appId: publicAppId, status: MailAppStatus.ACTIVE },
+      select: {
+        id: true,
+        primaryDomain: true,
+        domainStatus: true,
+      },
+    });
+    if (!app) {
+      throw new NotFoundException('Mail app not found.');
+    }
+    if (app.domainStatus !== MailDomainStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Verify domain DNS before mail can start.',
+      );
+    }
+
+    const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
+      app.id,
+      userId,
+    );
+    if (!developerAppId) {
+      throw new BadRequestException('Could not link billing account.');
+    }
+
+    if (app.primaryDomain) {
+      await this.unifiedEntitlement.syncMailDomainToEntitlement(
+        userId,
+        developerAppId,
+        app.primaryDomain,
+        { domainStatus: app.domainStatus },
+      );
+    }
+
+    await this.redis
+      .del(`${this.CACHE_PREFIX}${app.id}`)
+      .catch(() => {});
+
+    return {
+      activated: true as const,
+      needsCheckout: false as const,
+    };
+  }
+
+  /** @deprecated Use provisionFreeAfterDomainVerified */
   async provisionStarterAfterDomainVerified(userId: string, publicAppId: string) {
+    if (this.isUnifiedBillingOnly()) {
+      return this.provisionFreeAfterDomainVerified(userId, publicAppId);
+    }
     const app = await this.prisma.mailApp.findFirst({
       where: { userId, appId: publicAppId, status: MailAppStatus.ACTIVE },
       include: { subscription: true },
@@ -418,6 +515,11 @@ export class MailSubscriptionsService {
     plan: MailPlan,
     mailboxCount: number,
   ) {
+    if (this.isUnifiedBillingOnly()) {
+      throw new BadRequestException(
+        'Mail plan checkout is disabled. Upgrade your Email API plan in the developer portal.',
+      );
+    }
     const { app } = await this.requireBillingApp(userId, publicAppId);
     const seats = this.normalizeSeats(mailboxCount);
     const amount = mailMonthlyTotal(plan, seats);
@@ -525,6 +627,11 @@ export class MailSubscriptionsService {
     publicAppId: string,
     thousands: number,
   ) {
+    if (this.isUnifiedBillingOnly()) {
+      throw new BadRequestException(
+        'Mail outbound packs are disabled. Buy Email API overage packs in the developer portal.',
+      );
+    }
     const { app } = await this.requireBillingApp(userId, publicAppId);
     const { subscription } = await this.getSubscriptionForApp(app.id);
     if (!subscription || subscription.status !== 'ACTIVE') {
@@ -940,6 +1047,11 @@ export class MailSubscriptionsService {
       checkoutEmail?: string | null;
     },
   ) {
+    if (this.isUnifiedBillingOnly()) {
+      throw new BadRequestException(
+        'Mail plan checkout is disabled. Upgrade your Email API plan in the developer portal.',
+      );
+    }
     if (!this.qaseh.isConfigured()) {
       throw new BadRequestException({
         code: 'MAIL_CARD_UNAVAILABLE',
@@ -2127,6 +2239,22 @@ export class MailSubscriptionsService {
     }
 
     const metaKind = String(meta.kind || 'subscription');
+    if (this.isUnifiedBillingOnly() && metaKind === 'outbound_pack') {
+      await this.prisma.mailSubscriptionPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.FAILED,
+          failedAt: new Date(),
+          failureReason: 'unified_billing_only',
+          metadata: {
+            ...meta,
+            unifiedBillingOnly: true,
+            rejectedAt: new Date().toISOString(),
+          },
+        },
+      });
+      return { handled: true, status: 'unified_billing_only' };
+    }
     if (metaKind === 'outbound_pack') {
       const thousands = Math.max(
         1,
@@ -2212,6 +2340,38 @@ export class MailSubscriptionsService {
         },
       });
       return { handled: true, status: 'invalid_metadata' };
+    }
+
+    if (this.isUnifiedBillingOnly()) {
+      const app = payment.subscription.mailApp;
+      const now = new Date();
+      await this.prisma.mailSubscriptionPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          paidAt: now,
+          failedAt: null,
+          failureReason: null,
+          metadata: {
+            ...meta,
+            plan,
+            unifiedBillingOnly: true,
+            legacyActivationSkipped: true,
+            completedAt: now.toISOString(),
+            qasehPaymentStatus: context.payment_status,
+            source: 'qaseh_card',
+          },
+        },
+      });
+      if (app?.appId) {
+        await this.provisionFreeAfterDomainVerified(app.userId, app.appId).catch(
+          () => {},
+        );
+      }
+      this.logger.warn(
+        `Mail legacy plan payment ${paymentId} completed under unified billing — entitlement only`,
+      );
+      return { handled: true, status: 'unified_billing_only' };
     }
 
     const seats = payment.mailboxCount;

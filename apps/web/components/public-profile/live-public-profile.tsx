@@ -6,12 +6,14 @@ import {
   trackSocialLinkClick,
   type PublicProfile,
   type PublicProfileForm,
+  type PublicProfileProduct,
 } from '@/lib/public-profile-api';
 
 interface LivePublicProfileProps {
   profile: PublicProfile;
   forms: PublicProfileForm[];
-  featuredForm?: PublicProfileForm | null;
+  products: PublicProfileProduct[];
+  initialProductId?: string | null;
   /** Dashboard iframe embed — same layout, no footer / tracking noise */
   embed?: boolean;
 }
@@ -19,14 +21,16 @@ interface LivePublicProfileProps {
 export function LivePublicProfile({
   profile,
   forms,
-  featuredForm = null,
+  products,
+  initialProductId = null,
   embed = false,
 }: LivePublicProfileProps) {
   return (
     <PublicProfileShell
       profile={profile}
       forms={forms}
-      featuredForm={featuredForm}
+      products={products}
+      initialProductId={initialProductId}
       mode={embed ? 'preview' : 'live'}
       resolveMediaUrl={resolveProfileMediaUrl}
       onTrackClick={

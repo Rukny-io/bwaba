@@ -34,7 +34,7 @@ export function mailNavForPathname(pathname: string) {
   };
 }
 
-/** Starter has no console team — hide Team from chrome nav. */
+/** Hide Team when the account plan includes no console seats. */
 export function filterMailNavWithoutTeam(items: MailNavItem[]): MailNavItem[] {
   return items.filter((item) => {
     const path = stripMailSlotPrefix(item.href).split("?")[0];

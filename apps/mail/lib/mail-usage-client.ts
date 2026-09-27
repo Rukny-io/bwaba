@@ -4,7 +4,9 @@ import { isValidMailAppId, readMailAppIdFromDocument } from "@/lib/mail-app-id";
 export type MailOutboundUsageView = {
   plan: string;
   planId: string;
+  planName?: string;
   status: string;
+  unified?: boolean;
   included: number;
   used: number;
   packCredits: number;

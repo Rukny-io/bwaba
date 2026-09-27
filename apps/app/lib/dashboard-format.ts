@@ -1,4 +1,5 @@
 export const NUMBER_LOCALE = 'en-US';
+export const DATE_LOCALE = 'en-GB';
 
 const numberFormatter = new Intl.NumberFormat(NUMBER_LOCALE);
 
@@ -43,9 +44,16 @@ export function formatCurrency(value: number, currency = 'IQD'): string {
   }).format(value);
 }
 
+export function formatDate(
+  value: Date | string,
+  options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
+): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  return new Intl.DateTimeFormat(DATE_LOCALE, options).format(date);
+}
+
 export function formatShortDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+  return formatDate(dateStr, { month: 'short', day: 'numeric' });
 }
 
 export function formatRelativeTime(dateStr: string): string {
@@ -53,10 +61,10 @@ export function formatRelativeTime(dateStr: string): string {
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return 'الآن';
-  if (minutes < 60) return `منذ ${minutes} د`;
+  if (minutes < 60) return `منذ ${formatNumber(minutes)} د`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `منذ ${hours} س`;
+  if (hours < 24) return `منذ ${formatNumber(hours)} س`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `منذ ${days} ي`;
-  return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+  if (days < 7) return `منذ ${formatNumber(days)} ي`;
+  return formatShortDate(dateStr);
 }

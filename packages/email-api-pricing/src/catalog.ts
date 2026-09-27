@@ -21,6 +21,7 @@ export const EMAIL_API_USD_IQD_RATE = 1_320;
 export enum DeveloperEmailPlanId {
   FREE = 'FREE',
   PRO_10K = 'PRO_10K',
+  PRO_25K = 'PRO_25K',
   PRO_50K = 'PRO_50K',
   PRO_100K = 'PRO_100K',
   SCALE_100K = 'SCALE_100K',
@@ -183,6 +184,11 @@ export const EMAIL_API_PLAN_PERKS: Record<
     aiCreditsMonthly: 0,
     slackChannelEnabled: false,
   },
+  [DeveloperEmailPlanId.PRO_25K]: {
+    webhooksIncluded: 3,
+    aiCreditsMonthly: 0,
+    slackChannelEnabled: false,
+  },
   [DeveloperEmailPlanId.PRO_50K]: {
     webhooksIncluded: 3,
     aiCreditsMonthly: 0,
@@ -273,6 +279,14 @@ export const EMAIL_API_TRANSACTIONAL_PLANS: EmailApiPlanDefinition[] = [
     selfServe: false,
   }),
   defineTransactionalPlan({
+    id: DeveloperEmailPlanId.PRO_25K,
+    monthlyQuota: 25_000,
+    priceMonthlyIqd: 10_000,
+    overagePer1kIqd: EMAIL_API_UNIFIED_OVERAGE_PER_1K,
+    domainsIncluded: 10,
+    selfServe: true,
+  }),
+  defineTransactionalPlan({
     id: DeveloperEmailPlanId.PRO_50K,
     monthlyQuota: 50_000,
     priceMonthlyIqd: 16_000,
@@ -283,7 +297,7 @@ export const EMAIL_API_TRANSACTIONAL_PLANS: EmailApiPlanDefinition[] = [
   defineTransactionalPlan({
     id: DeveloperEmailPlanId.PRO_100K,
     monthlyQuota: 100_000,
-    priceMonthlyIqd: 130_000,
+    priceMonthlyIqd: 45_000,
     overagePer1kIqd: EMAIL_API_UNIFIED_OVERAGE_PER_1K,
     domainsIncluded: 1_000,
     selfServe: true,

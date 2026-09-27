@@ -5,12 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@heroui/react";
-import { MailReveal, MailRevealItem } from "@/components/marketing/mail-reveal";
-import {
-  formatMailIqD,
-  listMailPlans,
-  type MailPlanDefinition,
-} from "@/lib/mail-plans";
+import { MailReveal } from "@/components/marketing/mail-reveal";
 import { cfLayout } from "@/lib/mail-cloudflare-theme";
 
 type PricingTab = "mailboxes" | "sending" | "workspace";
@@ -27,50 +22,6 @@ const DELIVERY_STEPS = [
   { label: "DKIM", detail: "Signed" },
   { label: "Inbox", detail: "Delivered" },
 ] as const;
-
-function PlanCard({
-  plan,
-  highlight,
-}: {
-  plan: MailPlanDefinition;
-  highlight?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        cfLayout.card,
-        "flex h-full flex-col",
-        plan.popular && "border-[#F6821F] ring-2 ring-[#F6821F]/20",
-      )}
-    >
-      {plan.popular ? (
-        <p className="mb-3 inline-flex w-fit rounded-full bg-[#FFF4EB] px-2.5 py-0.5 text-[11px] font-semibold text-[#C2410C]">
-          Most popular
-        </p>
-      ) : (
-        <span className="mb-3 block h-5" aria-hidden />
-      )}
-      <h3 className="text-[16px] font-semibold">{plan.name}</h3>
-      <p className="mt-1 text-[13px] text-[#6B6F76]">{plan.bestFor}</p>
-      <p className="mt-5 text-[2rem] font-semibold tabular-nums tracking-[-0.04em]">
-        {formatMailIqD(plan.priceMonthly)}
-        <span className="text-[14px] font-medium text-[#6B6F76]">/mo</span>
-      </p>
-      {highlight ? (
-        <p className="mt-3 text-[14px] leading-relaxed text-[#6B6F76]">
-          {highlight}
-        </p>
-      ) : null}
-      <Link
-        href="/pricing"
-        className="mt-auto inline-flex items-center gap-1 pt-6 text-[14px] font-semibold text-[#F6821F] transition-opacity hover:opacity-80"
-      >
-        View plan
-        <ArrowRight className="size-3.5" aria-hidden />
-      </Link>
-    </div>
-  );
-}
 
 function DeliveryDiagram() {
   const reduceMotion = useReducedMotion();
@@ -121,13 +72,7 @@ function DeliveryDiagram() {
   );
 }
 
-function TabPanel({
-  tab,
-  plans,
-}: {
-  tab: PricingTab;
-  plans: MailPlanDefinition[];
-}) {
+function TabPanel({ tab }: { tab: PricingTab }) {
   if (tab === "mailboxes") {
     return (
       <div className={cn(cfLayout.card, "p-6 sm:p-8")}>
@@ -148,45 +93,44 @@ function TabPanel({
   }
 
   if (tab === "sending") {
-    const sending = [
-      { plan: plans[0], volume: "4,000 outbound / mo" },
-      { plan: plans[1], volume: "10,000 outbound / mo" },
-      { plan: plans[2], volume: "30,000 outbound / mo" },
-    ];
     return (
-      <div className="grid gap-4 sm:grid-cols-3">
-        {sending.map(({ plan, volume }) => (
-          <MailRevealItem key={plan.id}>
-            <PlanCard plan={plan} highlight={volume} />
-          </MailRevealItem>
-        ))}
+      <div className={cn(cfLayout.card, "p-6 sm:p-8")}>
+        <h3 className="text-[16px] font-semibold">Shared email quota</h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-[#6B6F76]">
+          Mailbox sends and transactional API calls draw from the same monthly
+          pool — from 3,000 on Free up to 100,000+ on paid tiers.
+        </p>
+        <Link
+          href="/pricing"
+          className="mt-6 inline-flex items-center gap-1 text-[14px] font-semibold text-[#F6821F]"
+        >
+          See sending tiers
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
       </div>
     );
   }
 
-  const workspace = [
-    { plan: plans[0], highlight: "Solo inbox · 10 aliases · Agentic drafts" },
-    { plan: plans[1], highlight: "3 seats · Open tracking · Smart replies" },
-    {
-      plan: plans[2],
-      highlight: "5 seats · Premium delivery · Unlimited aliases",
-    },
-  ];
-
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {workspace.map(({ plan, highlight }) => (
-        <MailRevealItem key={plan.id}>
-          <PlanCard plan={plan} highlight={highlight} />
-        </MailRevealItem>
-      ))}
+    <div className={cn(cfLayout.card, "p-6 sm:p-8")}>
+      <h3 className="text-[16px] font-semibold">Workspace limits by tier</h3>
+      <p className="mt-2 text-[14px] leading-relaxed text-[#6B6F76]">
+        Free includes 1 mailbox and 3 domains. Growth adds team seats and more
+        mailboxes. Enterprise unlocks premium delivery and advanced security.
+      </p>
+      <Link
+        href="/pricing"
+        className="mt-6 inline-flex items-center gap-1 text-[14px] font-semibold text-[#F6821F]"
+      >
+        Compare workspace limits
+        <ArrowRight className="size-3.5" aria-hidden />
+      </Link>
     </div>
   );
 }
 
 export function MailHomePricingHub() {
   const [tab, setTab] = useState<PricingTab>("mailboxes");
-  const plans = listMailPlans();
 
   return (
     <section
@@ -235,7 +179,7 @@ export function MailHomePricingHub() {
         </MailReveal>
 
         <div className="mt-8" role="tabpanel">
-          <TabPanel tab={tab} plans={plans} />
+          <TabPanel tab={tab} />
         </div>
 
         <DeliveryDiagram />
@@ -245,7 +189,7 @@ export function MailHomePricingHub() {
             {[
               "Anti-spam on every plan",
               "2FA per mailbox",
-              "Starter after DNS + checkout",
+              "Free after DNS verification",
             ].map((item) => (
               <span
                 key={item}

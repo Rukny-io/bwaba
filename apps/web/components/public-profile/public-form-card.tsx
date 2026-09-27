@@ -1,21 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft, FileText } from 'lucide-react';
 import type { PublicProfileForm } from './types';
 import { useMediaUrl } from './media-url-context';
 import { cn } from './utils';
-
-const FORM_TYPE_LABELS: Record<string, string> = {
-  CONTACT: 'تواصل',
-  SURVEY: 'استبيان',
-  REGISTRATION: 'تسجيل',
-  ORDER: 'طلب',
-  FEEDBACK: 'ملاحظات',
-  QUIZ: 'اختبار',
-  APPLICATION: 'طلب التحاق',
-  OTHER: 'أخرى',
-};
 
 interface PublicFormCardProps {
   form: PublicProfileForm;
@@ -23,11 +13,22 @@ interface PublicFormCardProps {
 }
 
 export function PublicFormCard({ form, preview }: PublicFormCardProps) {
+  const t = useTranslations('publicProfile.forms');
   const resolveMedia = useMediaUrl();
   const [coverFailed, setCoverFailed] = useState(false);
   const coverSrc = resolveMedia(form.coverImage);
   const showCover = Boolean(coverSrc) && !coverFailed;
-  const typeLabel = FORM_TYPE_LABELS[form.type] ?? form.type;
+  const typeLabel =
+    ({
+      CONTACT: t('types.CONTACT'),
+      SURVEY: t('types.SURVEY'),
+      REGISTRATION: t('types.REGISTRATION'),
+      ORDER: t('types.ORDER'),
+      FEEDBACK: t('types.FEEDBACK'),
+      QUIZ: t('types.QUIZ'),
+      APPLICATION: t('types.APPLICATION'),
+      OTHER: t('types.OTHER'),
+    } as Record<string, string>)[form.type] ?? form.type;
 
   const body = (
     <>
@@ -79,8 +80,8 @@ export function PublicFormCard({ form, preview }: PublicFormCardProps) {
             'transition-opacity group-hover:opacity-90',
           )}
         >
-          افتح
-          <ArrowLeft className="size-3.5 shrink-0" aria-hidden />
+          {t('open')}
+          <ArrowLeft className="size-3.5 shrink-0 rtl:rotate-0 ltr:rotate-180" aria-hidden />
         </span>
       </div>
     </>

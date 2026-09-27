@@ -1,5 +1,6 @@
 export const FEATURED_TRANSACTIONAL_PLAN_IDS = [
   'FREE',
+  'PRO_25K',
   'PRO_50K',
   'PRO_100K',
 ] as const;
@@ -32,6 +33,24 @@ export const FEATURED_TRANSACTIONAL_PLAN_COPY: Record<
       '3 نطاقات موثّقة',
       '10,000 تشغيل أتمتة',
       'دعم عبر التذاكر',
+    ],
+  },
+  PRO_25K: {
+    taglineEn: 'Small teams with hosted mailboxes',
+    taglineAr: 'فرق صغيرة مع بريد مستضاف',
+    featuresEn: [
+      '25,000 emails / mo',
+      '3 mailboxes · 20 GB each',
+      '10 verified domains',
+      '4 console members',
+      '1,000 IQD / 1,000 overage',
+    ],
+    featuresAr: [
+      '25,000 رسالة/شهر',
+      '3 صناديق · 20 GB لكل صندوق',
+      '10 نطاقات موثّقة',
+      '4 أعضاء في لوحة التحكم',
+      '1,000 د.ع / 1,000 رسالة إضافية',
     ],
   },
   PRO_50K: {

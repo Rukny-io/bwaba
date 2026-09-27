@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "notFoundTitle": "پڕۆفایل نەدۆزرایەوە",
+    "descriptionFallback": "پەڕەی {username} لە ركني"
+  },
+  "sections": {
+    "links": "بەستەرەکان",
+    "profileCards": "کارتی پڕۆفایل",
+    "instagramPosts": "پۆستەکانی ئینستاگرام",
+    "products": "بەرهەمەکان",
+    "productsGrid": "تۆڕی بەرهەم",
+    "forms": "فۆرمەکان"
+  },
+  "empty": {
+    "title": "هێشتا ناوەڕۆک نییە",
+    "description": "بەستەر و بەرهەم و فۆrmەکانت لێرە دەردەکەون"
+  },
+  "footer": {
+    "createPage": "پەڕەکەت لە ركني دروست بکە",
+    "language": "زمان"
+  },
+  "header": {
+    "verified": "پشتڕاستکراو"
+  },
+  "forms": {
+    "open": "کردنەوە",
+    "types": {
+      "CONTACT": "پەیوەندی",
+      "SURVEY": "ڕاپرسی",
+      "REGISTRATION": "تۆمارکردن",
+      "ORDER": "داواکاری",
+      "FEEDBACK": "فیدباک",
+      "QUIZ": "تاقیکردنەوە",
+      "APPLICATION": "داواکاری بەشداریکردن",
+      "OTHER": "هیتر"
+    }
+  },
+  "instagram": {
+    "loadError": "بارکردنی کارتی ئینستاگرام سەرکەوتوو نەبوو",
+    "openOnInstagram": "کردنەوە لە ئینستاگرام",
+    "follow": "فۆڵۆو",
+    "following": "فۆڵۆو دەکات",
+    "followers": "فۆڵۆوەر",
+    "posts": "پۆست"
+  },
+  "product": {
+    "currencyShort": "IQD",
+    "currencyCode": "IQD",
+    "kind": {
+      "digital": "دیجیتاڵ",
+      "physical": "ماددی"
+    },
+    "stock": {
+      "outOfStock": "کۆتایی هات",
+      "remaining": "{count} ماوە",
+      "inStock": "بەردەستە"
+    },
+    "attributes": {
+      "serviceType": "جۆری خزمەتگوزاری",
+      "duration": "ماوە",
+      "deliveryMethod": "ڕێگای گەیاندن",
+      "brand": "براند",
+      "condition": "دۆخ",
+      "warranty": "گaranti",
+      "model": "مۆدێل",
+      "material": "ماددە",
+      "gender": "پۆل",
+      "season": "وەرز",
+      "ingredients": "پێکهاتەکان",
+      "weight": "کێش",
+      "calories": "کالۆری",
+      "allergens": "هەستیاری"
+    },
+    "variants": {
+      "color": "ڕەنگ",
+      "size": "قەبارە",
+      "flavour": "تام",
+      "flavor": "تام",
+      "fallback": "جۆر",
+      "chooseOption": "هەڵبژاردنێک هەڵبژێرە",
+      "chooseToContinue": "جۆرێک هەڵبژێرە بۆ بەردەوامبوون"
+    },
+    "dialog": {
+      "close": "داخستن",
+      "imageAlt": "وێنە {index}",
+      "category": "پۆل:",
+      "noCategory": "زیاد نەکراوە بۆ هیچ پۆلێک",
+      "sku": "کۆدی بەرهەم",
+      "saved": "پاشەکەوتت کرد",
+      "shippingNote": "نرخی گەیاندن لە کاتی پارەدان دەژمێردرێت",
+      "description": "وەسف",
+      "productPage": "پەڕەی بەرهەم",
+      "copyLink": "کۆپیکردنی بەستەر",
+      "copied": "کۆپی کرا",
+      "copyLinkAriaCopied": "بەستەر کۆپی کرا",
+      "copyLinkAria": "کۆپیکردنی بەستەر",
+      "outOfStock": "ئەم بەرهەمە ئێستا بەردەست نییە",
+      "addToCart": "زیادکردن بۆ سەبەتە",
+      "addToCartAria": "زیادکردنی {name} بۆ سەبەتە",
+      "cartTotal": "کۆی گشتی",
+      "cartTitle": "سەبەتەکەت",
+      "cartItems": "{count} بەرهەم",
+      "cartItems_plural": "{count} بەرهەم",
+      "proceedToCheckout": "تەواوکردنی کڕین",
+      "proceedToCheckoutAria": "تەواوکردنی کڕین بە {count} بەرهەم",
+      "quantity": "بڕ",
+      "decreaseQuantity": "کەمکردنەوەی بڕ",
+      "increaseQuantity": "زیادکردنی بڕ",
+      "removeFromCart": "لابردن لە سەبەتە"
+    }
+  }
+}

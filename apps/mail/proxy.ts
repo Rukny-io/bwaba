@@ -177,7 +177,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.includes(".")
   ) {
-    return secureResponse(NextResponse.next());
+    return NextResponse.next();
   }
 
   // Marketing pages are public for signed-out and signed-in visitors.

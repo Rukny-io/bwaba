@@ -15,6 +15,7 @@ import {
   isFormAvailable,
   submitPublicForm,
 } from '@/lib/public-form-api';
+import { resolveMediaUrl } from '@/lib/media-url';
 import {
   notifyFormEmbedSubmitted,
   useFormEmbedMessaging,
@@ -211,7 +212,7 @@ export function PublicFormPageView({ form, slug, embed = false }: PublicFormPage
         <PublicFormView
           title={form.title}
           description={form.description}
-          coverUrl={form.coverImage ?? null}
+          coverUrl={resolveMediaUrl(form.coverImage)}
           theme={form.theme}
           fields={sortedFields}
           values={values}

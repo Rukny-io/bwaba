@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "notFoundTitle": "Profile not found",
+    "descriptionFallback": "{username}'s page on Rukny"
+  },
+  "sections": {
+    "links": "Links",
+    "profileCards": "Profile cards",
+    "instagramPosts": "Instagram posts",
+    "products": "Products",
+    "productsGrid": "Product grid",
+    "forms": "Forms"
+  },
+  "empty": {
+    "title": "No content yet",
+    "description": "Your links, products, and forms will appear here"
+  },
+  "footer": {
+    "createPage": "Create your page on Rukny",
+    "language": "Language"
+  },
+  "header": {
+    "verified": "Verified"
+  },
+  "forms": {
+    "open": "Open",
+    "types": {
+      "CONTACT": "Contact",
+      "SURVEY": "Survey",
+      "REGISTRATION": "Registration",
+      "ORDER": "Order",
+      "FEEDBACK": "Feedback",
+      "QUIZ": "Quiz",
+      "APPLICATION": "Application",
+      "OTHER": "Other"
+    }
+  },
+  "instagram": {
+    "loadError": "Could not load Instagram card",
+    "openOnInstagram": "Open on Instagram",
+    "follow": "Follow",
+    "following": "Following",
+    "followers": "Followers",
+    "posts": "Posts"
+  },
+  "product": {
+    "currencyShort": "IQD",
+    "currencyCode": "IQD",
+    "kind": {
+      "digital": "Digital",
+      "physical": "Physical"
+    },
+    "stock": {
+      "outOfStock": "Out of stock",
+      "remaining": "{count} left",
+      "inStock": "In stock"
+    },
+    "attributes": {
+      "serviceType": "Service type",
+      "duration": "Duration",
+      "deliveryMethod": "Delivery method",
+      "brand": "Brand",
+      "condition": "Condition",
+      "warranty": "Warranty",
+      "model": "Model",
+      "material": "Material",
+      "gender": "Category",
+      "season": "Season",
+      "ingredients": "Ingredients",
+      "weight": "Weight",
+      "calories": "Calories",
+      "allergens": "Allergens"
+    },
+    "variants": {
+      "color": "Color",
+      "size": "Size",
+      "flavour": "Flavour",
+      "flavor": "Flavor",
+      "fallback": "Variant",
+      "chooseOption": "Choose an option",
+      "chooseToContinue": "Choose a variant to continue"
+    },
+    "dialog": {
+      "close": "Close",
+      "imageAlt": "Image {index}",
+      "category": "Category:",
+      "noCategory": "Not added to any category",
+      "sku": "SKU",
+      "saved": "You save",
+      "shippingNote": "Shipping is calculated at checkout",
+      "description": "Description",
+      "productPage": "View product page",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "copyLinkAriaCopied": "Link copied",
+      "copyLinkAria": "Copy link",
+      "outOfStock": "This product is currently unavailable",
+      "addToCart": "Add to cart",
+      "addToCartAria": "Add {name} to cart",
+      "cartTotal": "Total amount",
+      "cartTitle": "Your cart",
+      "cartItems": "{count} item",
+      "cartItems_plural": "{count} items",
+      "proceedToCheckout": "View cart",
+      "proceedToCheckoutAria": "Proceed to checkout with {count} items",
+      "quantity": "Quantity",
+      "decreaseQuantity": "Decrease quantity",
+      "increaseQuantity": "Increase quantity",
+      "removeFromCart": "Remove from cart"
+    }
+  }
+}

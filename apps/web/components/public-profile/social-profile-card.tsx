@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { useMediaUrl } from './media-url-context';
 import { ProfilePlatformIcon } from './profile-platform-icon';
 import type { PublicSocialLink } from './types';
 import { cn } from './utils';
@@ -40,6 +42,10 @@ export function SocialProfileCard({
   preview,
   onTrackClick,
 }: SocialProfileCardProps) {
+  const resolveMedia = useMediaUrl();
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
+  const thumbnailSrc = resolveMedia(link.thumbnail);
+  const showThumbnail = Boolean(thumbnailSrc) && !thumbnailFailed;
   const platform = link.platform.toLowerCase();
   const brand = PLATFORM_LABEL[platform] ?? link.platform;
   const backdrop = PLATFORM_BACKDROP[platform] ?? '#161823';
@@ -57,11 +63,12 @@ export function SocialProfileCard({
         className="relative h-20 overflow-hidden"
         style={{ backgroundColor: backdrop }}
       >
-        {link.thumbnail ? (
+        {showThumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={link.thumbnail}
+            src={thumbnailSrc!}
             alt=""
+            onError={() => setThumbnailFailed(true)}
             className="absolute inset-0 size-full object-cover opacity-35"
           />
         ) : null}
@@ -81,9 +88,14 @@ export function SocialProfileCard({
       <div className="relative flex flex-1 flex-col px-3 pb-3">
         <div className="-mt-6 flex items-center justify-between gap-2">
           <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-secondary)] ring-[3px] ring-[var(--surface)]">
-            {link.thumbnail ? (
+            {showThumbnail ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.thumbnail} alt="" className="size-full object-cover" />
+              <img
+                src={thumbnailSrc!}
+                alt=""
+                onError={() => setThumbnailFailed(true)}
+                className="size-full object-cover"
+              />
             ) : (
               <ProfilePlatformIcon platform={link.platform} size="sm" />
             )}

@@ -24,17 +24,21 @@ describe('@rukny/email-api-pricing catalog', () => {
     expect(free.priceMonthlyIqd).toBe(0);
   });
 
-  it('exposes three self-serve paid tiers', () => {
+  it('exposes self-serve paid tiers', () => {
     const selfServe = listSelfServeTransactionalPlans();
     expect(selfServe.map((plan) => plan.id)).toEqual([
+      DeveloperEmailPlanId.PRO_25K,
       DeveloperEmailPlanId.PRO_50K,
       DeveloperEmailPlanId.PRO_100K,
     ]);
+    expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_25K).priceMonthlyIqd).toBe(
+      10_000,
+    );
     expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_50K).priceMonthlyIqd).toBe(
       16_000,
     );
     expect(getEmailApiPlan(DeveloperEmailPlanId.PRO_100K).priceMonthlyIqd).toBe(
-      130_000,
+      45_000,
     );
   });
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { memo, useState } from 'react';
-import { Package } from 'lucide-react';
+import { memo } from 'react';
 import { getProductDisplayName } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
+import { ProductThumbnail } from '@/components/products/product-list-primitives';
 import { cn } from '@/lib/utils';
 
 interface CollectionProductCardProps {
@@ -13,9 +13,7 @@ interface CollectionProductCardProps {
 }
 
 function CollectionProductCardComponent({ product, className }: CollectionProductCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = getProductImage(product);
-  const showImage = Boolean(imageUrl) && !imageFailed;
   const title = getProductDisplayName(product);
   const isDraft = product.status === 'DRAFT';
   const basePrice = Number(product.price);
@@ -28,21 +26,13 @@ function CollectionProductCardComponent({ product, className }: CollectionProduc
 
   return (
     <article className={cn('group flex min-w-0 flex-col gap-2.5', className)}>
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-secondary)]">
-        {showImage ? (
-          <img
-            src={imageUrl!}
-            alt=""
-            loading="lazy"
-            onError={() => setImageFailed(true)}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Package className="size-8 text-[var(--muted-foreground)]/35" strokeWidth={1.5} aria-hidden />
-          </div>
-        )}
-
+      <div className="relative">
+        <ProductThumbnail
+          imageUrl={imageUrl}
+          alt={title}
+          className="aspect-square rounded-xl"
+          imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
+        />
         {isDraft ? (
           <span className="absolute start-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
             مسودة

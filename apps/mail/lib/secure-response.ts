@@ -9,6 +9,7 @@ import { parseApiConnectOrigins } from "@rukny/forms-shared/security-headers";
 
 const SECURITY_OPTS = {
   isDev: process.env.NODE_ENV !== "production",
+  disableNonce: true,
   apiConnectOrigins: parseApiConnectOrigins(process.env.NEXT_PUBLIC_API_URL),
 } as const;
 

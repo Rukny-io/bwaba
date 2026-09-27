@@ -139,22 +139,6 @@ export function MailSetupWizard() {
       persist(next);
       if (result.verified) {
         setMailWizardDismissed(false);
-        const appId = readMailAppIdFromDocument();
-        // DNS unlocks the domain — plan activation always goes through checkout.
-        if (result.checkoutUrl) {
-          window.location.assign(result.checkoutUrl);
-          return;
-        }
-        if (appId) {
-          try {
-            const { startMailCheckoutSession } = await import("@/lib/mail-checkout");
-            const session = await startMailCheckoutSession("starter", 1, appId);
-            window.location.assign(session.checkoutUrl);
-            return;
-          } catch {
-            // Fall through to app; billing CTA will send them to checkout.
-          }
-        }
         router.refresh();
         router.replace("/app");
         return;

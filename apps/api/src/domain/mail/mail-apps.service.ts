@@ -576,17 +576,23 @@ export class MailAppsService {
       app.domainStatus === MailDomainStatus.ACTIVE &&
       previous.domainStatus !== MailDomainStatus.ACTIVE
     ) {
-      const starter = await this.subscriptions.provisionStarterAfterDomainVerified(
-        userId,
-        appId,
-      );
+      const activation =
+        await this.subscriptions.provisionFreeAfterDomainVerified(
+          userId,
+          appId,
+        );
       return {
         app: this.toView(app),
-        needsCheckout: Boolean(starter.needsCheckout),
+        needsCheckout: Boolean(
+          'needsCheckout' in activation && activation.needsCheckout,
+        ),
         checkoutUrl:
-          'checkoutUrl' in starter ? starter.checkoutUrl : undefined,
+          'checkoutUrl' in activation ? activation.checkoutUrl : undefined,
         checkoutSessionId:
-          'sessionId' in starter ? starter.sessionId : undefined,
+          'sessionId' in activation ? activation.sessionId : undefined,
+        activated: Boolean(
+          'activated' in activation && activation.activated,
+        ),
       };
     }
 

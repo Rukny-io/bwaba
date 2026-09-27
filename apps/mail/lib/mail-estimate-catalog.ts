@@ -1,6 +1,6 @@
 /**
- * Marketing estimate catalog for /pricing/estimate.
- * Seat prices + prepaid outbound packs (800 IQD / 1,000) match Billing.
+ * @deprecated Legacy Starter/Standard/Premium estimate — /pricing/estimate uses Email API pricing.
+ * Kept for backwards compatibility with mail-pricing-estimate.tsx.
  */
 
 import {

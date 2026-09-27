@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Loader2, Upload } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import {
   Alert,
   Button,
@@ -18,6 +18,7 @@ import { ProductPriceField } from '@/components/products/create/product-price-fi
 import { ProductFormSection } from '@/components/products/create/product-form-section';
 import { ProductKindIconBadge } from '@/components/products/create/product-kind-icon-badge';
 import { ProductCreatePill } from '@/components/products/create/page/product-create-primitives';
+import { ProductDigitalFileUpload } from '@/components/products/create/product-digital-file-upload';
 import {
   ProductImagesUpload,
   type PendingProductImage,
@@ -27,10 +28,13 @@ import { ProductVariantsForm } from '@/components/products/create/product-varian
 import { ApiException } from '@/lib/api-client';
 import {
   createProduct,
+  fetchStoreProduct,
   fetchStoreProductTemplate,
+  updateProduct,
   uploadDigitalProductFile,
   uploadProductImages,
 } from '@/lib/products/api';
+import { getProductDescription } from '@/lib/products/product-display';
 import type { ProductKindCatalogItem } from '@/lib/products/product-kind-catalog';
 import {
   getCategoryFormUi,
@@ -57,6 +61,7 @@ import { cn } from '@/lib/utils';
 interface CreateProductFormProps {
   kind: ProductKind;
   catalogItem: ProductKindCatalogItem;
+  productId?: string | null;
   onBack: () => void;
   onCreated?: () => void;
   mobile?: boolean;
@@ -73,6 +78,7 @@ function makeImageId() {
 export function CreateProductForm({
   kind,
   catalogItem,
+  productId = null,
   onBack,
   onCreated,
   mobile = false,
@@ -81,6 +87,7 @@ export function CreateProductForm({
   onSubmittingChange,
   className,
 }: CreateProductFormProps) {
+  const isEditing = Boolean(productId);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -164,6 +171,45 @@ export function CreateProductForm({
       cancelled = true;
     };
   }, [kind]);
+
+  useEffect(() => {
+    if (!productId) return;
+
+    let cancelled = false;
+
+    void fetchStoreProduct(productId)
+      .then((product) => {
+        if (cancelled) return;
+
+        setName(product.nameAr?.trim() || product.name);
+        setDescription(getProductDescription(product) || '');
+        setPrice(String(product.price));
+        setQuantity(String(product.quantity ?? 0));
+        setSku(product.sku?.trim() || '');
+
+        const attributeValues: Record<string, TemplateFieldValue> = {};
+        for (const attr of product.productAttributes ?? []) {
+          const value = attr.valueAr?.trim() || attr.value.trim();
+          if (value) attributeValues[attr.key] = value;
+        }
+        if (Object.keys(attributeValues).length > 0) {
+          setTemplateValues((current) => ({ ...current, ...attributeValues }));
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err instanceof ApiException
+              ? err.message
+              : 'تعذّر تحميل بيانات المنتج',
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const imagesRef = useRef(images);
   imagesRef.current = images;
@@ -265,35 +311,36 @@ export function CreateProductForm({
       return;
     }
 
-    if (kind === 'DIGITAL' && !digitalFile) {
+    if (kind === 'DIGITAL' && !digitalFile && !isEditing) {
       setError('ارفع ملف المنتج الرقمي');
       return;
     }
 
     setSaving(true);
     try {
-      const product = await createProduct(
-        {
-          kind,
-          name: trimmedName,
-          description: description.trim() || undefined,
-          price: parsedPrice,
-          quantity: kind === 'PHYSICAL' && !useVariants ? parsedQuantity : 0,
-          sku: sku.trim() || undefined,
-          serviceType: showLegacyServiceFields ? serviceType : undefined,
-          serviceDuration: showLegacyServiceFields ? serviceDuration : undefined,
-          deliveryMethod: showLegacyServiceFields ? deliveryMethod : undefined,
-          templateValues: template ? templateValues : undefined,
-          hasVariants: useVariants,
-          variants: useVariants
-            ? variants.map((variant) => ({
-                attributes: variant.attributes,
-                stock: variant.stock,
-              }))
-            : undefined,
-        },
-        template,
-      );
+      const input = {
+        kind,
+        name: trimmedName,
+        description: description.trim() || undefined,
+        price: parsedPrice,
+        quantity: kind === 'PHYSICAL' && !useVariants ? parsedQuantity : 0,
+        sku: sku.trim() || undefined,
+        serviceType: showLegacyServiceFields ? serviceType : undefined,
+        serviceDuration: showLegacyServiceFields ? serviceDuration : undefined,
+        deliveryMethod: showLegacyServiceFields ? deliveryMethod : undefined,
+        templateValues: template ? templateValues : undefined,
+        hasVariants: useVariants,
+        variants: useVariants
+          ? variants.map((variant) => ({
+              attributes: variant.attributes,
+              stock: variant.stock,
+            }))
+          : undefined,
+      };
+
+      const product = isEditing && productId
+        ? await updateProduct(productId, input, template)
+        : await createProduct(input, template);
 
       setUploadingAssets(true);
 
@@ -313,7 +360,9 @@ export function CreateProductForm({
       setError(
         err instanceof ApiException
           ? err.message
-          : 'تعذّر إنشاء المنتج',
+          : isEditing
+            ? 'تعذّر حفظ التعديلات'
+            : 'تعذّر إنشاء المنتج',
       );
     } finally {
       setSaving(false);
@@ -365,7 +414,7 @@ export function CreateProductForm({
             <header className="mb-1">
               <ProductCreatePill label={catalogItem.label} />
               <h2 className="mt-3 text-lg font-bold tracking-tight sm:text-xl">
-                تفاصيل المنتج
+                {isEditing ? 'تعديل المنتج' : 'تفاصيل المنتج'}
               </h2>
               {storeCategoryName ? (
                 <p className="mt-1 text-xs text-muted">متجر {storeCategoryName}</p>
@@ -554,29 +603,12 @@ export function CreateProductForm({
           ) : null}
 
           {kind === 'DIGITAL' ? (
-            <ProductFormSection
-              title="ملف المنتج الرقمي"
-              description="يُسلّم للعميل بعد الشراء"
-            >
-              <Card variant="default" className="gap-0 border border-dashed border-border p-0 shadow-none">
-                <Card.Content className="flex-row items-center gap-3 p-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-surface-secondary text-muted">
-                    <Upload className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <Card.Title className="truncate text-[13px] font-medium">
-                      {digitalFile?.name ?? 'اختر ملف PDF أو ZIP أو فيديو'}
-                    </Card.Title>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".pdf,.zip,.mp4,.mp3,application/pdf,application/zip,video/mp4,audio/mpeg"
-                    onChange={(e) => setDigitalFile(e.target.files?.[0] ?? null)}
-                    className="max-w-[6.5rem] text-[11px] text-muted"
-                  />
-                </Card.Content>
-              </Card>
-            </ProductFormSection>
+            <ProductDigitalFileUpload
+              file={digitalFile}
+              uploading={uploadingAssets}
+              onPick={setDigitalFile}
+              onRemove={() => setDigitalFile(null)}
+            />
           ) : null}
 
           {error ? (

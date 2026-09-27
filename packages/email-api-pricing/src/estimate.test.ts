@@ -9,18 +9,24 @@ import {
 
 describe('email-api-pricing estimate', () => {
   it('maps slider stops to public tiers', () => {
-    expect(EMAIL_API_TRANSACTIONAL_VOLUME_STOPS).toHaveLength(4);
+    expect(EMAIL_API_TRANSACTIONAL_VOLUME_STOPS).toHaveLength(5);
     expect(estimateTransactionalAtStop(0).plan.id).toBe(DeveloperEmailPlanId.FREE);
     expect(estimateTransactionalAtStop(1).plan.id).toBe(
-      DeveloperEmailPlanId.PRO_50K,
+      DeveloperEmailPlanId.PRO_25K,
     );
     expect(estimateTransactionalAtStop(2).plan.id).toBe(
+      DeveloperEmailPlanId.PRO_50K,
+    );
+    expect(estimateTransactionalAtStop(3).plan.id).toBe(
       DeveloperEmailPlanId.PRO_100K,
     );
-    expect(estimateTransactionalAtStop(3).tier).toBe('enterprise');
+    expect(estimateTransactionalAtStop(4).tier).toBe('enterprise');
   });
 
   it('recommends cheapest self-serve plan for arbitrary volume', () => {
+    expect(recommendTransactionalPlanForVolume(20_000).id).toBe(
+      DeveloperEmailPlanId.PRO_25K,
+    );
     expect(recommendTransactionalPlanForVolume(45_000).id).toBe(
       DeveloperEmailPlanId.PRO_50K,
     );

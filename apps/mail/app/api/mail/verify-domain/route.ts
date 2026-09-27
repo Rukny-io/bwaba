@@ -113,6 +113,14 @@ export async function POST(request: Request) {
       });
     }
 
+    if (result.verified && sync.activated) {
+      return NextResponse.json({
+        ...result,
+        activated: true,
+        needsCheckout: false,
+      });
+    }
+
     if (result.verified && sync.needsCheckout && sync.checkoutSessionId) {
       const checkoutBase =
         process.env.NEXT_PUBLIC_CHECKOUT_URL?.replace(/\/$/, "") ||

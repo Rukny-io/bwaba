@@ -117,11 +117,7 @@ async function refreshOnce(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        if (
-          response.status === 401 ||
-          response.status === 403 ||
-          response.status === 429
-        ) {
+        if (response.status === 401 || response.status === 403) {
           handleAuthFailure();
         }
         return false;

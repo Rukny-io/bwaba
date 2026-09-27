@@ -20,10 +20,11 @@ export default function TeamPage() {
       try {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
-        const planId = snap.subscription?.planId;
         const consoleSeats =
-          snap.subscription?.limits?.consoleMembersIncluded ?? 0;
-        const teamOk = planId !== "starter" && consoleSeats > 0;
+          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
+          snap.subscription?.limits?.consoleMembersIncluded ??
+          0;
+        const teamOk = consoleSeats > 0;
         if (!teamOk) {
           setState("blocked");
           const slot = parseMailSlot(pathname);

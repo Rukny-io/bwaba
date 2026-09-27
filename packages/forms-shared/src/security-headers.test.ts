@@ -13,14 +13,14 @@ describe('buildAppSecurityHeaders', () => {
     expect(csp).not.toContain('strict-dynamic');
   });
 
-  it('uses nonce and strict-dynamic in production', () => {
+  it('uses nonce without strict-dynamic in production', () => {
     const csp = buildAppSecurityHeaders({
       isDev: false,
       nonce: 'abc123',
     }).find((h) => h.key === 'Content-Security-Policy')!.value;
     expect(csp).toContain("'nonce-abc123'");
-    expect(csp).toContain('strict-dynamic');
-    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain('strict-dynamic');
+    expect(csp).toContain("'unsafe-inline'");
     expect(csp).toContain('upgrade-insecure-requests');
   });
 

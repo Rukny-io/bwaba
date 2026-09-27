@@ -38,7 +38,7 @@ describe('EmailBillingService', () => {
 
   it('returns public plan catalog', () => {
     const plans = service.getPlans();
-    expect(plans.transactional.length).toBe(3);
+    expect(plans.transactional.length).toBe(4);
     expect(plans.marketing.length).toBeGreaterThan(3);
     expect(plans.overagePack).toEqual(EMAIL_API_OVERAGE_PACK);
 
@@ -51,7 +51,7 @@ describe('EmailBillingService', () => {
     });
     expect(pro100k).toMatchObject({
       marketingNameEn: 'Enterprise',
-      priceMonthlyIqd: 130_000,
+      priceMonthlyIqd: 45_000,
       overagePer1kIqd: 1_000,
     });
   });

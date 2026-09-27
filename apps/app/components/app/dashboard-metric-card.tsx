@@ -118,13 +118,13 @@ export function DashboardMetricCard({
   const hasFooter = Boolean(chip || trend || trendNumericValue != null || comparisonSecondary || comparisonPrimary);
 
   return (
-    <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
+    <article className="dashboard-metric-tile flex min-h-[6.75rem] flex-col p-3.5 sm:min-h-[7.25rem] sm:p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[12px] font-medium leading-snug text-[var(--muted-foreground)] sm:text-[13px]">
           {label}
         </p>
         <Icon
-          className="size-[18px] shrink-0 text-[var(--muted-foreground)]/75"
+          className="size-4 shrink-0 text-[var(--muted-foreground)]"
           strokeWidth={1.75}
           aria-hidden
         />
@@ -132,10 +132,10 @@ export function DashboardMetricCard({
 
       <p
         className={cn(
-          'mt-3 min-w-0 font-semibold leading-none tracking-tight text-[var(--foreground)]',
+          'mt-2.5 min-w-0 font-semibold leading-none tracking-tight text-[var(--foreground)]',
           tabular
-            ? 'text-[1.65rem] sm:text-[1.75rem]'
-            : 'text-[1.25rem] leading-snug sm:text-[1.35rem]',
+            ? 'text-[1.5rem] sm:text-[1.65rem]'
+            : 'text-[1.15rem] leading-snug sm:text-[1.25rem]',
         )}
       >
         {valueNode}
@@ -150,8 +150,8 @@ export function DashboardMetricCard({
             <>
               <span
                 className={cn(
-                  'font-medium tabular-nums',
-                  trendPositive ? 'text-[var(--success)]' : 'text-[var(--danger)]',
+                  'font-medium tabular-nums text-[var(--foreground)]',
+                  !trendPositive && 'text-[var(--muted-foreground)]',
                 )}
                 dir="ltr"
                 lang="en"

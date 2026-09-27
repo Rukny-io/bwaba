@@ -222,6 +222,13 @@ export interface AdminMailAppDetail extends AdminMailApp {
   slotIndex: number;
   userId: string;
   updatedAt: string;
+  linkedDeveloperAppId?: string | null;
+  unifiedEmailPlan?: {
+    plan: string;
+    status: string;
+    monthlyQuota: number;
+    periodEndsAt: string | null;
+  } | null;
   subscription: {
     plan: MailPlanCode;
     status: string;

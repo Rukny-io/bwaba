@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ExternalLink, Link2, Loader2 } from 'lucide-react';
 import { API_PUBLIC_BASE } from '@/lib/config';
 import { cn } from './utils';
@@ -92,6 +93,7 @@ function FollowButton({
   preview?: boolean;
   className?: string;
 }) {
+  const t = useTranslations('publicProfile.instagram');
   const classes = cn(
     'inline-flex h-7 items-center justify-center rounded-full bg-[#1d9bf0] px-3 text-[11px] font-bold text-white',
     'transition-opacity hover:opacity-90',
@@ -99,12 +101,12 @@ function FollowButton({
   );
 
   if (preview) {
-    return <span className={classes}>Follow</span>;
+    return <span className={classes}>{t('follow')}</span>;
   }
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
-      Follow
+      {t('follow')}
     </a>
   );
 }
@@ -118,6 +120,7 @@ function InstagramCardShell({
   showGrid: boolean;
   preview?: boolean;
 }) {
+  const t = useTranslations('publicProfile.instagram');
   const { profile, media, coverUrl } = embed;
   const displayName = profile.name?.trim() || profile.username;
   const followHref = profile.profileUrl;
@@ -169,19 +172,19 @@ function InstagramCardShell({
             <p className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.followsCount)}
             </p>
-            <p className="truncate">Following</p>
+            <p className="truncate">{t('following')}</p>
           </div>
           <div className="min-w-0">
             <p className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.followersCount)}
             </p>
-            <p className="truncate">Followers</p>
+            <p className="truncate">{t('followers')}</p>
           </div>
           <div className="min-w-0">
             <p className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.mediaCount)}
             </p>
-            <p className="truncate">Posts</p>
+            <p className="truncate">{t('posts')}</p>
           </div>
         </div>
 
@@ -251,7 +254,7 @@ function InstagramCardShell({
         <div className="mt-auto pt-3">
           {preview ? (
             <span className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-full bg-[var(--foreground)] text-[11px] font-bold text-[var(--background)]">
-              Open on Instagram
+              {t('openOnInstagram')}
               <ExternalLink className="size-3" />
             </span>
           ) : (
@@ -261,7 +264,7 @@ function InstagramCardShell({
               rel="noopener noreferrer"
               className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-full bg-[var(--foreground)] text-[11px] font-bold text-[var(--background)] transition-opacity hover:opacity-90"
             >
-              Open on Instagram
+              {t('openOnInstagram')}
               <ExternalLink className="size-3" />
             </a>
           )}
@@ -278,6 +281,7 @@ interface InstagramRichLinkProps {
 }
 
 export function InstagramRichLink({ linkId, layout, preview }: InstagramRichLinkProps) {
+  const t = useTranslations('publicProfile.instagram');
   const [embed, setEmbed] = useState<InstagramEmbedPayload | null>(null);
   const [error, setError] = useState(false);
 
@@ -303,7 +307,7 @@ export function InstagramRichLink({ linkId, layout, preview }: InstagramRichLink
           'rounded-[1.35rem] border border-[var(--border)] bg-[var(--surface)] px-4 py-6 text-center text-sm text-[var(--muted-foreground)]',
         )}
       >
-        تعذر تحميل بطاقة إنستغرام
+        {t('loadError')}
       </div>
     );
   }

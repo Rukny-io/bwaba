@@ -13,6 +13,8 @@ import { existsSync } from 'fs';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
+import { RedisService } from '../../core/cache/redis.service';
+import { invalidateMyProductsCache } from './products-cache.util';
 
 /**
  * خدمة رفع صور المنتجات إلى S3
@@ -44,6 +46,7 @@ export class ProductsUploadService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -304,6 +307,12 @@ export class ProductsUploadService {
 
       this.logger.log(`تم رفع ${files.length} صورة للمنتج ${productId}`);
 
+      await invalidateMyProductsCache(
+        this.redisService,
+        userId,
+        this.logger,
+      );
+
       return { keys: uploadedKeys, urls: uploadedUrls };
     } catch (error) {
       // تنظيف الملفات المرفوعة في حال الفشل
@@ -401,6 +410,8 @@ export class ProductsUploadService {
       orderBy: { displayOrder: 'asc' },
     });
 
+    await invalidateMyProductsCache(this.redisService, userId, this.logger);
+
     return { success: true, images };
   }
 
@@ -449,6 +460,8 @@ export class ProductsUploadService {
 
     this.logger.log(`تم حذف الصورة ${imageId} من المنتج ${productId}`);
 
+    await invalidateMyProductsCache(this.redisService, userId, this.logger);
+
     return { success: true };
   }
 
@@ -484,6 +497,8 @@ export class ProductsUploadService {
       data: { isPrimary: true },
     });
 
+    await invalidateMyProductsCache(this.redisService, userId, this.logger);
+
     return { success: true };
   }
 
@@ -507,6 +522,8 @@ export class ProductsUploadService {
         }),
       ),
     );
+
+    await invalidateMyProductsCache(this.redisService, userId, this.logger);
 
     return { success: true };
   }

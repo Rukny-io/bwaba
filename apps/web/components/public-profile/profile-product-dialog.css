@@ -1,0 +1,23 @@
+.profile-product-dialog-layer {
+  --overlay: var(--surface, #ffffff);
+  --overlay-foreground: var(--foreground, #111111);
+  --backdrop: rgba(0, 0, 0, 0.45);
+  --background: var(--surface, #ffffff);
+  --foreground: var(--foreground, #111111);
+  --muted: var(--muted-foreground, #666666);
+  --border: var(--border, #e8e8e8);
+  --separator: var(--border, #e8e8e8);
+  --focus: rgba(17, 17, 17, 0.18);
+  box-sizing: border-box;
+}
+
+.profile-product-dialog-layer .product-detail-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.profile-product-dialog-layer .product-detail-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

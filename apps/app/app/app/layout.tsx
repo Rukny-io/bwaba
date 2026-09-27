@@ -43,7 +43,7 @@ export default async function AppDashboardLayout({
         ownerId={activeOwnerId}
       >
         <ProfilePreviewProvider>
-          <div dir="rtl" className="flex h-dvh flex-col bg-[var(--background)]">
+          <div dir="rtl" className="dashboard-chrome flex h-dvh flex-col bg-[var(--background)]">
             {activeForeign && (
               <ForeignWorkspaceBanner
                 ownerName={

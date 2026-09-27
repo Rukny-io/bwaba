@@ -74,13 +74,23 @@ export type MailDomainQuotaSnapshot = {
   domains: string[];
 };
 
+export type MailUnifiedLimitsSnapshot = {
+  planId: string;
+  plan: string;
+  mailboxCount: number;
+  limits: MailPlanLimits;
+  storageQuotaBytesPerMailbox: number;
+};
+
 export type MailAppSubscriptionSnapshot = {
   app: { appId: string; name: string; primaryDomain: string | null } | null;
   unifiedPlan?: MailUnifiedPlanSnapshot | null;
+  unifiedLimits?: MailUnifiedLimitsSnapshot | null;
   domainQuota?: MailDomainQuotaSnapshot | null;
   subscription: MailSubscriptionView | null;
   pendingRequest: MailPendingPlanRequest | null;
   needsApp: boolean;
+  hasWorkspaceAccess?: boolean;
   canManageBilling?: boolean;
   isOwner?: boolean;
   role?: string;
@@ -88,6 +98,7 @@ export type MailAppSubscriptionSnapshot = {
 
 type PlansResponse = {
   currency: string;
+  unifiedBillingOnly?: boolean;
   cardPayments?: {
     available?: boolean;
     status?: string;
@@ -193,6 +204,7 @@ export async function fetchMailPlans() {
   }
   return {
     currency: data.currency,
+    unifiedBillingOnly: Boolean(data.unifiedBillingOnly),
     cardPayments: {
       available: Boolean(data.cardPayments?.available),
       status: data.cardPayments?.status || "unavailable",
@@ -230,8 +242,10 @@ export async function fetchMailSubscription(
   const data = await readJson<{
     app?: MailAppSubscriptionSnapshot["app"];
     unifiedPlan?: MailUnifiedPlanSnapshot | null;
+    unifiedLimits?: MailUnifiedLimitsSnapshot | null;
     domainQuota?: MailDomainQuotaSnapshot | null;
     subscription?: MailSubscriptionView | null;
+    hasWorkspaceAccess?: boolean;
     pendingRequest?: MailPendingPlanRequest | null;
     canManageBilling?: boolean;
     isOwner?: boolean;
@@ -244,8 +258,10 @@ export async function fetchMailSubscription(
   return {
     app: data.app ?? null,
     unifiedPlan: data.unifiedPlan ?? null,
+    unifiedLimits: data.unifiedLimits ?? null,
     domainQuota: data.domainQuota ?? null,
     subscription: sub ? normalizeSubscription(sub) : null,
+    hasWorkspaceAccess: Boolean(data.hasWorkspaceAccess),
     pendingRequest: data.pendingRequest ?? null,
     needsApp: false,
     canManageBilling: Boolean(data.canManageBilling),
@@ -254,6 +270,7 @@ export async function fetchMailSubscription(
   };
 }
 
+/** @deprecated Legacy per-workspace mail plans — use developer portal checkout when unified billing is enabled. */
 export async function requestMailPlan(
   planId: MailPlanId,
   mailboxCount: number,
@@ -261,6 +278,12 @@ export async function requestMailPlan(
 ): Promise<{ alreadyPending: boolean; ticket: MailPendingPlanRequest }> {
   if (!isValidMailAppId(appId)) {
     throw new Error("Open a workspace first, then request a plan for that workspace.");
+  }
+  const plans = await fetchMailPlans();
+  if (plans.unifiedBillingOnly) {
+    throw new Error(
+      "Mail plan requests are disabled. Upgrade your Email API plan in the developer portal.",
+    );
   }
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/subscription/request`,
@@ -286,6 +309,7 @@ export async function requestMailPlan(
   };
 }
 
+/** @deprecated Legacy per-workspace mail card pay — use developer portal checkout when unified billing is enabled. */
 export async function payMailPlan(
   planId: MailPlanId,
   mailboxCount: number,
@@ -293,6 +317,12 @@ export async function payMailPlan(
 ): Promise<MailPayResponse> {
   if (!isValidMailAppId(appId)) {
     throw new Error("Open a workspace first, then pay for that workspace plan.");
+  }
+  const plans = await fetchMailPlans();
+  if (plans.unifiedBillingOnly) {
+    throw new Error(
+      "Mail plan checkout is disabled. Upgrade your Email API plan in the developer portal.",
+    );
   }
   const response = await sessionFetch(
     `/api/v1/mail/apps/${encodeURIComponent(appId)}/subscription/pay`,

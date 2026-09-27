@@ -2751,6 +2751,7 @@ enum DeveloperEmailSubscriptionStatus {
 enum DeveloperEmailPlan {
   FREE
   PRO_10K
+  PRO_25K
   PRO_50K
   PRO_100K
   SCALE_100K

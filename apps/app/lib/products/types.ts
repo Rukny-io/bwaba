@@ -34,6 +34,7 @@ export interface StoreProduct {
     imagePath: string;
     isPrimary?: boolean;
     displayOrder?: number;
+    createdAt?: string;
   }>;
   productAttributes?: Array<{
     key: string;

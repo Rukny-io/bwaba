@@ -20,6 +20,7 @@ export type EmailApiVolumeStop = {
 /** Public self-serve slider stops (Free · Growth · Enterprise). */
 export const EMAIL_API_TRANSACTIONAL_VOLUME_STOPS: EmailApiVolumeStop[] = [
   { volume: 3_000, label: '3K', planId: DeveloperEmailPlanId.FREE },
+  { volume: 25_000, label: '25K', planId: DeveloperEmailPlanId.PRO_25K },
   { volume: 50_000, label: '50K', planId: DeveloperEmailPlanId.PRO_50K },
   { volume: 100_000, label: '100K', planId: DeveloperEmailPlanId.PRO_100K },
   { volume: 250_000, label: '250K+', planId: DeveloperEmailPlanId.ENTERPRISE },

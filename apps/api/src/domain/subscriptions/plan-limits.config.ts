@@ -138,7 +138,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     wishlist: false,
     productReviews: false,
     featuredProducts: false,
-    digitalProducts: false,
+    digitalProducts: true,
     bilingualProducts: false,
     storeAnalytics: false,
 
@@ -221,7 +221,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     wishlist: true,
     productReviews: true,
     featuredProducts: true,
-    digitalProducts: false,
+    digitalProducts: true,
     bilingualProducts: false,
     storeAnalytics: 'basic',
 

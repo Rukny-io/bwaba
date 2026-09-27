@@ -34,7 +34,7 @@ function errorMessage(data: { message?: string | string[]; error?: string }, fal
 
 /**
  * Create a Mail → apps/checkout session and return the redirect URL.
- * Prefer this over direct Qaseh pay from the mail UI.
+ * @deprecated Legacy per-workspace mail checkout — disabled when unified billing is enabled.
  */
 export async function startMailCheckoutSession(
   planId: MailPlanId,
@@ -43,6 +43,14 @@ export async function startMailCheckoutSession(
 ): Promise<MailCheckoutSessionResponse> {
   if (!isValidMailAppId(appId)) {
     throw new Error("Open a workspace first, then continue to checkout.");
+  }
+
+  const { fetchMailPlans } = await import("@/lib/mail-subscription-client");
+  const plans = await fetchMailPlans();
+  if (plans.unifiedBillingOnly) {
+    throw new Error(
+      "Mail checkout is disabled. Upgrade your Email API plan in the developer portal.",
+    );
   }
 
   const response = await sessionFetch(
@@ -72,6 +80,7 @@ export async function startMailCheckoutSession(
 
 /**
  * Create a Mail → checkout session for prepaid outbound email packs.
+ * @deprecated Use Email API overage packs in the developer portal when unified billing is enabled.
  */
 export async function startMailOutboundPackCheckout(
   thousands: number,
@@ -79,6 +88,14 @@ export async function startMailOutboundPackCheckout(
 ): Promise<MailCheckoutSessionResponse> {
   if (!isValidMailAppId(appId)) {
     throw new Error("Open a workspace first, then continue to checkout.");
+  }
+
+  const { fetchMailPlans } = await import("@/lib/mail-subscription-client");
+  const plans = await fetchMailPlans();
+  if (plans.unifiedBillingOnly) {
+    throw new Error(
+      "Mail outbound packs are disabled. Buy Email API overage packs in the developer portal.",
+    );
   }
 
   const response = await sessionFetch(

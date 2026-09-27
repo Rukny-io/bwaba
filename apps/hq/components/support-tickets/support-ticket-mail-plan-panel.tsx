@@ -76,8 +76,8 @@ export function SupportTicketMailPlanPanel({
         Mail plan request
       </h2>
       <p className="text-xs text-[var(--muted-foreground)]">
-        Activates seats, storage quota, and plan features for this Mail app only
-        — not for the customer’s other apps. Card payments are coming soon.
+        Legacy Mail-only activation for this ticket. New customers use unified
+        Email API billing — activate the linked developer app instead.
       </p>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">

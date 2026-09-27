@@ -4,11 +4,17 @@ import en from '../messages/en.json';
 import arProducts from '../messages/products/ar.json';
 import ckbProducts from '../messages/products/ckb.json';
 import enProducts from '../messages/products/en.json';
+import arProfile from '../messages/profile/ar.json';
+import ckbProfile from '../messages/profile/ckb.json';
+import enProfile from '../messages/profile/en.json';
 
 export const LOCALES = ['ar', 'en', 'ckb'] as const;
 export type AppLocale = (typeof LOCALES)[number];
 
-export type AppMessages = typeof ar & { products: typeof arProducts };
+export type AppMessages = typeof ar & {
+  products: typeof arProducts;
+  publicProfile: typeof arProfile;
+};
 
 const MESSAGES: Record<AppLocale, typeof ar> = { ar, en, ckb };
 
@@ -16,6 +22,12 @@ const PRODUCT_MESSAGES: Record<AppLocale, typeof arProducts> = {
   ar: arProducts,
   en: enProducts,
   ckb: ckbProducts,
+};
+
+const PROFILE_MESSAGES: Record<AppLocale, typeof arProfile> = {
+  ar: arProfile,
+  en: enProfile,
+  ckb: ckbProfile,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -53,7 +65,10 @@ export function normalizeLocale(value: string | undefined | null): AppLocale {
 }
 
 export function getMessages(locale: AppLocale): AppMessages {
-  return mergeDeep(MESSAGES[locale], { products: PRODUCT_MESSAGES[locale] }) as AppMessages;
+  return mergeDeep(MESSAGES[locale], {
+    products: PRODUCT_MESSAGES[locale],
+    publicProfile: PROFILE_MESSAGES[locale],
+  }) as AppMessages;
 }
 
 export function getDirection(locale: AppLocale): 'rtl' | 'ltr' {

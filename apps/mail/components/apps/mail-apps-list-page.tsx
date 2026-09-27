@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus, Layers } from "lucide-react";
+import { resolveDeveloperUrl } from "@rukny/auth/client/env-urls";
 import type { MailApp } from "@/lib/mail-apps-client";
 import { MailAppCard } from "@/components/apps/mail-app-card";
+import {
+  fetchMailSubscription,
+  type MailDomainQuotaSnapshot,
+  type MailUnifiedPlanSnapshot,
+} from "@/lib/mail-subscription-client";
 import {
   acceptMailInvitation,
   declineMailInvitation,
@@ -22,6 +28,12 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
   const [invitations, setInvitations] = useState<MailTeamInvitation[]>([]);
   const [inviteBusy, setInviteBusy] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState("");
+  const [unifiedPlan, setUnifiedPlan] = useState<MailUnifiedPlanSnapshot | null>(
+    null,
+  );
+  const [domainQuota, setDomainQuota] = useState<MailDomainQuotaSnapshot | null>(
+    null,
+  );
 
   const loadInvites = useCallback(async () => {
     try {
@@ -36,6 +48,25 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
   useEffect(() => {
     void loadInvites();
   }, [loadInvites]);
+
+  useEffect(() => {
+    const owned = apps.find((app) => app.isOwner !== false);
+    if (!owned?.appId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await fetchMailSubscription(owned.appId);
+        if (cancelled) return;
+        setUnifiedPlan(snap.unifiedPlan ?? null);
+        setDomainQuota(snap.domainQuota ?? null);
+      } catch {
+        /* banner is optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apps]);
 
   async function onAccept(memberId: string) {
     setInviteBusy(memberId);
@@ -79,10 +110,34 @@ export function MailAppsListPage({ apps, currentAppId }: MailAppsListPageProps) 
         </h1>
         <p className="mx-auto max-w-md text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
           {isEmpty && invitations.length === 0
-            ? "One workspace per domain — mailboxes, DNS, and its own plan."
+            ? "One workspace per domain — mailboxes, DNS, and team tools on your account plan."
             : "Owned and invited workspaces appear here. Open one or add another."}
         </p>
       </header>
+
+      {unifiedPlan ? (
+        <div
+          className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-center sm:flex-row sm:text-left"
+          role="status"
+        >
+          <p className="text-sm text-[var(--foreground)]">
+            <span className="font-medium">{unifiedPlan.marketingNameEn}</span>
+            {domainQuota
+              ? ` · ${domainQuota.used}/${domainQuota.limit} domains`
+              : null}
+            <span className="text-[var(--muted-foreground)]">
+              {" "}
+              · {unifiedPlan.monthlyQuota.toLocaleString("en-IQ")} emails/mo
+            </span>
+          </p>
+          <a
+            href={`${resolveDeveloperUrl()}/apps`}
+            className="shrink-0 text-sm font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+          >
+            Manage plan
+          </a>
+        </div>
+      ) : null}
 
       {inviteError ? (
         <p className="rounded-xl border border-[var(--danger)]/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-3 text-center text-sm text-[var(--danger)]">

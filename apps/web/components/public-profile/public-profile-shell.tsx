@@ -1,7 +1,12 @@
 'use client';
 
 import { resolveProfileMediaUrl } from './resolve-media-url';
-import type { MediaUrlResolver, PublicProfile, PublicProfileForm } from './types';
+import type {
+  MediaUrlResolver,
+  PublicProfile,
+  PublicProfileForm,
+  PublicProfileProduct,
+} from './types';
 import { ProfilePageView } from './profile-page-view';
 
 export type PublicProfileShellMode = 'live' | 'preview';
@@ -9,7 +14,8 @@ export type PublicProfileShellMode = 'live' | 'preview';
 export interface PublicProfileShellProps {
   profile: PublicProfile;
   forms?: PublicProfileForm[];
-  featuredForm?: PublicProfileForm | null;
+  products?: PublicProfileProduct[];
+  initialProductId?: string | null;
   mode?: PublicProfileShellMode;
   resolveMediaUrl?: MediaUrlResolver;
   onTrackClick?: (linkId: string) => void;
@@ -19,7 +25,8 @@ export interface PublicProfileShellProps {
 export function PublicProfileShell({
   profile,
   forms = [],
-  featuredForm = null,
+  products = [],
+  initialProductId = null,
   mode = 'live',
   resolveMediaUrl = resolveProfileMediaUrl,
   onTrackClick,
@@ -30,7 +37,8 @@ export function PublicProfileShell({
     <ProfilePageView
       profile={profile}
       forms={forms}
-      featuredForm={featuredForm}
+      products={products}
+      initialProductId={initialProductId}
       preview={preview}
       constrained={preview}
       fillHeight={preview}

@@ -147,6 +147,28 @@ interface ApiResponse<T> {
   status: number;
 }
 
+function extractApiErrorMessage(responseData: unknown): string {
+  const fallback = 'حدث خطأ';
+  const raw = (responseData as { message?: unknown }).message;
+
+  if (Array.isArray(raw)) {
+    return raw.filter(Boolean).join(', ') || fallback;
+  }
+
+  if (typeof raw === 'string') {
+    return raw;
+  }
+
+  if (raw && typeof raw === 'object' && 'message' in raw) {
+    const nested = (raw as { message?: unknown }).message;
+    if (typeof nested === 'string' && nested.trim()) {
+      return nested;
+    }
+  }
+
+  return fallback;
+}
+
 async function apiClient<T>(
   endpoint: string,
   config: RequestConfig = {},
@@ -199,14 +221,7 @@ async function apiClient<T>(
   const responseData = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const raw = (responseData as { message?: unknown }).message;
-    let errorMessage = 'حدث خطأ';
-    if (Array.isArray(raw)) {
-      errorMessage = raw.filter(Boolean).join(', ') || errorMessage;
-    } else if (typeof raw === 'string') {
-      errorMessage = raw;
-    }
-    throw new ApiException(response.status, errorMessage);
+    throw new ApiException(response.status, extractApiErrorMessage(responseData));
   }
 
   return { data: responseData as T, status: response.status };

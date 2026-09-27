@@ -51,7 +51,7 @@ services:
       - >-
         export DATABASE_URL="postgresql://$${DB_USER:-rukny_admin}:$${DB_PASSWORD}@postgres:5432/$${DB_NAME:-rukny_io}"
         && node -e "const net=require('net'); const retry=()=>{const socket=net.createConnection({host:'postgres',port:5432},()=>{socket.end(); process.exit(0);}); socket.on('error',()=>setTimeout(retry,1000));}; retry();"
-        && npx prisma db push --accept-data-loss --config prisma/prisma.config.ts
+        && npx prisma migrate deploy --config prisma/prisma.config.ts
         && node dist/main
     env_file:
       - ./.env.dev

@@ -99,17 +99,20 @@ export async function updateProductStatus(
   return data;
 }
 
-export async function createProduct(
+export async function deleteProduct(id: string): Promise<void> {
+  const { api } = await import('@/lib/api-client');
+  await api.delete(`/products/${encodeURIComponent(id)}`);
+}
+
+function buildCreateProductPayload(
   input: CreateProductInput,
   template: CategoryTemplateFields | null = null,
-): Promise<StoreProduct> {
-  const { api } = await import('@/lib/api-client');
-
+) {
   const useVariants = Boolean(
     input.hasVariants && input.variants && input.variants.length > 0,
   );
 
-  const payload = {
+  return {
     kind: input.kind,
     name: input.name,
     nameAr: input.nameAr,
@@ -135,8 +138,30 @@ export async function createProduct(
         )
       : undefined,
   };
+}
 
-  const { data } = await api.post<StoreProduct>('/products', payload);
+export async function createProduct(
+  input: CreateProductInput,
+  template: CategoryTemplateFields | null = null,
+): Promise<StoreProduct> {
+  const { api } = await import('@/lib/api-client');
+  const { data } = await api.post<StoreProduct>(
+    '/products',
+    buildCreateProductPayload(input, template),
+  );
+  return data;
+}
+
+export async function updateProduct(
+  id: string,
+  input: CreateProductInput,
+  template: CategoryTemplateFields | null = null,
+): Promise<StoreProduct> {
+  const { api } = await import('@/lib/api-client');
+  const { data } = await api.patch<StoreProduct>(
+    `/products/${encodeURIComponent(id)}`,
+    buildCreateProductPayload(input, template),
+  );
   return data;
 }
 

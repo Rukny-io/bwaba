@@ -31,7 +31,7 @@ function extractS3KeyFromUrl(url: string): string | null {
 export const resolveProfileMediaUrl: MediaUrlResolver = (path) => {
   if (!path) return null;
   if (path.startsWith('/api/')) return path;
-  if (path.startsWith('/uploads/')) return null;
+  if (path.startsWith('/uploads/')) return path;
 
   if (path.startsWith('http://') || path.startsWith('https://')) {
     try {

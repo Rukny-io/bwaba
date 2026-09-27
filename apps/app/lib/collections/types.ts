@@ -41,5 +41,6 @@ export interface MyStoreProduct {
     imagePath: string;
     isPrimary?: boolean;
     displayOrder?: number;
+    createdAt?: string;
   }>;
 }

@@ -75,6 +75,7 @@ export function getMailLimitsForEmailPlan(
     return FREE_MAIL_LIMITS;
   }
   if (
+    id === DeveloperEmailPlanId.PRO_25K ||
     id === DeveloperEmailPlanId.PRO_50K ||
     id === DeveloperEmailPlanId.SCALE_100K ||
     id === DeveloperEmailPlanId.SCALE_200K

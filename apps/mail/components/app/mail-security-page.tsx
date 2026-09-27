@@ -49,8 +49,8 @@ const MATCH_FIELDS: { value: MailFilterMatchField; label: string }[] = [
   { value: "DOMAIN", label: "Sender domain" },
   { value: "SUBJECT", label: "Subject contains" },
   { value: "RECIPIENT", label: "Recipient address" },
-  { value: "SENDER_REGEX", label: "Sender regex (Premium)" },
-  { value: "SUBJECT_REGEX", label: "Subject regex (Premium)" },
+  { value: "SENDER_REGEX", label: "Sender regex (PRO_100K+)" },
+  { value: "SUBJECT_REGEX", label: "Subject regex (PRO_100K+)" },
 ];
 
 function ruleTypeForTab(tab: SecurityTab): MailFilterRuleType | undefined {

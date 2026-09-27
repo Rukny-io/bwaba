@@ -46,6 +46,8 @@ export class PlanGuard implements CanActivate {
       throw new ForbiddenException('المستخدم غير مصادق');
     }
 
+    const billingUserId = request.workspace?.ownerId ?? user.id;
+
     // 1. فحص الباقة المطلوبة @RequirePlan()
     const requiredPlan = this.reflector.getAllAndOverride<SubscriptionPlan>(
       REQUIRE_PLAN_KEY,
@@ -53,7 +55,7 @@ export class PlanGuard implements CanActivate {
     );
 
     if (requiredPlan) {
-      const userPlan = await this.subscriptionsService.getUserPlan(user.id);
+      const userPlan = await this.subscriptionsService.getUserPlan(billingUserId);
       if (PLAN_ORDER[userPlan] < PLAN_ORDER[requiredPlan]) {
         throw new ForbiddenException({
           message: `هذه الميزة تتطلب باقة ${this.getPlanName(requiredPlan)} أو أعلى`,
@@ -72,11 +74,11 @@ export class PlanGuard implements CanActivate {
 
     if (limitKey) {
       const result = await this.subscriptionsService.checkLimit(
-        user.id,
+        billingUserId,
         limitKey,
       );
       if (!result.allowed) {
-        const userPlan = await this.subscriptionsService.getUserPlan(user.id);
+        const userPlan = await this.subscriptionsService.getUserPlan(billingUserId);
         throw new ForbiddenException({
           message: `لقد وصلت إلى الحد الأقصى (${result.current}/${result.limit}). قم بترقية باقتك للحصول على المزيد.`,
           code: 'LIMIT_REACHED',
@@ -96,11 +98,11 @@ export class PlanGuard implements CanActivate {
 
     if (featureKey) {
       const result = await this.subscriptionsService.checkLimit(
-        user.id,
+        billingUserId,
         featureKey,
       );
       if (!result.allowed) {
-        const userPlan = await this.subscriptionsService.getUserPlan(user.id);
+        const userPlan = await this.subscriptionsService.getUserPlan(billingUserId);
         throw new ForbiddenException({
           message: `هذه الميزة غير متاحة في باقتك الحالية. قم بالترقية لتفعيلها.`,
           code: 'FEATURE_UNAVAILABLE',
@@ -117,9 +119,9 @@ export class PlanGuard implements CanActivate {
     );
 
     if (featureTier) {
-      const limits = await this.subscriptionsService.getUserLimits(user.id);
+      const limits = await this.subscriptionsService.getUserLimits(billingUserId);
       if (!hasMinFeatureTier(limits, featureTier.feature, featureTier.minTier)) {
-        const userPlan = await this.subscriptionsService.getUserPlan(user.id);
+        const userPlan = await this.subscriptionsService.getUserPlan(billingUserId);
         throw new ForbiddenException({
           message: `هذه الميزة تتطلب مستوى ${featureTier.minTier} أو أعلى في باقتك.`,
           code: 'FEATURE_TIER_REQUIRED',

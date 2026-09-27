@@ -73,6 +73,7 @@ export class MailSubscriptionsController {
   @Post('apps/:appId/usage/packs/checkout-session')
   @ApiOperation({
     summary: 'Create checkout session for prepaid outbound email packs',
+    deprecated: true,
   })
   createOutboundPackCheckout(
     @CurrentUser() user: AuthenticatedUser,
@@ -93,6 +94,7 @@ export class MailSubscriptionsController {
   @ApiOperation({
     summary:
       'Open a billing support ticket so an admin can activate this app’s plan',
+    deprecated: true,
   })
   requestPlan(
     @CurrentUser() user: AuthenticatedUser,
@@ -113,6 +115,7 @@ export class MailSubscriptionsController {
   @Post('apps/:appId/subscription/pay')
   @ApiOperation({
     summary: 'Start Al-Qaseh card payment for this Mail app plan',
+    deprecated: true,
   })
   payPlan(
     @CurrentUser() user: AuthenticatedUser,
@@ -134,6 +137,7 @@ export class MailSubscriptionsController {
   @ApiOperation({
     summary:
       'Create a Mail → apps/checkout session (Starter + upgrades; no free passage)',
+    deprecated: true,
   })
   createCheckoutSession(
     @CurrentUser() user: AuthenticatedUser,

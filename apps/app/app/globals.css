@@ -229,6 +229,53 @@ body {
   }
 }
 
+/* Mail-aligned neutral palette for the app dashboard chrome */
+.dashboard-chrome {
+  --background: #fafafa;
+  --foreground: #111111;
+  --muted: #666666;
+  --muted-foreground: #666666;
+  --border: #e8e8e8;
+  --separator: #f0f0f0;
+  --surface: #ffffff;
+  --surface-foreground: #111111;
+  --surface-secondary: #f5f5f5;
+  --surface-secondary-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #111111;
+  --accent: #111111;
+  --accent-foreground: #ffffff;
+  --link: #111111;
+  --focus: #111111;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+.dark .dashboard-chrome,
+[data-theme="dark"] .dashboard-chrome {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --muted: #a3a3a3;
+  --muted-foreground: #a3a3a3;
+  --border: #2a2a2a;
+  --separator: #1a1a1a;
+  --surface: #141414;
+  --surface-foreground: #f5f5f5;
+  --surface-secondary: #1a1a1a;
+  --surface-secondary-foreground: #e5e5e5;
+  --primary: #f5f5f5;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
+  --link: #f5f5f5;
+  --focus: #f5f5f5;
+}
+
 .dashboard-page {
   width: 100%;
   padding-top: 0.75rem;
@@ -260,25 +307,21 @@ body {
 }
 
 .dashboard-card {
-  border-radius: 2rem;
-  border: 1px solid var(--border);
+  border: none;
+  border-radius: 1rem;
   background: var(--surface);
-  box-shadow: var(--card-shadow);
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    background-color 0.2s ease;
+  box-shadow: none;
+  transition: background-color 0.2s ease;
 }
 
 .dashboard-card-interactive:hover {
   background: var(--surface-secondary);
-  border-color: color-mix(in srgb, var(--border) 70%, var(--primary) 30%);
-  box-shadow: var(--card-shadow-hover);
 }
 
 .dashboard-metric-tile {
-  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  background: var(--surface);
+  border: none;
+  border-radius: 1rem;
+  background: var(--surface-secondary);
 }
 
 @keyframes metric-value-in {
@@ -304,8 +347,7 @@ body {
 
 .dark .dashboard-metric-tile,
 [data-theme='dark'] .dashboard-metric-tile {
-  border-color: color-mix(in srgb, var(--border) 70%, transparent);
-  background: color-mix(in srgb, var(--surface) 88%, white 4%);
+  background: color-mix(in srgb, var(--surface-secondary) 92%, white 4%);
 }
 
 @supports not (backdrop-filter: blur(1px)) {

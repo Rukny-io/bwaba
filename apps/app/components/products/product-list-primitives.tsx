@@ -1,16 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Box, Download, Package, Wrench } from 'lucide-react';
+import { Package } from 'lucide-react';
+import { useResilientImage } from '@/lib/use-resilient-image';
 import type { ProductKind } from '@/lib/products/types';
 import { formatProductPrice } from '@/lib/collections/product-utils';
 import { cn } from '@/lib/utils';
-
-const KIND_ICONS = {
-  PHYSICAL: Box,
-  DIGITAL: Download,
-  SERVICE: Wrench,
-} as const;
 
 interface ProductThumbnailProps {
   imageUrl: string | null;
@@ -25,8 +19,7 @@ export function ProductThumbnail({
   className,
   imageClassName,
 }: ProductThumbnailProps) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(imageUrl) && !failed;
+  const { showImage, imageKey, onError } = useResilientImage(imageUrl);
 
   return (
     <div
@@ -37,10 +30,12 @@ export function ProductThumbnail({
     >
       {showImage ? (
         <img
+          key={imageKey}
           src={imageUrl!}
           alt={alt}
-          loading="lazy"
-          onError={() => setFailed(true)}
+          loading="eager"
+          decoding="async"
+          onError={onError}
           className={cn('size-full object-cover', imageClassName)}
         />
       ) : (
@@ -62,23 +57,14 @@ interface ProductKindBadgeProps {
   className?: string;
 }
 
-export function ProductKindBadge({ kind, label, className }: ProductKindBadgeProps) {
-  const Icon = KIND_ICONS[kind] ?? Package;
-
+export function ProductKindBadge({ label, className }: ProductKindBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-none',
-        kind === 'PHYSICAL' &&
-          'border-[color-mix(in_srgb,var(--success)_28%,var(--border))] bg-[color-mix(in_srgb,var(--success)_12%,var(--surface))] text-[color-mix(in_srgb,var(--success)_78%,var(--foreground))]',
-        kind === 'DIGITAL' &&
-          'border-[color-mix(in_srgb,var(--primary)_28%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_10%,var(--surface))] text-[color-mix(in_srgb,var(--primary)_82%,var(--foreground))]',
-        kind === 'SERVICE' &&
-          'border-[color-mix(in_srgb,var(--warning)_30%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_12%,var(--surface))] text-[color-mix(in_srgb,var(--warning)_78%,var(--foreground))]',
+        'text-[11px] font-medium leading-none text-[var(--muted-foreground)]',
         className,
       )}
     >
-      <Icon className="size-3" strokeWidth={2} aria-hidden />
       {label}
     </span>
   );
@@ -92,25 +78,18 @@ interface ProductStockBadgeProps {
 
 export function ProductStockBadge({ label, variant, className }: ProductStockBadgeProps) {
   if (variant === 'muted') {
-    return <span className={cn('text-[12px] text-[var(--muted-foreground)]', className)}>—</span>;
+    return <span className={cn('text-[11px] text-[var(--muted-foreground)]', className)}>—</span>;
   }
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
-        variant === 'low' &&
-          'border-[color-mix(in_srgb,var(--danger)_22%,var(--border))] bg-[color-mix(in_srgb,var(--danger)_6%,var(--surface))] text-[var(--danger)]',
-        variant === 'unlimited' &&
-          'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]',
-        variant === 'default' &&
-          'border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+        'text-[11px] font-medium text-[var(--foreground)]',
+        variant === 'low' && 'text-[var(--danger)]',
+        variant === 'default' && 'text-[var(--muted-foreground)]',
         className,
       )}
     >
-      {variant === 'unlimited' ? (
-        <span className="size-1.5 rounded-full bg-[var(--primary)]" aria-hidden />
-      ) : null}
       {label}
     </span>
   );
@@ -170,12 +149,25 @@ export function ProductPriceDisplay({
   }
 
   if (hasDiscount && layout === 'stack') {
+    const saleTextSize = size === 'md' ? 'text-[14px]' : 'text-[13px]';
+    const baseTextSize = size === 'md' ? 'text-[12px]' : 'text-[11px]';
+
     return (
       <span className={cn('flex min-w-0 flex-col items-start gap-0.5', className)}>
-        <span className="text-[14px] font-semibold tabular-nums leading-none text-[var(--foreground)]">
+        <span
+          className={cn(
+            saleTextSize,
+            'font-semibold tabular-nums leading-none text-[var(--foreground)]',
+          )}
+        >
           {formatProductPrice(parsedSale!)}
         </span>
-        <span className="text-[12px] font-medium tabular-nums leading-none text-[var(--muted-foreground)] line-through">
+        <span
+          className={cn(
+            baseTextSize,
+            'font-medium tabular-nums leading-none text-[var(--muted-foreground)] line-through',
+          )}
+        >
           {formatProductPrice(basePrice)}
         </span>
       </span>
@@ -195,11 +187,13 @@ export function ProductPriceDisplay({
     );
   }
 
+  const stackTextSize = size === 'md' ? 'text-[14px]' : 'text-[13px]';
+
   return (
     <span
       className={cn(
         layout === 'stack'
-          ? 'text-[14px] font-semibold tabular-nums text-[var(--foreground)]'
+          ? cn(stackTextSize, 'font-semibold tabular-nums text-[var(--foreground)]')
           : cn(textSize, 'font-medium text-[var(--muted-foreground)]'),
         className,
       )}

@@ -82,12 +82,12 @@ export const messages = {
     emptyCheckoutTitle: 'لا توجد جلسة دفع',
     emptyCheckoutSubtitle: 'لم نتمكن من تحميل طلبك في هذه الجلسة.',
     emptyCheckoutStoreHeading: 'السلة فارغة',
-    emptyCheckoutMailHeading: 'تعذّر تحميل الاشتراك',
+    emptyCheckoutMailHeading: 'فوترة Mail موحّدة',
     emptyCheckoutDeveloperHeading: 'تعذّر تحميل جلسة الدفع',
     emptyCheckoutHint1: 'ارجع إلى المتجر واضغط «إتمام الشراء» من السلة.',
     emptyCheckoutHint2: 'تأكد أن الرابط يتضمن المنتجات وليس صفحة Checkout فقط.',
     emptyCheckoutMailHint:
-      'افتح Checkout من صفحة الفوترة في Mail خلال 15 دقيقة من إنشاء الرابط.',
+      'باقات Mail المنفصلة أُلغيت. رقِّ حسابك من بوابة المطوّرين — نفس الباقة تغطي الصناديق و Email API.',
     emptyCheckoutDeveloperHint:
       'افتح Checkout من بوابة المطوّرين خلال 15 دقيقة من إنشاء الرابط.',
     emptyCheckoutAction: 'العودة للمتجر',
@@ -106,7 +106,7 @@ export const messages = {
     needAddress: 'يرجى اختيار أو إضافة عنوان توصيل للمتابعة',
     orderSectionLocked: 'أكمل التحقق وعنوان التوصيل أولاً.',
     mailSessionLoadError:
-      'تعذّر تحميل باقة البريد. ارجع من Mail وافتح Checkout من جديد.',
+      'فوترة Mail موحّدة تحت Email API. رقِّ من بوابة المطوّرين بدلاً من Checkout القديم.',
     developerSessionLoadError:
       'تعذّر تحميل جلسة الدفع. ارجع من بوابة المطوّرين وافتح Checkout من جديد.',
     multiStoreConflict:
@@ -289,13 +289,13 @@ export const messages = {
     emptyCheckoutTitle: 'No checkout session',
     emptyCheckoutSubtitle: 'We could not load your order in this session.',
     emptyCheckoutStoreHeading: 'Your cart is empty',
-    emptyCheckoutMailHeading: 'Could not load subscription',
+    emptyCheckoutMailHeading: 'Mail billing is unified',
     emptyCheckoutDeveloperHeading: 'Could not load checkout',
     emptyCheckoutHint1: 'Return to the store and tap checkout from your cart.',
     emptyCheckoutHint2:
       'Make sure the link includes your items, not just the checkout page.',
     emptyCheckoutMailHint:
-      'Open Checkout from Mail billing within 15 minutes of creating the link.',
+      'Per-workspace Mail plans are retired. Upgrade from the developer portal — one plan covers mailboxes and Email API.',
     emptyCheckoutDeveloperHint:
       'Open Checkout from Developers within 15 minutes of creating the link.',
     emptyCheckoutAction: 'Back to store',
@@ -314,7 +314,7 @@ export const messages = {
     needAddress: 'Please select or add a delivery address to continue',
     orderSectionLocked: 'Complete verification and delivery address first.',
     mailSessionLoadError:
-      'Could not load the Mail plan. Return to Mail and open Checkout again.',
+      'Mail billing is unified under Email API. Upgrade from the developer portal instead of legacy Mail checkout.',
     developerSessionLoadError:
       'Could not load the checkout session. Return to Developers and open Checkout again.',
     multiStoreConflict:

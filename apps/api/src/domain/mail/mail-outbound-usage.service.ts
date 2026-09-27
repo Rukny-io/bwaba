@@ -16,6 +16,7 @@ import {
 export type MailOutboundUsageView = {
   plan: MailPlan;
   planId: string;
+  planName?: string;
   status: string;
   included: number;
   used: number;
@@ -28,6 +29,7 @@ export type MailOutboundUsageView = {
   packsAvailable: boolean;
   packEmails: number;
   packPriceIqd: number | null;
+  unified?: boolean;
 };
 
 @Injectable()
@@ -40,6 +42,29 @@ export class MailOutboundUsageService {
   ) {}
 
   async getUsageForMailApp(mailAppUuid: string): Promise<MailOutboundUsageView | null> {
+    const unified =
+      await this.unifiedEntitlement.getOutboundUsageForMailApp(mailAppUuid);
+    if (unified) {
+      return {
+        plan: MailPlan.STARTER,
+        planId: unified.planId,
+        planName: unified.planName,
+        status: unified.status,
+        included: unified.included,
+        used: unified.used,
+        packCredits: unified.packCredits,
+        allowance: unified.allowance,
+        remaining: unified.remaining,
+        percentUsed: unified.percentUsed,
+        periodStart: unified.periodStart,
+        periodEnd: unified.periodEnd,
+        packsAvailable: false,
+        packEmails: 0,
+        packPriceIqd: null,
+        unified: true,
+      };
+    }
+
     const sub = await this.prisma.mailSubscription.findUnique({
       where: { mailAppId: mailAppUuid },
     });

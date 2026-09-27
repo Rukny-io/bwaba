@@ -2,10 +2,13 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { LivePublicProfile } from '@/components/public-profile/live-public-profile';
 import { PUBLIC_SITE_URL } from '@/lib/config';
+import { getLocale } from '@/lib/i18n-server';
+import { getMessages } from '@/lib/i18n';
 import { isValidProfileUsername } from '@/lib/profile-routes';
 import {
   fetchPublicProfile,
   fetchPublicProfileForms,
+  fetchPublicProfileProducts,
   getCanonicalProfileUrl,
   isProfilePubliclyVisible,
   resolveProfileMediaUrl,
@@ -13,22 +16,28 @@ import {
 
 type Props = {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; product?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
+  const locale = await getLocale();
+  const messages = getMessages(locale);
+  const profileCopy = messages.publicProfile;
+
   if (!isValidProfileUsername(username)) {
-    return { title: 'الملف غير موجود' };
+    return { title: profileCopy.meta.notFoundTitle };
   }
 
   const profile = await fetchPublicProfile(username);
   if (!profile || !isProfilePubliclyVisible(profile)) {
-    return { title: 'الملف غير موجود' };
+    return { title: profileCopy.meta.notFoundTitle };
   }
 
   const title = profile.name?.trim() || profile.username;
-  const description = profile.bio?.trim() || `صفحة ${profile.username} على ركني`;
+  const description =
+    profile.bio?.trim() ||
+    profileCopy.meta.descriptionFallback.replace('{username}', profile.username);
   const canonical = getCanonicalProfileUrl(profile.username);
   const avatar = resolveProfileMediaUrl(profile.avatar);
 
@@ -56,15 +65,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PublicProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
-  const { embed } = await searchParams;
+  const { embed, product: initialProductId } = await searchParams;
 
   if (!isValidProfileUsername(username)) {
     notFound();
   }
 
-  const [profile, formsData] = await Promise.all([
+  const [profile, formsData, productsData] = await Promise.all([
     fetchPublicProfile(username),
     fetchPublicProfileForms(username),
+    fetchPublicProfileProducts(username),
   ]);
 
   if (
@@ -79,7 +89,8 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     <LivePublicProfile
       profile={profile}
       forms={formsData.forms}
-      featuredForm={formsData.featured}
+      products={productsData.products}
+      initialProductId={initialProductId ?? null}
       embed={embed === '1'}
     />
   );

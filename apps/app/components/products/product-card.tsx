@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Copy, Eye, EyeOff, Info, MoreVertical } from 'lucide-react';
+import { Copy, Eye, EyeOff, Info, MoreVertical, Trash2 } from 'lucide-react';
 import { Button, Dropdown, Label } from '@heroui/react';
 import type { StoreProduct } from '@/lib/products/types';
 import { getProductDisplayName } from '@/lib/products/api';
@@ -20,6 +20,7 @@ interface ProductCardProps {
   isBusy?: boolean;
   onOpenDetails?: (product: StoreProduct) => void;
   onToggleVisibility?: (product: StoreProduct) => void;
+  onDelete?: (product: StoreProduct) => void;
 }
 
 function salePercent(price: number | string, salePrice: number | string | null | undefined) {
@@ -38,6 +39,7 @@ function ProductCardComponent({
   isBusy = false,
   onOpenDetails,
   onToggleVisibility,
+  onDelete,
 }: ProductCardProps) {
   const imageUrl = getProductImage(product as MyStoreProduct);
   const title = getProductDisplayName(product);
@@ -59,7 +61,7 @@ function ProductCardComponent({
     >
       <div
         className={cn(
-          'relative aspect-square overflow-hidden rounded-2xl bg-[var(--surface-secondary)] ring-1 ring-inset ring-black/[0.06]',
+          'relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-secondary)] ring-1 ring-inset ring-black/[0.06]',
           onOpenDetails && 'cursor-pointer',
         )}
         onClick={openDetails}
@@ -67,11 +69,11 @@ function ProductCardComponent({
         <ProductThumbnail
           imageUrl={imageUrl}
           alt={title}
-          className="size-full rounded-2xl"
+          className="size-full rounded-xl"
           imageClassName="transition-[transform,opacity] duration-300 group-hover/card:scale-[1.03] group-hover/card:opacity-[0.96] group-focus-within/card:scale-[1.03]"
         />
 
-        <div className="absolute start-2.5 top-2.5 z-[1] flex max-w-[calc(100%-3.25rem)] flex-col items-start gap-1">
+        <div className="absolute start-2 top-2 z-[1] flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-0.5">
           {isHidden ? (
             <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               مخفي
@@ -88,13 +90,13 @@ function ProductCardComponent({
         </div>
 
         {stock.variant === 'low' ? (
-          <span className="absolute inset-x-2.5 bottom-2.5 z-[1] w-fit max-w-[calc(100%-1.25rem)] truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+          <span className="absolute inset-x-2 bottom-2 z-[1] w-fit max-w-[calc(100%-1rem)] truncate rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
             {stock.label}
           </span>
         ) : null}
 
         <div
-          className="absolute end-2.5 top-2.5 z-10"
+          className="absolute end-2 top-2 z-10"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
@@ -106,9 +108,9 @@ function ProductCardComponent({
               variant="ghost"
               aria-label="خيارات المنتج"
               isDisabled={isBusy}
-              className="size-8 rounded-full !bg-black/45 !text-white backdrop-blur-sm hover:!bg-black/60"
+              className="size-7 rounded-full !bg-black/45 !text-white backdrop-blur-sm hover:!bg-black/60"
             >
-              <MoreVertical className="size-4" />
+              <MoreVertical className="size-3.5" />
             </Button>
             <Dropdown.Popover placement="bottom end">
               <Dropdown.Menu
@@ -120,6 +122,7 @@ function ProductCardComponent({
                   if (key === 'copy-sku' && product.sku) {
                     void navigator.clipboard.writeText(product.sku);
                   }
+                  if (key === 'delete') onDelete?.(product);
                 }}
               >
                 <Dropdown.Item id="details" textValue="تفاصيل المنتج">
@@ -146,6 +149,15 @@ function ProductCardComponent({
                     <Label>نسخ الرمز</Label>
                   </Dropdown.Item>
                 ) : null}
+                <Dropdown.Item
+                  id="delete"
+                  variant="danger"
+                  isDisabled={isBusy}
+                  textValue="حذف المنتج"
+                >
+                  <Trash2 className="size-4 shrink-0" aria-hidden />
+                  <Label>حذف المنتج</Label>
+                </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
@@ -154,24 +166,25 @@ function ProductCardComponent({
 
       <div
         className={cn(
-          'mt-3 flex min-w-0 flex-col gap-1.5 px-0.5',
+          'mt-2 flex min-w-0 flex-col gap-1 px-0.5',
           onOpenDetails && 'cursor-pointer',
         )}
         onClick={openDetails}
       >
         <h3
           dir="auto"
-          className="line-clamp-2 min-h-[2.5em] text-[13px] font-medium leading-snug text-[var(--foreground)] sm:text-[14px]"
+          className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--foreground)] sm:text-[14px]"
           title={title}
         >
           {title}
         </h3>
 
-        <div className="flex min-w-0 items-end justify-between gap-2" dir="rtl">
+        <div className="flex min-w-0 items-end justify-between gap-1.5" dir="rtl">
           <ProductPriceDisplay
             price={product.price}
             salePrice={product.salePrice}
             layout="stack"
+            size="md"
           />
           {stock.variant === 'default' || stock.variant === 'unlimited' ? (
             <span className="mb-px shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
@@ -187,10 +200,10 @@ function ProductCardComponent({
 export function ProductCardSkeleton() {
   return (
     <div className="flex animate-pulse flex-col">
-      <div className="aspect-square rounded-2xl bg-[var(--surface-secondary)]/70 ring-1 ring-inset ring-black/[0.04]" />
-      <div className="mt-3 space-y-2 px-0.5">
-        <div className="h-3.5 w-[88%] rounded-md bg-[var(--surface-secondary)]/70" />
-        <div className="h-3.5 w-[42%] rounded-md bg-[var(--surface-secondary)]/60" />
+      <div className="aspect-square rounded-xl bg-[var(--surface-secondary)]/70 ring-1 ring-inset ring-black/[0.04]" />
+      <div className="mt-2 space-y-1.5 px-0.5">
+        <div className="h-3 w-[88%] rounded-md bg-[var(--surface-secondary)]/70" />
+        <div className="h-3 w-[42%] rounded-md bg-[var(--surface-secondary)]/60" />
       </div>
     </div>
   );

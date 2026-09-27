@@ -1,6 +1,6 @@
 /**
- * Client catalog — mirrors apps/api mail-plan-limits.config (IQD).
- * Runtime source of truth is GET /api/v1/mail/plans.
+ * Client catalog — mailbox limits for legacy UI fallbacks.
+ * Pricing and quotas: use @rukny/email-api-pricing / GET /api/v1/mail/plans (unified).
  */
 
 export const MAIL_CURRENCY = "IQD";

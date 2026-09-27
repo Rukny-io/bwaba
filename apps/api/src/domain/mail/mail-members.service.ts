@@ -19,6 +19,7 @@ import { EmailService } from '../../integrations/email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MAIL_PLAN_LIMITS } from './mail-plan-limits.config';
+import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
   InviteMailAppMemberDto,
   TransferMailAppOwnershipDto,
@@ -67,6 +68,7 @@ export class MailMembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: MailAppAccessService,
+    private readonly subscriptions: MailSubscriptionsService,
     private readonly notifications: NotificationsService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
@@ -180,12 +182,23 @@ export class MailMembersService {
     };
   }
 
-  private consoleMemberLimit(subscription: MailSubscription | null): number {
+  private consoleMemberLimitLegacy(subscription: MailSubscription | null): number {
     if (!subscription || subscription.status !== 'ACTIVE') {
       return MAIL_PLAN_LIMITS.STARTER.consoleMembersIncluded;
     }
     const plan = subscription.plan as MailPlan;
     return MAIL_PLAN_LIMITS[plan]?.consoleMembersIncluded ?? 0;
+  }
+
+  private async resolveConsoleMemberLimit(
+    mailAppUuid: string,
+    subscription: MailSubscription | null,
+  ): Promise<number> {
+    const active = await this.subscriptions.getActiveLimitsForApp(mailAppUuid);
+    if (active?.limits) {
+      return active.limits.consoleMembersIncluded;
+    }
+    return this.consoleMemberLimitLegacy(subscription);
   }
 
   private async expireStaleMemberInvites(mailAppId?: string) {
@@ -340,7 +353,10 @@ export class MailMembersService {
         }),
       ]);
 
-    const limit = this.consoleMemberLimit(subscription);
+    const limit = await this.resolveConsoleMemberLimit(
+      access.app.id,
+      subscription,
+    );
     const used = await this.countSeatsUsed(access.app.id);
 
     const mailboxesByUser = new Map<
@@ -407,7 +423,10 @@ export class MailMembersService {
     const subscription = await this.prisma.mailSubscription.findUnique({
       where: { mailAppId: access.app.id },
     });
-    const limit = this.consoleMemberLimit(subscription);
+    const limit = await this.resolveConsoleMemberLimit(
+      access.app.id,
+      subscription,
+    );
     await this.assertSeatAvailable(access.app.id, limit);
 
     const email = dto.email.trim().toLowerCase();
@@ -1041,7 +1060,10 @@ export class MailMembersService {
     const subscription = await this.prisma.mailSubscription.findUnique({
       where: { mailAppId: invite.mailAppId },
     });
-    const limit = this.consoleMemberLimit(subscription);
+    const limit = await this.resolveConsoleMemberLimit(
+      invite.mailAppId,
+      subscription,
+    );
 
     const existing = await this.prisma.mailAppMember.findUnique({
       where: {

@@ -49,4 +49,42 @@ export interface PublicProfileForm {
   _count?: { submissions: number };
 }
 
+export interface PublicProfileProductAttribute {
+  key: string;
+  value: string;
+}
+
+export interface PublicProfileProductVariant {
+  id: string;
+  sku: string | null;
+  price: number;
+  compareAtPrice: number | null;
+  stock: number;
+  attributes: Record<string, unknown> | null;
+  imageUrl: string | null;
+}
+
+export interface PublicProfileProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  salePrice: number | null;
+  currency: string;
+  stock: number;
+  isDigital: boolean;
+  images: string[];
+  sku?: string | null;
+  category?: string | null;
+  attributes?: PublicProfileProductAttribute[];
+  hasVariants?: boolean;
+  variants?: PublicProfileProductVariant[];
+}
+
+export interface PublicProfileProductsResponse {
+  products: PublicProfileProduct[];
+  total: number;
+  storeId: string | null;
+}
+
 export type MediaUrlResolver = (path: string | null | undefined) => string | null;

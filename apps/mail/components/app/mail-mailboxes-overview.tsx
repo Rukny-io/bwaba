@@ -240,6 +240,12 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
 
   const [appId, setAppId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
+  const [unifiedLimits, setUnifiedLimits] = useState<
+    import("@/lib/mail-subscription-client").MailUnifiedLimitsSnapshot | null
+  >(null);
+  const [unifiedPlan, setUnifiedPlan] = useState<
+    import("@/lib/mail-subscription-client").MailUnifiedPlanSnapshot | null
+  >(null);
   const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
     null,
   );
@@ -314,7 +320,11 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
       try {
         const current = await fetchMailSubscription(appId);
         if (!cancelled) {
-          setSubscription(current.subscription?.status === "ACTIVE" ? current.subscription : null);
+          setSubscription(
+            current.subscription?.status === "ACTIVE" ? current.subscription : null,
+          );
+          setUnifiedLimits(current.unifiedLimits ?? null);
+          setUnifiedPlan(current.unifiedPlan ?? null);
           setPendingRequest(current.pendingRequest);
         }
       } catch {
@@ -360,13 +370,16 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     };
   }, [appId, refreshMailboxes]);
 
-  const limits = subscription?.limits;
-  const seatLimit = subscription?.mailboxCount ?? 0;
+  const limits = subscription?.limits ?? unifiedLimits?.limits;
+  const seatLimit = subscription?.mailboxCount ?? unifiedLimits?.mailboxCount ?? 0;
   const activeCount = mailboxes.filter((m) => m.status === "ACTIVE").length;
   const seatsLeft = Math.max(0, seatLimit - activeCount);
-  const storageQuotaBytes = subscription?.storageQuotaBytesPerMailbox ?? 0;
-  const canCreate = Boolean(appId && subscription && activeCount < seatLimit);
-  const hasActivePlan = Boolean(subscription);
+  const storageQuotaBytes =
+    subscription?.storageQuotaBytesPerMailbox ??
+    unifiedLimits?.storageQuotaBytesPerMailbox ??
+    0;
+  const hasActivePlan = Boolean(subscription) || Boolean(unifiedLimits);
+  const canCreate = Boolean(appId && hasActivePlan && activeCount < seatLimit);
   const canAssign = Boolean(team?.canManage && assigneeOptions.length > 0);
 
   // After Checkout activates a plan, create the pending mailbox from setup.
@@ -635,12 +648,12 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
       type="button"
       disabled={!canCreate}
       title={
-        !subscription
+        !hasActivePlan
           ? pendingRequest
             ? "Plan request pending — wait for admin activation"
-            : "Starter starts after domain DNS is verified"
+            : "Verify domain DNS to activate your free plan"
           : !canCreate
-            ? "Mailbox limit reached — upgrade or add seats"
+            ? "Mailbox limit reached — upgrade in the developer portal"
             : undefined
       }
       onClick={() => {
@@ -703,37 +716,16 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                 {setup.domain}
               </h2>
               <p className="text-sm text-[var(--muted-foreground)]">
-                Domain is ready. Activate a plan through Checkout to unlock mailboxes and
-                the console tools.
+                Domain is ready. Finish DNS verification to activate your free plan and
+                unlock mailboxes.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#111111] px-4 text-sm font-medium text-white"
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      const { startMailCheckoutSession } = await import(
-                        "@/lib/mail-checkout"
-                      );
-                      const session = await startMailCheckoutSession("starter", 1);
-                      window.location.assign(session.checkoutUrl);
-                    } catch {
-                      window.location.assign("/billing");
-                    }
-                  })();
-                }}
-              >
-                Continue to Checkout
-              </button>
-              <Link
-                href="/billing"
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground)]"
-              >
-                See all plans
-              </Link>
-            </div>
+            <Link
+              href="/billing"
+              className="inline-flex h-10 w-fit items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground)]"
+            >
+              View plans
+            </Link>
           </div>
         ) : (
           <>

@@ -69,8 +69,32 @@ export function MailAppSubscriptionPanel({
       </p>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+        {app.unifiedEmailPlan ? (
+          <>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Unified Email API plan</dt>
+              <dd className="font-medium">{app.unifiedEmailPlan.plan}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Unified status</dt>
+              <dd className="font-medium">{app.unifiedEmailPlan.status}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Monthly quota</dt>
+              <dd className="font-medium tabular-nums" dir="ltr">
+                {app.unifiedEmailPlan.monthlyQuota.toLocaleString('en-IQ')} emails
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Period end</dt>
+              <dd className="font-medium">
+                {formatMailDateTime(app.unifiedEmailPlan.periodEndsAt)}
+              </dd>
+            </div>
+          </>
+        ) : null}
         <div>
-          <dt className="text-[var(--muted-foreground)]">Current plan</dt>
+          <dt className="text-[var(--muted-foreground)]">Legacy Mail plan</dt>
           <dd className="font-medium">{formatMailPlan(app.subscription?.plan)}</dd>
         </div>
         <div>

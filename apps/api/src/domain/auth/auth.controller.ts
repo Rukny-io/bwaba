@@ -68,7 +68,7 @@ import { StoresService } from '../stores/stores.service';
 // - Development: more lenient to avoid blocking mobile/local testing when the client retries
 const AUTH_REFRESH_THROTTLE =
   process.env.NODE_ENV === 'production'
-    ? { default: { limit: 10, ttl: 60000 } } // 10 requests per minute (reduced from 30 for security)
+    ? { default: { limit: 60, ttl: 60000 } } // allow parallel tab/API refresh bursts
     : { default: { limit: 300, ttl: 60000 } }; // 300 requests per minute (dev only)
 
 @ApiTags('Auth')

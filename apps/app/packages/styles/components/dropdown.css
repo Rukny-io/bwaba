@@ -49,7 +49,7 @@
 
 /* Similar to select popover styles */
 .dropdown__popover {
-  @apply max-w-[48svw] origin-(--trigger-anchor-point) scroll-py-1 overflow-y-auto overscroll-contain rounded-2xl bg-overlay p-0 text-sm scrollbar md:min-w-55;
+  @apply max-w-[48svw] origin-(--trigger-anchor-point) scroll-py-1 overflow-y-auto overscroll-contain rounded-xl bg-overlay p-0 text-sm scrollbar md:min-w-55;
   box-shadow: var(--shadow-overlay);
 
   /* Focus state */
@@ -113,13 +113,19 @@
     @apply p-1.5 outline-none;
   }
 
-  [data-slot="menu-item"] {
-    @apply px-2.5;
+  [data-slot="menu-item"],
+  .menu-item {
+    @apply rounded-xl px-2.5;
+  }
+
+  &[dir="rtl"] [data-slot="menu-item"],
+  &[dir="rtl"] .menu-item {
+    @apply text-right;
   }
 }
 
 .dropdown__menu {
-  @apply relative flex w-full flex-col gap-0.5 overflow-clip rounded-2xl p-1;
+  @apply relative flex w-full flex-col gap-0.5 overflow-clip p-1;
 
   /* This makes the separator take up 94% of the width and be centered */
   [data-slot="separator"] {

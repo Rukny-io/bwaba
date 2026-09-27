@@ -21,19 +21,21 @@ export function DashboardQuickAction({
     <Link
       href={href}
       className={cn(
-        'group dashboard-card dashboard-card-interactive flex items-center gap-4 rounded-4xl p-4 sm:p-5',
+        'group flex items-center gap-3 rounded-2xl bg-[var(--surface-secondary)] px-3.5 py-3 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_92%,var(--foreground)_3%)] sm:gap-4 sm:px-4 sm:py-3.5',
         className,
       )}
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)]">
-        <Icon size={18} strokeWidth={1.8} />
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--foreground)] sm:size-10">
+        <Icon size={17} strokeWidth={1.75} />
       </div>
       <div className="min-w-0 flex-1">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
-        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">{description}</p>
+        <h2 className="text-sm font-medium text-[var(--foreground)]">{title}</h2>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+          {description}
+        </p>
       </div>
       <ArrowLeft
-        size={16}
+        size={15}
         className="shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:-translate-x-0.5"
       />
     </Link>

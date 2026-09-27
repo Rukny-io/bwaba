@@ -24,7 +24,7 @@ export const MAIL_FAQS: MailFaqItem[] = [
     id: "plans",
     question: "How do plans work?",
     answer:
-      "Starter activates after DNS verification and checkout in the console. Standard and Premium are requested from Billing and activated by an admin. Prices are monthly in IQD.",
+      "After DNS verification your workspace activates on the Free plan (3,000 emails/month). Upgrade to Growth or Enterprise in the developer portal — the same plan covers hosted mailboxes and Email API sends. Prices are monthly in IQD.",
   },
   {
     id: "inbox",

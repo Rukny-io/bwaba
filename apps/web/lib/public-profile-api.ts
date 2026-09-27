@@ -55,6 +55,18 @@ export interface PublicProfileFormsResponse {
   featured: PublicProfileForm | null;
 }
 
+export type {
+  PublicProfileProduct,
+  PublicProfileProductAttribute,
+  PublicProfileProductVariant,
+} from '@/components/public-profile/types';
+
+export interface PublicProfileProductsResponse {
+  products: PublicProfileProduct[];
+  total: number;
+  storeId: string | null;
+}
+
 function apiRoot(): string {
   const base = getBackendUrl().replace(/\/$/, '');
   return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
@@ -64,33 +76,7 @@ export function getCanonicalProfileUrl(username: string): string {
   return `${PUBLIC_SITE_URL}/${encodeURIComponent(username)}`;
 }
 
-export function resolveProfileMediaUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith('/api/')) return path;
-  if (path.startsWith('/uploads/')) return null;
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    try {
-      const parsed = new URL(path);
-      const host = parsed.hostname;
-      const isS3 =
-        host.includes('.s3.') ||
-        host.includes('.s3-') ||
-        host.startsWith('s3.') ||
-        host.startsWith('s3-');
-      if (!isS3) return path;
-      let key = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
-      if (!key || key.includes('..')) return null;
-      if (host.startsWith('s3.') || host.startsWith('s3-')) {
-        const slash = key.indexOf('/');
-        if (slash !== -1) key = key.slice(slash + 1);
-      }
-      return `/api/media/${key}`;
-    } catch {
-      return null;
-    }
-  }
-  return `/api/media/${path.replace(/^\/+/, '')}`;
-}
+export { resolveProfileMediaUrl } from '@/lib/media-url';
 
 export async function fetchPublicProfile(username: string): Promise<PublicProfile | null> {
   try {
@@ -101,6 +87,22 @@ export async function fetchPublicProfile(username: string): Promise<PublicProfil
     return (await res.json()) as PublicProfile;
   } catch {
     return null;
+  }
+}
+
+export async function fetchPublicProfileProducts(
+  username: string,
+  limit = 48,
+): Promise<PublicProfileProductsResponse> {
+  try {
+    const res = await fetch(
+      `${apiRoot()}/stores/${encodeURIComponent(username)}/products?limit=${limit}`,
+      { next: { revalidate: 60 } },
+    );
+    if (!res.ok) return { products: [], total: 0, storeId: null };
+    return (await res.json()) as PublicProfileProductsResponse;
+  } catch {
+    return { products: [], total: 0, storeId: null };
   }
 }
 

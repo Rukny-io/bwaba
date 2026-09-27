@@ -108,17 +108,7 @@ export function MailDomainDashboard({
         ),
       );
       if (result.verified) {
-        const appId = readMailAppIdFromDocument();
-        if (appId) {
-          try {
-            const { startMailCheckoutSession } = await import("@/lib/mail-checkout");
-            const session = await startMailCheckoutSession("starter", 1, appId);
-            window.location.assign(session.checkoutUrl);
-            return;
-          } catch {
-            // User can continue from Mailboxes / Billing checkout CTA.
-          }
-        }
+        // DNS verification activates FREE via the API — no checkout redirect.
       }
     } catch {
       persist({

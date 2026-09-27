@@ -83,7 +83,7 @@ export function MailDevelopersPage() {
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-[var(--foreground)]">
-              Two products, clear split
+              One plan, two surfaces
             </h2>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
               <span className="font-medium text-[var(--foreground)]">Mail</span>{" "}
@@ -91,8 +91,8 @@ export function MailDevelopersPage() {
               <span className="font-medium text-[var(--foreground)]">
                 Email API
               </span>{" "}
-              is a separate Developers product for sending from code with API
-              keys — not shared seats or storage with this workspace.
+              sends from your apps with API keys. Both share the same account
+              plan, email quota, and domain limit.
             </p>
           </div>
         </div>

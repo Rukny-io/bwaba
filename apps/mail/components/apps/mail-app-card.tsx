@@ -61,14 +61,13 @@ export function MailAppCard({ app, href, active }: MailAppCardProps) {
             Current
           </span>
         ) : null}
-        {app.subscription?.status === "ACTIVE" ? (
+        {app.primaryDomain ? (
           <span className="rounded-full bg-[color-mix(in_srgb,var(--success)_12%,var(--background))] px-2.5 py-0.5 text-[10px] font-medium text-[var(--success)]">
-            {app.subscription.plan} · {app.subscription.mailboxCount} seat
-            {app.subscription.mailboxCount === 1 ? "" : "s"}
+            Domain connected
           </span>
         ) : (
           <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">
-            No plan
+            DNS pending
           </span>
         )}
       </div>

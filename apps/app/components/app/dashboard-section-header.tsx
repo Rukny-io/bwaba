@@ -21,11 +21,11 @@ export function DashboardSectionHeader({
   children,
 }: DashboardSectionHeaderProps) {
   return (
-    <div className={cn('mb-4 flex flex-wrap items-end justify-between gap-3', className)}>
+    <div className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
       <div className="min-w-0">
-        <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">{title}</h2>
+        <h2 className="text-base font-medium tracking-tight text-[var(--foreground)]">{title}</h2>
         {description ? (
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)] sm:text-sm">{description}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">{description}</p>
         ) : null}
       </div>
       <div className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export function DashboardSectionHeader({
         {href ? (
           <Link
             href={href}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline sm:text-sm"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:text-sm"
           >
             {linkLabel}
             <ArrowLeft className="size-3.5" />

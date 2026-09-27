@@ -21,7 +21,8 @@ export function createSecurityHeadersContext(
   options: SecurityHeadersOptions,
 ): SecurityHeadersContext {
   const isDev = options.isDev ?? false;
-  const nonce = isDev ? undefined : generateCspNonce();
+  const nonce =
+    isDev || options.disableNonce ? undefined : generateCspNonce();
   const securityHeaders = buildAppSecurityHeaders({ ...options, nonce });
   const csp = securityHeaders.find(
     (header) => header.key === 'Content-Security-Policy',

@@ -1,4 +1,9 @@
 import { getBackendUrl, PUBLIC_SITE_URL } from '@/lib/config';
+import type {
+  PublicProfileProduct,
+  PublicProfileProductAttribute,
+  PublicProfileProductVariant,
+} from '@/components/public-profile/types';
 
 export interface PublicSocialLink {
   id: string;
@@ -59,7 +64,7 @@ export type {
   PublicProfileProduct,
   PublicProfileProductAttribute,
   PublicProfileProductVariant,
-} from '@/components/public-profile/types';
+};
 
 export interface PublicProfileProductsResponse {
   products: PublicProfileProduct[];

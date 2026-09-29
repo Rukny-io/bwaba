@@ -2,7 +2,8 @@
 
 import './profile-themes.css';
 import './profile-product-dialog.css';
-import { Link2, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import { Link2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { MediaUrlProvider } from './media-url-context';
 import { getProfileThemeClass } from './profile-themes';

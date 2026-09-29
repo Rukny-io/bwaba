@@ -128,7 +128,6 @@ function InstagramCardShell({
   return (
     <article
       className="flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-[var(--border)] bg-[var(--surface)] shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-      dir="ltr"
     >
       <InstagramBrandBackdrop coverUrl={coverUrl} />
 
@@ -156,7 +155,10 @@ function InstagramCardShell({
           <h3 className="truncate text-[13px] font-bold leading-tight text-[var(--foreground)]">
             {displayName}
           </h3>
-          <p className="truncate text-[11px] leading-tight text-[var(--muted-foreground)]">
+          <p
+            dir="ltr"
+            className="truncate text-start text-[11px] leading-tight text-[var(--muted-foreground)]"
+          >
             @{profile.username}
           </p>
         </div>
@@ -169,19 +171,19 @@ function InstagramCardShell({
 
         <div className="mt-2.5 grid grid-cols-3 gap-1 text-center text-[10px] leading-tight text-[var(--muted-foreground)]">
           <div className="min-w-0">
-            <p className="truncate font-bold text-[var(--foreground)]">
+            <p dir="ltr" className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.followsCount)}
             </p>
             <p className="truncate">{t('following')}</p>
           </div>
           <div className="min-w-0">
-            <p className="truncate font-bold text-[var(--foreground)]">
+            <p dir="ltr" className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.followersCount)}
             </p>
             <p className="truncate">{t('followers')}</p>
           </div>
           <div className="min-w-0">
-            <p className="truncate font-bold text-[var(--foreground)]">
+            <p dir="ltr" className="truncate font-bold text-[var(--foreground)]">
               {formatCount(profile.mediaCount)}
             </p>
             <p className="truncate">{t('posts')}</p>

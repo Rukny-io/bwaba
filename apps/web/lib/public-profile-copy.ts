@@ -14,9 +14,14 @@ export function formatProfileProductPrice(
   return `${formatted} ${currencyShort}`;
 }
 
+export function formatProfilePriceAmount(amount: number): string {
+  if (!Number.isFinite(amount)) return '—';
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+}
+
 export function formatProfileDialogPriceIqd(amount: number, currencyCode: string): string {
   if (!Number.isFinite(amount)) return '—';
-  return `${currencyCode} ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount)}`;
+  return `${currencyCode} ${formatProfilePriceAmount(amount)}`;
 }
 
 export function getPublicProductStockDisplayLocalized(

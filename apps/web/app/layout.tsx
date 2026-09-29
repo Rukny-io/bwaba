@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_Arabic } from 'next/font/google';
 import { thmanyahSans } from '@rukny/thmanyah-font/next';
 import { NextIntlClientProvider } from 'next-intl';
@@ -26,6 +26,12 @@ const notoSansArabic = Noto_Sans_Arabic({
   variable: '--font-noto-arabic',
   display: 'swap',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();

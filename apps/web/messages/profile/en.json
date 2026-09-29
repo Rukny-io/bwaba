@@ -5,6 +5,7 @@
   },
   "sections": {
     "links": "Links",
+    "myLinks": "My Links",
     "profileCards": "Profile cards",
     "instagramPosts": "Instagram posts",
     "products": "Products",
@@ -19,8 +20,28 @@
     "createPage": "Create your page on Rukny",
     "language": "Language"
   },
+  "promo": {
+    "brand": "Rukny",
+    "tagline": "Create your page and store for free",
+    "taglineShort": "Create your page free",
+    "ariaLabel": "Go to Rukny website"
+  },
   "header": {
-    "verified": "Verified"
+    "verified": "Verified",
+    "following": "Following",
+    "followers": "Followers",
+    "products": "Products",
+    "links": "Links",
+    "forms": "Forms",
+    "message": "Message",
+    "store": "Store",
+    "share": "Share",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "verifiedBy": "Verified by Rukny",
+    "statsProducts": "{count} products",
+    "statsLinks": "{count} links",
+    "statsForms": "{count} forms"
   },
   "forms": {
     "open": "Open",
@@ -34,6 +55,10 @@
       "APPLICATION": "Application",
       "OTHER": "Other"
     }
+  },
+  "socialCard": {
+    "follow": "Follow",
+    "openOn": "Open on {brand}"
   },
   "instagram": {
     "loadError": "Could not load Instagram card",
@@ -86,6 +111,7 @@
       "category": "Category:",
       "noCategory": "Not added to any category",
       "sku": "SKU",
+      "stock": "Stock",
       "saved": "You save",
       "shippingNote": "Shipping is calculated at checkout",
       "description": "Description",
@@ -108,5 +134,20 @@
       "increaseQuantity": "Increase quantity",
       "removeFromCart": "Remove from cart"
     }
+  },
+  "cart": {
+    "title": "Your cart",
+    "empty": "Your cart is empty",
+    "emptyDescription": "Add products from this store to start your order.",
+    "subtotal": "Subtotal",
+    "checkout": "Proceed to checkout",
+    "checkoutAria": "Proceed to checkout with {count} items",
+    "removeItem": "Remove",
+    "itemCount": "{count} item",
+    "itemCount_plural": "{count} items",
+    "continueShopping": "Continue shopping",
+    "close": "Close cart",
+    "open": "View cart",
+    "openAria": "View cart with {count} items"
   }
 }

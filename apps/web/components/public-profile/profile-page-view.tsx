@@ -17,9 +17,15 @@ import { resolveProfileMediaUrl } from '@/lib/media-url';
 import { cn } from './utils';
 import { ProfileFormsSection } from './profile-forms-section';
 import { ProfileHeader } from './profile-header';
-import { ProfileLanguageSwitcher } from './profile-language-switcher';
+import { ProfileTopBar } from './profile-top-bar';
 import { ProfileLinkButton } from './profile-link-button';
+import {
+  groupProfileLinkRows,
+  ProfileLinksSection,
+} from './profile-links-section';
 import { ProfileProductsSection } from './profile-products-section';
+import { StoreCartProvider } from './store-cart-context';
+import { StoreCartFloating } from './store-cart-sheet';
 import { InstagramRichLink } from './instagram-rich-link';
 import { SocialProfileCard } from './social-profile-card';
 
@@ -33,37 +39,6 @@ function isProfileCard(link: PublicSocialLink): boolean {
 
 function isInstagramMediaGrid(link: PublicSocialLink): boolean {
   return link.platform === 'instagram' && link.layout === 'media_grid';
-}
-
-function isHomeShowcaseLink(link: PublicSocialLink): boolean {
-  return isProfileCard(link) || isInstagramMediaGrid(link);
-}
-
-type LinkRow =
-  | { type: 'cards'; links: PublicSocialLink[] }
-  | { type: 'single'; link: PublicSocialLink };
-
-function groupProfileCards(links: PublicSocialLink[]): LinkRow[] {
-  const rows: LinkRow[] = [];
-  let cardBuffer: PublicSocialLink[] = [];
-
-  const flushCards = () => {
-    if (cardBuffer.length === 0) return;
-    rows.push({ type: 'cards', links: cardBuffer });
-    cardBuffer = [];
-  };
-
-  for (const link of links) {
-    if (isProfileCard(link)) {
-      cardBuffer.push(link);
-      continue;
-    }
-    flushCards();
-    rows.push({ type: 'single', link });
-  }
-  flushCards();
-
-  return rows;
 }
 
 function formSlugFromLink(link: PublicSocialLink): string | null {
@@ -158,12 +133,8 @@ export function ProfilePageView({
   const usePublicLayout = !embedded || constrained;
   const links = [...profile.socialLinks].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  const showcaseLinks = links.filter(isHomeShowcaseLink);
-  const listLinks = links.filter(
-    (l) => !isHomeShowcaseLink(l) && !isFormLink(l.platform),
-  );
-  const showcaseCardRows = groupProfileCards(showcaseLinks.filter(isProfileCard));
-  const showcaseMediaGrids = showcaseLinks.filter(isInstagramMediaGrid);
+  const profileLinks = links.filter((link) => !isFormLink(link.platform));
+  const profileLinkRows = groupProfileLinkRows(profileLinks);
 
   const linkedFormSlugs = new Set(
     links
@@ -174,11 +145,7 @@ export function ProfilePageView({
   const profileForms = forms.filter((form) => !linkedFormSlugs.has(form.slug));
 
   const hasContent =
-    listLinks.length > 0 ||
-    showcaseCardRows.length > 0 ||
-    showcaseMediaGrids.length > 0 ||
-    products.length > 0 ||
-    profileForms.length > 0;
+    profileLinks.length > 0 || products.length > 0 || profileForms.length > 0;
 
   const productsCompact = constrained || preview;
   const pageColumnClass = cn(
@@ -186,8 +153,16 @@ export function ProfilePageView({
     usePublicLayout ? 'max-w-lg px-4 sm:max-w-xl sm:px-5' : 'max-w-md px-3',
   );
 
+  const hasStore = products.length > 0;
+
   return (
     <MediaUrlProvider resolve={resolveMediaUrl}>
+      <StoreCartProvider
+        storeSlug={profile.username}
+        storeName={profile.name}
+        products={products}
+        preview={preview}
+      >
       <div
         className={cn(
           'profile-theme-scope text-[var(--foreground)]',
@@ -201,52 +176,32 @@ export function ProfilePageView({
             : 'min-h-screen',
         )}
       >
-        <div className={cn('relative z-[1] pb-12 pt-1', pageColumnClass)}>
-          {usePublicLayout && !preview && !constrained ? (
-            <div className="absolute top-1 end-0 z-20 sm:top-2">
-              <ProfileLanguageSwitcher variant="compact" />
-            </div>
-          ) : null}
+        <div
+          className={cn(
+            'relative z-[1] pt-1',
+            pageColumnClass,
+            hasStore && !preview ? 'pb-28' : 'pb-12',
+          )}
+        >
+          <div className="space-y-0">
+            {usePublicLayout && !preview && !constrained ? <ProfileTopBar /> : null}
+            <ProfileHeader
+              profile={profile}
+              compact={embedded && !constrained}
+              withTopBar={usePublicLayout && !preview && !constrained}
+              productCount={products.length}
+              linkCount={profileLinks.length}
+              formCount={profileForms.length}
+            />
+          </div>
 
-          <ProfileHeader profile={profile} compact={embedded && !constrained} />
-
-          {listLinks.length > 0 ? (
-            <section className="space-y-2.5" aria-label={t('sections.links')}>
-              {listLinks.map((link) => (
-                <div key={link.id}>
-                  {renderLinkItem(link, { preview, onTrackClick })}
-                </div>
-              ))}
-            </section>
-          ) : null}
-
-          {showcaseCardRows.length > 0 ? (
-            <section className="space-y-2" aria-label={t('sections.profileCards')}>
-              {showcaseCardRows.map((row) =>
-                row.type === 'cards' ? (
-                  <div
-                    key={`cards-${row.links.map((l) => l.id).join('-')}`}
-                    className="grid grid-cols-2 gap-2.5 sm:gap-3"
-                  >
-                    {row.links.map((link) =>
-                      renderLinkItem(link, { preview, onTrackClick }),
-                    )}
-                  </div>
-                ) : (
-                  <div key={row.link.id}>
-                    {renderLinkItem(row.link, { preview, onTrackClick })}
-                  </div>
-                ),
-              )}
-            </section>
-          ) : null}
-
-          {showcaseMediaGrids.length > 0 ? (
-            <section className="space-y-2" aria-label={t('sections.instagramPosts')}>
-              {showcaseMediaGrids.map((link) =>
-                renderLinkItem(link, { preview, onTrackClick }),
-              )}
-            </section>
+          {profileLinks.length > 0 ? (
+            <ProfileLinksSection
+              rows={profileLinkRows}
+              linkCount={profileLinks.length}
+              compact={productsCompact}
+              renderLink={(link) => renderLinkItem(link, { preview, onTrackClick })}
+            />
           ) : null}
 
           {products.length > 0 ? (
@@ -288,7 +243,15 @@ export function ProfilePageView({
             </footer>
           ) : null}
         </div>
+        {hasStore && !preview ? (
+          <StoreCartFloating
+            storeSlug={profile.username}
+            products={products}
+            themeKey={profile.themeKey}
+          />
+        ) : null}
       </div>
+      </StoreCartProvider>
     </MediaUrlProvider>
   );
 }

@@ -5,6 +5,7 @@
   },
   "sections": {
     "links": "الروابط",
+    "myLinks": "روابطي",
     "profileCards": "البطاقات التعريفية",
     "instagramPosts": "منشورات إنستغرام",
     "products": "المنتجات",
@@ -19,8 +20,28 @@
     "createPage": "أنشئ صفحتك على ركني",
     "language": "اللغة"
   },
+  "promo": {
+    "brand": "ركني",
+    "tagline": "أنشئ صفحتك ومتجرك مجاناً",
+    "taglineShort": "أنشئ صفحتك مجاناً",
+    "ariaLabel": "انتقل إلى موقع ركني"
+  },
   "header": {
-    "verified": "موثّق"
+    "verified": "موثّق",
+    "following": "يتابع",
+    "followers": "متابع",
+    "products": "منتج",
+    "links": "رابط",
+    "forms": "نموذج",
+    "message": "مراسلة",
+    "store": "المتجر",
+    "share": "مشاركة",
+    "copyLink": "نسخ الرابط",
+    "linkCopied": "تم نسخ الرابط",
+    "verifiedBy": "موثّق من ركني",
+    "statsProducts": "{count} منتج",
+    "statsLinks": "{count} رابط",
+    "statsForms": "{count} نموذج"
   },
   "forms": {
     "open": "افتح",
@@ -34,6 +55,10 @@
       "APPLICATION": "طلب التحاق",
       "OTHER": "أخرى"
     }
+  },
+  "socialCard": {
+    "follow": "متابعة",
+    "openOn": "فتح على {brand}"
   },
   "instagram": {
     "loadError": "تعذر تحميل بطاقة إنستغرام",
@@ -86,6 +111,7 @@
       "category": "التصنيف:",
       "noCategory": "لم يتم إضافته إلى أي تصنيف",
       "sku": "رمز المنتج",
+      "stock": "المخزون",
       "saved": "وفّرت",
       "shippingNote": "تُحسب تكلفة الشحن عند الدفع",
       "description": "الوصف",
@@ -108,5 +134,20 @@
       "increaseQuantity": "زيادة الكمية",
       "removeFromCart": "إزالة من السلة"
     }
+  },
+  "cart": {
+    "title": "سلة الطلب",
+    "empty": "السلة فارغة",
+    "emptyDescription": "أضف منتجات من هذا المتجر لبدء الطلب.",
+    "subtotal": "المجموع الفرعي",
+    "checkout": "إتمام الشراء",
+    "checkoutAria": "إتمام شراء {count} منتج",
+    "removeItem": "إزالة",
+    "itemCount": "{count} منتج",
+    "itemCount_plural": "{count} منتجات",
+    "continueShopping": "متابعة التسوق",
+    "close": "إغلاق السلة",
+    "open": "عرض السلة",
+    "openAria": "عرض السلة ({count} منتج)"
   }
 }

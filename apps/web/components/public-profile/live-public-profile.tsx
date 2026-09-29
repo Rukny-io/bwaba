@@ -31,7 +31,8 @@ export function LivePublicProfile({
       forms={forms}
       products={products}
       initialProductId={initialProductId}
-      mode={embed ? 'preview' : 'live'}
+      mode="live"
+      embedded={embed}
       resolveMediaUrl={resolveProfileMediaUrl}
       onTrackClick={
         embed

@@ -17,6 +17,8 @@ export interface PublicProfileShellProps {
   products?: PublicProfileProduct[];
   initialProductId?: string | null;
   mode?: PublicProfileShellMode;
+  /** iframe / phone-frame embed — interactive store, compact layout */
+  embedded?: boolean;
   resolveMediaUrl?: MediaUrlResolver;
   onTrackClick?: (linkId: string) => void;
 }
@@ -28,6 +30,7 @@ export function PublicProfileShell({
   products = [],
   initialProductId = null,
   mode = 'live',
+  embedded = false,
   resolveMediaUrl = resolveProfileMediaUrl,
   onTrackClick,
 }: PublicProfileShellProps) {
@@ -40,8 +43,9 @@ export function PublicProfileShell({
       products={products}
       initialProductId={initialProductId}
       preview={preview}
-      constrained={preview}
-      fillHeight={preview}
+      embedded={embedded}
+      constrained={preview || embedded}
+      fillHeight={preview || embedded}
       resolveMediaUrl={resolveMediaUrl}
       onTrackClick={preview ? undefined : onTrackClick}
     />

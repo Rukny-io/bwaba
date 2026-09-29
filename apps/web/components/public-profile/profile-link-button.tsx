@@ -1,6 +1,7 @@
 'use client';
 
-import { ProfileLinkChevron, ProfilePlatformIcon } from './profile-platform-icon';
+import { ArrowUpRight } from 'lucide-react';
+import { ProfilePlatformIcon } from './profile-platform-icon';
 import type { PublicSocialLink } from './types';
 import { cn } from './utils';
 
@@ -22,6 +23,25 @@ function formSlugFromLink(link: PublicSocialLink): string | null {
     return null;
   }
 }
+
+function linkHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    return null;
+  }
+}
+
+const linkRowClass = (preview?: boolean) =>
+  cn(
+    'group/link profile-link-row',
+    'flex w-full items-center gap-3 rounded-3xl px-3 py-3 sm:px-3.5 sm:py-3.5',
+    'bg-[var(--surface-secondary)]/60',
+    'text-[var(--foreground)]',
+    !preview &&
+      'transition-[background-color,transform] duration-200 ease-out hover:bg-[var(--surface-secondary)] active:scale-[0.99]',
+    preview && 'pointer-events-none',
+  );
 
 const linkCardClass = (preview?: boolean) =>
   cn(
@@ -68,13 +88,35 @@ export function ProfileLinkButton({ link, preview, onTrackClick }: ProfileLinkBu
   }
 
   const external = !isForm && href.startsWith('http');
-  const className = linkCardClass(preview);
+  const className = linkRowClass(preview);
+  const hostname = external ? linkHostname(href) : null;
+  const showHostname =
+    hostname &&
+    hostname.toLowerCase() !== label.trim().toLowerCase() &&
+    !label.trim().toLowerCase().includes(hostname.toLowerCase());
 
   const content = (
     <>
-      <ProfilePlatformIcon platform={link.platform} size="md" />
-      <span className="min-w-0 flex-1 truncate text-start">{label}</span>
-      <ProfileLinkChevron />
+      <ProfilePlatformIcon platform={link.platform} size="sm" variant="soft" />
+      <span className="min-w-0 flex-1 text-start">
+        <span className="block truncate text-[13px] font-semibold leading-snug tracking-tight">
+          {label}
+        </span>
+        {showHostname ? (
+          <span className="mt-0.5 block truncate text-[11px] font-medium text-[var(--muted-foreground)]">
+            {hostname}
+          </span>
+        ) : null}
+      </span>
+      <ArrowUpRight
+        className={cn(
+          'size-4 shrink-0 text-[var(--muted-foreground)]/55',
+          'transition-[transform,opacity] duration-200',
+          'group-hover/link:-translate-y-px group-hover/link:translate-x-px group-hover/link:opacity-90',
+          'rtl:-scale-x-100',
+        )}
+        aria-hidden
+      />
     </>
   );
 

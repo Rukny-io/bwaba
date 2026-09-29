@@ -92,6 +92,49 @@ export function ProductThumbnail({
   );
 }
 
+interface ProductKindBadgeProps {
+  label: string;
+  className?: string;
+}
+
+export function ProductKindBadge({ label, className }: ProductKindBadgeProps) {
+  return (
+    <span
+      className={cn(
+        'text-[11px] font-medium leading-none text-[var(--muted-foreground)]',
+        className,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+interface ProductStockBadgeProps {
+  label: string;
+  variant: ProductStockVariant;
+  className?: string;
+}
+
+export function ProductStockBadge({ label, variant, className }: ProductStockBadgeProps) {
+  if (variant === 'muted') {
+    return <span className={cn('text-[11px] text-[var(--muted-foreground)]', className)}>—</span>;
+  }
+
+  return (
+    <span
+      className={cn(
+        'text-[11px] font-medium text-[var(--foreground)]',
+        variant === 'low' && 'text-[var(--danger)]',
+        variant === 'default' && 'text-[var(--muted-foreground)]',
+        className,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
 interface ProductPriceDisplayProps {
   price: number;
   salePrice?: number | null;
@@ -131,6 +174,7 @@ export function ProductPriceDisplay({
     return (
       <span className={cn(discountLayout, className)}>
         <span
+          dir="ltr"
           className={cn(
             saleTextSize,
             'font-semibold tabular-nums leading-none text-[var(--foreground)]',
@@ -139,6 +183,7 @@ export function ProductPriceDisplay({
           {formatProfileProductPrice(parsedSale!, currencyShort)}
         </span>
         <span
+          dir="ltr"
           className={cn(
             baseTextSize,
             'font-medium tabular-nums leading-none text-[var(--muted-foreground)] line-through',
@@ -155,6 +200,7 @@ export function ProductPriceDisplay({
 
   return (
     <span
+      dir="ltr"
       className={cn(
         layout === 'inline' ? textSize : stackTextSize,
         'font-semibold tabular-nums text-[var(--foreground)]',

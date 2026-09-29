@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ExternalLink } from 'lucide-react';
 import { useMediaUrl } from './media-url-context';
 import { ProfilePlatformIcon } from './profile-platform-icon';
@@ -42,6 +43,7 @@ export function SocialProfileCard({
   preview,
   onTrackClick,
 }: SocialProfileCardProps) {
+  const t = useTranslations('publicProfile.socialCard');
   const resolveMedia = useMediaUrl();
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const thumbnailSrc = resolveMedia(link.thumbnail);
@@ -102,7 +104,7 @@ export function SocialProfileCard({
           </div>
 
           <span className="inline-flex h-7 shrink-0 items-center rounded-full bg-[#1d9bf0] px-3 text-[11px] font-bold text-white">
-            Follow
+            {t('follow')}
           </span>
         </div>
 
@@ -122,7 +124,7 @@ export function SocialProfileCard({
 
         <div className="mt-auto pt-3">
           <span className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-full bg-[var(--foreground)] text-[11px] font-bold text-[var(--background)]">
-            Open on {brand}
+            {t('openOn', { brand })}
             <ExternalLink className="size-3" />
           </span>
         </div>
@@ -137,7 +139,7 @@ export function SocialProfileCard({
 
   if (preview) {
     return (
-      <article className={className} dir="ltr">
+      <article className={className}>
         {body}
       </article>
     );
@@ -150,7 +152,6 @@ export function SocialProfileCard({
       rel="noopener noreferrer"
       onClick={handleClick}
       className={className}
-      dir="ltr"
     >
       {body}
     </a>

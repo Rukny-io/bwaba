@@ -72,24 +72,22 @@ function LoginContent() {
         : null;
 
   return (
-    <AuthShell className="max-w-[460px]">
-      <section className="w-full px-5 py-6 sm:px-7 sm:py-8">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-[var(--secondary)] px-4 py-2 text-xs font-medium text-[var(--secondary-foreground)]">
-            أهلاً بك
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">
-            تسجيل الدخول
-          </h1>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--muted-foreground)]">
-            أدر روابطك وصفحتك الشخصية من مكان واحد
-          </p>
-        </div>
+    <AuthShell>
+      <div className="w-full text-center">
+        <p className="text-[12px] font-medium tracking-[0.08em] text-[#9CA3AF]">
+          أهلاً بك
+        </p>
+        <h1 className="mt-4 text-[1.75rem] font-medium leading-tight tracking-[0em] text-[#1D1D1D]">
+          تسجيل الدخول
+        </h1>
+        <p className="mt-3 text-[1rem] font-normal leading-[1.5] text-[#6B6F76]">
+          أدر روابطك وصفحتك الشخصية من مكان واحد
+        </p>
 
-        <div className="w-full space-y-4">
+        <div className="mt-8 flex flex-col gap-3">
           {sessionMessage ? (
             <p
-              className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 text-center"
+              className="rounded-2xl bg-[#F5F5F5] px-3 py-2 text-[13px] leading-relaxed text-[#6B6F76]"
               role="status"
             >
               {sessionMessage}
@@ -98,7 +96,7 @@ function LoginContent() {
 
           <button
             type="button"
-            className="h-11 w-full rounded-full bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-95"
+            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#1D1D1D] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#0A0A0A]"
             onClick={() => {
               window.location.href = getAccountsLoginUrl(nextPath);
             }}
@@ -106,15 +104,9 @@ function LoginContent() {
             تسجيل الدخول عبر ركني
           </button>
 
-          <div className="my-5 flex w-full items-center gap-3">
-            <span className="h-px flex-1 bg-[var(--border)]" />
-            <span className="shrink-0 text-xs text-[var(--muted-foreground)]">أو</span>
-            <span className="h-px flex-1 bg-[var(--border)]" />
-          </div>
-
           <button
             type="button"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium transition-colors hover:bg-[var(--surface-secondary)]"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#F5F5F5] px-6 text-[14px] font-medium text-[#1D1D1D] transition-colors hover:bg-[#EBEBEB]"
             onClick={() => {
               window.location.href = getGoogleOAuthUrl(nextPath);
             }}
@@ -123,11 +115,11 @@ function LoginContent() {
             تسجيل دخول سريع بـ Google
           </button>
 
-          <p className="pt-2 text-center text-xs leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-3 text-[13px] leading-relaxed text-[#9CA3AF]">
             بتسجيل الدخول عبر Google يُنشأ حسابك في منصة ركني إن لم يكن موجوداً مسبقاً.
           </p>
         </div>
-      </section>
+      </div>
     </AuthShell>
   );
 }
@@ -138,8 +130,8 @@ export default function LoginPage() {
       fallback={
         <AuthShell>
           <div className="w-full py-12 text-center">
-            <div className="mx-auto size-10 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
-            <p className="mt-4 text-sm text-[var(--muted-foreground)]">جارٍ التحميل...</p>
+            <div className="mx-auto size-10 animate-spin rounded-full border-2 border-[#1D1D1D] border-t-transparent" />
+            <p className="mt-4 text-[13px] text-[#9CA3AF]">جارٍ التحميل...</p>
           </div>
         </AuthShell>
       }

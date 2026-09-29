@@ -2,6 +2,7 @@ import type {
   PublicProfileProduct,
   PublicProfileProductVariant,
 } from '@/components/public-profile/types';
+import type { StoreCartItem } from '@/lib/store-cart';
 
 const CHECKOUT_URL = (
   process.env.NEXT_PUBLIC_CHECKOUT_URL || 'http://localhost:3010'
@@ -17,6 +18,23 @@ function variantLabel(variant: PublicProfileProductVariant): string {
   return variant.sku?.trim() || 'متغير';
 }
 
+export function buildStoreCheckoutUrl(storeSlug: string, items: StoreCartItem[]): string {
+  const payload = items.map((item) => ({
+    productId: item.productId,
+    ...(item.variantId ? { variantId: item.variantId } : {}),
+    quantity: Math.max(1, Math.min(99, Math.floor(item.quantity))),
+    name: item.name,
+    price: item.price,
+  }));
+
+  const params = new URLSearchParams({
+    store: storeSlug,
+    items: JSON.stringify(payload),
+  });
+
+  return `${CHECKOUT_URL}/?${params.toString()}`;
+}
+
 export function buildProductCheckoutUrl(
   storeSlug: string,
   product: PublicProfileProduct,
@@ -29,7 +47,7 @@ export function buildProductCheckoutUrl(
   const name = variant ? `${product.name} — ${variantLabel(variant)}` : product.name;
   const safeQuantity = Math.max(1, Math.min(99, Math.floor(quantity)));
 
-  const items = JSON.stringify([
+  return buildStoreCheckoutUrl(storeSlug, [
     {
       productId: product.id,
       ...(variant ? { variantId: variant.id } : {}),
@@ -38,11 +56,4 @@ export function buildProductCheckoutUrl(
       price,
     },
   ]);
-
-  const params = new URLSearchParams({
-    store: storeSlug,
-    items,
-  });
-
-  return `${CHECKOUT_URL}/?${params.toString()}`;
 }

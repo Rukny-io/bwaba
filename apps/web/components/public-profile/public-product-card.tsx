@@ -1,8 +1,7 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import type { PublicProfileProduct } from './types';
-import { getDirection, type AppLocale } from '@/lib/i18n';
 import {
   formatProfileProductPrice,
   getPublicProductStockDisplayLocalized,
@@ -30,41 +29,43 @@ export function PublicProductCard({
   onOpenDetails,
 }: PublicProductCardProps) {
   const t = useTranslations('publicProfile');
-  const locale = useLocale() as AppLocale;
-  const direction = getDirection(locale);
   const resolveMedia = useMediaUrl();
   const imageUrl = resolveMedia(product.images[0] ?? null);
   const stock = getPublicProductStockDisplayLocalized(product, t);
   const discount = getProductDiscountPercent(product);
   const outOfStock = !product.isDigital && product.stock <= 0;
 
+  const interactive = !preview && Boolean(onOpenDetails);
+
   const openDetails = () => {
-    if (!preview) onOpenDetails?.(product);
+    if (interactive) onOpenDetails?.(product);
   };
 
   return (
     <article
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? openDetails : undefined}
+      onKeyDown={
+        interactive
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openDetails();
+              }
+            }
+          : undefined
+      }
       className={cn(
         'group/card relative flex h-full min-w-0 flex-col',
         outOfStock && 'opacity-70',
         preview && 'pointer-events-none',
+        interactive && 'cursor-pointer touch-manipulation select-none',
       )}
       aria-label={product.name}
     >
       <div
-        role={!preview && onOpenDetails ? 'button' : undefined}
-        tabIndex={!preview && onOpenDetails ? 0 : undefined}
-        onClick={openDetails}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            openDetails();
-          }
-        }}
-        className={cn(
-          'relative aspect-square overflow-hidden rounded-2xl bg-[var(--surface-secondary)]',
-          !preview && onOpenDetails && 'cursor-pointer',
-        )}
+        className="relative aspect-square overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"
       >
         <ProductThumbnail
           imageUrl={imageUrl}
@@ -92,21 +93,7 @@ export function PublicProductCard({
         ) : null}
       </div>
 
-      <div
-        role={!preview && onOpenDetails ? 'button' : undefined}
-        tabIndex={!preview && onOpenDetails ? 0 : undefined}
-        onClick={openDetails}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            openDetails();
-          }
-        }}
-        className={cn(
-          'mt-2 flex min-w-0 flex-col gap-1 px-0.5',
-          !preview && onOpenDetails && 'cursor-pointer',
-        )}
-      >
+      <div className="mt-2 flex min-w-0 flex-col gap-1 px-0.5">
         <h3
           dir="auto"
           className="line-clamp-2 text-[12px] font-medium leading-snug text-[var(--foreground)] sm:text-[13px]"
@@ -115,7 +102,7 @@ export function PublicProductCard({
           {product.name}
         </h3>
 
-        <div className="flex min-w-0 items-end justify-between gap-1.5" dir={direction}>
+        <div className="flex min-w-0 items-end justify-between gap-1.5">
           <ProductPriceDisplay
             price={product.price}
             salePrice={product.salePrice}

@@ -56,7 +56,7 @@ export function PublicFormCard({ form, preview }: PublicFormCardProps) {
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 px-0.5 text-right">
+      <div className="flex flex-1 flex-col gap-2 px-0.5 text-start">
         <h3 className="line-clamp-2 min-h-[2.4em] text-[13px] font-bold leading-snug text-[var(--foreground)] sm:text-[14px]">
           {form.title}
         </h3>

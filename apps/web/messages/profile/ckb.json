@@ -5,6 +5,7 @@
   },
   "sections": {
     "links": "بەستەرەکان",
+    "myLinks": "بەستەرەکانم",
     "profileCards": "کارتی پڕۆفایل",
     "instagramPosts": "پۆستەکانی ئینستاگرام",
     "products": "بەرهەمەکان",
@@ -19,8 +20,28 @@
     "createPage": "پەڕەکەت لە ركني دروست بکە",
     "language": "زمان"
   },
+  "promo": {
+    "brand": "ركني",
+    "tagline": "پەڕە و فرۆشگاکەت بەخۆڕایی دروست بکە",
+    "taglineShort": "پەڕەکەت بەخۆڕایی دروست بکە",
+    "ariaLabel": "بچۆ بۆ ماڵپەڕی ركني"
+  },
   "header": {
-    "verified": "پشتڕاستکراو"
+    "verified": "پشتڕاستکراو",
+    "following": "فۆڵۆو دەکات",
+    "followers": "فۆڵۆوەر",
+    "products": "بەرهەم",
+    "links": "بەستەر",
+    "forms": "فۆرم",
+    "message": "نامە",
+    "store": "فرۆشگا",
+    "share": "هاوبەشکردن",
+    "copyLink": "کۆپیکردنی بەستەر",
+    "linkCopied": "بەستەر کۆپی کرا",
+    "verifiedBy": "پشتڕاستکراو لە ركني",
+    "statsProducts": "{count} بەرهەم",
+    "statsLinks": "{count} بەستەر",
+    "statsForms": "{count} فۆرم"
   },
   "forms": {
     "open": "کردنەوە",
@@ -34,6 +55,10 @@
       "APPLICATION": "داواکاری بەشداریکردن",
       "OTHER": "هیتر"
     }
+  },
+  "socialCard": {
+    "follow": "فۆڵۆو",
+    "openOn": "کردنەوە لە {brand}"
   },
   "instagram": {
     "loadError": "بارکردنی کارتی ئینستاگرام سەرکەوتوو نەبوو",
@@ -86,6 +111,7 @@
       "category": "پۆل:",
       "noCategory": "زیاد نەکراوە بۆ هیچ پۆلێک",
       "sku": "کۆدی بەرهەم",
+      "stock": "کۆگا",
       "saved": "پاشەکەوتت کرد",
       "shippingNote": "نرخی گەیاندن لە کاتی پارەدان دەژمێردرێت",
       "description": "وەسف",
@@ -108,5 +134,20 @@
       "increaseQuantity": "زیادکردنی بڕ",
       "removeFromCart": "لابردن لە سەبەتە"
     }
+  },
+  "cart": {
+    "title": "سەبەتەکەت",
+    "empty": "سەبەتە بەتاڵە",
+    "emptyDescription": "بەرهەم لەم فرۆشگایە زیاد بکە بۆ دەستپێکردنی داواکاری.",
+    "subtotal": "کۆی لاوەکی",
+    "checkout": "تەواوکردنی کڕین",
+    "checkoutAria": "تەواوکردنی کڕین بە {count} بەرهەم",
+    "removeItem": "لابردن",
+    "itemCount": "{count} بەرهەم",
+    "itemCount_plural": "{count} بەرهەم",
+    "continueShopping": "بەردەوامبوون لە کڕین",
+    "close": "داخستنی سەبەتە",
+    "open": "بینینی سەبەتە",
+    "openAria": "بینینی سەبەتە بە {count} بەرهەم"
   }
 }

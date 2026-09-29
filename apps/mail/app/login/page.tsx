@@ -74,16 +74,16 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <div className="w-full rounded-2xl border border-[#E8E8E8] bg-white/90 p-7 shadow-[0_8px_40px_-20px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:p-8">
-        <div className="text-center">
-          <p className={agLayout.pill}>Welcome</p>
-          <h1 className="mt-5 text-[1.75rem] font-medium leading-tight tracking-[0em] text-[#1D1D1D]">
-            Sign in to Mail
-          </h1>
-          <p className={cn(agLayout.lead, "mt-3")}>
-            {sessionCopy(sessionFlag)}
-          </p>
-        </div>
+      <div className="w-full text-center">
+        <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#9CA3AF]">
+          Welcome
+        </p>
+        <h1 className="mt-4 text-[1.75rem] font-medium leading-tight tracking-[0em] text-[#1D1D1D]">
+          Sign in to Mail
+        </h1>
+        <p className={cn(agLayout.lead, "mt-3")}>
+          {sessionCopy(sessionFlag)}
+        </p>
 
         <div className="mt-8 flex flex-col gap-3">
           <button
@@ -99,7 +99,7 @@ function LoginContent() {
 
           <button
             type="button"
-            className={cn(agLayout.btnSecondary, "w-full")}
+            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#F5F5F5] px-6 text-[14px] font-medium text-[#1D1D1D] transition-colors hover:bg-[#EBEBEB]"
             onClick={() => {
               window.location.href = getAccountsLoginUrl(nextPath);
             }}
@@ -108,7 +108,7 @@ function LoginContent() {
           </button>
         </div>
 
-        <p className="mt-6 text-center text-[13px] leading-relaxed text-[#9CA3AF]">
+        <p className="mt-6 text-[13px] leading-relaxed text-[#9CA3AF]">
           By continuing you agree to use Mail for your workspace.
         </p>
       </div>

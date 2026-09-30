@@ -196,7 +196,6 @@ export interface StartVerifyIdentityResponse {
     email: boolean;
     authenticator: boolean;
     recovery: boolean;
-    whatsapp?: boolean;
   };
   pendingSessionId: string | null;
   message?: string;
@@ -241,19 +240,6 @@ export async function verify2FALogin(
     body: { pendingSessionId, token, rememberDevice },
   });
 }
-
-export async function sendWhatsappOtp(
-  pendingSessionId: string
-): Promise<{ success: boolean; message: string }> {
-  return apiFetch<{ success: boolean; message: string }>(
-    "/auth/2fa/whatsapp/send-otp",
-    {
-      method: "POST",
-      body: { pendingSessionId },
-    }
-  );
-}
-
 
 // ── Complete Profile API ──────────────────────────────────────────────
 

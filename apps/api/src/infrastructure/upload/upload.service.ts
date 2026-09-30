@@ -27,6 +27,7 @@ export class UploadService {
     'image/png',
     'image/webp',
     'image/gif',
+    'image/svg+xml',
   ];
   private readonly MAX_WIDTH = 2000;
   private readonly MAX_HEIGHT = 2000;
@@ -369,10 +370,28 @@ export class UploadService {
 
     // 2. Validate actual file type using file-type (checks magic bytes)
     const fileType = await fileTypeFromBuffer(buf);
-    if (!fileType || !this.ALLOWED_MIME_TYPES.includes(fileType.mime)) {
+    const isSvg =
+      typeof file?.mimetype === 'string' && file.mimetype === 'image/svg+xml';
+    if (!fileType && !isSvg) {
       throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed',
+        'Invalid file type. Only JPEG, PNG, WebP, GIF, and SVG are allowed',
       );
+    }
+    if (fileType && !this.ALLOWED_MIME_TYPES.includes(fileType.mime)) {
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG, WebP, GIF, and SVG are allowed',
+      );
+    }
+
+    if (!existsSync(this.thumbnailsPath)) {
+      await mkdir(this.thumbnailsPath, { recursive: true });
+    }
+
+    if (isSvg) {
+      const fileName = `${uuidv4()}.svg`;
+      const filePath = join(this.thumbnailsPath, fileName);
+      await writeFile(filePath, buf);
+      return `/uploads/thumbnails/${fileName}`;
     }
 
     // 3. Process image with sharp - resize and optimize for thumbnails (rotate() removes EXIF)
@@ -385,12 +404,7 @@ export class UploadService {
       .webp({ quality: 80, effort: 6 }) // Convert to WebP with good compression
       .toBuffer();
 
-    // 4. Create directory if it doesn't exist
-    if (!existsSync(this.thumbnailsPath)) {
-      await mkdir(this.thumbnailsPath, { recursive: true });
-    }
-
-    // 5. Generate secure filename using UUID
+    // 4. Generate secure filename using UUID
     const fileName = `${uuidv4()}.webp`;
     const filePath = join(this.thumbnailsPath, fileName);
 

@@ -27,7 +27,7 @@ export function OnboardingShell({
 
       {apiError ? (
         <div
-          className="mb-4 animate-in rounded-xl bg-destructive/8 px-3 py-2.5 text-sm text-destructive fade-in slide-in-from-top-2"
+          className="mb-4 animate-in rounded-xl bg-[#FEE2E2]/70 px-3 py-2.5 text-sm text-[#B91C1C] fade-in slide-in-from-top-2"
           role="alert"
         >
           {apiError}

@@ -156,15 +156,15 @@ export function ProductPriceDisplay({
   const hasDiscount =
     parsedSale != null && Number.isFinite(parsedSale) && parsedSale < price;
 
-  const textSize = size === 'md' ? 'text-[13px]' : 'text-[12px]';
+  const textSize = size === 'md' ? 'text-sm' : 'text-[13px]';
 
   if (!Number.isFinite(price)) {
     return <span className={cn(textSize, 'text-[var(--muted-foreground)]', className)}>—</span>;
   }
 
   if (hasDiscount) {
-    const saleTextSize = size === 'md' ? 'text-[14px]' : 'text-[13px]';
-    const baseTextSize = size === 'md' ? 'text-[12px]' : 'text-[11px]';
+    const saleTextSize = size === 'md' ? 'text-[15px]' : 'text-sm';
+    const baseTextSize = size === 'md' ? 'text-[13px]' : 'text-xs';
 
     const discountLayout =
       layout === 'inline'
@@ -196,7 +196,7 @@ export function ProductPriceDisplay({
     );
   }
 
-  const stackTextSize = size === 'md' ? 'text-[14px]' : 'text-[13px]';
+  const stackTextSize = size === 'md' ? 'text-[15px]' : 'text-sm';
 
   return (
     <span

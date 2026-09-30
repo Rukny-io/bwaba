@@ -34,6 +34,12 @@ export function isValidProfileUsername(username: string): boolean {
   return !RESERVED_PROFILE_SEGMENTS.has(username.toLowerCase());
 }
 
+export const PROFILE_PRODUCTS_PREVIEW_LIMIT = 6;
+
 export function getPublicProfilePath(username: string): string {
   return `/${encodeURIComponent(username.trim())}`;
+}
+
+export function getPublicStorePath(username: string): string {
+  return `${getPublicProfilePath(username)}/store`;
 }

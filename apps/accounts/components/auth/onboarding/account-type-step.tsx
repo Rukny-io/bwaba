@@ -3,7 +3,13 @@
 import React from "react"
 import { Check, Code2, Loader2, Store, User } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
+import {
+  authBtnPrimaryClass,
+  authBtnRowClass,
+  authBtnSecondaryClass,
+  authCardClass,
+  authChipSelectedClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 export type AccountType = "user" | "store" | "developer"
@@ -51,7 +57,7 @@ export function AccountTypeSelector({
   const t = useTranslations("Auth")
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       {accountTypes.map((option) => {
         const selected = value === option.id
 
@@ -61,27 +67,26 @@ export function AccountTypeSelector({
             type="button"
             onClick={() => onChange(option.id)}
             className={cn(
-              "group flex w-full cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3.5 text-start transition-all duration-200 sm:rounded-full sm:py-4",
-              selected
-                ? "border-primary/40 bg-primary/5 shadow-sm"
-                : "border-border/60 bg-background/80 backdrop-blur-sm hover:border-primary/25 hover:bg-muted/40",
+              "group flex w-full cursor-pointer items-center gap-3",
+              authCardClass,
+              selected && authChipSelectedClass,
             )}
           >
             <span
               className={cn(
                 "flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors",
                 selected
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted text-muted-foreground group-hover:text-foreground",
+                  ? "bg-[#1D1D1D] text-white"
+                  : "bg-[#F5F5F5] text-[#6B6F76]",
               )}
             >
               {option.icon}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-[#1D1D1D]">
                 {t(option.labelKey)}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#6B6F76]">
                 {t(option.descriptionKey)}
               </p>
             </div>
@@ -89,8 +94,8 @@ export function AccountTypeSelector({
               className={cn(
                 "flex size-5 shrink-0 items-center justify-center rounded-full border transition-all",
                 selected
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background",
+                  ? "border-[#1D1D1D] bg-[#1D1D1D] text-white"
+                  : "border-[#E8E8E8] bg-white",
               )}
               aria-hidden
             >
@@ -124,23 +129,20 @@ export function AccountTypeStep({
     <div className="w-full animate-in fade-in slide-in-from-right-4 duration-300">
       <AccountTypeSelector value={value} onChange={onChange} />
 
-      <div className="mt-6 flex gap-3">
-        <Button
+      <div className={cn(authBtnRowClass, "mt-6")}>
+        <button
           type="button"
-          variant="outline"
-          size="lg"
           onClick={onBack}
           disabled={isLoading}
-          className="h-12 flex-1 rounded-full border-border/60 bg-background/80 text-sm font-semibold backdrop-blur-sm sm:h-11"
+          className={cn(authBtnSecondaryClass, "flex-1")}
         >
           {t("back")}
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          size="lg"
           onClick={onFinish}
           disabled={isLoading}
-          className="h-12 flex-1 rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:opacity-95 sm:h-11"
+          className={cn(authBtnPrimaryClass, "flex-1")}
         >
           {isLoading ? (
             <span className="inline-flex items-center gap-2">
@@ -150,7 +152,7 @@ export function AccountTypeStep({
           ) : (
             t("start_now")
           )}
-        </Button>
+        </button>
       </div>
     </div>
   )

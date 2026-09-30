@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { authBtnSecondaryClass } from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 interface AuthStatusProps {
@@ -24,15 +24,15 @@ export function AuthStatus({
     <div className={cn("w-full space-y-5 py-2", className)}>
       {variant === "loading" ? (
         <Loader2
-          className="mx-auto size-10 animate-spin text-primary"
+          className="mx-auto size-10 animate-spin text-[#1D1D1D]"
           role="status"
           aria-label={message}
         />
       ) : (
-        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-destructive/10">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#FEE2E2]/70">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="size-6 text-destructive"
+            className="size-6 text-[#B91C1C]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -51,7 +51,7 @@ export function AuthStatus({
       <p
         className={cn(
           "text-center text-sm",
-          variant === "error" ? "text-destructive" : "text-muted-foreground",
+          variant === "error" ? "text-[#B91C1C]" : "text-[#6B6F76]",
         )}
         role={variant === "error" ? "alert" : "status"}
       >
@@ -60,15 +60,13 @@ export function AuthStatus({
 
       {variant === "error" && actionLabel && onAction ? (
         <div className="flex justify-center">
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="lg"
             onClick={onAction}
-            className="h-11 rounded-full px-6"
+            className={cn(authBtnSecondaryClass, "w-auto px-6")}
           >
             {actionLabel}
-          </Button>
+          </button>
         </div>
       ) : null}
     </div>

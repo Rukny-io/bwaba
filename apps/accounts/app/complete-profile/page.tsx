@@ -19,11 +19,22 @@ import {
   AuthTextInput,
 } from "@/components/auth/onboarding/auth-form-field"
 import { useUsernameCheck } from "@/hooks/use-username-check"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import {
+  authAlertInfoClass,
+  authAlertSuccessClass,
+  authBtnPrimaryClass,
+  authBtnRowClass,
+  authBtnSecondaryClass,
+  authChipClass,
+  authChipSelectedClass,
+  authLabelClass,
+  authLeadClass,
+  authLinkClass,
+  authPanelClass,
+  authTextareaClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
-import { status } from "@/lib/status-colors"
 import {
   completeProfile,
   updateProfile,
@@ -395,7 +406,7 @@ function CompleteProfileContent() {
         title={t("session_expired")}
         description={
           email ? (
-            <span className="font-medium text-foreground" dir="ltr">
+            <span className={cn(authAlertInfoClass, "inline-block px-3 py-2")} dir="ltr">
               {email}
             </span>
           ) : undefined
@@ -434,14 +445,7 @@ function CompleteProfileContent() {
   > = {
     1: {
       title: t("complete_profile_title"),
-      description: (
-        <>
-          {t("complete_profile_hello")}{" "}
-          <span className="font-medium text-foreground" dir="ltr">
-            {email}
-          </span>
-        </>
-      ),
+      description: t("complete_profile_hello"),
     },
     2: {
       title: t("what_account_type"),
@@ -465,6 +469,7 @@ function CompleteProfileContent() {
       title={hero.title}
       description={hero.description}
       showFooter={false}
+      layoutClassName="max-w-[460px]"
     >
       <OnboardingShell
         steps={stepLabels}
@@ -501,14 +506,19 @@ function CompleteProfileContent() {
 
         {step === 3 && (
           <div className="w-full animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 p-4 backdrop-blur-sm sm:rounded-full sm:px-5">
+            <div
+              className={cn(
+                authPanelClass,
+                "mb-5 flex items-center justify-between p-4",
+              )}
+            >
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
                     "flex size-10 items-center justify-center rounded-xl transition-colors",
                     storeEnabled
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground",
+                      ? "bg-[#1D1D1D] text-white"
+                      : "bg-white text-[#6B6F76] ring-1 ring-[#E8E8E8]",
                   )}
                 >
                   <Store className="size-5" strokeWidth={1.5} aria-hidden />
@@ -516,7 +526,7 @@ function CompleteProfileContent() {
                 <span
                   className={cn(
                     "text-sm font-medium",
-                    storeEnabled ? "text-foreground" : "text-muted-foreground",
+                    storeEnabled ? "text-[#1D1D1D]" : "text-[#6B6F76]",
                   )}
                 >
                   {storeEnabled ? t("store_enabled") : t("store_disabled")}
@@ -528,7 +538,7 @@ function CompleteProfileContent() {
             {storeEnabled ? (
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-300">
                 <div className="space-y-2">
-                  <label className="block text-start text-sm font-medium text-foreground">
+                  <label className={authLabelClass}>
                     {t("store_category_title")}
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -548,10 +558,9 @@ function CompleteProfileContent() {
                             )
                           }
                           className={cn(
-                            "flex cursor-pointer items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-start text-sm transition-all sm:rounded-full",
-                            storeCategory === cat.slug
-                              ? "border-primary/40 bg-primary/5 font-medium text-foreground shadow-sm"
-                              : "border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm hover:border-primary/30 hover:bg-muted/30",
+                            "flex items-center gap-2.5 px-3 py-2.5 text-start text-sm",
+                            authChipClass,
+                            storeCategory === cat.slug && authChipSelectedClass,
                           )}
                         >
                           <span
@@ -568,24 +577,21 @@ function CompleteProfileContent() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label
-                    htmlFor="storeDesc"
-                    className="block text-start text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="storeDesc" className={authLabelClass}>
                     {t("store_description_label")}
                   </label>
-                  <Textarea
+                  <textarea
                     id="storeDesc"
                     placeholder={t("store_description_placeholder")}
                     value={storeDescription}
                     onChange={(e) => setStoreDescription(e.target.value)}
                     rows={3}
-                    className="rounded-2xl border-input/70 bg-background/80 backdrop-blur-sm"
+                    className={authTextareaClass}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-start text-sm font-medium text-foreground">
+                  <label className={authLabelClass}>
                     {t("employees_count_label")}
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -599,10 +605,9 @@ function CompleteProfileContent() {
                           )
                         }
                         className={cn(
-                          "cursor-pointer rounded-2xl border px-2 py-2.5 text-center text-xs font-medium transition-all sm:rounded-full",
-                          employeesCount === opt.id
-                            ? "border-primary/40 bg-primary/5 text-foreground shadow-sm"
-                            : "border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm hover:border-primary/30",
+                          "px-2 py-2.5 text-center text-xs font-medium",
+                          authChipClass,
+                          employeesCount === opt.id && authChipSelectedClass,
                         )}
                       >
                         {opt.label}
@@ -613,22 +618,19 @@ function CompleteProfileContent() {
               </div>
             ) : null}
 
-            <div className="mt-6 flex gap-3">
-              <Button
+            <div className={cn(authBtnRowClass, "mt-6")}>
+              <button
                 type="button"
-                variant="outline"
-                size="lg"
                 onClick={() => setStep(2)}
-                className="h-12 flex-1 rounded-full border-border/60 bg-background/80 text-sm font-semibold backdrop-blur-sm sm:h-11"
+                className={cn(authBtnSecondaryClass, "flex-1")}
               >
                 {t("back")}
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                size="lg"
                 onClick={handleSubmitProfile}
                 disabled={isLoading}
-                className="h-12 flex-1 rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:opacity-95 sm:h-11"
+                className={cn(authBtnPrimaryClass, "flex-1")}
               >
                 {isLoading ? (
                   <span className="inline-flex items-center gap-2">
@@ -641,7 +643,7 @@ function CompleteProfileContent() {
                     <ArrowUpRight className="size-4 rtl:rotate-180" aria-hidden />
                   </span>
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         )}
@@ -650,12 +652,11 @@ function CompleteProfileContent() {
           <div className="w-full animate-in fade-in slide-in-from-right-4 duration-300">
             {twoFAState === "idle" && (
               <div className="space-y-4">
-                <Button
+                <button
                   type="button"
-                  size="lg"
                   onClick={handleSetup2FA}
                   disabled={isLoading || !canSetup2FA}
-                  className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:opacity-95 disabled:opacity-45 sm:h-11"
+                  className={authBtnPrimaryClass}
                 >
                   {isLoading ? (
                     <span className="inline-flex items-center gap-2">
@@ -665,51 +666,49 @@ function CompleteProfileContent() {
                   ) : (
                     t("enable_2fa")
                   )}
-                </Button>
+                </button>
                 {!canSetup2FA && !isLoading ? (
-                  <p className="text-center text-xs text-muted-foreground">
+                  <p className={cn(authLeadClass, "text-center text-xs")}>
                     {t("session_expired")}
                   </p>
                 ) : null}
                 <div className="text-center">
-                  <p className="mb-3 text-xs text-muted-foreground">
+                  <p className={cn(authLeadClass, "mb-3 text-xs")}>
                     {t("2fa_skip_note")}
                   </p>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
                     onClick={() => void handleFinish()}
-                    className="text-sm text-muted-foreground hover:text-foreground"
+                    className={authLinkClass}
                   >
                     {t("skip_start")} →
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
 
             {twoFAState === "scanning" && (
               <div className="space-y-5 animate-in fade-in duration-300">
-                <p className="text-center text-sm text-muted-foreground">
+                <p className={cn(authLeadClass, "text-center text-sm")}>
                   {t("setup_2fa_scan")}
                 </p>
                 {qrCode ? (
-                  <div className="mx-auto w-fit rounded-2xl border border-border/60 bg-background/80 p-4 backdrop-blur-sm">
+                  <div className={cn(authPanelClass, "mx-auto w-fit bg-white p-4")}>
                     <img src={qrCode} alt="QR Code" className="size-48" />
                   </div>
                 ) : (
-                  <div className="mx-auto flex size-48 items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/30">
+                  <div className="mx-auto flex size-48 items-center justify-center rounded-2xl border border-dashed border-[#E8E8E8] bg-[#FAFAFA]">
                     <Loader2
-                      className="size-8 animate-spin text-primary"
+                      className="size-8 animate-spin text-[#1D1D1D]"
                       aria-hidden
                     />
                   </div>
                 )}
                 <div className="text-center">
-                  <p className="mb-1 text-xs text-muted-foreground">
+                  <p className={cn(authLeadClass, "mb-1 text-xs")}>
                     {t("setup_2fa_manual")}
                   </p>
-                  <code className="select-all break-all rounded-lg bg-muted px-3 py-1.5 font-mono text-xs">
+                  <code className="select-all break-all rounded-lg bg-[#F5F5F5] px-3 py-1.5 font-mono text-xs text-[#1D1D1D]">
                     {secret}
                   </code>
                 </div>
@@ -734,44 +733,41 @@ function CompleteProfileContent() {
                     className="text-center font-mono text-lg tracking-[0.5em]"
                   />
                 </AuthFormField>
-                <div className="flex gap-3">
-                  <Button
+                <div className={authBtnRowClass}>
+                  <button
                     type="button"
-                    variant="outline"
-                    size="lg"
                     onClick={() => setTwoFAState("idle")}
-                    className="h-12 flex-1 rounded-full border-border/60 bg-background/80 text-sm font-semibold backdrop-blur-sm sm:h-11"
+                    className={cn(authBtnSecondaryClass, "flex-1")}
                   >
                     {t("back")}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="button"
-                    size="lg"
                     onClick={handleEnable2FA}
                     disabled={isLoading || otpCode.length < 6}
-                    className="h-12 flex-1 rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:opacity-95 disabled:opacity-45 sm:h-11"
+                    className={cn(authBtnPrimaryClass, "flex-1")}
                   >
                     {isLoading ? t("activating_2fa") : t("activate_2fa")}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
 
             {twoFAState === "success" && (
               <div className="space-y-5 animate-in fade-in duration-300">
-                <div className={status.successPanel}>{t("2fa_success")}</div>
+                <div className={authAlertSuccessClass}>{t("2fa_success")}</div>
                 <div>
-                  <h3 className="mb-1 text-sm font-semibold text-foreground">
+                  <h3 className="mb-1 text-sm font-semibold text-[#1D1D1D]">
                     {t("backup_codes_title")}
                   </h3>
-                  <p className="mb-3 text-xs text-muted-foreground">
+                  <p className={cn(authLeadClass, "mb-3 text-xs")}>
                     {t("backup_codes_desc")}
                   </p>
-                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-background/80 p-4 backdrop-blur-sm">
+                  <div className={cn(authPanelClass, "grid grid-cols-2 gap-2 bg-white p-4")}>
                     {backupCodes.map((code, i) => (
                       <code
                         key={i}
-                        className="py-1 text-center font-mono text-sm text-foreground"
+                        className="py-1 text-center font-mono text-sm text-[#1D1D1D]"
                       >
                         {code}
                       </code>
@@ -779,36 +775,31 @@ function CompleteProfileContent() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={handleCopyCodes}
-                    className="h-10 flex-1 rounded-full border-border/60 bg-background/80 text-sm backdrop-blur-sm"
+                    className={cn(authBtnSecondaryClass, "h-10 flex-1 text-sm")}
                   >
                     {copied ? t("copied") : t("copy_codes")}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={handleDownloadCodes}
-                    className="h-10 flex-1 rounded-full border-border/60 bg-background/80 text-sm backdrop-blur-sm"
+                    className={cn(authBtnSecondaryClass, "h-10 flex-1 text-sm")}
                   >
                     {t("download_codes")}
-                  </Button>
+                  </button>
                 </div>
-                <Button
+                <button
                   type="button"
-                  size="lg"
                   onClick={() => void handleFinish()}
-                  className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:opacity-95 sm:h-11"
+                  className={authBtnPrimaryClass}
                 >
                   <span className="inline-flex items-center gap-2">
                     {t("start_now")}
                     <ArrowUpRight className="size-4 rtl:rotate-180" aria-hidden />
                   </span>
-                </Button>
+                </button>
               </div>
             )}
           </div>

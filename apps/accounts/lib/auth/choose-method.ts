@@ -4,7 +4,6 @@ export const VERIFICATION_METHODS: VerificationMethod[] = [
   "authenticator",
   "backup-code",
   "email",
-  "whatsapp",
 ]
 
 export function parseVerificationMethod(
@@ -19,11 +18,9 @@ export function parseVerificationMethod(
 export function isVerificationMethodAvailable(
   method: VerificationMethod,
   has2FA: boolean,
-  isSubscribed: boolean,
 ): boolean {
   if (method === "email") return true
   if (method === "authenticator" || method === "backup-code") return has2FA
-  if (method === "whatsapp") return isSubscribed
   return false
 }
 

@@ -189,6 +189,7 @@ export class StoresController {
    * 🛍️ الحصول على منتجات المستخدم حسب username
    * Public endpoint - لا يحتاج تسجيل دخول
    */
+  @Public()
   @Get(':username/products')
   @ApiOperation({ summary: 'Get products by username' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -215,6 +216,7 @@ export class StoresController {
   /**
    * 📂 الحصول على فئات منتجات المستخدم
    */
+  @Public()
   @Get(':username/categories')
   @ApiOperation({ summary: 'Get product categories by username' })
   @ApiResponse({
@@ -223,5 +225,19 @@ export class StoresController {
   })
   getCategoriesByUsername(@Param('username') username: string) {
     return this.storesService.getCategoriesByUsername(username);
+  }
+
+  /**
+   * 📚 الحصول على مجموعات منتجات المستخدم
+   */
+  @Public()
+  @Get(':username/collections')
+  @ApiOperation({ summary: 'Get product collections by username' })
+  @ApiResponse({
+    status: 200,
+    description: 'Collections retrieved successfully',
+  })
+  getCollectionsByUsername(@Param('username') username: string) {
+    return this.storesService.getCollectionsByUsername(username);
   }
 }

@@ -12,10 +12,8 @@ function LinksLoading() {
 
 export default function LinksPage() {
   return (
-    <div className="w-full pt-0.75 sm:pt-1.25">
-      <Suspense fallback={<LinksLoading />}>
-        <LinksView />
-      </Suspense>
-    </div>
+    <Suspense fallback={<LinksLoading />}>
+      <LinksView />
+    </Suspense>
   );
 }

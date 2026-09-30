@@ -44,7 +44,7 @@ export function PublicProfileShell({
       initialProductId={initialProductId}
       preview={preview}
       embedded={embedded}
-      constrained={preview || embedded}
+      constrained={preview}
       fillHeight={preview || embedded}
       resolveMediaUrl={resolveMediaUrl}
       onTrackClick={preview ? undefined : onTrackClick}

@@ -5,15 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { AlertTriangle, Clock, Link2, Loader2 } from "lucide-react"
 import { AuthSplitPage } from "@/components/auth/auth-split-page"
-import { Button } from "@/components/ui/button"
+import { authBtnPrimaryClass, authLinkClass } from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 const ERROR_KEYS = ["used", "expired", "invalid", "processing"] as const
 type VerifyErrorKey = (typeof ERROR_KEYS)[number]
 
 const ERROR_ICONS: Record<VerifyErrorKey, React.ReactNode> = {
-  used: <Link2 className="size-8 text-muted-foreground" aria-hidden />,
-  expired: <Clock className="size-8 text-muted-foreground" aria-hidden />,
+  used: <Link2 className="size-8 text-[#6B6F76]" aria-hidden />,
+  expired: <Clock className="size-8 text-[#6B6F76]" aria-hidden />,
   invalid: <AlertTriangle className="size-8 text-amber-600" aria-hidden />,
   processing: null,
 }
@@ -70,11 +70,11 @@ function VerifyContent() {
       {isProcessing ? (
         <div className="space-y-5 py-2 text-center">
           <Loader2
-            className="mx-auto size-10 animate-spin text-primary"
+            className="mx-auto size-10 animate-spin text-[#1D1D1D]"
             role="status"
             aria-label={t("verify_processing_title")}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={authLinkClass}>
             {t("verify_retry", { current: retryCount + 1, max: MAX_RETRIES })}
           </p>
         </div>
@@ -85,7 +85,7 @@ function VerifyContent() {
               "mx-auto flex size-16 items-center justify-center rounded-full",
               showRetryExhausted || error === "invalid"
                 ? "bg-amber-500/10"
-                : "bg-muted/60",
+                : "bg-[#F5F5F5]",
             )}
           >
             {showRetryExhausted ? (
@@ -95,13 +95,13 @@ function VerifyContent() {
             )}
           </div>
 
-          <Button
+          <button
+            type="button"
             onClick={() => router.replace("/login")}
-            size="lg"
-            className="h-12 w-full rounded-full text-sm font-semibold"
+            className={authBtnPrimaryClass}
           >
             {t("verify_request_new")}
-          </Button>
+          </button>
         </div>
       )}
     </AuthSplitPage>
@@ -120,7 +120,7 @@ export default function AuthVerifyPage() {
           showFooter={false}
         >
           <Loader2
-            className="mx-auto size-10 animate-spin text-primary"
+            className="mx-auto size-10 animate-spin text-[#1D1D1D]"
             role="status"
             aria-label={t("loading")}
           />

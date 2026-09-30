@@ -27,12 +27,12 @@ export function AuthStepper({ steps, currentStep, className }: AuthStepperProps)
               <div
                 className={cn(
                   "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300",
-                  isComplete && "scale-90 bg-primary text-primary-foreground",
+                  isComplete && "scale-90 bg-[#1D1D1D] text-white",
                   isCurrent &&
-                    "bg-primary text-primary-foreground ring-4 ring-primary/15",
+                    "bg-[#1D1D1D] text-white ring-4 ring-[#1D1D1D]/10",
                   !isComplete &&
                     !isCurrent &&
-                    "bg-muted text-muted-foreground",
+                    "bg-[#F5F5F5] text-[#9CA3AF]",
                 )}
                 aria-current={isCurrent ? "step" : undefined}
               >
@@ -46,8 +46,8 @@ export function AuthStepper({ steps, currentStep, className }: AuthStepperProps)
                 className={cn(
                   "hidden truncate text-xs transition-colors sm:block",
                   stepNumber <= currentStep
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground",
+                    ? "font-medium text-[#1D1D1D]"
+                    : "text-[#9CA3AF]",
                 )}
               >
                 {label}
@@ -58,7 +58,7 @@ export function AuthStepper({ steps, currentStep, className }: AuthStepperProps)
               <div
                 className={cn(
                   "h-0.5 min-w-4 flex-1 rounded-full transition-colors duration-500",
-                  currentStep > stepNumber ? "bg-primary" : "bg-border",
+                  currentStep > stepNumber ? "bg-[#1D1D1D]" : "bg-[#E8E8E8]",
                 )}
                 aria-hidden
               />

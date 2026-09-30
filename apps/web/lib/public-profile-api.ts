@@ -1,5 +1,6 @@
 import { getBackendUrl, PUBLIC_SITE_URL } from '@/lib/config';
 import type {
+  PublicProfileCollection,
   PublicProfileProduct,
   PublicProfileProductAttribute,
   PublicProfileProductVariant,
@@ -64,6 +65,7 @@ export type {
   PublicProfileProduct,
   PublicProfileProductAttribute,
   PublicProfileProductVariant,
+  PublicProfileCollection,
 };
 
 export interface PublicProfileProductsResponse {
@@ -81,6 +83,10 @@ export function getCanonicalProfileUrl(username: string): string {
   return `${PUBLIC_SITE_URL}/${encodeURIComponent(username)}`;
 }
 
+export function getCanonicalStoreUrl(username: string): string {
+  return `${PUBLIC_SITE_URL}/${encodeURIComponent(username)}/store`;
+}
+
 export { resolveProfileMediaUrl } from '@/lib/media-url';
 
 export async function fetchPublicProfile(username: string): Promise<PublicProfile | null> {
@@ -92,6 +98,21 @@ export async function fetchPublicProfile(username: string): Promise<PublicProfil
     return (await res.json()) as PublicProfile;
   } catch {
     return null;
+  }
+}
+
+export async function fetchPublicProfileCollections(
+  username: string,
+): Promise<PublicProfileCollection[]> {
+  try {
+    const res = await fetch(
+      `${apiRoot()}/stores/${encodeURIComponent(username)}/collections`,
+      { next: { revalidate: 60 } },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as PublicProfileCollection[];
+  } catch {
+    return [];
   }
 }
 

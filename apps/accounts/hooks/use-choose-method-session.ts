@@ -12,7 +12,6 @@ export function useChooseMethodSession() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [has2FA, setHas2FA] = useState(false)
-  const [isSubscribed, setIsSubscribed] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
 
   const ensureSessionId = useCallback(async () => {
@@ -30,8 +29,8 @@ export function useChooseMethodSession() {
 
   const isMethodAvailable = useCallback(
     (method: VerificationMethod) =>
-      isVerificationMethodAvailable(method, has2FA, isSubscribed),
-    [has2FA, isSubscribed],
+      isVerificationMethodAvailable(method, has2FA),
+    [has2FA],
   )
 
   useEffect(() => {
@@ -66,10 +65,8 @@ export function useChooseMethodSession() {
     const cachedData = sessionStorage.getItem(`auth_methods_${finalEmail}`)
     if (cachedData) {
       try {
-        const { has2FA: cached2FA, isSubscribed: cachedSub } =
-          JSON.parse(cachedData)
+        const { has2FA: cached2FA } = JSON.parse(cachedData)
         if (!urlSessionId) setHas2FA(cached2FA)
-        setIsSubscribed(cachedSub)
         setIsLoading(false)
       } catch {
         // ignore invalid cache
@@ -80,16 +77,13 @@ export function useChooseMethodSession() {
       .then((result) => {
         const fresh2FA =
           Boolean(result.availableMethods.authenticator) || Boolean(urlSessionId)
-        const freshSub = result.availableMethods.whatsapp || false
 
         setHas2FA(fresh2FA)
-        setIsSubscribed(freshSub)
 
         sessionStorage.setItem(
           `auth_methods_${finalEmail}`,
           JSON.stringify({
             has2FA: fresh2FA,
-            isSubscribed: freshSub,
             timestamp: Date.now(),
           }),
         )
@@ -103,7 +97,6 @@ export function useChooseMethodSession() {
         }
       })
       .catch(() => {
-        // Keep email path; preserve has2FA when we already have a 2FA session.
         if (urlSessionId) setHas2FA(true)
       })
       .finally(() => {
@@ -115,7 +108,6 @@ export function useChooseMethodSession() {
     email,
     isLoading,
     has2FA,
-    isSubscribed,
     sessionId,
     setSessionId,
     ensureSessionId,

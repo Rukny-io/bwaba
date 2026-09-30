@@ -15,6 +15,10 @@ import type {
   PublicSocialLink,
 } from './types';
 import { resolveProfileMediaUrl } from '@/lib/media-url';
+import {
+  getPublicStorePath,
+  PROFILE_PRODUCTS_PREVIEW_LIMIT,
+} from '@/lib/profile-routes';
 import { cn } from './utils';
 import { ProfileFormsSection } from './profile-forms-section';
 import { ProfileHeader } from './profile-header';
@@ -131,7 +135,7 @@ export function ProfilePageView({
 }: ProfilePageViewProps) {
   const t = useTranslations('publicProfile');
   const themeClass = getProfileThemeClass(profile.themeKey);
-  const usePublicLayout = !embedded || constrained;
+  const usePublicLayout = !preview;
   const links = [...profile.socialLinks].sort((a, b) => a.displayOrder - b.displayOrder);
 
   const profileLinks = links.filter((link) => !isFormLink(link.platform));
@@ -148,10 +152,10 @@ export function ProfilePageView({
   const hasContent =
     profileLinks.length > 0 || products.length > 0 || profileForms.length > 0;
 
-  const productsCompact = constrained || preview;
+  const productsCompact = preview;
   const pageColumnClass = cn(
     'mx-auto w-full space-y-6',
-    usePublicLayout ? 'max-w-lg px-4 sm:max-w-xl sm:px-5' : 'max-w-md px-3',
+    preview ? 'max-w-md px-3' : 'max-w-lg px-4 sm:max-w-xl sm:px-5 max-sm:max-w-none',
   );
 
   const hasStore = products.length > 0;
@@ -188,11 +192,12 @@ export function ProfilePageView({
             {usePublicLayout && !preview && !constrained ? <ProfileTopBar /> : null}
             <ProfileHeader
               profile={profile}
-              compact={embedded && !constrained}
+              compact={preview}
               withTopBar={usePublicLayout && !preview && !constrained}
               productCount={products.length}
               linkCount={profileLinks.length}
               formCount={profileForms.length}
+              storeHref={hasStore ? getPublicStorePath(profile.username) : undefined}
             />
           </div>
 
@@ -214,6 +219,9 @@ export function ProfilePageView({
               initialProductId={initialProductId}
               preview={preview}
               compact={productsCompact}
+              limit={preview ? undefined : PROFILE_PRODUCTS_PREVIEW_LIMIT}
+              viewAllHref={preview ? undefined : getPublicStorePath(profile.username)}
+              assignSectionId
             />
           ) : null}
 

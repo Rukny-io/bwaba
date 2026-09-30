@@ -110,14 +110,14 @@
   --field-border: var(--border);
 }
 
-/* Legal pages — match developer documentation tokens */
+/* Legal pages — aligned with accounts auth / mail antigravity */
 .legal-docs-shell {
-  --background: #fafbfc;
-  --foreground: #0f172a;
-  --muted: #64748b;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --primary: #3b82f6;
+  --background: #ffffff;
+  --foreground: #1d1d1d;
+  --muted: #6b6f76;
+  --muted-foreground: #6b6f76;
+  --border: #e8e8e8;
+  --primary: #1d1d1d;
   --primary-foreground: #ffffff;
   --surface: #ffffff;
   --surface-secondary: #f1f5f9;
@@ -247,6 +247,23 @@
 
   .auth-grainient {
     opacity: 0.92;
+  }
+
+  .accounts-auth-scope {
+    --background: #ffffff;
+    --foreground: #1d1d1d;
+    --card: #ffffff;
+    --card-foreground: #1d1d1d;
+    --muted: #f5f5f5;
+    --muted-foreground: #6b6f76;
+    --border: #e8e8e8;
+    --input: #e8e8e8;
+    --primary: #1d1d1d;
+    --primary-foreground: #ffffff;
+    --ring: #1d1d1d;
+    background: #ffffff;
+    color: #1d1d1d;
+    color-scheme: light;
   }
 
   .auth-field {

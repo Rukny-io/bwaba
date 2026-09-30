@@ -3,6 +3,11 @@
 import React from "react"
 import { cn } from "@/lib/utils"
 import { status } from "@/lib/status-colors"
+import {
+  authFieldShellClass,
+  authInputClass,
+  authLabelClass,
+} from "@/components/auth/auth-ui"
 
 interface AuthFormFieldProps {
   label: string
@@ -25,22 +30,19 @@ export function AuthFormField({
 }: AuthFormFieldProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label
-        htmlFor={htmlFor}
-        className="block text-sm font-medium text-foreground"
-      >
+      <label htmlFor={htmlFor} className={authLabelClass}>
         {label}
       </label>
       {children}
       {error ? (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-xs text-[#B91C1C]" role="alert">
           {error}
         </p>
       ) : hint ? (
         <p
           className={cn(
             "text-xs",
-            hintTone === "success" ? status.successHint : "text-muted-foreground",
+            hintTone === "success" ? status.successHint : "text-[#6B6F76]",
           )}
         >
           {hint}
@@ -64,9 +66,9 @@ export function AuthInputShell({
   return (
     <div
       className={cn(
-        "auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm transition-all sm:h-11 sm:rounded-full",
-        "focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/15",
-        invalid && "border-destructive/50 focus-within:border-destructive/50 focus-within:ring-destructive/15",
+        authFieldShellClass,
+        invalid &&
+          "border-[#FCA5A5] focus-within:border-[#B91C1C]/50 focus-within:ring-[#B91C1C]/10",
         className,
       )}
     >
@@ -95,10 +97,7 @@ export function AuthTextInput({
     <AuthInputShell invalid={invalid} className={shellClassName}>
       {prefix}
       <input
-        className={cn(
-          "h-full min-w-0 flex-1 border-0 bg-transparent text-sm outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0",
-          className,
-        )}
+        className={cn(authInputClass, "auth-email-input", className)}
         aria-invalid={invalid}
         {...props}
       />

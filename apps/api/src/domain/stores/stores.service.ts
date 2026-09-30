@@ -971,6 +971,75 @@ export class StoresService {
   }
 
   /**
+   * 📚 الحصول على مجموعات منتجات المتجر حسب username (عام)
+   */
+  async getCollectionsByUsername(username: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        profile: { username },
+      },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('المستخدم غير موجود');
+    }
+
+    const store = await this.prisma.store.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!store) {
+      return [];
+    }
+
+    const collections = await this.prisma.product_collections.findMany({
+      where: {
+        storeId: store.id,
+        isActive: true,
+        items: {
+          some: {
+            product: { status: 'ACTIVE' },
+          },
+        },
+      },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        items: {
+          where: {
+            product: { status: 'ACTIVE' },
+          },
+          select: { productId: true, order: true },
+          orderBy: { order: 'asc' },
+        },
+        _count: {
+          select: {
+            items: {
+              where: {
+                product: { status: 'ACTIVE' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return collections.map((collection) => ({
+      id: collection.id,
+      name: collection.nameAr?.trim() || collection.name,
+      slug: collection.slug,
+      description: collection.description,
+      imagePath:
+        resolveMediaProxyUrl(collection.imagePath) ?? collection.imagePath,
+      bannerPath:
+        resolveMediaProxyUrl(collection.bannerPath) ?? collection.bannerPath,
+      productsCount: collection._count.items,
+      productIds: collection.items.map((item) => item.productId),
+    }));
+  }
+
+  /**
    * Generate unique slug from name
    */
   private async generateUniqueSlug(name: string): Promise<string> {

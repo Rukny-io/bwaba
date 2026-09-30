@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Pencil, Pause, Play, Package, Percent, Plus, Trash2 } from 'lucide-react';
+import { Package, Pause, Pencil, Percent, Play, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
+import {
+  dashboardPagePanelClass,
+  dashboardPageSectionClass,
+} from '@/components/app/dashboard-page-frame';
 import { CreateDiscountDialog } from '@/components/products/discounts/create-discount-dialog';
 import { EditDiscountDialog } from '@/components/products/discounts/edit-discount-dialog';
 import { DiscountStrip } from '@/components/products/discounts/discount-strip';
+import { DiscountsPageActions } from '@/components/products/discounts/discounts-page-actions';
 import {
   CollectionProductCard,
   CollectionProductCardSkeleton,
@@ -15,11 +20,21 @@ import {
 import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { fetchMyStoreProducts } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
-import { fetchDiscounts, deleteDiscount, toggleDiscountActive, formatDiscountLabel } from '@/lib/discounts/api';
+import {
+  deleteDiscount,
+  fetchDiscounts,
+  formatDiscountLabel,
+  toggleDiscountActive,
+} from '@/lib/discounts/api';
 import type { ProductDiscount } from '@/lib/discounts/types';
 import { ApiException } from '@/lib/api-client';
+import { formatNumber } from '@/lib/dashboard-format';
+import { cn } from '@/lib/utils';
 
 const config = PRODUCT_CATALOG_CONFIG.discounts;
+
+const panelActionClass =
+  'h-9 shrink-0 gap-1.5 rounded-lg px-3 text-sm font-medium';
 
 export function DiscountsView() {
   const router = useRouter();
@@ -89,7 +104,7 @@ export function DiscountsView() {
 
   const selectedDiscount = useMemo(
     () => sortedDiscounts.find((discount) => discount.id === selectedDiscountId) ?? null,
-    [discounts, selectedDiscountId, sortedDiscounts],
+    [selectedDiscountId, sortedDiscounts],
   );
 
   const discountedProducts = useMemo(() => {
@@ -150,7 +165,7 @@ export function DiscountsView() {
   }, [loadDiscounts]);
 
   return (
-    <section className="dashboard-page flex flex-col gap-5 sm:gap-6">
+    <section className={dashboardPageSectionClass}>
       <CreateDiscountDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -191,15 +206,15 @@ export function DiscountsView() {
               aria-modal="true"
               aria-labelledby="delete-discount-title"
               dir="rtl"
-              className="relative w-full max-w-sm rounded-2xl border border-[rgba(34,34,34,0.1)] bg-white p-5 shadow-[0px_8px_12px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-zinc-950"
+              className="relative w-full max-w-sm rounded-2xl bg-[var(--surface)] p-5 ring-1 ring-[var(--border)]"
             >
               <h2
                 id="delete-discount-title"
-                className="text-[15px] font-semibold text-[var(--foreground)]"
+                className="text-base font-semibold text-[var(--foreground)]"
               >
                 حذف {formatDiscountLabel(pendingDelete.percentage)}؟
               </h2>
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+              <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
                 يُلغى الخصم عن المنتجات المشمولة ولا يمكن التراجع عن هذا الإجراء.
               </p>
               <div className="mt-5 flex gap-2">
@@ -207,7 +222,7 @@ export function DiscountsView() {
                   variant="danger"
                   isDisabled={busyId === pendingDelete.id}
                   onPress={() => void handleDelete(pendingDelete)}
-                  className="h-10 flex-1 rounded-xl text-[13px] font-semibold"
+                  className="h-9 flex-1 rounded-lg text-sm font-medium"
                 >
                   حذف الخصم
                 </Button>
@@ -215,7 +230,7 @@ export function DiscountsView() {
                   variant="secondary"
                   isDisabled={busyId === pendingDelete.id}
                   onPress={() => setPendingDelete(null)}
-                  className="h-10 rounded-xl px-4 text-[13px]"
+                  className="h-9 rounded-lg px-4 text-sm font-medium"
                 >
                   تراجع
                 </Button>
@@ -228,128 +243,184 @@ export function DiscountsView() {
       <DashboardPageHeader
         title="الخصومات"
         description="طبّق خصماً بنسبة مئوية على منتجات محددة في متجرك"
-        className="mb-0"
         actions={
-          <Button
-            onPress={() => setCreateOpen(true)}
-            className="h-10 shrink-0 gap-2 rounded-xl px-4 text-[13px] font-bold shadow-[0_4px_14px_rgba(59,130,246,0.22)] bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-95 sm:text-[14px]"
-          >
-            <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-            <span>{config.addButtonLabel}</span>
-          </Button>
+          <DiscountsPageActions
+            addLabel={config.addButtonLabel}
+            onAdd={() => setCreateOpen(true)}
+          />
         }
       />
 
       {error ? (
-        <div className="rounded-xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-8 text-center">
-          <p className="text-[14px] font-medium text-[var(--foreground)]">{error}</p>
+        <div
+          className={cn(
+            dashboardPagePanelClass,
+            'border border-[var(--danger)]/20 bg-[var(--danger)]/5 text-center',
+          )}
+        >
+          <p className="text-sm font-medium text-[var(--danger)]">{error}</p>
         </div>
-      ) : (
-        <>
+      ) : null}
+
+      {actionError ? (
+        <p className="text-sm text-[var(--danger)]">{actionError}</p>
+      ) : null}
+
+      {!error && !loadingDiscounts && sortedDiscounts.length === 0 ? (
+        <div
+          className={cn(
+            dashboardPagePanelClass,
+            'items-center border border-dashed border-[var(--border)] py-16 text-center sm:py-20',
+          )}
+        >
+          <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+            <Percent className="size-5" strokeWidth={1.75} aria-hidden />
+          </div>
+          <p className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+            {config.emptyTitle}
+          </p>
+          <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
+            {config.emptyDescription}
+          </p>
+          <Button
+            onPress={() => setCreateOpen(true)}
+            className="mt-5 h-9 gap-1.5 rounded-lg bg-[var(--primary)] px-3.5 text-sm font-medium text-[var(--primary-foreground)] hover:opacity-90"
+          >
+            <Plus className="size-3.5" strokeWidth={2.25} aria-hidden />
+            {config.addButtonLabel}
+          </Button>
+        </div>
+      ) : null}
+
+      {!error && (loadingDiscounts || sortedDiscounts.length > 0) ? (
+        <div className={cn(dashboardPagePanelClass, 'gap-4')}>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-[var(--foreground)]">
+              خصوماتك
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+              {loadingDiscounts
+                ? 'جاري التحميل…'
+                : `${formatNumber(sortedDiscounts.length)} خصم`}
+            </p>
+          </div>
+
           <DiscountStrip
             discounts={sortedDiscounts}
             selectedDiscountId={selectedDiscountId}
             loading={loadingDiscounts}
-            busyId={busyId}
             onSelect={setSelectedDiscountId}
             onEdit={setEditingDiscount}
-            onToggleActive={(discount) => void handleToggleActive(discount)}
-            onDelete={setPendingDelete}
           />
+        </div>
+      ) : null}
 
-          {actionError ? (
-            <p className="text-[13px] text-[var(--danger)]">{actionError}</p>
-          ) : null}
+      {!error && selectedDiscount ? (
+        <div className={cn(dashboardPagePanelClass, 'gap-5')}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-semibold text-[var(--foreground)]">
+                  {formatDiscountLabel(selectedDiscount.percentage)}
+                </h2>
+                <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-0.5 text-xs font-medium text-[var(--muted-foreground)]">
+                  {formatNumber(discountedProducts.length)} منتج
+                </span>
+                {!selectedDiscount.isActive ? (
+                  <span className="rounded-full bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] px-2.5 py-0.5 text-xs font-medium text-[var(--warning)]">
+                    متوقف
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                {selectedDiscount.productsCount === 1
+                  ? 'يشمل منتجاً واحداً'
+                  : `يشمل ${formatNumber(selectedDiscount.productsCount)} منتجات`}
+              </p>
+            </div>
 
-          {loadingDiscounts ? null : sortedDiscounts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-4 py-16 text-center sm:py-20">
-              <Percent
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                onPress={() => setEditingDiscount(selectedDiscount)}
+                className={cn(
+                  panelActionClass,
+                  'bg-[var(--surface-secondary)] text-[var(--foreground)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_80%,var(--foreground)_8%)]',
+                )}
+              >
+                <Pencil className="size-3.5" aria-hidden />
+                تعديل
+              </Button>
+              <Button
+                variant="ghost"
+                isDisabled={busyId === selectedDiscount.id}
+                onPress={() => void handleToggleActive(selectedDiscount)}
+                className={cn(
+                  panelActionClass,
+                  'bg-[var(--surface-secondary)] text-[var(--foreground)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_80%,var(--foreground)_8%)]',
+                )}
+              >
+                {selectedDiscount.isActive ? (
+                  <Pause className="size-3.5" aria-hidden />
+                ) : (
+                  <Play className="size-3.5" aria-hidden />
+                )}
+                {selectedDiscount.isActive ? 'إيقاف' : 'تفعيل'}
+              </Button>
+              <Button
+                variant="ghost"
+                isDisabled={busyId === selectedDiscount.id}
+                onPress={() => setPendingDelete(selectedDiscount)}
+                className={cn(
+                  panelActionClass,
+                  'text-[var(--danger)] hover:bg-[var(--danger)]/10',
+                )}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                حذف
+              </Button>
+            </div>
+          </div>
+
+          {productsLoading ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <CollectionProductCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : discountedProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl bg-[var(--surface-secondary)]/50 px-4 py-14 text-center">
+              <Package
                 className="mb-3 size-8 text-[var(--muted-foreground)]/70"
                 strokeWidth={1.5}
                 aria-hidden
               />
-              <p className="text-[14px] font-medium text-[var(--foreground)]">
-                {config.emptyTitle}
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                لا توجد منتجات في هذا الخصم
               </p>
-              <p className="mt-1 max-w-sm text-[13px] text-[var(--muted-foreground)]">
-                {config.emptyDescription}
+              <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
+                أضف منتجات عند إنشاء الخصم أو عدّله لاحقاً.
               </p>
+              <Button
+                variant="ghost"
+                onPress={() => setEditingDiscount(selectedDiscount)}
+                className="mt-4 h-9 rounded-lg px-3 text-sm font-medium text-[var(--primary)] hover:bg-[var(--surface-secondary)]"
+              >
+                تعديل الخصم
+              </Button>
             </div>
-          ) : selectedDiscount ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[13px] text-[var(--muted-foreground)]">
-                  {formatDiscountLabel(selectedDiscount.percentage)}
-                  {selectedDiscount.isActive ? '' : ' · متوقف'}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onPress={() => setEditingDiscount(selectedDiscount)}
-                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
-                  >
-                    <Pencil className="size-3.5" strokeWidth={2} aria-hidden />
-                    تعديل
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    isDisabled={busyId === selectedDiscount.id}
-                    onPress={() => void handleToggleActive(selectedDiscount)}
-                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
-                  >
-                    {selectedDiscount.isActive ? (
-                      <Pause className="size-3.5" strokeWidth={2} aria-hidden />
-                    ) : (
-                      <Play className="size-3.5" strokeWidth={2} aria-hidden />
-                    )}
-                    {selectedDiscount.isActive ? 'إيقاف' : 'تفعيل'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    isDisabled={busyId === selectedDiscount.id}
-                    onPress={() => setPendingDelete(selectedDiscount)}
-                    className="h-9 gap-1.5 rounded-xl px-3 text-[13px]"
-                  >
-                    <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-
-              {productsLoading ? (
-                <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {Array.from({ length: 8 }).map((_, index) => (
-                    <CollectionProductCardSkeleton key={index} />
-                  ))}
-                </div>
-              ) : discountedProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] px-4 py-14 text-center">
-                  <Package
-                    className="mb-3 size-8 text-[var(--muted-foreground)]/70"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <p className="text-[14px] font-medium text-[var(--foreground)]">
-                    لا توجد منتجات في هذا الخصم
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                  aria-label="منتجات هذا الخصم"
-                >
-                  {discountedProducts.map((product) => (
-                    <CollectionProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-              )}
+          ) : (
+            <div
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+              aria-label="منتجات هذا الخصم"
+            >
+              {discountedProducts.map((product) => (
+                <CollectionProductCard key={product.id} product={product} />
+              ))}
             </div>
-          ) : null}
-        </>
-      )}
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

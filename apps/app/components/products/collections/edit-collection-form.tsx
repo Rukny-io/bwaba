@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { Check, Loader2, Package, Trash2 } from 'lucide-react';
-import { Alert } from '@heroui/react';
+import { Alert, Button } from '@heroui/react';
 import { CollectionImageUpload } from '@/components/products/collections/collection-image-upload';
 import { ApiException } from '@/lib/api-client';
 import {
@@ -14,6 +14,8 @@ import {
 } from '@/lib/collections/api';
 import type { MyStoreProduct, ProductCollection } from '@/lib/collections/types';
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
+import { formatNumber } from '@/lib/dashboard-format';
+import { formatProductDate } from '@/lib/products/product-display';
 import { uploadStorageImage } from '@/lib/storage/upload';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +25,20 @@ interface EditCollectionFormProps {
   onDeleted?: () => void;
   onCancel?: () => void;
   className?: string;
+}
+
+function MetaItem({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-[11px] text-[var(--muted-foreground)]">{label}</span>
+      <span
+        dir="auto"
+        className="text-[12px] font-medium tabular-nums text-[var(--foreground)]"
+      >
+        {value}
+      </span>
+    </span>
+  );
 }
 
 export function EditCollectionForm({
@@ -145,7 +161,7 @@ export function EditCollectionForm({
         if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
         return null;
       });
-      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة الخلفية');
+      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة البانر');
     } finally {
       setUploadingBanner(false);
     }
@@ -220,22 +236,14 @@ export function EditCollectionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn('flex min-h-0 flex-1 flex-col', className)}
+      className={cn('flex min-h-0 flex-1 flex-col overflow-hidden', className)}
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col gap-4 px-4 py-4">
-          <CollectionImageUpload
-            variant="banner"
-            value={bannerPath}
-            previewUrl={bannerPreview}
-            uploading={uploadingBanner}
-            onPick={handleBannerPick}
-            onRemove={clearBanner}
-          />
-
-          <div className="flex items-start gap-3 border-b border-[rgba(34,34,34,0.08)] pb-4 dark:border-white/10">
+        <div className="grid min-w-0 gap-4 p-4 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-5 sm:p-5">
+          <div className="flex min-w-0 flex-col gap-2.5">
             <CollectionImageUpload
               variant="thumbnail"
+              layout="panel"
               value={imagePath}
               previewUrl={imagePreview}
               uploading={uploadingImage}
@@ -243,173 +251,209 @@ export function EditCollectionForm({
               onRemove={clearImage}
             />
 
-            <div className="min-w-0 flex-1 space-y-2.5 pt-1">
+            <CollectionImageUpload
+              variant="banner"
+              layout="panel"
+              value={bannerPath}
+              previewUrl={bannerPreview}
+              uploading={uploadingBanner}
+              onPick={handleBannerPick}
+              onRemove={clearBanner}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-3.5">
+            <div className="flex flex-col gap-1">
+              <p
+                id="edit-collection-title"
+                className="text-[11px] font-medium text-[var(--muted-foreground)]"
+              >
+                تعديل المجموعة
+              </p>
               <input
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
                 placeholder="اسم المجموعة"
-                className="w-full border-0 bg-transparent p-0 text-[15px] font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/75"
+                dir="auto"
+                className="w-full border-0 bg-transparent p-0 text-[18px] font-semibold leading-snug tracking-tight text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60"
               />
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="وصف اختياري"
-                className="w-full border-0 bg-transparent p-0 text-[12px] text-[var(--muted-foreground)] outline-none placeholder:text-[var(--muted-foreground)]/65"
+                dir="auto"
+                className="w-full border-0 bg-transparent p-0 text-[13px] leading-relaxed text-[var(--muted-foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60"
               />
             </div>
-          </div>
 
-          <section className="flex min-h-0 flex-col">
-            <p className="mb-3 text-[12px] text-[var(--muted-foreground)]">
-              منتجات المجموعة
-            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-0.5">
+              <MetaItem
+                label="الحالة"
+                value={collection.isActive ? 'نشط' : 'متوقف'}
+              />
+              <MetaItem
+                label="المنتجات"
+                value={formatNumber(selectedProductIds.length)}
+              />
+              <MetaItem
+                label="تاريخ الإنشاء"
+                value={formatProductDate(collection.createdAt) ?? '—'}
+              />
+            </div>
 
-            <input
-              type="search"
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              placeholder="بحث…"
-              className="mb-3 h-9 w-full rounded-lg border border-[rgba(34,34,34,0.1)] bg-transparent px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60 focus:border-[rgba(34,34,34,0.18)] dark:border-white/10 dark:focus:border-white/20"
-            />
+            <section className="flex min-h-0 flex-col gap-2.5">
+              <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
+                منتجات المجموعة
+              </p>
 
-            {loadingProducts ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="size-5 animate-spin text-[var(--muted-foreground)]" />
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="py-10 text-center">
-                <Package
-                  className="mx-auto mb-2 size-6 text-[var(--muted-foreground)]/60"
-                  strokeWidth={1.5}
-                />
-                <p className="text-[13px] text-[var(--muted-foreground)]">
-                  لا توجد منتجات
-                </p>
-              </div>
-            ) : (
-              <div className="flex max-h-[12rem] flex-col overflow-y-auto">
-                {filteredProducts.map((product) => {
-                  const selected = selectedProductIds.includes(product.id);
-                  const imageUrl = getProductImage(product);
+              <input
+                type="search"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="بحث في المنتجات…"
+                className="h-9 w-full rounded-lg bg-[var(--surface-secondary)] px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60 focus:ring-2 focus:ring-[var(--foreground)]/8"
+              />
 
-                  return (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => toggleProduct(product.id)}
-                      className="flex w-full items-center gap-3 border-b border-[rgba(34,34,34,0.08)] py-3 text-right transition-colors last:border-b-0 hover:bg-black/[0.02] dark:border-white/10 dark:hover:bg-white/[0.03]"
-                    >
-                      <div
-                        className={cn(
-                          'flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                          selected
-                            ? 'border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]'
-                            : 'border-[rgba(34,34,34,0.18)] bg-transparent dark:border-white/20',
-                        )}
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-5 animate-spin text-[var(--muted-foreground)]" />
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="rounded-xl bg-[var(--surface-secondary)]/50 py-10 text-center">
+                  <Package
+                    className="mx-auto mb-2 size-6 text-[var(--muted-foreground)]/60"
+                    strokeWidth={1.5}
+                  />
+                  <p className="text-[13px] text-[var(--muted-foreground)]">
+                    لا توجد منتجات
+                  </p>
+                </div>
+              ) : (
+                <div className="flex max-h-[14rem] flex-col overflow-y-auto rounded-xl bg-[var(--surface-secondary)]/40">
+                  {filteredProducts.map((product) => {
+                    const selected = selectedProductIds.includes(product.id);
+                    const imageUrl = getProductImage(product);
+
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => toggleProduct(product.id)}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-right transition-colors hover:bg-[var(--surface-secondary)]"
                       >
-                        {selected ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
-                      </div>
+                        <div
+                          className={cn(
+                            'flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                            selected
+                              ? 'border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]'
+                              : 'border-[var(--border)] bg-transparent',
+                          )}
+                        >
+                          {selected ? (
+                            <Check className="size-3" strokeWidth={2.5} />
+                          ) : null}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
-                          {getProductDisplayName(product)}
-                        </p>
-                        <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
-                          {formatProductPrice(product.price)}
-                        </p>
-                      </div>
+                        <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-secondary)]">
+                          {imageUrl ? (
+                            <Image
+                              src={imageUrl}
+                              alt=""
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <Package className="size-4 text-[var(--muted-foreground)]" />
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-secondary)]">
-                        {imageUrl ? (
-                          <Image
-                            src={imageUrl}
-                            alt=""
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center">
-                            <Package className="size-4 text-[var(--muted-foreground)]" />
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            dir="auto"
+                            className="truncate text-[13px] font-medium text-[var(--foreground)]"
+                          >
+                            {getProductDisplayName(product)}
+                          </p>
+                          <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
+                            {formatProductPrice(product.price)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {error ? (
+              <Alert status="danger">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Description>{error}</Alert.Description>
+                </Alert.Content>
+              </Alert>
+            ) : null}
+
+            <div className="flex items-stretch gap-2 pt-1">
+              <Button
+                type="submit"
+                variant="secondary"
+                isDisabled={isBusy}
+                className="h-10 min-w-0 flex-1 rounded-xl text-[13px] font-medium !shadow-none"
+              >
+                {saving ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  'حفظ التعديلات'
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant={confirmDelete ? 'danger' : 'danger-soft'}
+                isDisabled={saving || isUploading || deleting}
+                onPress={() => {
+                  if (confirmDelete) {
+                    void handleDelete();
+                    return;
+                  }
+                  setConfirmDelete(true);
+                }}
+                className="h-10 min-w-0 flex-1 gap-1.5 rounded-xl text-[13px] font-medium !shadow-none"
+              >
+                {deleting ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <>
+                    <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
+                    {confirmDelete ? 'تأكيد الحذف' : 'حذف'}
+                  </>
+                )}
+              </Button>
+
+              {onCancel ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  isDisabled={isBusy}
+                  onPress={() => {
+                    if (confirmDelete) {
+                      setConfirmDelete(false);
+                      return;
+                    }
+                    onCancel();
+                  }}
+                  className="h-10 shrink-0 rounded-xl px-4 text-[13px] font-medium !shadow-none"
+                >
+                  {confirmDelete ? 'تراجع' : 'إلغاء'}
+                </Button>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </div>
-
-      {error ? (
-        <div className="shrink-0 px-4 pb-2">
-          <Alert status="danger">
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Description>{error}</Alert.Description>
-            </Alert.Content>
-          </Alert>
-        </div>
-      ) : null}
-
-      <div className="flex shrink-0 gap-2 border-t border-[rgba(34,34,34,0.08)] px-4 py-3 dark:border-white/10">
-        <button
-          type="submit"
-          disabled={isBusy}
-          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-lg bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {saving ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-          ) : (
-            <span>حفظ التعديلات</span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          disabled={saving || isUploading}
-          onClick={() => {
-            if (confirmDelete) {
-              void handleDelete();
-              return;
-            }
-            setConfirmDelete(true);
-          }}
-          className={cn(
-            'inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition-opacity disabled:opacity-60',
-            confirmDelete
-              ? 'bg-[var(--danger)] text-white hover:opacity-90'
-              : 'border border-[var(--danger)]/35 text-[var(--danger)] hover:bg-[var(--danger)]/5',
-          )}
-        >
-          {deleting ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-          ) : (
-            <>
-              <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
-              <span>{confirmDelete ? 'تأكيد الحذف' : 'حذف'}</span>
-            </>
-          )}
-        </button>
-
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (confirmDelete) {
-                setConfirmDelete(false);
-                return;
-              }
-              onCancel();
-            }}
-            disabled={isBusy}
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[rgba(34,34,34,0.12)] px-4 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-black/[0.03] disabled:opacity-60 dark:border-white/15 dark:hover:bg-white/[0.05]"
-          >
-            {confirmDelete ? 'تراجع' : 'إلغاء'}
-          </button>
-        ) : null}
       </div>
     </form>
   );

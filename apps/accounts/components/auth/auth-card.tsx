@@ -2,6 +2,12 @@
 
 import React from "react"
 import { Card } from "@heroui/react"
+import {
+  authBadgeClass,
+  authLeadClass,
+  authLinkClass,
+  authTitleClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 interface AuthCardProps {
@@ -13,7 +19,7 @@ interface AuthCardProps {
 /** HeroUI Card shell for auth flows */
 export function AuthCard({ children, className, footer }: AuthCardProps) {
   return (
-    <Card variant="default" className={cn("w-full border border-border/40 p-6 shadow-none sm:p-8", className)}>
+    <Card variant="default" className={cn("w-full border border-[#E8E8E8] bg-white p-6 shadow-none sm:p-8", className)}>
       <Card.Content className="gap-0 p-0">{children}</Card.Content>
       {footer ? <div className="mt-8">{footer}</div> : null}
     </Card>
@@ -43,21 +49,21 @@ export function AuthCardHeader({
       )}
     >
       {icon ? (
-        <div className="mb-5 flex size-14 items-center justify-center rounded-full bg-muted/35 text-muted-foreground">
+        <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#F5F5F5] text-[#1D1D1D]">
           {icon}
         </div>
       ) : badge ? (
-        <span className="mb-4 text-xs font-medium tracking-wide text-muted-foreground">
+        <span className={cn(authBadgeClass, "mb-4")}>
           {badge}
         </span>
       ) : null}
 
-      <h1 className="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-3xl">
+      <h1 className={authTitleClass}>
         {title}
       </h1>
 
       {description ? (
-        <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+        <p className={cn(authLeadClass, "mt-2.5 max-w-sm")}>
           {description}
         </p>
       ) : null}
@@ -89,7 +95,8 @@ export function AuthCardBackLink({
       type="button"
       onClick={onClick}
       className={cn(
-        "mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
+        authLinkClass,
+        "mb-6 flex items-center gap-1.5",
         className,
       )}
     >

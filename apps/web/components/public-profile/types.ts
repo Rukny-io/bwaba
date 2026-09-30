@@ -87,4 +87,15 @@ export interface PublicProfileProductsResponse {
   storeId: string | null;
 }
 
+export interface PublicProfileCollection {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  imagePath?: string | null;
+  bannerPath?: string | null;
+  productsCount: number;
+  productIds: string[];
+}
+
 export type MediaUrlResolver = (path: string | null | undefined) => string | null;

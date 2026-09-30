@@ -57,11 +57,12 @@ function isUnavailablePath(pathname: string): boolean {
 }
 
 /**
- * Lock app / business / developer in production unless `?preview=<key>`
- * (or the matching httpOnly cookie) is present.
+ * Optional private-preview gate for app / business in production.
+ *
+ * - `RUKNY_PREVIEW_ACCESS_KEY` unset → surface is public (normal production).
+ * - Key set → require `?preview=<key>` once (or matching httpOnly cookie).
  *
  * Returns a response that should short-circuit middleware, or null to continue.
- * If the env key is empty in production, the surface stays fully locked.
  */
 export function applyPreviewAccessGate(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
@@ -79,6 +80,9 @@ export function applyPreviewAccessGate(request: NextRequest): NextResponse | nul
   }
 
   const expected = previewAccessKey();
+  if (!expected) {
+    return null;
+  }
   const queryKey = request.nextUrl.searchParams.get(PREVIEW_QUERY_PARAM);
 
   if (matchesPreviewKey(queryKey, expected)) {

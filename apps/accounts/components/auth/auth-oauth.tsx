@@ -2,8 +2,6 @@
 
 import React from "react"
 import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { getEnabledLoginOAuthProviders } from "@/lib/auth/oauth-providers"
 import {
@@ -56,10 +54,8 @@ const OAUTH_PROVIDERS: {
   },
 ]
 
-const oauthButtonClassName = cn(
-  "rounded-2xl border-border/60 bg-background/80 font-medium shadow-none backdrop-blur-sm",
-  "transition-colors hover:border-border hover:bg-background",
-)
+const oauthButtonClassName =
+  "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#E8E8E8] bg-white px-3 text-[14px] font-medium text-[#1D1D1D] transition-colors hover:bg-[#FAFAFA]"
 
 interface AuthOAuthButtonsProps {
   onProvider: (provider: OAuthProviderId) => void
@@ -89,43 +85,35 @@ export function AuthOAuthButtons({
     <div className={cn("w-full", className)}>
       {showSeparator ? (
         <div className="flex w-full items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-[#E8E8E8]" />
+          <span className="shrink-0 text-xs text-[#9CA3AF]">
             {t("or_continue_with")}
           </span>
-          <Separator className="flex-1" />
+          <div className="h-px flex-1 bg-[#E8E8E8]" />
         </div>
       ) : null}
 
       <div
         className={cn(
           showSeparator ? "mt-4" : "",
-          "gap-2",
-          layout === "stack" ? "flex flex-col gap-2.5" : "grid grid-cols-3",
+          layout === "stack" ? "flex flex-col gap-2.5" : "grid grid-cols-3 gap-2",
         )}
       >
         {enabledProviders.map(({ id, icon: Icon, nameKey, ariaKey, buttonId }) => (
-          <Button
+          <button
             key={id}
             id={buttonId}
             type="button"
-            variant="outline"
-            size="lg"
             onClick={() => onProvider(id)}
             aria-label={t(ariaKey)}
             className={cn(
               oauthButtonClassName,
-              "w-full",
-              layout === "stack"
-                ? "h-12 rounded-full px-3 text-sm sm:h-11"
-                : "h-11 justify-center px-2.5 text-xs sm:text-sm",
+              layout === "grid" && "px-2.5 text-xs sm:text-sm",
             )}
           >
-            <span className="inline-flex min-w-0 items-center justify-center gap-2">
-              <Icon className="size-4 shrink-0 sm:size-[1.125rem]" />
-              <span className="truncate">{t(nameKey)}</span>
-            </span>
-          </Button>
+            <Icon className="size-4 shrink-0 sm:size-[1.125rem]" />
+            <span className="truncate">{t(nameKey)}</span>
+          </button>
         ))}
       </div>
     </div>

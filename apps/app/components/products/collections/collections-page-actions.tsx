@@ -14,7 +14,7 @@ interface CollectionsPageActionsProps {
 }
 
 const actionButtonBase =
-  'h-10 shrink-0 gap-2 rounded-xl px-4 text-[13px] font-semibold sm:text-[14px]';
+  'h-9 shrink-0 gap-1.5 rounded-lg px-3.5 text-sm font-medium';
 
 export function CollectionsPageActions({
   addLabel,
@@ -25,17 +25,17 @@ export function CollectionsPageActions({
   className,
 }: CollectionsPageActionsProps) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-end gap-2', className)}>
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
       <Button
         isDisabled={exportDisabled}
         onPress={onExport}
         className={cn(
           actionButtonBase,
-          'border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]',
-          'hover:bg-[var(--surface-secondary)] disabled:opacity-45',
+          'bg-[var(--surface-secondary)] text-[var(--foreground)]',
+          'hover:bg-[color-mix(in_srgb,var(--surface-secondary)_80%,var(--foreground)_8%)] disabled:opacity-45',
         )}
       >
-        <Download className="size-4" strokeWidth={2} aria-hidden />
+        <Download className="size-3.5" strokeWidth={2} aria-hidden />
         <span>{exportLabel}</span>
       </Button>
 
@@ -43,11 +43,10 @@ export function CollectionsPageActions({
         onPress={onAdd}
         className={cn(
           actionButtonBase,
-          'font-bold shadow-[0_4px_14px_rgba(59,130,246,0.22)]',
-          'bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-95',
+          'bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90',
         )}
       >
-        <Plus className="size-4" strokeWidth={2.5} aria-hidden />
+        <Plus className="size-3.5" strokeWidth={2.25} aria-hidden />
         <span>{addLabel}</span>
       </Button>
     </div>

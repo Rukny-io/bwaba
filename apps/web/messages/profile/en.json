@@ -10,6 +10,8 @@
     "instagramPosts": "Instagram posts",
     "products": "Products",
     "productsGrid": "Product grid",
+    "viewAllProducts": "View all products",
+    "goToStore": "Go to store",
     "forms": "Forms"
   },
   "empty": {
@@ -134,6 +136,17 @@
       "increaseQuantity": "Increase quantity",
       "removeFromCart": "Remove from cart"
     }
+  },
+  "store": {
+    "backToProfile": "Back to {name}",
+    "pageTitle": "{name}'s store",
+    "descriptionFallback": "Shop products from {username} on Rukny",
+    "filterLabel": "Filter products",
+    "allCategories": "All",
+    "noProductsInCategory": "No products in this category",
+    "collectionsFilterLabel": "Store collections",
+    "allCollections": "All",
+    "noProductsInCollection": "No products in this collection"
   },
   "cart": {
     "title": "Your cart",

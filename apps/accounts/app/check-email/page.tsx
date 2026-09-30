@@ -27,7 +27,6 @@ function CheckEmailContent() {
           `auth_methods_${storedEmail}`,
           JSON.stringify({
             has2FA: result.availableMethods.authenticator,
-            isSubscribed: result.availableMethods.whatsapp || false,
             timestamp: Date.now(),
           }),
         )
@@ -43,14 +42,7 @@ function CheckEmailContent() {
     <AuthSplitPage
       badge={t("login_badge")}
       title={t("check_email_title")}
-      description={
-        <>
-          {t("check_email_desc")}{" "}
-          <span className="font-medium text-foreground" dir="ltr">
-            {email}
-          </span>
-        </>
-      }
+      description={t("check_email_desc")}
     >
       <CheckEmailCard
         email={email}

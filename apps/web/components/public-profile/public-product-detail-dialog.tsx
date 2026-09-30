@@ -25,6 +25,7 @@ import {
   ProductThumbnail,
 } from './product-card-primitives';
 import { useStoreCart } from './store-cart-context';
+import { ProfileEntityPill } from '@/components/public-profile/profile-entity-pill';
 import { cn } from './utils';
 
 interface PublicProductDetailDialogProps {
@@ -340,40 +341,11 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 
 function InlineMetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span className="text-[11px] text-[var(--muted-foreground)]">{label}</span>
-      <span dir="auto" className="text-[12px] font-medium text-[var(--foreground)]">{value}</span>
-    </span>
-  );
-}
-
-function StoreProfileBadge({
-  label,
-  avatarUrl,
-}: {
-  label: string;
-  avatarUrl: string | null;
-}) {
-  const [avatarFailed, setAvatarFailed] = useState(false);
-  const showAvatar = Boolean(avatarUrl) && !avatarFailed;
-  const initial = label.trim().charAt(0).toUpperCase() || '?';
-
-  return (
-    <span className="inline-flex h-8 w-fit max-w-full items-center gap-1.5 rounded-full bg-[var(--foreground)] py-0.5 ps-1 pe-3">
-      <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--surface)]">
-        {showAvatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl!}
-            alt=""
-            className="size-full object-cover"
-            onError={() => setAvatarFailed(true)}
-          />
-        ) : (
-          <span className="text-[9px] font-semibold text-[var(--foreground)]">{initial}</span>
-        )}
+    <span className="inline-flex max-w-full items-center gap-1 whitespace-nowrap sm:gap-1.5">
+      <span className="text-[10px] text-[var(--muted-foreground)] sm:text-[11px]">{label}</span>
+      <span dir="auto" className="truncate text-[11px] font-medium text-[var(--foreground)] sm:text-[12px]">
+        {value}
       </span>
-      <span className="truncate text-[12px] font-semibold text-[var(--background)]">{label}</span>
     </span>
   );
 }
@@ -566,7 +538,7 @@ export function PublicProductDetailDialog({
           <motion.div
             className={cn(
               'pointer-events-none fixed inset-0 box-border flex items-center justify-center',
-              'px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:px-3 sm:pt-8',
+              'px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 sm:px-3 sm:pt-8',
             )}
             {...dialogShellMotion}
             transition={dialogTransition}
@@ -578,8 +550,8 @@ export function PublicProductDetailDialog({
               aria-modal="true"
               aria-labelledby="product-detail-title"
               className={cn(
-                'profile-store-chrome pointer-events-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-4xl',
-                'max-h-[min(90dvh,calc(100dvh-3rem))]',
+                'profile-store-chrome pointer-events-auto flex w-full max-w-[min(100%,19rem)] flex-col overflow-hidden rounded-3xl sm:max-w-3xl sm:rounded-4xl',
+                'max-h-[min(74dvh,calc(100dvh-2rem))] sm:max-h-[min(90dvh,calc(100dvh-3rem))]',
                 'bg-[var(--surface)] p-0 outline-none',
                 'shadow-[0_8px_24px_5px_rgba(0,0,0,0.08)]',
               )}
@@ -587,18 +559,18 @@ export function PublicProductDetailDialog({
             >
               <div
                 className={cn(
-                  'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-5',
+                  'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-3 sm:p-5',
                   '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                 )}
               >
                 <div
                   className={cn(
-                    'grid min-w-0 gap-4',
+                    'grid min-w-0 gap-3',
                     'sm:grid-cols-[14rem_minmax(0,1fr)] sm:items-stretch sm:gap-5',
                   )}
                 >
                 <div className="flex min-w-0 flex-col gap-2 sm:h-full">
-                  <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-secondary)]">
+                  <div className="relative mx-auto w-full max-w-[8.5rem] overflow-hidden rounded-xl bg-[var(--surface-secondary)] sm:mx-0 sm:max-w-none sm:rounded-2xl">
                     <ProductThumbnail
                       imageUrl={heroImage}
                       alt={displayedProduct.name}
@@ -637,7 +609,7 @@ export function PublicProductDetailDialog({
                           aria-label={t('product.dialog.imageAlt', { index: index + 1 })}
                           aria-current={index === activeImageIndex ? 'true' : undefined}
                         >
-                          <ProductThumbnail imageUrl={url} alt="" className="size-11" />
+                          <ProductThumbnail imageUrl={url} alt="" className="size-9 sm:size-11" />
                         </button>
                       ))}
                     </div>
@@ -653,6 +625,7 @@ export function PublicProductDetailDialog({
                             currencyCode={currencyCode}
                             onOpenCart={openCart}
                             reduceMotion={reduceMotion}
+                            narrow
                             labels={{
                               total: t('product.dialog.cartTotal'),
                               proceed: t('product.dialog.proceedToCheckout'),
@@ -684,8 +657,13 @@ export function PublicProductDetailDialog({
                   </AnimatePresence>
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-3.5">
-                  <StoreProfileBadge label={storeLabel} avatarUrl={storeAvatarUrl} />
+                <div className="flex min-w-0 flex-col gap-2.5 sm:gap-3.5">
+                  <ProfileEntityPill
+                    label={storeLabel}
+                    imageUrl={storeAvatarUrl}
+                    selected
+                    className="h-8 ps-1.5 pe-3 sm:h-9 sm:ps-2 sm:pe-4 [&_span:first-child]:size-5 sm:[&_span:first-child]:size-6 [&_span:last-child]:text-xs sm:[&_span:last-child]:text-[13px]"
+                  />
 
                   <div className="flex flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
@@ -701,7 +679,7 @@ export function PublicProductDetailDialog({
                     <h2
                       id="product-detail-title"
                       dir="auto"
-                      className="text-[18px] font-semibold leading-snug tracking-tight text-[var(--foreground)]"
+                      className="text-base font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[18px]"
                     >
                       {displayedProduct.name}
                     </h2>
@@ -736,7 +714,7 @@ export function PublicProductDetailDialog({
                   {displayedProduct.description ? (
                     <p
                       dir="auto"
-                      className="line-clamp-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]"
+                      className="line-clamp-3 text-xs leading-relaxed text-[var(--muted-foreground)] sm:line-clamp-2 sm:text-[13px]"
                     >
                       {displayedProduct.description}
                     </p>
@@ -791,8 +769,8 @@ export function PublicProductDetailDialog({
                     <a
                       href={productPageUrl}
                       className={cn(
-                        'inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl',
-                        'border border-[var(--border)] bg-[var(--surface)] text-[13px] font-medium text-[var(--foreground)] no-underline',
+                        'inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl sm:h-10',
+                        'border border-[var(--border)] bg-[var(--surface)] text-xs font-medium text-[var(--foreground)] no-underline sm:text-[13px]',
                         'transition-colors hover:bg-[var(--surface-secondary)]',
                       )}
                     >
@@ -808,8 +786,8 @@ export function PublicProductDetailDialog({
                       }
                       onClick={handleCopyLink}
                       className={cn(
-                        'inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl',
-                        'border border-[var(--border)] bg-[var(--surface)] text-[13px] font-medium text-[var(--foreground)]',
+                        'inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl sm:h-10',
+                        'border border-[var(--border)] bg-[var(--surface)] text-xs font-medium text-[var(--foreground)] sm:text-[13px]',
                         'transition-colors hover:bg-[var(--surface-secondary)]',
                       )}
                     >
@@ -833,11 +811,11 @@ export function PublicProductDetailDialog({
 
                   <div className="flex flex-col gap-2 pt-2">
                     {outOfStock ? (
-                      <div className="flex h-10 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[13px] font-medium text-[var(--muted-foreground)]">
+                      <div className="flex h-9 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-xs font-medium text-[var(--muted-foreground)] sm:h-10 sm:text-[13px]">
                         {t('product.dialog.outOfStock')}
                       </div>
                     ) : needsVariant ? (
-                      <div className="flex h-10 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[13px] font-semibold text-[var(--muted-foreground)]">
+                      <div className="flex h-9 w-full items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-xs font-semibold text-[var(--muted-foreground)] sm:h-10 sm:text-[13px]">
                         {t('product.variants.chooseToContinue')}
                       </div>
                     ) : !inCart ? (
@@ -848,8 +826,8 @@ export function PublicProductDetailDialog({
                           name: displayedProduct.name,
                         })}
                         className={cn(
-                          'inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl',
-                          'bg-[var(--primary)] text-[13px] font-semibold text-[var(--primary-foreground)]',
+                          'inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl sm:h-10',
+                          'bg-[var(--primary)] text-xs font-semibold text-[var(--primary-foreground)] sm:text-[13px]',
                           'transition-opacity hover:opacity-90 active:scale-[0.99]',
                         )}
                       >

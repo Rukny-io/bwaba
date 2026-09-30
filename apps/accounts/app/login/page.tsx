@@ -17,8 +17,14 @@ import { AuthLoadingFallback } from "@/components/auth/auth-loading"
 import { AuthOAuthButtons, type OAuthProviderId } from "@/components/auth/auth-oauth"
 import { AuthSplitPage } from "@/components/auth/auth-split-page"
 import { getEnabledLoginOAuthProviders } from "@/lib/auth/oauth-providers"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import {
+  authAlertErrorClass,
+  authBtnPrimaryClass,
+  authFieldShellClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 import {
   loginWithPassword,
@@ -103,11 +109,13 @@ function LoginPageContent() {
   }
 
   const handleAuthError = (err: unknown) => {
-    console.error("Login Error:", err)
     const apiError = err as {
       status?: number
       data?: { message?: string; lockoutMinutes?: number }
       message?: string
+    }
+    if (apiError.status !== 429 && apiError.status !== 403) {
+      console.error("Login Error:", err)
     }
     if (apiError.status === 403) {
       setError(
@@ -225,7 +233,6 @@ function LoginPageContent() {
               `auth_methods_${emailFor2FA}`,
               JSON.stringify({
                 has2FA: true,
-                isSubscribed: false,
                 timestamp: Date.now(),
               }),
             )
@@ -276,10 +283,7 @@ function LoginPageContent() {
       ) : null}
 
       {oauthErrorMessage ? (
-        <p
-          className="mb-4 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
-          role="alert"
-        >
+        <p className={cn(authAlertErrorClass, "mb-4")} role="alert">
           {oauthErrorMessage}
         </p>
       ) : null}
@@ -294,11 +298,11 @@ function LoginPageContent() {
 
       {hasOAuthProviders ? (
         <div className="my-6 flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-[#E8E8E8]" />
+          <span className="shrink-0 text-xs text-[#9CA3AF]">
             {t("or_continue_with")}
           </span>
-          <Separator className="flex-1" />
+          <div className="h-px flex-1 bg-[#E8E8E8]" />
         </div>
       ) : null}
 
@@ -309,14 +313,11 @@ function LoginPageContent() {
           noValidate
         >
           <div className="space-y-1.5">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-foreground"
-            >
+            <label htmlFor="email" className={authLabelClass}>
               {t("email_label")}
             </label>
-            <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm transition-all focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/15 sm:h-11 sm:rounded-full">
-              <Mail className="size-4 shrink-0 text-muted-foreground" />
+            <div className={authFieldShellClass}>
+              <Mail className="size-4 shrink-0 text-[#9CA3AF]" />
               <input
                 id="email"
                 type="email"
@@ -329,31 +330,23 @@ function LoginPageContent() {
                 autoComplete="email"
                 autoFocus
                 aria-invalid={!!error}
-                className="auth-email-input h-full min-w-0 flex-1 border-0 bg-transparent text-left text-sm outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                className={cn(authInputClass, "auth-email-input")}
                 dir="ltr"
               />
             </div>
           </div>
 
           {error ? (
-            <p
-              className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
-              role="alert"
-            >
+            <p className={authAlertErrorClass} role="alert">
               {error}
             </p>
           ) : null}
 
-          <Button
+          <button
             id="send-magic-link-btn"
             type="submit"
-            size="lg"
             disabled={!isValidEmail || isLoading}
-            className={cn(
-              "h-12 w-full rounded-full text-sm font-semibold transition-all sm:h-11",
-              "bg-primary text-primary-foreground hover:opacity-95",
-              "disabled:opacity-45",
-            )}
+            className={authBtnPrimaryClass}
           >
             {isLoading ? (
               <span className="inline-flex items-center gap-2">
@@ -366,12 +359,12 @@ function LoginPageContent() {
                 <ArrowUpRight className="size-4 rtl:rotate-180" />
               </span>
             )}
-          </Button>
+          </button>
 
           <button
             type="button"
             onClick={() => switchMode("password")}
-            className="flex w-full items-center justify-center gap-2 pt-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className={cn(authLinkClass, "flex w-full items-center justify-center gap-2 pt-1")}
           >
             <KeyRound className="size-3.5" aria-hidden />
             {t("continue_with_password")}
@@ -384,14 +377,11 @@ function LoginPageContent() {
           noValidate
         >
           <div className="space-y-1.5">
-            <label
-              htmlFor="email-password"
-              className="block text-sm font-medium text-foreground"
-            >
+            <label htmlFor="email-password" className={authLabelClass}>
               {t("email_label")}
             </label>
-            <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm transition-all focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/15 sm:h-11 sm:rounded-full">
-              <Mail className="size-4 shrink-0 text-muted-foreground" />
+            <div className={authFieldShellClass}>
+              <Mail className="size-4 shrink-0 text-[#9CA3AF]" />
               <input
                 id="email-password"
                 type="email"
@@ -404,7 +394,7 @@ function LoginPageContent() {
                 autoComplete="email"
                 autoFocus
                 aria-invalid={!!error}
-                className="auth-email-input h-full min-w-0 flex-1 border-0 bg-transparent text-left text-sm outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                className={cn(authInputClass, "auth-email-input")}
                 dir="ltr"
               />
             </div>
@@ -412,23 +402,20 @@ function LoginPageContent() {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground"
-              >
+              <label htmlFor="password" className={authLabelClass}>
                 {t("password_label")}
               </label>
               {!isRegister ? (
                 <Link
                   href={`/forgot-password${trimmedEmail ? `?email=${encodeURIComponent(trimmedEmail)}` : ""}`}
-                  className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  className={cn(authLinkClass, "text-xs")}
                 >
                   {t("forgot_password")}
                 </Link>
               ) : null}
             </div>
-            <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm transition-all focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/15 sm:h-11 sm:rounded-full">
-              <KeyRound className="size-4 shrink-0 text-muted-foreground" />
+            <div className={authFieldShellClass}>
+              <KeyRound className="size-4 shrink-0 text-[#9CA3AF]" />
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -440,13 +427,13 @@ function LoginPageContent() {
                 }}
                 autoComplete={isRegister ? "new-password" : "current-password"}
                 aria-invalid={!!error}
-                className="h-full min-w-0 flex-1 border-0 bg-transparent text-left text-sm outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                className={authInputClass}
                 dir="ltr"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                className="shrink-0 text-[#9CA3AF] transition-colors hover:text-[#1D1D1D]"
                 aria-label={
                   showPassword ? t("hide_password") : t("show_password")
                 }
@@ -459,30 +446,22 @@ function LoginPageContent() {
               </button>
             </div>
             {isRegister ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#6B6F76]">
                 {t("password_hint")}
               </p>
             ) : null}
           </div>
 
           {error ? (
-            <p
-              className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
-              role="alert"
-            >
+            <p className={authAlertErrorClass} role="alert">
               {error}
             </p>
           ) : null}
 
-          <Button
+          <button
             type="submit"
-            size="lg"
-            disabled={!canSubmitPassword}
-            className={cn(
-              "h-12 w-full rounded-full text-sm font-semibold transition-all sm:h-11",
-              "bg-primary text-primary-foreground hover:opacity-95",
-              "disabled:opacity-45",
-            )}
+            disabled={!canSubmitPassword || isLoading}
+            className={authBtnPrimaryClass}
           >
             {isLoading ? (
               <span className="inline-flex items-center gap-2">
@@ -495,7 +474,7 @@ function LoginPageContent() {
                 <ArrowUpRight className="size-4 rtl:rotate-180" />
               </span>
             )}
-          </Button>
+          </button>
 
           <div className="flex flex-col items-center gap-2 pt-1 text-sm">
             <button
@@ -504,7 +483,7 @@ function LoginPageContent() {
                 setIsRegister((v) => !v)
                 setError(null)
               }}
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className={authLinkClass}
             >
               {isRegister
                 ? t("have_account_sign_in")
@@ -513,7 +492,7 @@ function LoginPageContent() {
             <button
               type="button"
               onClick={() => switchMode("sso")}
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className={authLinkClass}
             >
               {t("continue_with_sso")}
             </button>

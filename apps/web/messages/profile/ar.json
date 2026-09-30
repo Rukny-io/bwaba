@@ -10,6 +10,8 @@
     "instagramPosts": "منشورات إنستغرام",
     "products": "المنتجات",
     "productsGrid": "شبكة المنتجات",
+    "viewAllProducts": "عرض جميع المنتجات",
+    "goToStore": "انتقال إلى المتجر",
     "forms": "النماذج"
   },
   "empty": {
@@ -134,6 +136,17 @@
       "increaseQuantity": "زيادة الكمية",
       "removeFromCart": "إزالة من السلة"
     }
+  },
+  "store": {
+    "backToProfile": "العودة إلى {name}",
+    "pageTitle": "متجر {name}",
+    "descriptionFallback": "تسوق منتجات {username} على ركني",
+    "filterLabel": "تصفية المنتجات",
+    "allCategories": "الكل",
+    "noProductsInCategory": "لا توجد منتجات في هذا التصنيف",
+    "collectionsFilterLabel": "مجموعات المتجر",
+    "allCollections": "الكل",
+    "noProductsInCollection": "لا توجد منتجات في هذه المجموعة"
   },
   "cart": {
     "title": "سلة الطلب",

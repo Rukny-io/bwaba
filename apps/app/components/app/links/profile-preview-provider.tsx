@@ -99,12 +99,14 @@ export function useProfilePreviewSync(profile: MyProfile | null, links: SocialLi
   }, [setPreview, profile, links]);
 }
 
-/** Fixed preview column — matches dashboard gutter rhythm */
-export const PREVIEW_COLUMN_WIDTH_PX = 320;
-const PHONE_WIDTH_PX = 300;
-const PHONE_RADIUS = '2.25rem';
-const HEADER_HEIGHT_PX = 36;
-const COLUMN_GAP_PX = 12;
+/** Minimum preview column width — column grows with flex-1 like Linktree */
+export const PREVIEW_COLUMN_MIN_WIDTH_PX = 440;
+const PHONE_WIDTH_PX = 390;
+const PHONE_RADIUS = '2.5rem';
+const HEADER_HEIGHT_PX = 40;
+const COLUMN_GAP_PX = 24;
+const PREVIEW_ASIDE_CLASS =
+  'relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center px-5 pb-8 pt-4';
 
 /**
  * Build public site origin matching how the dashboard is opened.
@@ -168,10 +170,14 @@ export function ProfilePreviewAside() {
 
   if (!profile?.username) {
     return (
-      <aside className="flex h-full min-h-0 w-full items-center justify-center px-2 py-4">
+      <aside className={PREVIEW_ASIDE_CLASS}>
         <div
-          className="flex w-[300px] items-center justify-center rounded-[2.25rem] bg-[var(--surface-secondary)]/60 ring-1 ring-[var(--border)]"
-          style={{ height: 'min(560px, calc(100dvh - 8rem))' }}
+          className="flex items-center justify-center bg-[var(--surface-secondary)]/60 ring-1 ring-[var(--border)]"
+          style={{
+            width: PHONE_WIDTH_PX,
+            borderRadius: PHONE_RADIUS,
+            height: 'min(640px, calc(100dvh - 7rem))',
+          }}
         >
           <p className="px-6 text-center text-xs text-[var(--muted-foreground)]">
             جاري تحميل المعاينة…
@@ -183,20 +189,20 @@ export function ProfilePreviewAside() {
 
   const publicUrl = getPublicProfileUrl(profile.username);
 
-  const phoneHeight = 'min(560px, calc(100dvh - 8rem))';
+  const phoneHeight = 'min(640px, calc(100dvh - 7rem))';
 
   return (
-    <aside className="flex h-full min-h-0 w-full items-center justify-center px-2 py-4">
+    <aside className={PREVIEW_ASIDE_CLASS}>
       <div
-        className="flex w-[300px] shrink-0 flex-col"
-        style={{ gap: COLUMN_GAP_PX }}
+        className="flex shrink-0 flex-col"
+        style={{ width: PHONE_WIDTH_PX, gap: COLUMN_GAP_PX }}
       >
         <div
           className="flex w-full shrink-0 items-center justify-between"
           style={{ height: HEADER_HEIGHT_PX }}
         >
           <p className="text-sm font-semibold text-[var(--foreground)]">معاينة مباشرة</p>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => {

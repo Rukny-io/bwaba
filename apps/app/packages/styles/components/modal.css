@@ -85,7 +85,7 @@
  * Modifier: backdrop--blur
  */
 .modal__backdrop--blur {
-  @apply bg-backdrop backdrop-blur-md;
+  @apply bg-black/10;
 }
 
 /**

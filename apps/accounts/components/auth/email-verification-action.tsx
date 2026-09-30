@@ -3,7 +3,11 @@
 import React, { useState } from "react"
 import { ArrowUpRight, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
+import {
+  authBtnPrimaryClass,
+  authFieldShellClass,
+  authInputClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 interface EmailVerificationActionProps {
@@ -31,18 +35,20 @@ export function EmailVerificationAction({
 
   return (
     <div className={cn("w-full space-y-4", className)}>
-      <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm sm:h-11 sm:rounded-full">
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" dir="ltr">
+      <div className={authFieldShellClass}>
+        <span
+          className={cn(authInputClass, "font-medium")}
+          dir="ltr"
+        >
           {email}
         </span>
       </div>
 
-      <Button
+      <button
         type="button"
-        size="lg"
         disabled={isLoading}
         onClick={handleSubmit}
-        className="h-12 w-full rounded-full text-sm font-semibold sm:h-11"
+        className={authBtnPrimaryClass}
       >
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
@@ -55,7 +61,7 @@ export function EmailVerificationAction({
             <ArrowUpRight className="size-4 rtl:rotate-180" />
           </span>
         )}
-      </Button>
+      </button>
     </div>
   )
 }

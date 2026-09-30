@@ -6,6 +6,8 @@ import { Reorder } from 'framer-motion';
 import { Link2, Loader2, Plus } from 'lucide-react';
 import { AddLinkCatalogDialog } from '@/components/app/links/add-link-catalog/add-link-catalog-dialog';
 import { AddLinkMobileDialog } from '@/components/app/links/add-link-catalog/add-link-mobile-dialog';
+import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
+import { LinksPageActions } from '@/components/app/links/links-page-actions';
 import { useProfilePreviewSync } from '@/components/app/links/profile-preview-provider';
 import { SortableLinkCard } from '@/components/app/links/sortable-link-card';
 import { ApiException } from '@/lib/api-client';
@@ -20,9 +22,7 @@ import {
 } from '@/lib/links/api';
 import { getLinkDisplayLabel } from '@/lib/links/resolve-platform';
 import type { CreateSocialLinkInput, SocialLink } from '@/lib/links/types';
-
-const panelClass =
-  'rounded-4xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5';
+import { cn } from '@/lib/utils';
 
 export function LinksView() {
   const router = useRouter();
@@ -171,70 +171,71 @@ export function LinksView() {
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
-            روابطي
-          </h1>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)] sm:mt-1 sm:text-sm">
-            أضف ورتّب روابط صفحتك الشخصية
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCatalogOpen(true)}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--primary)] px-3.5 text-sm font-semibold text-[var(--primary-foreground)] sm:h-10 sm:gap-2 sm:px-4"
-        >
-          <Plus className="size-4" />
-          <span className="sm:hidden">جديد</span>
-          <span className="hidden sm:inline">رابط جديد</span>
-        </button>
-      </div>
+    <section className="dashboard-page flex w-full min-w-0 flex-col gap-5 sm:gap-6">
+      <DashboardPageHeader
+        className="mb-0"
+        title="روابطي"
+        description="أضف روابطك ورتّبها كما تظهر في صفحتك العامة"
+        actions={<LinksPageActions onAdd={() => setCatalogOpen(true)} />}
+      />
 
       {error ? (
-        <div
-          className={`${panelClass} border-[var(--danger)]/30 bg-[var(--danger)]/5`}
-        >
+        <div className="rounded-2xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-3.5">
           <p className="text-sm text-[var(--danger)]">{error}</p>
         </div>
       ) : null}
 
       {links.length === 0 ? (
-        <div className={`${panelClass} border-dashed py-12 text-center`}>
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
-            <Link2 className="size-5" />
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-16 text-center sm:py-20">
+          <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+            <Link2 className="size-5" strokeWidth={1.75} aria-hidden />
           </div>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            لا توجد روابط بعد. أضف أول رابط لصفحتك.
+          <p className="text-sm font-semibold text-[var(--foreground)] sm:text-base">لا توجد روابط بعد</p>
+          <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
+            أضف أول رابط لصفحتك الشخصية وابدأ بجمع النقرات.
           </p>
           <button
             type="button"
             onClick={() => setCatalogOpen(true)}
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"
+            className={cn(
+              'mt-5 inline-flex h-10 items-center gap-2 rounded-xl px-4',
+              'text-sm font-semibold text-[var(--primary-foreground)]',
+              'bg-[var(--primary)] shadow-[0_4px_14px_rgba(59,130,246,0.22)] hover:opacity-95',
+            )}
           >
-            <Plus className="size-4" />
+            <Plus className="size-4" strokeWidth={2.5} aria-hidden />
             إضافة رابط
           </button>
         </div>
       ) : (
-        <Reorder.Group
-          axis="y"
-          values={links}
-          onReorder={handleReorder}
-          onPointerUp={() => void handleReorderPointerUp()}
-          className="flex flex-col gap-3 sm:gap-3.5"
-        >
-          {links.map((link) => (
-            <SortableLinkCard
-              key={link.id}
-              link={link}
-              busyId={busyId}
-              onToggleStatus={handleToggleStatus}
-              onDelete={handleDelete}
-            />
-          ))}
-        </Reorder.Group>
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">
+            مرّر المؤشر على الرابط ثم اسحب لإعادة الترتيب
+          </p>
+          <Reorder.Group
+            axis="y"
+            values={links}
+            onReorder={handleReorder}
+            onPointerUp={() => void handleReorderPointerUp()}
+            className="flex flex-col gap-4"
+          >
+            {links.map((link) => (
+              <SortableLinkCard
+                key={link.id}
+                link={link}
+                busyId={busyId}
+                onToggleStatus={handleToggleStatus}
+                onDelete={handleDelete}
+                onLinkUpdated={(updated) =>
+                  setLinks((prev) =>
+                    prev.map((item) => (item.id === updated.id ? updated : item)),
+                  )
+                }
+                onThumbnailError={(message) => setError(message)}
+              />
+            ))}
+          </Reorder.Group>
+        </div>
       )}
 
       <AddLinkCatalogDialog
@@ -247,6 +248,6 @@ export function LinksView() {
         onClose={() => setCatalogOpen(false)}
         onSubmit={handleCreatePayload}
       />
-    </div>
+    </section>
   );
 }

@@ -158,7 +158,6 @@ export function ProductDetailSheet({
       onOpenChange={onOpenChange}
       isDismissable
       variant="blur"
-      className="!backdrop-blur-sm"
     >
       <Modal.Container placement="center" className="px-2 sm:px-3">
         <Modal.Dialog

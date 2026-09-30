@@ -19,7 +19,7 @@ export function ProfileTopBar({ className }: { className?: string }) {
         href="/"
         className={cn(
           'group inline-flex min-w-0 flex-1 items-center gap-1.5 text-start',
-          'text-[11px] font-medium leading-snug sm:text-xs',
+          'text-xs font-medium leading-snug sm:text-[13px]',
           'text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]',
         )}
         aria-label={t('ariaLabel')}

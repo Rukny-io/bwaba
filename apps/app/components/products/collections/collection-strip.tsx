@@ -27,14 +27,14 @@ export function CollectionStrip({
   return (
     <div
       className={cn(
-        'flex gap-3.5 overflow-x-auto overscroll-x-contain px-0.5 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [scroll-padding-inline:6px] [&::-webkit-scrollbar]:hidden',
+        '-mx-1 flex gap-3.5 overflow-x-auto overscroll-x-contain py-1.5 ps-3 pe-2 [-ms-overflow-style:none] [scrollbar-width:none] [scroll-padding-inline:12px] sm:ps-4 sm:pe-3 [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
       {loading ? (
         Array.from({ length: 6 }).map((_, index) => <CollectionStripItemSkeleton key={index} />)
       ) : collections.length === 0 ? (
-        <p className="py-2 text-[13px] text-[var(--muted-foreground)]">
+        <p className="py-2 text-sm text-[var(--muted-foreground)]">
           لا توجد مجموعات بعد. اضغط «إضافة مجموعة» للبدء.
         </p>
       ) : (

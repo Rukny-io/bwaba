@@ -45,6 +45,13 @@ const ACCOUNTS_URL =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  images: {
+    localPatterns: [
+      {
+        pathname: '/api/media/**',
+      },
+    ],
+  },
   allowedDevOrigins: ['192.168.0.179', '127.0.0.1', 'localhost'],
   transpilePackages: ['@rukny/forms-shared', '@rukny/auth', '@rukny/thmanyah-font'],
   turbopack: {

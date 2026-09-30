@@ -42,7 +42,7 @@ export function CreateCollectionDialog({
       {open ? (
         <div className="fixed inset-0 z-[120]">
           <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
+            className="fixed inset-0 bg-black/15"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

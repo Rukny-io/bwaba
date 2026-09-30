@@ -8,7 +8,12 @@ import { AuthFooter } from "@/components/auth/auth-footer"
 import { AuthLoadingFallback } from "@/components/auth/auth-loading"
 import { AuthSplitPage } from "@/components/auth/auth-split-page"
 import { OtpCodeInput } from "@/components/manage/otp-code-input"
-import { Button } from "@/components/ui/button"
+import {
+  authAlertErrorClass,
+  authAlertInfoClass,
+  authBtnPrimaryClass,
+  authLinkClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 import {
   fetchEmailVerificationStatus,
@@ -162,17 +167,17 @@ function VerifyEmailContent() {
       description={t("verify_email_desc")}
       showFooter={false}
     >
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-3">
-        <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className={cn(authAlertInfoClass, "mb-4 flex items-start gap-3 px-3 py-3")}>
+        <Mail className="mt-0.5 size-4 shrink-0 text-[#9CA3AF]" />
         <div className="min-w-0 space-y-1">
-          <p className="text-sm text-foreground">
+          <p className="text-sm text-[#1D1D1D]">
             {t("verify_email_sent_to")}
           </p>
           <p className="truncate text-sm font-medium" dir="ltr">
             {email || "—"}
           </p>
           {sentHint ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#6B6F76]">
               {t("verify_email_resent")}
             </p>
           ) : null}
@@ -193,24 +198,16 @@ function VerifyEmailContent() {
         />
 
         {error ? (
-          <p
-            className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive"
-            role="alert"
-          >
+          <p className={authAlertErrorClass} role="alert">
             {error}
           </p>
         ) : null}
 
-        <Button
+        <button
           type="button"
-          size="lg"
           disabled={code.length !== 6 || isLoading}
           onClick={() => void handleVerify(code)}
-          className={cn(
-            "h-12 w-full rounded-full text-sm font-semibold transition-all sm:h-11",
-            "bg-primary text-primary-foreground hover:opacity-95",
-            "disabled:opacity-45",
-          )}
+          className={authBtnPrimaryClass}
         >
           {isLoading ? (
             <span className="inline-flex items-center gap-2">
@@ -220,13 +217,13 @@ function VerifyEmailContent() {
           ) : (
             t("verify_email_submit")
           )}
-        </Button>
+        </button>
 
         <button
           type="button"
           onClick={() => void handleResend()}
           disabled={isSending || cooldown > 0}
-          className="block w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          className={cn(authLinkClass, "block w-full text-center disabled:opacity-50")}
         >
           {isSending
             ? t("sending")

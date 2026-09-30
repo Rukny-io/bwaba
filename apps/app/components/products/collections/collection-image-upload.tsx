@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface CollectionImageUploadProps {
   variant: 'banner' | 'thumbnail';
+  layout?: 'inline' | 'panel';
   value?: string | null;
   previewUrl?: string | null;
   uploading?: boolean;
@@ -18,6 +19,7 @@ interface CollectionImageUploadProps {
 
 export function CollectionImageUpload({
   variant,
+  layout = 'inline',
   value,
   previewUrl,
   uploading = false,
@@ -25,6 +27,7 @@ export function CollectionImageUpload({
   onRemove,
   className,
 }: CollectionImageUploadProps) {
+  const isPanel = layout === 'panel';
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const resolvedPreview = previewUrl ?? resolveMediaUrl(value);
@@ -37,7 +40,7 @@ export function CollectionImageUpload({
 
   if (variant === 'banner') {
     return (
-      <div className={cn('relative', className)}>
+      <div className={cn('relative', isPanel && 'w-full', className)}>
         <input
           ref={inputRef}
           id={inputId}
@@ -50,8 +53,13 @@ export function CollectionImageUpload({
         <label
           htmlFor={inputId}
           className={cn(
-            'group relative flex min-h-[5.25rem] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-[rgba(34,34,34,0.14)] bg-[rgba(34,34,34,0.02)] px-3 py-4 text-center transition-colors hover:border-[rgba(34,34,34,0.22)] hover:bg-[rgba(34,34,34,0.04)] dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-white/25 sm:min-h-[5.75rem]',
-            resolvedPreview && 'min-h-[5.75rem] border-solid border-[rgba(34,34,34,0.1)] bg-transparent p-0 dark:border-white/10 sm:min-h-[6rem]',
+            'group relative flex cursor-pointer flex-col items-center justify-center overflow-hidden text-center transition-colors',
+            isPanel
+              ? 'aspect-[5/1] w-full rounded-2xl bg-[var(--surface-secondary)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_88%,var(--foreground)_6%)]'
+              : 'min-h-[5.25rem] rounded-lg border border-dashed border-[rgba(34,34,34,0.14)] bg-[rgba(34,34,34,0.02)] px-3 py-4 hover:border-[rgba(34,34,34,0.22)] hover:bg-[rgba(34,34,34,0.04)] dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-white/25 sm:min-h-[5.75rem]',
+            !isPanel &&
+              resolvedPreview &&
+              'min-h-[5.75rem] border-solid border-[rgba(34,34,34,0.1)] bg-transparent p-0 dark:border-white/10 sm:min-h-[6rem]',
           )}
         >
           {resolvedPreview ? (
@@ -65,6 +73,12 @@ export function CollectionImageUpload({
               />
               <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/5" />
             </>
+          ) : isPanel ? (
+            <ImagePlus
+              className="size-4 text-[var(--muted-foreground)]/45"
+              strokeWidth={1.5}
+              aria-hidden
+            />
           ) : (
             <div className="flex flex-col items-center gap-1.5">
               <div className="flex size-9 items-center justify-center rounded-lg bg-[var(--surface)]/70 text-[var(--muted-foreground)]">
@@ -90,7 +104,10 @@ export function CollectionImageUpload({
           <button
             type="button"
             onClick={onRemove}
-            className="absolute left-2.5 top-2.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+            className={cn(
+              'absolute top-2 flex size-7 items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/60',
+              isPanel ? 'end-2' : 'left-2.5',
+            )}
             aria-label="إزالة صورة البانر"
           >
             <X className="size-3.5" />
@@ -101,7 +118,7 @@ export function CollectionImageUpload({
   }
 
   return (
-    <div className={cn('relative shrink-0', className)}>
+    <div className={cn('relative', isPanel ? 'w-full' : 'shrink-0', className)}>
       <input
         ref={inputRef}
         id={inputId}
@@ -114,8 +131,13 @@ export function CollectionImageUpload({
       <label
         htmlFor={inputId}
         className={cn(
-          'group relative flex size-14 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-[rgba(34,34,34,0.14)] bg-[rgba(34,34,34,0.02)] transition-colors hover:border-[rgba(34,34,34,0.22)] hover:bg-[rgba(34,34,34,0.04)] dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-white/25',
-          resolvedPreview && 'border-solid border-[rgba(34,34,34,0.1)] bg-transparent dark:border-white/10',
+          'group relative flex cursor-pointer items-center justify-center overflow-hidden transition-colors',
+          isPanel
+            ? 'aspect-square w-full rounded-2xl bg-[var(--surface-secondary)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_88%,var(--foreground)_6%)]'
+            : 'size-14 rounded-lg border border-dashed border-[rgba(34,34,34,0.14)] bg-[rgba(34,34,34,0.02)] hover:border-[rgba(34,34,34,0.22)] hover:bg-[rgba(34,34,34,0.04)] dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-white/25',
+          !isPanel &&
+            resolvedPreview &&
+            'border-solid border-[rgba(34,34,34,0.1)] bg-transparent dark:border-white/10',
         )}
       >
         {resolvedPreview ? (
@@ -123,12 +145,15 @@ export function CollectionImageUpload({
             src={resolvedPreview}
             alt=""
             fill
-            sizes="56px"
+            sizes={isPanel ? '12rem' : '56px'}
             className="object-cover"
           />
         ) : (
           <ImagePlus
-            className="size-[18px] text-[var(--muted-foreground)]/75"
+            className={cn(
+              'text-[var(--muted-foreground)]',
+              isPanel ? 'size-6 opacity-45' : 'size-[18px] opacity-75',
+            )}
             strokeWidth={1.5}
           />
         )}
@@ -144,10 +169,13 @@ export function CollectionImageUpload({
         <button
           type="button"
           onClick={onRemove}
-          className="absolute -left-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-[var(--border)]/80 bg-[var(--surface)] text-[var(--muted-foreground)] shadow-sm transition-colors hover:text-[var(--foreground)]"
+          className={cn(
+            'absolute flex items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/60',
+            isPanel ? 'end-2 top-2 size-7' : '-left-1.5 -top-1.5 size-5 border border-[var(--border)]/80 bg-[var(--surface)] text-[var(--muted-foreground)] shadow-sm hover:text-[var(--foreground)]',
+          )}
           aria-label="إزالة صورة الشعار"
         >
-          <X className="size-3" />
+          <X className={isPanel ? 'size-3.5' : 'size-3'} />
         </button>
       ) : null}
     </div>

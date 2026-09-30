@@ -59,15 +59,30 @@ import { Public } from '../../core/common/decorators/auth/public.decorator';
 // Throttle policies:
 // - Production: strict limits to prevent abuse
 // - Development: more lenient to avoid blocking local/mobile testing
+const devThrottleLimit = (envKey: string, fallback: number) => {
+  const parsed = Number(process.env[envKey]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const QUICK_SIGN_REQUEST_THROTTLE =
   process.env.NODE_ENV === 'production'
     ? { default: { limit: 3, ttl: 900000 } } // 3 requests per 15 minutes
-    : { default: { limit: 20, ttl: 60000 } }; // 20 requests per 1 minute
+    : {
+        default: {
+          limit: devThrottleLimit('QUICKSIGN_REQUEST_LIMIT_DEV', 100),
+          ttl: 60000,
+        },
+      }; // generous for local testing
 
 const QUICK_SIGN_RESEND_THROTTLE =
   process.env.NODE_ENV === 'production'
     ? { default: { limit: 2, ttl: 60000 } } // 2 requests per minute
-    : { default: { limit: 30, ttl: 60000 } }; // 30 requests per minute
+    : {
+        default: {
+          limit: devThrottleLimit('QUICKSIGN_RESEND_LIMIT_DEV', 100),
+          ttl: 60000,
+        },
+      };
 
 const QUICK_SIGN_VERIFY_THROTTLE =
   process.env.NODE_ENV === 'production'

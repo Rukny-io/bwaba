@@ -1,13 +1,17 @@
 "use client"
 
 import React from "react"
-import { ArrowUpRight, Check, Loader2, User, X } from "lucide-react"
+import { ArrowUpRight, Check, Loader2, Mail, User, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import {
   AuthFormField,
   AuthTextInput,
 } from "@/components/auth/onboarding/auth-form-field"
-import { Button } from "@/components/ui/button"
+import {
+  authAlertInfoClass,
+  authBtnPrimaryClass,
+  authInputClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 import { status } from "@/lib/status-colors"
 
@@ -28,6 +32,7 @@ interface ProfileInfoFormProps {
 export function ProfileInfoForm({
   fullName,
   username,
+  email,
   errors,
   usernameAvailable,
   isCheckingUsername,
@@ -45,6 +50,18 @@ export function ProfileInfoForm({
       className="w-full space-y-4 animate-in fade-in slide-in-from-right-4 duration-300"
       noValidate
     >
+      {email ? (
+        <div className="space-y-2">
+          <p className="text-center text-[12px] font-medium uppercase tracking-[0.08em] text-[#9CA3AF]">
+            {t("complete_profile_account")}
+          </p>
+          <div className={cn(authAlertInfoClass, "flex items-center gap-2.5 px-3 py-3")} dir="ltr">
+            <Mail className="size-4 shrink-0 text-[#9CA3AF]" aria-hidden />
+            <span className={cn(authInputClass, "truncate font-medium")}>{email}</span>
+          </div>
+        </div>
+      ) : null}
+
       <AuthFormField
         label={t("full_name_label")}
         htmlFor="fullName"
@@ -59,7 +76,7 @@ export function ProfileInfoForm({
           invalid={!!errors.fullName}
           autoFocus
           autoComplete="name"
-          prefix={<User className="size-4 shrink-0 text-muted-foreground" />}
+          prefix={<User className="size-4 shrink-0 text-[#9CA3AF]" />}
         />
       </AuthFormField>
 
@@ -85,14 +102,14 @@ export function ProfileInfoForm({
           dir="ltr"
           className="text-left"
           prefix={
-            <span className="shrink-0 text-sm text-muted-foreground">@</span>
+            <span className="shrink-0 text-sm text-[#9CA3AF]">@</span>
           }
           suffix={
             username.length >= 3 ? (
               <span className="flex shrink-0 items-center">
                 {isCheckingUsername ? (
                   <Loader2
-                    className="size-4 animate-spin text-muted-foreground"
+                    className="size-4 animate-spin text-[#9CA3AF]"
                     aria-hidden
                   />
                 ) : usernameAvailable === true ? (
@@ -103,7 +120,7 @@ export function ProfileInfoForm({
                   />
                 ) : usernameAvailable === false ? (
                   <X
-                    className="size-4 text-destructive"
+                    className="size-4 text-[#B91C1C]"
                     strokeWidth={2.5}
                     aria-hidden
                   />
@@ -114,19 +131,15 @@ export function ProfileInfoForm({
         />
       </AuthFormField>
 
-      <Button
+      <button
         type="submit"
-        size="lg"
         disabled={
           submitDisabled ||
           isSubmitting ||
           isCheckingUsername ||
           usernameAvailable === false
         }
-        className={cn(
-          "mt-2 h-12 w-full rounded-full text-sm font-semibold transition-all sm:h-11",
-          "bg-primary text-primary-foreground hover:opacity-95 disabled:opacity-45",
-        )}
+        className={cn(authBtnPrimaryClass, "mt-2")}
       >
         {isSubmitting ? (
           <span className="inline-flex items-center gap-2">
@@ -139,7 +152,7 @@ export function ProfileInfoForm({
             <ArrowUpRight className="size-4 rtl:rotate-180" aria-hidden />
           </span>
         )}
-      </Button>
+      </button>
     </form>
   )
 }

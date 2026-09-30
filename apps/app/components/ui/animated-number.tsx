@@ -92,7 +92,11 @@ export function AnimatedNumber({
   }, [value, duration, delay, animateFromZeroOnMount]);
 
   return (
-    <span className={cn('metric-value-animate inline-block tabular-nums', className)}>
+    <span
+      className={cn('metric-value-animate inline-block tabular-nums', className)}
+      dir="ltr"
+      lang="en"
+    >
       {format(display)}
     </span>
   );

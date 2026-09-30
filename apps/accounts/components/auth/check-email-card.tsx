@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from "react"
 import { Loader2, Mail, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { status } from "@/lib/status-colors"
 import { useTranslations } from "next-intl"
+import {
+  authAlertSuccessClass,
+  authBtnSecondaryClass,
+  authLinkClass,
+} from "@/components/auth/auth-ui"
 
 interface CheckEmailCardProps {
   email: string
@@ -52,30 +55,42 @@ export function CheckEmailCard({
 
   return (
     <div className={cn("w-full space-y-5", className)}>
-      <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background/80 px-3 backdrop-blur-sm sm:h-11 sm:rounded-full">
-        <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" dir="ltr">
-          {email}
+      <div className="space-y-2">
+        <p className="text-center text-[12px] font-medium uppercase tracking-[0.08em] text-[#9CA3AF]">
+          {t("check_email_sent_to")}
         </p>
+
+        <div
+          className="flex w-full min-h-[3.5rem] items-center gap-3 rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] px-4 py-3.5"
+          dir="ltr"
+        >
+          <span
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-[#6B6F76] ring-1 ring-[#E8E8E8]"
+            aria-hidden
+          >
+            <Mail className="size-4" />
+          </span>
+
+          <span
+            className="min-w-0 flex-1 truncate text-left text-[15px] font-medium leading-snug text-[#1D1D1D]"
+            title={email}
+          >
+            {email}
+          </span>
+        </div>
       </div>
 
       {resendSuccess ? (
-        <p className={cn("text-center text-sm font-medium", status.successHint)} role="status">
+        <p className={cn(authAlertSuccessClass, "text-center")} role="status">
           {t("resend_success")}
         </p>
       ) : null}
 
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="lg"
         onClick={handleResend}
         disabled={!canResend || isResending}
-        className={cn(
-          "h-12 w-full rounded-full text-sm font-semibold sm:h-11",
-          "border-border/60 bg-background/80 backdrop-blur-sm",
-          "disabled:opacity-45",
-        )}
+        className={authBtnSecondaryClass}
       >
         {isResending ? (
           <span className="inline-flex items-center gap-2">
@@ -90,13 +105,13 @@ export function CheckEmailCard({
         ) : (
           t("resend_in", { seconds: countdown })
         )}
-      </Button>
+      </button>
 
       <div className="text-center">
         <button
           type="button"
           onClick={onTryOtherMethod}
-          className="cursor-pointer text-sm text-muted-foreground underline underline-offset-3 transition-colors hover:text-foreground"
+          className={cn(authLinkClass, "underline underline-offset-3")}
         >
           {t("try_other_method")}
         </button>

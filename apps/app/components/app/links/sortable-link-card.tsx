@@ -1,23 +1,26 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reorder, useDragControls } from 'framer-motion';
 import {
   Eye,
   EyeOff,
+  GripVertical,
   MoreVertical,
-  MousePointerClick,
-  Pin,
+  Pencil,
+  Share2,
   Trash2,
 } from 'lucide-react';
 import { Button, Dropdown, Label } from '@heroui/react';
+import { LinkThumbnailControl } from '@/components/app/links/link-thumbnail-control';
 import { LinkPlatformIconBadge } from '@/components/app/links/platform-icons/link-platform-icon-badge';
 import { formatNumber } from '@/lib/dashboard-format';
 import {
   getLinkDisplayLabel,
   resolveCatalogTypeFromPlatform,
 } from '@/lib/links/resolve-platform';
-import type { LinkLayout, SocialLink } from '@/lib/links/types';
+import type { SocialLink } from '@/lib/links/types';
 import { cn } from '@/lib/utils';
 
 interface SortableLinkCardProps {
@@ -26,30 +29,8 @@ interface SortableLinkCardProps {
   sortable?: boolean;
   onToggleStatus: (link: SocialLink) => void;
   onDelete: (link: SocialLink) => void;
-}
-
-const LAYOUT_LABEL: Partial<Record<LinkLayout, string>> = {
-  profile_card: 'بطاقة',
-  media_grid: 'محتوى',
-  featured: 'مميز',
-};
-
-function DragHandleDots({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      className={className}
-      fill="currentColor"
-      aria-hidden
-    >
-      <circle cx="5.5" cy="3.5" r="1.2" />
-      <circle cx="10.5" cy="3.5" r="1.2" />
-      <circle cx="5.5" cy="8" r="1.2" />
-      <circle cx="10.5" cy="8" r="1.2" />
-      <circle cx="5.5" cy="12.5" r="1.2" />
-      <circle cx="10.5" cy="12.5" r="1.2" />
-    </svg>
-  );
+  onLinkUpdated?: (link: SocialLink) => void;
+  onThumbnailError?: (message: string) => void;
 }
 
 export function SortableLinkCard({
@@ -58,57 +39,58 @@ export function SortableLinkCard({
   sortable = true,
   onToggleStatus,
   onDelete,
+  onLinkUpdated,
+  onThumbnailError,
 }: SortableLinkCardProps) {
   const router = useRouter();
   const dragControls = useDragControls();
   const catalogType = resolveCatalogTypeFromPlatform(link.platform);
   const label = getLinkDisplayLabel(link);
-  const layoutLabel = LAYOUT_LABEL[link.layout ?? 'classic'];
-  const hostLabel = (() => {
-    try {
-      return new URL(link.url).hostname.replace(/^www\./, '');
-    } catch {
-      return link.platform;
-    }
-  })();
   const isHidden = link.status === 'hidden';
   const isBusy = busyId === link.id;
   const isBlock = catalogType === 'header' || catalogType === 'text';
+  const shareUrl = link.shortUrl || link.url;
 
-  function openDetail() {
+  const openDetail = useCallback(() => {
     router.push(`/app/links/${link.id}`);
-  }
+  }, [link.id, router]);
+
+  const handleShare = useCallback(async () => {
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: label, url: shareUrl });
+        return;
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Clipboard unavailable.
+    }
+  }, [label, shareUrl]);
 
   const cardClassName = cn(
-    'dashboard-card group relative list-none',
-    'flex items-center gap-1 sm:gap-1.5',
-    'rounded-[1.75rem] p-2.5 sm:rounded-4xl sm:p-3',
-    'transition-[box-shadow,border-color,opacity,background-color] duration-200',
-    'hover:border-[color-mix(in_srgb,var(--border)_50%,var(--primary)_50%)]',
-    'hover:shadow-[var(--card-shadow-hover)]',
-    isHidden &&
-      'border-dashed opacity-60 hover:opacity-80',
-    link.isPinned &&
-      'border-[color-mix(in_srgb,var(--primary)_38%,var(--border)_62%)] bg-[color-mix(in_srgb,var(--primary)_5%,var(--surface)_95%)]',
+    'group/link relative list-none w-full',
+    'flex items-center gap-3 rounded-xl border p-4 sm:gap-4',
+    'border-[var(--border)] bg-[var(--surface)]',
+    'transition-[border-color,box-shadow,opacity,transform] duration-150',
+    'hover:border-[color-mix(in_srgb,var(--border)_65%,var(--foreground)_35%)] hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]',
+    isHidden && 'opacity-55 hover:opacity-70',
   );
 
   const content = (
     <>
-      {link.isPinned ? (
-        <span
-          className="absolute inset-y-5 start-1.5 w-1 rounded-full bg-[var(--primary)]"
-          aria-hidden
-        />
-      ) : null}
-
       {sortable ? (
         <button
           type="button"
           className={cn(
-            'flex h-11 w-7 shrink-0 touch-none cursor-grab items-center justify-center self-center',
-            'rounded-xl text-[var(--muted-foreground)]/45',
-            'transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
-            'active:cursor-grabbing sm:h-12 sm:w-8',
+            'absolute inset-y-0 start-0 z-[1] flex w-8 touch-none cursor-grab items-center justify-center',
+            'text-[var(--muted-foreground)]/35 transition-opacity',
+            'opacity-100 md:opacity-0 md:group-hover/link:opacity-100',
+            'hover:text-[var(--muted-foreground)] active:cursor-grabbing',
           )}
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -116,138 +98,95 @@ export function SortableLinkCard({
           }}
           aria-label="اسحب لإعادة الترتيب"
         >
-          <DragHandleDots className="size-4" />
+          <GripVertical className="size-4" aria-hidden />
         </button>
       ) : null}
 
-      <button
-        type="button"
-        onClick={openDetail}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-[1.35rem] px-1 py-0.5 text-start sm:gap-3.5"
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-3 sm:gap-4',
+          sortable && 'ps-5 md:ps-6',
+        )}
       >
-        <div className="relative shrink-0">
-          {link.thumbnail ? (
-            <div className="size-12 overflow-hidden rounded-2xl ring-1 ring-inset ring-black/[0.06] dark:ring-white/[0.08]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={link.thumbnail}
-                alt=""
-                className="size-full object-cover"
-              />
-            </div>
-          ) : (
-            <LinkPlatformIconBadge
-              type={catalogType}
-              size="lg"
-              className="ring-1 ring-inset ring-black/[0.06] dark:ring-white/[0.08]"
-            />
-          )}
-          {link.isPinned ? (
-            <span className="absolute -bottom-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm ring-2 ring-[var(--surface)]">
-              <Pin className="size-2.5 fill-current" />
-            </span>
-          ) : (
-            <span
-              className={cn(
-                'absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full ring-2 ring-[var(--surface)]',
-                isHidden ? 'bg-[var(--muted-foreground)]/45' : 'bg-[var(--success)]',
-              )}
-              aria-hidden
-            />
-          )}
-        </div>
+        {!isBlock ? (
+          <LinkThumbnailControl
+            link={link}
+            catalogType={catalogType}
+            disabled={isBusy}
+            onUpdated={(updated) => onLinkUpdated?.(updated)}
+            onError={onThumbnailError}
+          />
+        ) : null}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate text-[14px] font-semibold leading-tight tracking-tight text-[var(--foreground)] sm:text-[15px]">
+        <button
+          type="button"
+          onClick={openDetail}
+          className="flex min-w-0 flex-1 items-center gap-3 text-start sm:gap-4"
+        >
+          {isBlock ? <LinkPlatformIconBadge type={catalogType} size="md" /> : null}
+          <span className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-snug text-[var(--foreground)] sm:text-base">
               {label}
             </p>
-            {isHidden ? (
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)]">
-                <EyeOff className="size-2.5" />
+            {isBlock ? (
+              <p className="mt-1 text-xs leading-snug text-[var(--muted-foreground)] sm:text-sm">
+                كتلة نصية
+              </p>
+            ) : isHidden ? (
+              <p className="mt-1 text-xs leading-snug text-[var(--muted-foreground)] sm:text-sm">
                 مخفي
-              </span>
+              </p>
             ) : null}
-            {layoutLabel ? (
-              <span className="hidden shrink-0 rounded-full bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-foreground)] sm:inline-flex">
-                {layoutLabel}
-              </span>
-            ) : null}
-          </div>
+          </span>
+        </button>
+      </div>
 
-          {!isBlock ? (
-            <p
-              className="mt-0.5 truncate text-[11px] text-[var(--muted-foreground)] sm:mt-1 sm:text-xs"
-              dir="ltr"
-            >
-              {hostLabel}
-            </p>
-          ) : null}
-        </div>
-
+      <div
+        className="flex shrink-0 items-center gap-2"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         {!isBlock ? (
-          <div className="flex shrink-0 flex-col items-end gap-0.5 pe-0.5 sm:min-w-[3.25rem]">
-            <span
-              className="flex items-center gap-1 text-[13px] font-semibold tabular-nums leading-none text-[var(--foreground)] sm:text-[15px]"
-              dir="ltr"
-              lang="en"
-            >
-              <MousePointerClick className="hidden size-3.5 text-[var(--muted-foreground)]/70 sm:block" />
+          <div
+            className="flex h-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-[var(--surface-secondary)] px-3 sm:h-12 sm:min-w-[3.5rem]"
+            aria-label={`${formatNumber(link.totalClicks)} نقرة`}
+          >
+            <span className="text-sm font-bold tabular-nums leading-none text-[var(--foreground)] sm:text-base">
               {formatNumber(link.totalClicks)}
             </span>
-            <span className="text-[9px] font-medium text-[var(--muted-foreground)] sm:text-[10px]">
+            <span className="text-[10px] font-medium leading-none text-[var(--muted-foreground)]">
               نقرة
             </span>
           </div>
         ) : null}
-      </button>
-
-      <div
-        className="flex shrink-0 items-center gap-0.5 pe-0.5 sm:gap-1"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!isHidden}
-          aria-label={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط'}
-          disabled={isBusy}
-          onClick={() => onToggleStatus(link)}
-          className={cn(
-            'relative h-6 w-10 shrink-0 rounded-full transition-colors duration-200',
-            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]',
-            'disabled:opacity-50',
-            isHidden
-              ? 'bg-[var(--surface-secondary)]'
-              : 'bg-[var(--primary)]',
-          )}
-        >
-          <span
-            className={cn(
-              'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-[inset-inline-start] duration-200',
-              isHidden ? 'inset-inline-start-0.5' : 'inset-inline-start-[1.125rem]',
-            )}
-          />
-        </button>
 
         <Dropdown>
           <Button
             isIconOnly
             variant="ghost"
-            aria-label="المزيد"
+            aria-label="خيارات الرابط"
             isDisabled={isBusy}
-            className="size-8 rounded-full sm:size-9"
+            className="size-8 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)]"
           >
             <MoreVertical className="size-4" />
           </Button>
           <Dropdown.Popover placement="bottom end">
             <Dropdown.Menu
               onAction={(key) => {
+                if (key === 'edit') openDetail();
+                if (key === 'share') void handleShare();
                 if (key === 'toggle') void onToggleStatus(link);
                 if (key === 'delete') void onDelete(link);
               }}
             >
+              <Dropdown.Item id="edit" isDisabled={isBusy} textValue="تعديل">
+                <Pencil className="size-4 shrink-0 text-muted" aria-hidden />
+                <Label>تعديل</Label>
+              </Dropdown.Item>
+              <Dropdown.Item id="share" isDisabled={isBusy || isBlock} textValue="مشاركة">
+                <Share2 className="size-4 shrink-0 text-muted" aria-hidden />
+                <Label>مشاركة</Label>
+              </Dropdown.Item>
               <Dropdown.Item
                 id="toggle"
                 isDisabled={isBusy}
@@ -287,8 +226,8 @@ export function SortableLinkCard({
       dragControls={dragControls}
       className={cardClassName}
       whileDrag={{
-        scale: 1.02,
-        boxShadow: '0 16px 48px rgba(15, 23, 42, 0.14)',
+        scale: 1.01,
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
         zIndex: 20,
       }}
     >

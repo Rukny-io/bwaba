@@ -1,8 +1,8 @@
 "use client"
 
-import React, { Suspense, useCallback, useEffect, useState } from "react"
+import React, { Suspense, useEffect } from "react"
 import { useParams } from "next/navigation"
-import { KeyRound, Mail, MessageCircle, ShieldCheck } from "lucide-react"
+import { KeyRound, Mail, ShieldCheck } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { AuthLoadingFallback } from "@/components/auth/auth-loading"
 import { AuthVerificationForm } from "@/components/auth/auth-verification-form"
@@ -15,14 +15,12 @@ import {
 } from "@/components/auth/method-chooser"
 import { useChooseMethodSession } from "@/hooks/use-choose-method-session"
 import { parseVerificationMethod } from "@/lib/auth/choose-method"
-import { resendMagicLink, sendWhatsappOtp, verify2FALogin } from "@/lib/api"
+import { resendMagicLink, verify2FALogin } from "@/lib/api"
 import { consumeStoredNext } from "@/lib/redirect"
 
 function MethodIcon({ method }: { method: VerificationMethod }) {
   const className = "size-6"
   switch (method) {
-    case "whatsapp":
-      return <MessageCircle className={className} strokeWidth={1.75} aria-hidden />
     case "backup-code":
       return <KeyRound className={className} strokeWidth={1.75} aria-hidden />
     case "email":
@@ -45,9 +43,6 @@ function ChooseMethodVerifyContent() {
     router,
   } = useChooseMethodSession()
 
-  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false)
-  const [whatsappError, setWhatsappError] = useState<string | null>(null)
-
   useEffect(() => {
     if (!method) {
       router.replace("/choose-method")
@@ -58,45 +53,6 @@ function ChooseMethodVerifyContent() {
       router.replace("/choose-method")
     }
   }, [method, isLoading, isMethodAvailable, router])
-
-  const handleSendWhatsappOtp = useCallback(
-    async (sid: string) => {
-      setIsSendingWhatsapp(true)
-      setWhatsappError(null)
-      try {
-        await sendWhatsappOtp(sid)
-      } catch {
-        setWhatsappError(t("whatsapp_send_error"))
-      } finally {
-        setIsSendingWhatsapp(false)
-      }
-    },
-    [t],
-  )
-
-  useEffect(() => {
-    if (method !== "whatsapp" || isLoading || !email) return
-
-    let cancelled = false
-
-    async function sendOtp() {
-      try {
-        const sid = sessionId || (await ensureSessionId())
-        if (!sid || cancelled) return
-        await handleSendWhatsappOtp(sid)
-      } catch {
-        if (!cancelled) {
-          setWhatsappError(t("whatsapp_send_error"))
-        }
-      }
-    }
-
-    sendOtp()
-
-    return () => {
-      cancelled = true
-    }
-  }, [method, isLoading, email, sessionId, ensureSessionId, handleSendWhatsappOtp, t])
 
   const handleVerifyCode = async (code: string) => {
     const sid = sessionId || (await ensureSessionId())
@@ -143,30 +99,12 @@ function ChooseMethodVerifyContent() {
           <ChooseMethodBackLink />
         </div>
 
-        {whatsappError ? (
-          <p
-            className="rounded-xl bg-destructive/8 px-3 py-2.5 text-center text-xs text-destructive"
-            role="alert"
-          >
-            {whatsappError}
-          </p>
-        ) : null}
-
         {method === "email" ? (
           <EmailVerificationAction email={email} onSubmit={handleEmailSubmit} />
         ) : (
           <AuthVerificationForm
-            mode={method as Extract<
-              VerificationMethod,
-              "authenticator" | "backup-code" | "whatsapp"
-            >}
+            mode={method}
             onSubmit={handleVerifyCode}
-            isSendingWhatsapp={isSendingWhatsapp}
-            onResendWhatsapp={
-              method === "whatsapp" && sessionId
-                ? () => handleSendWhatsappOtp(sessionId)
-                : undefined
-            }
           />
         )}
       </div>

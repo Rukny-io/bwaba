@@ -93,10 +93,10 @@ export function PublicProductCard({
         ) : null}
       </div>
 
-      <div className="mt-2 flex min-w-0 flex-col gap-1 px-0.5">
+      <div className="mt-2.5 flex min-w-0 flex-col gap-1 px-0.5">
         <h3
           dir="auto"
-          className="line-clamp-2 text-[12px] font-medium leading-snug text-[var(--foreground)] sm:text-[13px]"
+          className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--foreground)] sm:text-sm"
           title={product.name}
         >
           {product.name}

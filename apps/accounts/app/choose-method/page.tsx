@@ -9,8 +9,7 @@ import { useChooseMethodSession } from "@/hooks/use-choose-method-session"
 
 function ChooseMethodContent() {
   const t = useTranslations("Auth")
-  const { email, isLoading, has2FA, isSubscribed, sessionId } =
-    useChooseMethodSession()
+  const { email, isLoading, has2FA, sessionId } = useChooseMethodSession()
 
   if (!email) return null
 
@@ -34,7 +33,6 @@ function ChooseMethodContent() {
     >
       <MethodChooser
         has2FA={has2FA}
-        isSubscribed={isSubscribed}
         isLoading={isLoading}
         sessionId={sessionId}
         email={email}

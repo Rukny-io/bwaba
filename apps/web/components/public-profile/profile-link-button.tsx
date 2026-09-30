@@ -35,20 +35,19 @@ function linkHostname(url: string): string | null {
 const linkRowClass = (preview?: boolean) =>
   cn(
     'group/link profile-link-row',
-    'flex w-full items-center gap-3 rounded-3xl px-3 py-3 sm:px-3.5 sm:py-3.5',
-    'bg-[var(--surface-secondary)]/60',
+    'flex w-full items-center gap-3 rounded-3xl border border-[var(--border)] px-3 py-3 sm:px-3.5 sm:py-3.5',
     'text-[var(--foreground)]',
     !preview &&
-      'transition-[background-color,transform] duration-200 ease-out hover:bg-[var(--surface-secondary)] active:scale-[0.99]',
+      'transition-[transform,border-color] duration-200 ease-out hover:border-[var(--muted-foreground)]/35 active:scale-[0.99]',
     preview && 'pointer-events-none',
   );
 
 const linkCardClass = (preview?: boolean) =>
   cn(
-    'profile-card flex w-full items-center gap-3 rounded-xl bg-[var(--surface)] px-3.5 py-3',
-    'ring-1 ring-[var(--border)]',
-    'text-[13px] font-semibold text-[var(--foreground)]',
-    !preview && 'profile-card-interactive active:scale-[0.99]',
+    'flex w-full items-center gap-3 rounded-3xl border border-[var(--border)] px-3 py-3 sm:px-3.5 sm:py-3.5',
+    'text-sm font-semibold text-[var(--foreground)]',
+    !preview &&
+      'transition-[transform,border-color] duration-200 ease-out hover:border-[var(--muted-foreground)]/35 active:scale-[0.99]',
     preview && 'pointer-events-none',
   );
 
@@ -97,7 +96,7 @@ export function ProfileLinkButton({ link, preview, onTrackClick }: ProfileLinkBu
 
   const content = (
     <>
-      <ProfilePlatformIcon platform={link.platform} size="sm" variant="soft" />
+      <ProfilePlatformIcon platform={link.platform} size="sm" variant="plain" />
       <span className="min-w-0 flex-1 text-start">
         <span className="block truncate text-[13px] font-semibold leading-snug tracking-tight">
           {label}

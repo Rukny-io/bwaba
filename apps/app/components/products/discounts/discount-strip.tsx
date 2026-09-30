@@ -11,11 +11,8 @@ interface DiscountStripProps {
   discounts: ProductDiscount[];
   selectedDiscountId: string | null;
   loading?: boolean;
-  busyId?: string | null;
   onSelect: (id: string) => void;
   onEdit: (discount: ProductDiscount) => void;
-  onToggleActive: (discount: ProductDiscount) => void;
-  onDelete: (discount: ProductDiscount) => void;
   className?: string;
 }
 
@@ -23,17 +20,14 @@ export function DiscountStrip({
   discounts,
   selectedDiscountId,
   loading = false,
-  busyId = null,
   onSelect,
   onEdit,
-  onToggleActive,
-  onDelete,
   className,
 }: DiscountStripProps) {
   return (
     <div
       className={cn(
-        'flex gap-3.5 overflow-x-auto overscroll-x-contain px-0.5 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [scroll-padding-inline:6px] [&::-webkit-scrollbar]:hidden',
+        '-mx-1 flex gap-3.5 overflow-x-auto overscroll-x-contain py-1.5 ps-3 pe-2 [-ms-overflow-style:none] [scrollbar-width:none] [scroll-padding-inline:12px] sm:ps-4 sm:pe-3 [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
@@ -42,7 +36,7 @@ export function DiscountStrip({
           <DiscountStripItemSkeleton key={index} />
         ))
       ) : discounts.length === 0 ? (
-        <p className="py-2 text-[13px] text-[var(--muted-foreground)]">
+        <p className="py-2 text-sm text-[var(--muted-foreground)]">
           لا توجد خصومات بعد. اضغط «إضافة خصم» للبدء.
         </p>
       ) : (
@@ -51,11 +45,8 @@ export function DiscountStrip({
             key={discount.id}
             discount={discount}
             selected={discount.id === selectedDiscountId}
-            isBusy={busyId === discount.id}
             onSelect={() => onSelect(discount.id)}
             onEdit={() => onEdit(discount)}
-            onToggleActive={() => onToggleActive(discount)}
-            onDelete={() => onDelete(discount)}
           />
         ))
       )}

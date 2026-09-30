@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { authLinkClass } from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 export function ChooseMethodBackLink({ className }: { className?: string }) {
@@ -12,7 +13,8 @@ export function ChooseMethodBackLink({ className }: { className?: string }) {
     <Link
       href="/choose-method"
       className={cn(
-        "inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+        authLinkClass,
+        "inline-flex items-center gap-1.5 font-medium",
         className,
       )}
     >

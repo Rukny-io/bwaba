@@ -10,6 +10,8 @@
     "instagramPosts": "پۆستەکانی ئینستاگرام",
     "products": "بەرهەمەکان",
     "productsGrid": "تۆڕی بەرهەم",
+    "viewAllProducts": "بینینی هەموو بەرهەمەکان",
+    "goToStore": "چوونە سەر فرۆشگا",
     "forms": "فۆرمەکان"
   },
   "empty": {
@@ -134,6 +136,17 @@
       "increaseQuantity": "زیادکردنی بڕ",
       "removeFromCart": "لابردن لە سەبەتە"
     }
+  },
+  "store": {
+    "backToProfile": "گەڕانەوە بۆ {name}",
+    "pageTitle": "فرۆشگای {name}",
+    "descriptionFallback": "بەرهەمەکانی {username} لە ركني بکڕە",
+    "filterLabel": "پاڵاوتنی بەرهەم",
+    "allCategories": "هەموو",
+    "noProductsInCategory": "بەرهەم لەم پۆلەدا نییە",
+    "collectionsFilterLabel": "کۆمەڵەکانی فرۆشگا",
+    "allCollections": "هەموو",
+    "noProductsInCollection": "بەرهەم لەم کۆمەڵەیەدا نییە"
   },
   "cart": {
     "title": "سەبەتەکەت",

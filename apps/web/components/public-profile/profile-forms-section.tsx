@@ -25,7 +25,7 @@ function FormLinkCard({
 
   const content = (
     <>
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--profile-accent-soft)] ring-1 ring-[var(--border)]">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--profile-accent-soft)]">
         <FileText className="size-[1.15rem] text-[var(--primary)]" />
       </div>
       <div className="min-w-0 flex-1 text-start">

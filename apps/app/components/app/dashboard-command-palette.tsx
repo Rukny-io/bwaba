@@ -47,7 +47,11 @@ function useIsMac() {
   return isMac;
 }
 
-export function DashboardCommandPalette() {
+export function DashboardCommandPalette({
+  variant = 'header',
+}: {
+  variant?: 'header' | 'sidebar';
+}) {
   const router = useRouter();
   const isMac = useIsMac();
   const [isOpen, setIsOpen] = useState(false);
@@ -108,9 +112,11 @@ export function DashboardCommandPalette() {
         aria-label="بحث سريع"
         aria-keyshortcuts={isMac ? 'Meta+K' : 'Control+K'}
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10',
-          'text-[var(--muted-foreground)] transition-colors duration-200',
-          'hover:bg-black/5 hover:text-[var(--foreground)] dark:hover:bg-white/10',
+          variant === 'sidebar'
+            ? 'flex size-10 items-center justify-center rounded-2xl text-[var(--muted-foreground)] transition-colors duration-75 hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]'
+            : 'flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10',
+          variant === 'header' &&
+            'text-[var(--muted-foreground)] transition-colors duration-200 hover:bg-black/5 hover:text-[var(--foreground)] dark:hover:bg-white/10',
           'active:scale-[0.97]',
         )}
       >

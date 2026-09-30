@@ -4,31 +4,32 @@ import React, { useState } from "react"
 import { Key, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { OtpCodeInput } from "@/components/manage/otp-code-input"
-import { Button } from "@/components/ui/button"
+import {
+  authAlertErrorClass,
+  authBtnPrimaryClass,
+  authFieldShellClass,
+  authInputClass,
+} from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 import type { VerificationMethod } from "@/components/auth/method-chooser"
 
 interface AuthVerificationFormProps {
-  mode: Extract<VerificationMethod, "authenticator" | "backup-code" | "whatsapp">
+  mode: Extract<VerificationMethod, "authenticator" | "backup-code">
   onSubmit: (code: string) => Promise<void>
   className?: string
-  isSendingWhatsapp?: boolean
-  onResendWhatsapp?: () => void
 }
 
 export function AuthVerificationForm({
   mode,
   onSubmit,
   className,
-  isSendingWhatsapp,
-  onResendWhatsapp,
 }: AuthVerificationFormProps) {
   const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const t = useTranslations("Auth")
 
-  const isOtpMode = mode === "authenticator" || mode === "whatsapp"
+  const isOtpMode = mode === "authenticator"
   const isValid = isOtpMode ? code.length === 6 : code.trim().length >= 8
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,11 +42,9 @@ export function AuthVerificationForm({
       await onSubmit(code.trim())
     } catch {
       setError(
-        mode === "whatsapp"
-          ? t("whatsapp_invalid")
-          : mode === "authenticator"
-            ? t("authenticator_invalid")
-            : t("backup_code_invalid"),
+        mode === "authenticator"
+          ? t("authenticator_invalid")
+          : t("backup_code_invalid"),
       )
     } finally {
       setIsLoading(false)
@@ -53,11 +52,9 @@ export function AuthVerificationForm({
   }
 
   const title =
-    mode === "whatsapp"
-      ? t("enter_whatsapp_code")
-      : mode === "authenticator"
-        ? t("enter_auth_code")
-        : t("enter_backup_code")
+    mode === "authenticator"
+      ? t("enter_auth_code")
+      : t("enter_backup_code")
 
   return (
     <form onSubmit={handleSubmit} className={cn("w-full space-y-5", className)}>
@@ -73,8 +70,8 @@ export function AuthVerificationForm({
           aria-invalid={!!error}
         />
       ) : (
-        <div className="auth-field flex h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-input/70 bg-background px-3.5 transition-all focus-within:border-foreground/25 focus-within:ring-2 focus-within:ring-foreground/8 sm:h-12">
-          <Key className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <div className={authFieldShellClass}>
+          <Key className="size-4 shrink-0 text-[#9CA3AF]" aria-hidden />
           <input
             type="text"
             value={code}
@@ -87,26 +84,22 @@ export function AuthVerificationForm({
             aria-label={title}
             aria-invalid={!!error}
             autoFocus
-            className="auth-email-input h-full min-w-0 flex-1 border-0 bg-transparent text-left text-sm tracking-wide outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+            className={cn(authInputClass, "auth-email-input tracking-wide")}
             dir="ltr"
           />
         </div>
       )}
 
       {error ? (
-        <p
-          className="rounded-xl bg-destructive/8 px-3 py-2.5 text-center text-xs leading-relaxed text-destructive"
-          role="alert"
-        >
+        <p className={cn(authAlertErrorClass, "text-center")} role="alert">
           {error}
         </p>
       ) : null}
 
-      <Button
+      <button
         type="submit"
-        size="lg"
         disabled={!isValid || isLoading}
-        className="h-12 w-full rounded-full text-sm font-semibold"
+        className={authBtnPrimaryClass}
       >
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
@@ -116,20 +109,7 @@ export function AuthVerificationForm({
         ) : (
           t("continue")
         )}
-      </Button>
-
-      {mode === "whatsapp" && onResendWhatsapp ? (
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={onResendWhatsapp}
-            disabled={isSendingWhatsapp}
-            className="cursor-pointer text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
-          >
-            {isSendingWhatsapp ? t("whatsapp_resending") : t("whatsapp_didnt_receive")}
-          </button>
-        </div>
-      ) : null}
+      </button>
     </form>
   )
 }

@@ -3,6 +3,7 @@
 import React from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
+import { authLinkClass } from "@/components/auth/auth-ui"
 import { cn } from "@/lib/utils"
 
 interface AuthFooterProps {
@@ -15,23 +16,17 @@ export function AuthFooter({ className }: AuthFooterProps) {
   return (
     <footer
       className={cn(
-        "flex items-center justify-center gap-1 text-xs text-muted-foreground",
+        "flex items-center justify-center gap-1 text-[13px] text-[#9CA3AF]",
         className,
       )}
     >
-      <Link
-        href="/terms"
-        className="underline underline-offset-3 transition-colors hover:text-foreground"
-      >
+      <Link href="/terms" className={authLinkClass}>
         {t("terms_of_service")}
       </Link>
       <span className="mx-2 opacity-40" aria-hidden>
         |
       </span>
-      <Link
-        href="/privacy"
-        className="underline underline-offset-3 transition-colors hover:text-foreground"
-      >
+      <Link href="/privacy" className={authLinkClass}>
         {t("privacy_policy")}
       </Link>
     </footer>

@@ -98,47 +98,36 @@ export function ProfileLinksSection({
     >
       {showHeading ? (
         <motion.div
-          className="flex items-center gap-3 sm:gap-4"
+          className="flex items-center gap-2 px-1"
           variants={reduceMotion ? undefined : HEADING_MOTION}
           initial={reduceMotion ? false : 'hidden'}
           animate={reduceMotion ? undefined : 'visible'}
         >
-          <div className="h-px flex-1 bg-[var(--border)] opacity-60" aria-hidden />
-          <div
+          <Link2
             className={cn(
-              'inline-flex shrink-0 items-center gap-2 rounded-full',
-              'bg-[var(--surface-secondary)] shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[var(--border)]',
-              compact ? 'px-3 py-1' : 'px-3.5 py-1.5',
+              'shrink-0 text-[var(--muted-foreground)]',
+              compact ? 'size-3' : 'size-3.5',
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+          <h2
+            className={cn(
+              'font-bold tracking-tight text-[var(--foreground)]',
+              compact ? 'text-xs' : 'text-sm sm:text-[15px]',
             )}
           >
-            <Link2
-              className={cn(
-                'shrink-0 text-[var(--muted-foreground)]',
-                compact ? 'size-3' : 'size-3.5',
-              )}
-              strokeWidth={2}
-              aria-hidden
-            />
-            <h2
-              className={cn(
-                'font-bold tracking-tight text-[var(--foreground)]',
-                compact ? 'text-[11px]' : 'text-xs sm:text-[13px]',
-              )}
-            >
-              {resolvedHeading}
-            </h2>
-            <span
-              className={cn(
-                'inline-flex min-w-[1.25rem] items-center justify-center rounded-full',
-                'bg-[var(--foreground)] font-bold tabular-nums text-[var(--background)]',
-                compact ? 'px-1.5 py-0 text-[9px]' : 'px-1.5 py-0.5 text-[10px]',
-              )}
-              dir="ltr"
-            >
-              {linkCount}
-            </span>
-          </div>
-          <div className="h-px flex-1 bg-[var(--border)] opacity-60" aria-hidden />
+            {resolvedHeading}
+          </h2>
+          <span
+            className={cn(
+              'font-semibold tabular-nums text-[var(--muted-foreground)]',
+              compact ? 'text-[11px]' : 'text-xs sm:text-[13px]',
+            )}
+            dir="ltr"
+          >
+            {linkCount}
+          </span>
         </motion.div>
       ) : null}
 

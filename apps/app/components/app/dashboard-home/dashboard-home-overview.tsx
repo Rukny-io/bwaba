@@ -164,8 +164,8 @@ export function DashboardHomeOverview({
 
       <div className="overflow-hidden rounded-xl ring-1 ring-[var(--border)]">
         <div className="grid grid-cols-1 gap-px bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((metric) => (
-            <OverviewMetricCell key={metric.key} {...metric} />
+          {metrics.map(({ key, ...metric }) => (
+            <OverviewMetricCell key={key} {...metric} />
           ))}
         </div>
       </div>

@@ -24,7 +24,11 @@ export function ProfileCollectionFilters({
   if (collections.length === 0) return null;
 
   const options = [
-    { id: null as string | null, label: t('allCollections') },
+    {
+      id: null as string | null,
+      label: t('allCollections'),
+      imageUrl: null as string | null,
+    },
     ...collections.map((collection) => ({
       id: collection.id,
       label: collection.name,
@@ -50,7 +54,7 @@ export function ProfileCollectionFilters({
           <ProfileEntityPill
             key={option.id ?? 'all'}
             label={option.label}
-            imageUrl={option.id === null ? undefined : option.imageUrl}
+            imageUrl={option.imageUrl ?? undefined}
             selected={isActive}
             onClick={() => onChange(option.id)}
             role="tab"

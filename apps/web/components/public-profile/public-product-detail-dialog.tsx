@@ -538,7 +538,7 @@ export function PublicProductDetailDialog({
           <motion.div
             className={cn(
               'pointer-events-none fixed inset-0 box-border flex items-center justify-center',
-              'px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 sm:px-3 sm:pt-8',
+              'px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:px-3 sm:pt-8',
             )}
             {...dialogShellMotion}
             transition={dialogTransition}
@@ -550,8 +550,8 @@ export function PublicProductDetailDialog({
               aria-modal="true"
               aria-labelledby="product-detail-title"
               className={cn(
-                'profile-store-chrome pointer-events-auto flex w-full max-w-[min(100%,19rem)] flex-col overflow-hidden rounded-3xl sm:max-w-3xl sm:rounded-4xl',
-                'max-h-[min(74dvh,calc(100dvh-2rem))] sm:max-h-[min(90dvh,calc(100dvh-3rem))]',
+                'profile-store-chrome pointer-events-auto flex w-full max-w-[min(100%,26rem)] flex-col overflow-hidden rounded-4xl sm:max-w-3xl',
+                'max-h-[min(90dvh,calc(100dvh-3rem))]',
                 'bg-[var(--surface)] p-0 outline-none',
                 'shadow-[0_8px_24px_5px_rgba(0,0,0,0.08)]',
               )}
@@ -559,18 +559,18 @@ export function PublicProductDetailDialog({
             >
               <div
                 className={cn(
-                  'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-3 sm:p-5',
+                  'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-5',
                   '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                 )}
               >
                 <div
                   className={cn(
-                    'grid min-w-0 gap-3',
+                    'grid min-w-0 gap-4',
                     'sm:grid-cols-[14rem_minmax(0,1fr)] sm:items-stretch sm:gap-5',
                   )}
                 >
                 <div className="flex min-w-0 flex-col gap-2 sm:h-full">
-                  <div className="relative mx-auto w-full max-w-[8.5rem] overflow-hidden rounded-xl bg-[var(--surface-secondary)] sm:mx-0 sm:max-w-none sm:rounded-2xl">
+                  <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-secondary)]">
                     <ProductThumbnail
                       imageUrl={heroImage}
                       alt={displayedProduct.name}
@@ -609,7 +609,7 @@ export function PublicProductDetailDialog({
                           aria-label={t('product.dialog.imageAlt', { index: index + 1 })}
                           aria-current={index === activeImageIndex ? 'true' : undefined}
                         >
-                          <ProductThumbnail imageUrl={url} alt="" className="size-9 sm:size-11" />
+                          <ProductThumbnail imageUrl={url} alt="" className="size-11" />
                         </button>
                       ))}
                     </div>
@@ -625,7 +625,6 @@ export function PublicProductDetailDialog({
                             currencyCode={currencyCode}
                             onOpenCart={openCart}
                             reduceMotion={reduceMotion}
-                            narrow
                             labels={{
                               total: t('product.dialog.cartTotal'),
                               proceed: t('product.dialog.proceedToCheckout'),
@@ -657,7 +656,7 @@ export function PublicProductDetailDialog({
                   </AnimatePresence>
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-2.5 sm:gap-3.5">
+                <div className="flex min-w-0 flex-col gap-3.5">
                   <ProfileEntityPill
                     label={storeLabel}
                     imageUrl={storeAvatarUrl}
@@ -679,7 +678,7 @@ export function PublicProductDetailDialog({
                     <h2
                       id="product-detail-title"
                       dir="auto"
-                      className="text-base font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[18px]"
+                      className="text-[18px] font-semibold leading-snug tracking-tight text-[var(--foreground)]"
                     >
                       {displayedProduct.name}
                     </h2>
@@ -714,7 +713,7 @@ export function PublicProductDetailDialog({
                   {displayedProduct.description ? (
                     <p
                       dir="auto"
-                      className="line-clamp-3 text-xs leading-relaxed text-[var(--muted-foreground)] sm:line-clamp-2 sm:text-[13px]"
+                      className="line-clamp-4 text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:line-clamp-3"
                     >
                       {displayedProduct.description}
                     </p>

@@ -21,6 +21,7 @@
     "@react-types/shared": "3.34.0",
     "@rukny/auth": "file:../../packages/auth",
     "@rukny/forms-shared": "file:../../packages/forms-shared",
+    "@rukny/public-profile-ui": "file:../../packages/public-profile-ui",
     "@rukny/thmanyah-font": "file:../../packages/Thmanyah-Font-Family",
     "clsx": "^2.1.1",
     "framer-motion": "^11",

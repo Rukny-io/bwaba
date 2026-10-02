@@ -6,6 +6,7 @@ import { BadgeCheck, Check, Link2, Share2 } from 'lucide-react';
 import { resolveAvatarUrl } from '@/lib/media-url';
 import type { PublicProfile } from './types';
 import { cn } from './utils';
+import { ProfileLanguageSwitcher } from './profile-language-switcher';
 
 interface ProfileHeaderProps {
   profile: PublicProfile;
@@ -16,6 +17,8 @@ interface ProfileHeaderProps {
   formCount?: number;
   storeHref?: string;
   showStoreButton?: boolean;
+  /** Show language switcher in the identity row (public page only). */
+  showLanguageSwitcher?: boolean;
 }
 
 export const PROFILE_STORE_SECTION_ID = 'profile-store';
@@ -47,6 +50,7 @@ export function ProfileHeader({
   formCount = 0,
   storeHref,
   showStoreButton = true,
+  showLanguageSwitcher = false,
 }: ProfileHeaderProps) {
   const t = useTranslations('publicProfile.header');
   const avatarUrl = resolveAvatarUrl(profile.avatar);
@@ -192,6 +196,10 @@ export function ProfileHeader({
               </p>
             ) : null}
           </div>
+
+          {showLanguageSwitcher ? (
+            <ProfileLanguageSwitcher variant="bar" className="shrink-0 self-start" />
+          ) : null}
         </div>
 
         {bio ? (

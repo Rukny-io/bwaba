@@ -8,6 +8,8 @@ interface LinkPlatformIconProps {
   type: LinkCatalogTypeId;
   className?: string;
   size?: number;
+  /** Prefer object-contain even when the asset is marked fill */
+  forceContain?: boolean;
 }
 
 function PlatformPublicIcon({
@@ -48,14 +50,14 @@ function PlatformPublicIcon({
     <img
       src={src}
       alt=""
-      width={fill ? undefined : size}
-      height={fill ? undefined : size}
+      width={size}
+      height={size}
       className={cn(
-        'shrink-0',
-        fill ? 'size-full object-cover' : 'object-contain',
+        'shrink-0 object-contain',
+        fill && 'object-cover',
         className,
       )}
-      style={fill ? { width: size, height: size } : undefined}
+      style={{ width: size, height: size }}
       aria-hidden
       draggable={false}
     />
@@ -124,7 +126,12 @@ function InlinePlatformIcon({
   }
 }
 
-export function LinkPlatformIcon({ type, className, size = 20 }: LinkPlatformIconProps) {
+export function LinkPlatformIcon({
+  type,
+  className,
+  size = 20,
+  forceContain = false,
+}: LinkPlatformIconProps) {
   const asset = getPlatformIconAsset(type);
 
   if (asset) {
@@ -133,7 +140,7 @@ export function LinkPlatformIcon({ type, className, size = 20 }: LinkPlatformIco
         src={asset.src}
         size={size}
         crop={asset.crop}
-        fill={asset.fill}
+        fill={asset.fill && !forceContain}
         className={className}
       />
     );

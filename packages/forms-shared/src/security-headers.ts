@@ -87,7 +87,12 @@ export function buildAppSecurityHeaders(
     ...(allowTurnstile ? ['https://challenges.cloudflare.com'] : []),
     ...frameSrcOrigins,
     ...(isDev
-      ? ['http://localhost:3006', 'http://127.0.0.1:3006', 'http://192.168.0.179:3006']
+      ? [
+          'http://localhost:3011',
+          'http://127.0.0.1:3011',
+          'http://localhost:3006',
+          'http://127.0.0.1:3006',
+        ]
       : []),
   ];
 

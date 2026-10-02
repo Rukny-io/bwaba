@@ -16,7 +16,7 @@ export const LOCAL_SERVICE_URLS = {
   forms: 'http://localhost:3007',
   mail: 'http://localhost:3009',
   checkout: 'http://localhost:3010',
-  publicSite: 'http://localhost:3006',
+  publicSite: 'http://localhost:3011',
 } as const;
 
 export const PRODUCTION_SERVICE_URLS = {

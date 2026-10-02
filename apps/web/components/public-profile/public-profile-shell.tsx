@@ -17,7 +17,7 @@ export interface PublicProfileShellProps {
   products?: PublicProfileProduct[];
   initialProductId?: string | null;
   mode?: PublicProfileShellMode;
-  /** iframe / phone-frame embed — interactive store, compact layout */
+  /** iframe / phone-frame embed — compact layout, no checkout chrome */
   embedded?: boolean;
   resolveMediaUrl?: MediaUrlResolver;
   onTrackClick?: (linkId: string) => void;

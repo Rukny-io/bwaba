@@ -23,11 +23,38 @@ const SHELL_PX: Record<NonNullable<LinkPlatformIconBadgeProps['size']>, number> 
   lg: 48,
 };
 
-const ICON_PX: Record<NonNullable<LinkPlatformIconBadgeProps['size']>, number> = {
-  sm: 18,
-  md: 22,
-  lg: 24,
+/**
+ * Major social brands — fixed optical size (won't edge-bleed like custom thumbs).
+ * YouTube SVG already has viewBox padding, so it can sit slightly larger.
+ */
+const MAJOR_PLATFORMS = new Set<LinkCatalogTypeId>([
+  'youtube',
+  'instagram',
+  'tiktok',
+  'whatsapp',
+  'snapchat',
+  'x',
+  'linkedin',
+  'telegram',
+  'facebook',
+  'email',
+]);
+
+const MARK_RATIO_MAJOR: Partial<Record<LinkCatalogTypeId, number>> = {
+  youtube: 0.72,
+  instagram: 0.8,
+  tiktok: 0.8,
+  whatsapp: 0.8,
+  snapchat: 0.8,
+  x: 0.78,
+  linkedin: 0.8,
+  telegram: 0.8,
+  facebook: 0.8,
+  email: 0.78,
 };
+
+const MARK_RATIO_MAJOR_DEFAULT = 0.8;
+const MARK_RATIO_DEFAULT = 1.06;
 
 export function LinkPlatformIconBadge({
   type,
@@ -38,13 +65,19 @@ export function LinkPlatformIconBadge({
   const asset = getPlatformIconAsset(type);
   const shell = SHELL[size];
   const shellPx = SHELL_PX[size];
-  const iconSize = asset?.fill ? shellPx : ICON_PX[size];
+  const circular = Boolean(className?.includes('rounded-full'));
+  const isMajor = MAJOR_PLATFORMS.has(type);
+  const optical = asset?.opticalScale ?? 1;
+  const ratio = isMajor
+    ? (MARK_RATIO_MAJOR[type] ?? MARK_RATIO_MAJOR_DEFAULT)
+    : MARK_RATIO_DEFAULT;
+  const iconSize = Math.max(16, Math.round(shellPx * ratio * optical));
 
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-center',
-        asset?.fill ? 'overflow-hidden p-0' : 'p-2',
+        'flex shrink-0 items-center justify-center overflow-hidden',
+        circular ? 'p-0' : 'p-1',
         shell,
         styles.bg,
         className,
@@ -54,6 +87,7 @@ export function LinkPlatformIconBadge({
         type={type}
         size={iconSize}
         className={styles.brand ? undefined : styles.fg}
+        forceContain
       />
     </div>
   );

@@ -68,6 +68,13 @@ export function LinkDetailView({ linkId }: LinkDetailViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    const requested = searchParams.get('tab');
+    if (requested === 'details' || requested === 'powerups' || requested === 'insights') {
+      setTab(requested);
+    }
+  }, [searchParams]);
+
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -296,7 +303,11 @@ export function LinkDetailView({ linkId }: LinkDetailViewProps) {
 
       <Tabs
         selectedKey={tab}
-        onSelectionChange={(key) => setTab(key as DetailTab)}
+        onSelectionChange={(key) => {
+          const next = key as DetailTab;
+          setTab(next);
+          router.replace(`/app/links/${linkId}?tab=${next}`, { scroll: false });
+        }}
         className="gap-4 sm:gap-5"
       >
         <Tabs.ListContainer className="flex justify-center">
@@ -347,6 +358,7 @@ export function LinkDetailView({ linkId }: LinkDetailViewProps) {
                     status: link.status === 'active' ? 'hidden' : 'active',
                   }).catch(() => undefined)
                 }
+                onPatch={(input) => patchLink(input)}
               />
             </Card>
           ) : null}

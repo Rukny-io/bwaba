@@ -1,18 +1,21 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reorder, useDragControls } from 'framer-motion';
 import {
-  Eye,
-  EyeOff,
-  GripVertical,
-  MoreVertical,
+  BarChart3,
+  Bell,
+  CalendarClock,
+  ExternalLink,
+  Folder,
+  Grip,
+  Lock,
   Pencil,
-  Share2,
+  Star,
   Trash2,
 } from 'lucide-react';
-import { Button, Dropdown, Label } from '@heroui/react';
+import { Button, Popover, Switch } from '@heroui/react';
 import { LinkThumbnailControl } from '@/components/app/links/link-thumbnail-control';
 import { LinkPlatformIconBadge } from '@/components/app/links/platform-icons/link-platform-icon-badge';
 import { formatNumber } from '@/lib/dashboard-format';
@@ -20,199 +23,537 @@ import {
   getLinkDisplayLabel,
   resolveCatalogTypeFromPlatform,
 } from '@/lib/links/resolve-platform';
-import type { SocialLink } from '@/lib/links/types';
+import type { LinkGroup, SocialLink, UpdateSocialLinkInput } from '@/lib/links/types';
 import { cn } from '@/lib/utils';
 
 interface SortableLinkCardProps {
   link: SocialLink;
   busyId: string | null;
   sortable?: boolean;
+  groups?: LinkGroup[];
   onToggleStatus: (link: SocialLink) => void;
+  onTogglePin: (link: SocialLink) => void;
+  onToggleNotify: (link: SocialLink) => void;
+  onQuickUpdate: (link: SocialLink, patch: UpdateSocialLinkInput) => Promise<void>;
   onDelete: (link: SocialLink) => void;
+  onMoveToGroup?: (link: SocialLink, groupId: string | null) => void;
   onLinkUpdated?: (link: SocialLink) => void;
   onThumbnailError?: (message: string) => void;
+}
+
+const reorderTransition = {
+  type: 'spring' as const,
+  stiffness: 520,
+  damping: 38,
+  mass: 0.55,
+};
+
+const toolBtnClass = cn(
+  'inline-flex size-8 items-center justify-center rounded-lg',
+  'text-[var(--muted-foreground)] transition-colors',
+  'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
+  'disabled:pointer-events-none disabled:opacity-40',
+);
+
+function formatLinkUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.href.replace(/\/$/, '');
+  } catch {
+    return url;
+  }
+}
+
+function toDatetimeLocalValue(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromDatetimeLocalValue(value: string): string | null {
+  if (!value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
 export function SortableLinkCard({
   link,
   busyId,
   sortable = true,
+  groups = [],
   onToggleStatus,
+  onTogglePin,
+  onToggleNotify,
+  onQuickUpdate,
   onDelete,
+  onMoveToGroup,
   onLinkUpdated,
   onThumbnailError,
 }: SortableLinkCardProps) {
   const router = useRouter();
   const dragControls = useDragControls();
+  const [isDragging, setIsDragging] = useState(false);
+  const [editTitle, setEditTitle] = useState(link.title || '');
+  const [editUrl, setEditUrl] = useState(link.url);
+  const [scheduleStart, setScheduleStart] = useState(toDatetimeLocalValue(link.scheduledStartAt));
+  const [scheduleEnd, setScheduleEnd] = useState(toDatetimeLocalValue(link.scheduledEndAt));
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const catalogType = resolveCatalogTypeFromPlatform(link.platform);
   const label = getLinkDisplayLabel(link);
   const isHidden = link.status === 'hidden';
-  const isBusy = busyId === link.id;
+  const isBusy = busyId === link.id || busyId === 'reorder' || saving;
   const isBlock = catalogType === 'header' || catalogType === 'text';
-  const shareUrl = link.shortUrl || link.url;
+  const displayUrl = isBlock ? 'كتلة نصية' : formatLinkUrl(link.url);
+  const isScheduled = Boolean(link.scheduledStartAt || link.scheduledEndAt);
+  const isProtected = Boolean(link.isLocked || link.isPasswordProtected);
 
-  const openDetail = useCallback(() => {
-    router.push(`/app/links/${link.id}`);
+  useEffect(() => {
+    setEditTitle(link.title || '');
+    setEditUrl(link.url);
+    setScheduleStart(toDatetimeLocalValue(link.scheduledStartAt));
+    setScheduleEnd(toDatetimeLocalValue(link.scheduledEndAt));
+  }, [link.title, link.url, link.scheduledStartAt, link.scheduledEndAt]);
+
+  const clearDragChrome = useCallback(() => {
+    document.body.style.removeProperty('user-select');
+    document.body.style.removeProperty('cursor');
+  }, []);
+
+  useEffect(() => () => clearDragChrome(), [clearDragChrome]);
+
+  const openInsights = useCallback(() => {
+    router.push(`/app/links/${link.id}?tab=insights`);
   }, [link.id, router]);
 
-  const handleShare = useCallback(async () => {
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title: label, url: shareUrl });
-        return;
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
-      }
-    }
-
+  async function runSave(patch: UpdateSocialLinkInput) {
+    setSaving(true);
     try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      // Clipboard unavailable.
+      await onQuickUpdate(link, patch);
+    } finally {
+      setSaving(false);
     }
-  }, [label, shareUrl]);
+  }
 
   const cardClassName = cn(
     'group/link relative list-none w-full',
-    'flex items-center gap-3 rounded-xl border p-4 sm:gap-4',
-    'border-[var(--border)] bg-[var(--surface)]',
-    'transition-[border-color,box-shadow,opacity,transform] duration-150',
-    'hover:border-[color-mix(in_srgb,var(--border)_65%,var(--foreground)_35%)] hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]',
-    isHidden && 'opacity-55 hover:opacity-70',
+    'rounded-2xl border border-[var(--border)] bg-[var(--surface)]',
+    'transition-[border-color,background-color,opacity] duration-150',
+    'hover:border-[color-mix(in_srgb,var(--border)_50%,var(--foreground)_50%)]',
+    isHidden && 'opacity-70',
+    isDragging &&
+      'z-20 border-[color-mix(in_srgb,var(--border)_35%,var(--primary)_65%)] bg-[var(--surface)]',
   );
 
+  function renderEditPopover() {
+    return (
+      <Popover.Content placement="top start" className="w-[min(22rem,calc(100vw-2rem))]">
+        <Popover.Dialog className="flex flex-col gap-3 p-3">
+          <Popover.Heading className="text-sm font-semibold">تعديل الرابط</Popover.Heading>
+          <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
+            العنوان
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="h-9 rounded-lg border border-[var(--border)] bg-transparent px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+            />
+          </label>
+          {!isBlock ? (
+            <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
+              الرابط
+              <input
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                dir="ltr"
+                className="h-9 rounded-lg border border-[var(--border)] bg-transparent px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+              />
+            </label>
+          ) : null}
+          <Button
+            isDisabled={isBusy}
+            className="h-9 rounded-lg bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]"
+            onPress={() =>
+              void runSave({
+                title: editTitle.trim() || undefined,
+                ...(isBlock ? {} : { url: editUrl.trim() }),
+              })
+            }
+          >
+            حفظ
+          </Button>
+        </Popover.Dialog>
+      </Popover.Content>
+    );
+  }
+
   const content = (
-    <>
+    <div className="flex gap-1 p-3 sm:gap-2 sm:p-4">
       {sortable ? (
         <button
           type="button"
           className={cn(
-            'absolute inset-y-0 start-0 z-[1] flex w-8 touch-none cursor-grab items-center justify-center',
-            'text-[var(--muted-foreground)]/35 transition-opacity',
-            'opacity-100 md:opacity-0 md:group-hover/link:opacity-100',
-            'hover:text-[var(--muted-foreground)] active:cursor-grabbing',
+            'mt-0.5 flex size-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg',
+            'text-[var(--muted-foreground)]/55 transition-colors',
+            'hover:bg-[var(--surface-secondary)] hover:text-[var(--muted-foreground)]',
+            'active:cursor-grabbing',
+            isDragging && 'cursor-grabbing text-[var(--foreground)]',
           )}
           onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
             e.stopPropagation();
             dragControls.start(e);
           }}
           aria-label="اسحب لإعادة الترتيب"
         >
-          <GripVertical className="size-4" aria-hidden />
+          <Grip className="size-4" strokeWidth={1.75} aria-hidden />
         </button>
       ) : null}
 
-      <div
-        className={cn(
-          'flex min-w-0 flex-1 items-center gap-3 sm:gap-4',
-          sortable && 'ps-5 md:ps-6',
-        )}
-      >
-        {!isBlock ? (
-          <LinkThumbnailControl
-            link={link}
-            catalogType={catalogType}
-            disabled={isBusy}
-            onUpdated={(updated) => onLinkUpdated?.(updated)}
-            onError={onThumbnailError}
-          />
-        ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          {!isBlock ? (
+            <LinkThumbnailControl
+              link={link}
+              catalogType={catalogType}
+              disabled={isBusy}
+              variant="thumb"
+              onUpdated={(updated) => onLinkUpdated?.(updated)}
+              onError={onThumbnailError}
+            />
+          ) : (
+            <LinkPlatformIconBadge type={catalogType} size="md" className="size-11 rounded-full sm:size-12" />
+          )}
 
-        <button
-          type="button"
-          onClick={openDetail}
-          className="flex min-w-0 flex-1 items-center gap-3 text-start sm:gap-4"
-        >
-          {isBlock ? <LinkPlatformIconBadge type={catalogType} size="md" /> : null}
-          <span className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-snug text-[var(--foreground)] sm:text-base">
-              {label}
-            </p>
-            {isBlock ? (
-              <p className="mt-1 text-xs leading-snug text-[var(--muted-foreground)] sm:text-sm">
-                كتلة نصية
-              </p>
-            ) : isHidden ? (
-              <p className="mt-1 text-xs leading-snug text-[var(--muted-foreground)] sm:text-sm">
-                مخفي
-              </p>
-            ) : null}
-          </span>
-        </button>
-      </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <Popover>
+              <Popover.Trigger className="block w-full min-w-0">
+                <button
+                  type="button"
+                  className="group/title flex w-full max-w-full items-center gap-1.5 text-start"
+                >
+                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--foreground)] sm:text-[0.95rem]">
+                    {label}
+                  </span>
+                  <Pencil
+                    className="size-3.5 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover/title:opacity-100 group-hover/link:opacity-70"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                </button>
+              </Popover.Trigger>
+              {renderEditPopover()}
+            </Popover>
 
-      <div
-        className="flex shrink-0 items-center gap-2"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {!isBlock ? (
-          <div
-            className="flex h-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-[var(--surface-secondary)] px-3 sm:h-12 sm:min-w-[3.5rem]"
-            aria-label={`${formatNumber(link.totalClicks)} نقرة`}
-          >
-            <span className="text-sm font-bold tabular-nums leading-none text-[var(--foreground)] sm:text-base">
-              {formatNumber(link.totalClicks)}
-            </span>
-            <span className="text-[10px] font-medium leading-none text-[var(--muted-foreground)]">
-              نقرة
-            </span>
+            <Popover>
+              <Popover.Trigger className="block w-full min-w-0">
+                <button
+                  type="button"
+                  className="group/url flex w-full max-w-full items-center gap-1.5 text-start"
+                >
+                  <span
+                    className="min-w-0 truncate text-xs text-[var(--muted-foreground)] sm:text-[13px]"
+                    dir="ltr"
+                  >
+                    {displayUrl}
+                  </span>
+                  {!isBlock ? (
+                    <Pencil
+                      className="size-3.5 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover/url:opacity-100 group-hover/link:opacity-70"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              </Popover.Trigger>
+              {renderEditPopover()}
+            </Popover>
           </div>
-        ) : null}
 
-        <Dropdown>
-          <Button
-            isIconOnly
-            variant="ghost"
-            aria-label="خيارات الرابط"
-            isDisabled={isBusy}
-            className="size-8 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)]"
+          <div
+            className="flex shrink-0 items-center gap-1.5 sm:gap-2"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
-            <MoreVertical className="size-4" />
-          </Button>
-          <Dropdown.Popover placement="bottom end">
-            <Dropdown.Menu
-              onAction={(key) => {
-                if (key === 'edit') openDetail();
-                if (key === 'share') void handleShare();
-                if (key === 'toggle') void onToggleStatus(link);
-                if (key === 'delete') void onDelete(link);
-              }}
+            <button
+              type="button"
+              className={cn(
+                toolBtnClass,
+                link.notifyOnClick && 'text-[var(--foreground)]',
+              )}
+              aria-label={link.notifyOnClick ? 'إيقاف إشعارات النقر' : 'تفعيل إشعارات النقر'}
+              disabled={isBusy}
+              onClick={() => onToggleNotify(link)}
             >
-              <Dropdown.Item id="edit" isDisabled={isBusy} textValue="تعديل">
-                <Pencil className="size-4 shrink-0 text-muted" aria-hidden />
-                <Label>تعديل</Label>
-              </Dropdown.Item>
-              <Dropdown.Item id="share" isDisabled={isBusy || isBlock} textValue="مشاركة">
-                <Share2 className="size-4 shrink-0 text-muted" aria-hidden />
-                <Label>مشاركة</Label>
-              </Dropdown.Item>
-              <Dropdown.Item
-                id="toggle"
-                isDisabled={isBusy}
-                textValue={link.status === 'active' ? 'إخفاء' : 'إظهار'}
+              <Bell
+                className="size-4"
+                strokeWidth={1.75}
+                fill={link.notifyOnClick ? 'currentColor' : 'none'}
+                aria-hidden
+              />
+            </button>
+
+            <Switch
+              isSelected={!isHidden}
+              isDisabled={isBusy}
+              onChange={() => onToggleStatus(link)}
+              aria-label={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط'}
+              className="shrink-0 [--switch-control-bg-checked:#10b981] [--switch-control-bg-checked-hover:#059669]"
+            >
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className="flex min-w-0 flex-wrap items-center gap-0.5"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {!isBlock ? (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className={toolBtnClass}
+                aria-label="فتح الرابط"
               >
-                {link.status === 'active' ? (
-                  <EyeOff className="size-4 shrink-0 text-muted" aria-hidden />
-                ) : (
-                  <Eye className="size-4 shrink-0 text-muted" aria-hidden />
+                <ExternalLink className="size-4" strokeWidth={1.75} aria-hidden />
+              </a>
+            ) : null}
+
+            <button
+              type="button"
+              className={cn(
+                toolBtnClass,
+                link.isPinned && 'text-amber-500 hover:text-amber-600',
+              )}
+              aria-label={link.isPinned ? 'إلغاء التمييز' : 'تمييز الرابط'}
+              disabled={isBusy}
+              onClick={() => onTogglePin(link)}
+            >
+              <Star
+                className="size-4"
+                strokeWidth={1.75}
+                fill={link.isPinned ? 'currentColor' : 'none'}
+                aria-hidden
+              />
+            </button>
+
+            {onMoveToGroup && groups.length > 0 ? (
+              <Popover>
+                <Popover.Trigger>
+                  <button
+                    type="button"
+                    className={cn(toolBtnClass, link.groupId && 'text-[var(--foreground)]')}
+                    aria-label="نقل إلى مجموعة"
+                    disabled={isBusy}
+                  >
+                    <Folder className="size-4" strokeWidth={1.75} aria-hidden />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Content placement="bottom start" className="w-[min(16rem,calc(100vw-2rem))]">
+                  <Popover.Dialog className="flex flex-col gap-1 p-2">
+                    <Popover.Heading className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
+                      نقل إلى مجموعة
+                    </Popover.Heading>
+                    <button
+                      type="button"
+                      className={cn(
+                        'rounded-lg px-2.5 py-2 text-start text-sm',
+                        !link.groupId
+                          ? 'bg-[var(--surface-secondary)] font-semibold'
+                          : 'hover:bg-[var(--surface-secondary)]',
+                      )}
+                      onClick={() => onMoveToGroup(link, null)}
+                    >
+                      بدون مجموعة
+                    </button>
+                    {groups.map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        className={cn(
+                          'flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm',
+                          link.groupId === group.id
+                            ? 'bg-[var(--surface-secondary)] font-semibold'
+                            : 'hover:bg-[var(--surface-secondary)]',
+                        )}
+                        onClick={() => onMoveToGroup(link, group.id)}
+                      >
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: group.color }}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 truncate">{group.nameAr || group.name}</span>
+                      </button>
+                    ))}
+                  </Popover.Dialog>
+                </Popover.Content>
+              </Popover>
+            ) : null}
+
+            <Popover>
+              <Popover.Trigger>
+                <button
+                  type="button"
+                  className={cn(toolBtnClass, isScheduled && 'text-[var(--foreground)]')}
+                  aria-label="جدولة الظهور"
+                  disabled={isBusy}
+                >
+                  <CalendarClock className="size-4" strokeWidth={1.75} aria-hidden />
+                </button>
+              </Popover.Trigger>
+              <Popover.Content placement="bottom start" className="w-[min(22rem,calc(100vw-2rem))]">
+                <Popover.Dialog className="flex flex-col gap-3 p-3">
+                  <Popover.Heading className="text-sm font-semibold">جدولة الظهور</Popover.Heading>
+                  <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
+                    يبدأ في
+                    <input
+                      type="datetime-local"
+                      value={scheduleStart}
+                      onChange={(e) => setScheduleStart(e.target.value)}
+                      className="h-9 rounded-lg border border-[var(--border)] bg-transparent px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
+                    ينتهي في
+                    <input
+                      type="datetime-local"
+                      value={scheduleEnd}
+                      onChange={(e) => setScheduleEnd(e.target.value)}
+                      className="h-9 rounded-lg border border-[var(--border)] bg-transparent px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      isDisabled={isBusy}
+                      className="h-9 flex-1 rounded-lg bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]"
+                      onPress={() =>
+                        void runSave({
+                          scheduledStartAt: fromDatetimeLocalValue(scheduleStart),
+                          scheduledEndAt: fromDatetimeLocalValue(scheduleEnd),
+                        })
+                      }
+                    >
+                      حفظ
+                    </Button>
+                    <Button
+                      isDisabled={isBusy}
+                      variant="secondary"
+                      className="h-9 rounded-lg text-sm"
+                      onPress={() => {
+                        setScheduleStart('');
+                        setScheduleEnd('');
+                        void runSave({
+                          scheduledStartAt: null,
+                          scheduledEndAt: null,
+                        });
+                      }}
+                    >
+                      مسح
+                    </Button>
+                  </div>
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover>
+
+            <Popover>
+              <Popover.Trigger>
+                <button
+                  type="button"
+                  className={cn(toolBtnClass, isProtected && 'text-[var(--foreground)]')}
+                  aria-label="قفل الرابط"
+                  disabled={isBusy}
+                >
+                  <Lock className="size-4" strokeWidth={1.75} aria-hidden />
+                </button>
+              </Popover.Trigger>
+              <Popover.Content placement="bottom start" className="w-[min(22rem,calc(100vw-2rem))]">
+                <Popover.Dialog className="flex flex-col gap-3 p-3">
+                  <Popover.Heading className="text-sm font-semibold">قفل الرابط</Popover.Heading>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    {isProtected
+                      ? 'الرابط محمي حالياً. يمكنك تغيير كلمة المرور أو إزالتها.'
+                      : 'أضف كلمة مرور ليطلبها الزائر قبل فتح الرابط.'}
+                  </p>
+                  <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
+                    كلمة المرور
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-9 rounded-lg border border-[var(--border)] bg-transparent px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]"
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      isDisabled={isBusy || password.trim().length < 4}
+                      className="h-9 flex-1 rounded-lg bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]"
+                      onPress={() => {
+                        void runSave({ password: password.trim() }).then(() => setPassword(''));
+                      }}
+                    >
+                      {isProtected ? 'تغيير' : 'تفعيل القفل'}
+                    </Button>
+                    {isProtected ? (
+                      <Button
+                        isDisabled={isBusy}
+                        variant="secondary"
+                        className="h-9 rounded-lg text-sm"
+                        onPress={() =>
+                          void runSave({ clearPassword: true, isLocked: false }).then(() =>
+                            setPassword(''),
+                          )
+                        }
+                      >
+                        إزالة
+                      </Button>
+                    ) : null}
+                  </div>
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover>
+
+            {!isBlock ? (
+              <button
+                type="button"
+                className={cn(
+                  toolBtnClass,
+                  'h-8 w-auto gap-1.5 px-2 text-xs font-medium',
                 )}
-                <Label>{link.status === 'active' ? 'إخفاء' : 'إظهار'}</Label>
-              </Dropdown.Item>
-              <Dropdown.Item
-                id="delete"
-                variant="danger"
-                isDisabled={isBusy}
-                textValue="حذف"
+                aria-label={`${formatNumber(link.totalClicks)} نقرة`}
+                onClick={openInsights}
               >
-                <Trash2 className="size-4 shrink-0" aria-hidden />
-                <Label>حذف</Label>
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown>
+                <BarChart3 className="size-4" strokeWidth={1.75} aria-hidden />
+                <span className="tabular-nums">
+                  {formatNumber(link.totalClicks)} نقرة
+                </span>
+              </button>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className={cn(toolBtnClass, 'shrink-0 text-[var(--muted-foreground)] hover:text-[var(--danger)]')}
+            aria-label="حذف الرابط"
+            disabled={isBusy}
+            onClick={() => onDelete(link)}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 
   if (!sortable) {
@@ -224,10 +565,21 @@ export function SortableLinkCard({
       value={link}
       dragListener={false}
       dragControls={dragControls}
+      dragElastic={0.08}
+      dragTransition={{ bounceStiffness: 420, bounceDamping: 28 }}
+      onDragStart={() => {
+        setIsDragging(true);
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'grabbing';
+      }}
+      onDragEnd={() => {
+        setIsDragging(false);
+        clearDragChrome();
+      }}
       className={cardClassName}
+      transition={reorderTransition}
       whileDrag={{
         scale: 1.01,
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
         zIndex: 20,
       }}
     >

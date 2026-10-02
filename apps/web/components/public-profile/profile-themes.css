@@ -257,12 +257,12 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   --success: #16a34a;
   --warning: #d97706;
   --danger: #dc2626;
-  --store-glass-bg: rgba(255, 255, 255, 0.82);
-  --store-glass-bar-bg: rgba(22, 24, 35, 0.8);
+  --store-glass-bg: rgba(255, 255, 255, 0.92);
+  --store-glass-bar-bg: rgba(255, 255, 255, 0.94);
   --store-glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
-  --store-glass-bar-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  --store-glass-bar-shadow: 0 10px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
   --store-glass-ring: rgba(22, 24, 35, 0.1);
-  --store-glass-bar-ring: rgba(255, 255, 255, 0.12);
+  --store-glass-bar-ring: rgba(22, 24, 35, 0.1);
   --store-glass-blur: blur(20px) saturate(180%);
   --ease-liquid: cubic-bezier(0.32, 0.72, 0, 1);
   color: var(--foreground);
@@ -280,12 +280,12 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   --surface-secondary-foreground: #e5e5e5;
   --primary: #f5f5f5;
   --primary-foreground: #0a0a0a;
-  --store-glass-bg: rgba(30, 30, 30, 0.86);
-  --store-glass-bar-bg: rgba(22, 24, 35, 0.88);
+  --store-glass-bg: rgba(30, 30, 30, 0.92);
+  --store-glass-bar-bg: rgba(28, 28, 28, 0.94);
   --store-glass-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
-  --store-glass-bar-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
+  --store-glass-bar-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
   --store-glass-ring: rgba(255, 255, 255, 0.12);
-  --store-glass-bar-ring: rgba(255, 255, 255, 0.1);
+  --store-glass-bar-ring: rgba(255, 255, 255, 0.12);
 }
 
 /* iOS 26 Liquid Glass — store cart panel */
@@ -296,8 +296,8 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   background-color: var(--store-glass-bg);
   -webkit-backdrop-filter: var(--store-glass-blur);
   backdrop-filter: var(--store-glass-blur);
-  border: none;
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: var(--store-glass-shadow);
   transition: background-color 0.45s var(--ease-liquid);
 }
 
@@ -306,7 +306,7 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   z-index: 1;
 }
 
-/* iOS 26 Liquid Glass — floating cart bar */
+/* Floating cart bar — light surface chrome (matches profile rows) */
 .profile-store-glass-bar {
   position: relative;
   isolation: isolate;
@@ -314,10 +314,13 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   background-color: var(--store-glass-bar-bg);
   -webkit-backdrop-filter: var(--store-glass-blur);
   backdrop-filter: var(--store-glass-blur);
-  border: none;
-  box-shadow: none;
-  color: #ffffff;
-  transition: background-color 0.45s var(--ease-liquid);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: var(--store-glass-bar-shadow);
+  color: var(--foreground);
+  transition:
+    background-color 0.45s var(--ease-liquid),
+    box-shadow 0.45s var(--ease-liquid),
+    border-color 0.45s var(--ease-liquid);
 }
 
 .profile-store-glass-bar > * {
@@ -333,7 +336,7 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   }
 
   .profile-store-glass-bar {
-    background-color: #161823;
+    background-color: var(--surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

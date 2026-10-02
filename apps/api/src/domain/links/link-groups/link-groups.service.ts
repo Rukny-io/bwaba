@@ -1,17 +1,43 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
+import { CacheManager } from '../../../core/cache/cache.manager';
+import { SubscriptionsService } from '../../subscriptions/subscriptions.service';
 import { CreateLinkGroupDto, UpdateLinkGroupDto } from './dto';
 
 @Injectable()
 export class LinkGroupsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly cacheManager: CacheManager,
+    private readonly subscriptions: SubscriptionsService,
+  ) {}
+
+  private async invalidateProfileCache(userId: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+      select: { username: true },
+    });
+    if (!profile?.username) return;
+    const username = profile.username;
+    await this.cacheManager.invalidate(`profile:username:${username}`);
+    await this.cacheManager.invalidate(`profile:username:v2:${username}`);
+    await this.cacheManager.invalidate(`profile:username:v3:${username}`);
+    await this.cacheManager.invalidate(`profile:username:v4:${username}`);
+    await this.cacheManager.invalidate(`profile:username:v5:${username}`);
+  }
 
   async create(userId: string, createDto: CreateLinkGroupDto) {
-    // Get user's profile
+    const limit = await this.subscriptions.checkLimit(userId, 'linkGroups');
+    if (!limit.allowed) {
+      throw new ForbiddenException(
+        'وصلت إلى حد مجموعات الروابط في خطتك الحالية. رقِّ خطتك لإضافة المزيد.',
+      );
+    }
+
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
     });
@@ -20,7 +46,6 @@ export class LinkGroupsService {
       throw new NotFoundException('Profile not found');
     }
 
-    // Get the max order to place the new group at the end
     const maxOrder = await this.prisma.linkGroup.findFirst({
       where: { profileId: profile.id },
       orderBy: { order: 'desc' },
@@ -29,12 +54,17 @@ export class LinkGroupsService {
 
     const linkGroup = await this.prisma.linkGroup.create({
       data: {
-        ...createDto,
+        name: createDto.name,
+        nameAr: createDto.nameAr,
+        color: createDto.color || '#6366f1',
+        icon: createDto.icon,
+        isExpanded: createDto.isExpanded ?? true,
         profileId: profile.id,
         order: maxOrder ? maxOrder.order + 1 : 0,
       },
     });
 
+    await this.invalidateProfileCache(userId);
     return linkGroup;
   }
 
@@ -116,6 +146,7 @@ export class LinkGroupsService {
       data: updateDto,
     });
 
+    await this.invalidateProfileCache(userId);
     return updatedGroup;
   }
 
@@ -139,17 +170,16 @@ export class LinkGroupsService {
       throw new NotFoundException('Link group not found');
     }
 
-    // Set groupId to null for all links in this group
     await this.prisma.socialLink.updateMany({
       where: { groupId: id },
       data: { groupId: null },
     });
 
-    // Delete the group
     await this.prisma.linkGroup.delete({
       where: { id },
     });
 
+    await this.invalidateProfileCache(userId);
     return { message: 'Link group deleted successfully' };
   }
 }

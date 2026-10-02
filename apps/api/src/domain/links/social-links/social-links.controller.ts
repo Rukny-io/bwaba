@@ -35,6 +35,7 @@ import {
   BulkUpdateStatusDto,
   BulkMoveToGroupDto,
   BulkDeleteDto,
+  UnlockSocialLinkDto,
 } from './dto';
 
 @ApiTags('Social Links')
@@ -235,6 +236,17 @@ export class SocialLinksController {
   }
 
   // ============= PUBLIC TRACKING ENDPOINT =============
+
+  @Post(':id/unlock')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unlock a password-protected social link (public)' })
+  @ApiParam({ name: 'id', description: 'Social link ID' })
+  @ApiResponse({ status: 200, description: 'Link unlocked successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid password' })
+  @ApiResponse({ status: 404, description: 'Social link not found' })
+  unlock(@Param('id') id: string, @Body() dto: UnlockSocialLinkDto) {
+    return this.socialLinksService.unlock(id, dto.password);
+  }
 
   @Post(':id/track-click')
   @HttpCode(HttpStatus.OK)

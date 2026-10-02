@@ -22,10 +22,9 @@ import {
 import { cn } from './utils';
 import { ProfileFormsSection } from './profile-forms-section';
 import { ProfileHeader } from './profile-header';
-import { ProfileTopBar } from './profile-top-bar';
 import { ProfileLinkButton } from './profile-link-button';
 import {
-  groupProfileLinkRows,
+  buildPublicLinkBlocks,
   ProfileLinksSection,
 } from './profile-links-section';
 import { ProfileProductsSection } from './profile-products-section';
@@ -136,10 +135,19 @@ export function ProfilePageView({
   const t = useTranslations('publicProfile');
   const themeClass = getProfileThemeClass(profile.themeKey);
   const usePublicLayout = !preview;
-  const links = [...profile.socialLinks].sort((a, b) => a.displayOrder - b.displayOrder);
+  /** Dashboard iframe embed: real page chrome, but no checkout / cart actions */
+  const storeReadOnly = preview || embedded;
+  const links = [...profile.socialLinks].sort((a, b) => {
+    const pinDiff = Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned));
+    if (pinDiff !== 0) return pinDiff;
+    return a.displayOrder - b.displayOrder;
+  });
 
   const profileLinks = links.filter((link) => !isFormLink(link.platform));
-  const profileLinkRows = groupProfileLinkRows(profileLinks);
+  const profileLinkBlocks = buildPublicLinkBlocks(
+    profileLinks,
+    profile.linkGroups ?? [],
+  );
 
   const linkedFormSlugs = new Set(
     links
@@ -152,13 +160,17 @@ export function ProfilePageView({
   const hasContent =
     profileLinks.length > 0 || products.length > 0 || profileForms.length > 0;
 
-  const productsCompact = preview;
+  const productsCompact = preview || embedded;
   const pageColumnClass = cn(
     'mx-auto w-full space-y-6',
-    preview ? 'max-w-md px-3' : 'max-w-lg px-4 sm:max-w-xl sm:px-5 max-sm:max-w-none',
+    preview || embedded
+      ? 'max-w-md px-3'
+      : 'max-w-lg px-4 sm:max-w-xl sm:px-5 max-sm:max-w-none',
   );
 
   const hasStore = products.length > 0;
+  /** Show floating cart on the public profile when the store has products (not in preview/embed). */
+  const showStoreCart = hasStore && !storeReadOnly;
 
   return (
     <MediaUrlProvider resolve={resolveMediaUrl}>
@@ -166,7 +178,7 @@ export function ProfilePageView({
         storeSlug={profile.username}
         storeName={profile.name}
         products={products}
-        preview={preview}
+        preview={storeReadOnly}
       >
       <div
         className={cn(
@@ -185,28 +197,36 @@ export function ProfilePageView({
           className={cn(
             'relative z-[1] pt-1',
             pageColumnClass,
-            hasStore && !preview ? 'pb-28' : 'pb-12',
+            showStoreCart ? 'pb-28' : 'pb-12',
           )}
         >
           <div className="space-y-0">
-            {usePublicLayout && !preview && !constrained ? <ProfileTopBar /> : null}
             <ProfileHeader
               profile={profile}
-              compact={preview}
-              withTopBar={usePublicLayout && !preview && !constrained}
+              compact={preview || embedded}
               productCount={products.length}
               linkCount={profileLinks.length}
               formCount={profileForms.length}
-              storeHref={hasStore ? getPublicStorePath(profile.username) : undefined}
+              showLanguageSwitcher={usePublicLayout && !preview && !constrained && !embedded}
+              storeHref={
+                hasStore && !storeReadOnly
+                  ? getPublicStorePath(profile.username)
+                  : undefined
+              }
             />
           </div>
 
           {profileLinks.length > 0 ? (
             <ProfileLinksSection
-              rows={profileLinkRows}
+              blocks={profileLinkBlocks}
               linkCount={profileLinks.length}
               compact={productsCompact}
-              renderLink={(link) => renderLinkItem(link, { preview, onTrackClick })}
+              renderLink={(link) =>
+                renderLinkItem(link, {
+                  preview: preview || embedded,
+                  onTrackClick,
+                })
+              }
             />
           ) : null}
 
@@ -216,11 +236,13 @@ export function ProfilePageView({
               storeSlug={profile.username}
               storeName={profile.name}
               storeAvatar={profile.avatar}
-              initialProductId={initialProductId}
-              preview={preview}
+              initialProductId={storeReadOnly ? null : initialProductId}
+              preview={storeReadOnly}
               compact={productsCompact}
-              limit={preview ? undefined : PROFILE_PRODUCTS_PREVIEW_LIMIT}
-              viewAllHref={preview ? undefined : getPublicStorePath(profile.username)}
+              limit={storeReadOnly ? undefined : PROFILE_PRODUCTS_PREVIEW_LIMIT}
+              viewAllHref={
+                storeReadOnly ? undefined : getPublicStorePath(profile.username)
+              }
               assignSectionId
             />
           ) : null}
@@ -238,10 +260,10 @@ export function ProfilePageView({
           ) : null}
 
           {profileForms.length > 0 ? (
-            <ProfileFormsSection forms={profileForms} preview={preview} />
+            <ProfileFormsSection forms={profileForms} preview={preview || embedded} />
           ) : null}
 
-          {usePublicLayout && !preview && !constrained ? (
+          {usePublicLayout && !preview && !constrained && !embedded ? (
             <footer className="pt-2 text-center">
               <a
                 href="/"
@@ -252,7 +274,7 @@ export function ProfilePageView({
             </footer>
           ) : null}
         </div>
-        {hasStore && !preview ? (
+        {showStoreCart ? (
           <StoreCartFloating
             storeSlug={profile.username}
             products={products}

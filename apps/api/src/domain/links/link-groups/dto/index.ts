@@ -17,9 +17,10 @@ export class CreateLinkGroupDto {
   @IsOptional()
   nameAr?: string;
 
-  @ApiProperty({ description: 'Group color (hex)', default: '#6366f1' })
+  @ApiPropertyOptional({ description: 'Group color (hex)', default: '#6366f1' })
   @IsHexColor()
-  color: string;
+  @IsOptional()
+  color?: string;
 
   @ApiPropertyOptional({ description: 'Icon name (Lucide icon)' })
   @IsString()

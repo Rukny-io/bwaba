@@ -18,7 +18,7 @@ function publicSiteFrameOrigins(hostname: string): string[] {
   const raw =
     process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (isLoopbackHost(hostname) || isDev ? 'http://localhost:3006' : '');
+    (isLoopbackHost(hostname) || isDev ? 'http://localhost:3011' : '');
   if (!raw) return [];
   try {
     return [new URL(raw).origin];

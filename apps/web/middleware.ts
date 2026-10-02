@@ -9,22 +9,44 @@ import { parseApiConnectOrigins } from '@rukny/forms-shared/security-headers';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
-const SECURITY_OPTS = {
-  isDev,
-  allowTurnstile: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()),
-  apiConnectOrigins: parseApiConnectOrigins(process.env.NEXT_PUBLIC_API_URL),
-} as const;
+function resolveAppOrigin(): string {
+  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://app.rukny.io';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return 'https://app.rukny.io';
+  }
+}
+
+function resolveFrameAncestors(
+  request: NextRequest,
+): 'none' | '*' | string[] {
+  const embed = request.nextUrl.searchParams.get('embed') === '1';
+  if (!embed) return 'none';
+  if (isDev) return '*';
+  return [resolveAppOrigin()];
+}
 
 export function middleware(request: NextRequest) {
-  const security = createSecurityHeadersContext(SECURITY_OPTS);
+  const isEmbed = request.nextUrl.searchParams.get('embed') === '1';
+  const security = createSecurityHeadersContext({
+    isDev,
+    allowTurnstile: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()),
+    apiConnectOrigins: parseApiConnectOrigins(process.env.NEXT_PUBLIC_API_URL),
+    frameAncestors: resolveFrameAncestors(request),
+  });
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/_next') || pathname.includes('.')) {
-    return applySecurityHeaders(NextResponse.next(), security);
+    const response = applySecurityHeaders(NextResponse.next(), security);
+    if (isEmbed) {
+      response.headers.set('Cache-Control', 'no-store');
+    }
+    return response;
   }
 
   const requestHeaders = applySecurityHeadersToRequest(request, security);
-  return applySecurityHeaders(
+  const response = applySecurityHeaders(
     NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -32,6 +54,13 @@ export function middleware(request: NextRequest) {
     }),
     security,
   );
+  if (isEmbed) {
+    response.headers.set(
+      'Cache-Control',
+      'private, no-store, no-cache, must-revalidate',
+    );
+  }
+  return response;
 }
 
 export const config = {

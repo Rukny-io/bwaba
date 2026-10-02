@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ImagePlus, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Image, ImagePlus, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
 import { Button, Dropdown, Label } from '@heroui/react';
 import { LinkPlatformIconBadge } from '@/components/app/links/platform-icons/link-platform-icon-badge';
 import {
@@ -21,6 +21,8 @@ interface LinkThumbnailControlProps {
   onUpdated: (link: SocialLink) => void;
   onError?: (message: string) => void;
   className?: string;
+  /** `toolbar` = compact icon for link card action row */
+  variant?: 'thumb' | 'toolbar';
 }
 
 export function LinkThumbnailControl({
@@ -30,11 +32,13 @@ export function LinkThumbnailControl({
   onUpdated,
   onError,
   className,
+  variant = 'thumb',
 }: LinkThumbnailControlProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const thumbnailSrc = resolveMediaUrl(link.thumbnail);
   const hasCustomLogo = Boolean(thumbnailSrc);
+  const isToolbar = variant === 'toolbar';
 
   async function runAction(action: () => Promise<SocialLink>) {
     setBusy(true);
@@ -61,39 +65,64 @@ export function LinkThumbnailControl({
       <Dropdown>
         <Button
           variant="ghost"
+          isIconOnly={isToolbar}
           isDisabled={disabled || busy}
           aria-label="تغيير شعار الرابط"
           className={cn(
-            'group/thumb relative h-auto min-h-0 min-w-0 overflow-hidden rounded-xl p-0',
-            'size-11 sm:size-12',
-            'ring-1 ring-[var(--border)]',
-            'hover:ring-[color-mix(in_srgb,var(--border)_50%,var(--foreground)_50%)]',
+            isToolbar
+              ? cn(
+                  'size-8 min-w-8 rounded-lg p-0',
+                  'text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
+                  hasCustomLogo && 'text-[var(--foreground)]',
+                )
+              : cn(
+                  'group/thumb relative h-auto min-h-0 min-w-0 overflow-hidden rounded-full p-0',
+                  'size-11 sm:size-12',
+                  'ring-1 ring-[var(--border)]',
+                  'hover:ring-[color-mix(in_srgb,var(--border)_50%,var(--foreground)_50%)]',
+                ),
           )}
         >
-          {hasCustomLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbnailSrc!}
-              alt=""
-              className="size-full object-contain bg-[var(--surface-secondary)] p-1.5"
-            />
-          ) : (
-            <LinkPlatformIconBadge type={catalogType} size="md" />
-          )}
-
-          <span
-            className={cn(
-              'absolute inset-0 flex items-center justify-center bg-black/45 text-white',
-              'opacity-0 transition-opacity group-hover/thumb:opacity-100',
-              busy && 'opacity-100',
-            )}
-          >
-            {busy ? (
+          {isToolbar ? (
+            busy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
-              <ImagePlus className="size-4" aria-hidden />
-            )}
-          </span>
+              <Image className="size-4" strokeWidth={1.75} aria-hidden />
+            )
+          ) : (
+            <>
+              {hasCustomLogo ? (
+                <span className="flex size-full items-center justify-center overflow-hidden bg-[var(--surface-secondary)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={thumbnailSrc!}
+                    alt=""
+                    className="size-full scale-[1.08] object-cover"
+                  />
+                </span>
+              ) : (
+                <LinkPlatformIconBadge
+                  type={catalogType}
+                  size="md"
+                  className="size-full rounded-full"
+                />
+              )}
+
+              <span
+                className={cn(
+                  'absolute inset-0 flex items-center justify-center bg-black/45 text-white',
+                  'opacity-0 transition-opacity group-hover/thumb:opacity-100',
+                  busy && 'opacity-100',
+                )}
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <ImagePlus className="size-4" aria-hidden />
+                )}
+              </span>
+            </>
+          )}
         </Button>
 
         <Dropdown.Popover placement="bottom start">

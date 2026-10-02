@@ -1,9 +1,16 @@
 'use client';
 
-import { Link2 } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Folder, Link2 } from 'lucide-react';
 import { MediaUrlProvider } from '../media-url-context';
 import { getProfileThemeClass } from '../profile-themes';
-import type { MediaUrlResolver, PublicProfile, PublicProfileForm } from '../types';
+import type {
+  MediaUrlResolver,
+  PublicLinkGroup,
+  PublicProfile,
+  PublicProfileForm,
+  PublicSocialLink,
+} from '../types';
 import { cn } from '../utils';
 import { ProfileFormsSection } from './profile-forms-section';
 import { ProfileHeader } from './profile-header';
@@ -22,6 +29,74 @@ function formSlugFromLink(link: { username: string | null; url: string }): strin
   } catch {
     return null;
   }
+}
+
+function sortLinks(a: PublicSocialLink, b: PublicSocialLink) {
+  const pinDiff = Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned));
+  if (pinDiff !== 0) return pinDiff;
+  return a.displayOrder - b.displayOrder;
+}
+
+function CollapsibleGroup({
+  group,
+  links,
+  preview,
+  onTrackClick,
+}: {
+  group: PublicLinkGroup;
+  links: PublicSocialLink[];
+  preview?: boolean;
+  onTrackClick?: (linkId: string) => void;
+}) {
+  const [open, setOpen] = useState(group.isExpanded);
+  const label = group.nameAr || group.name;
+  const color = group.color || 'var(--foreground)';
+
+  return (
+    <div className="space-y-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          'profile-card flex w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3.5',
+          'ring-1 ring-[var(--border)]',
+          'text-sm font-semibold text-[var(--foreground)]',
+          !preview && 'profile-card-interactive',
+        )}
+        aria-expanded={open}
+      >
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] ring-1 ring-[var(--border)]"
+          aria-hidden
+        >
+          <Folder className="size-4" style={{ color }} strokeWidth={1.75} />
+        </span>
+        <span className="min-w-0 flex-1 text-start">
+          <span className="block truncate">{label}</span>
+          <span className="mt-0.5 block text-xs font-medium text-[var(--muted-foreground)]">
+            {links.length} رابط
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-[var(--muted-foreground)]/55 transition-transform',
+            open && 'rotate-180 text-[var(--muted-foreground)]',
+          )}
+          aria-hidden
+        />
+      </button>
+      {open
+        ? links.map((link) => (
+            <ProfileLinkButton
+              key={link.id}
+              link={link}
+              preview={preview}
+              onTrackClick={onTrackClick}
+            />
+          ))
+        : null}
+    </div>
+  );
 }
 
 export interface ProfilePageViewProps {
@@ -49,7 +124,12 @@ export function ProfilePageView({
 }: ProfilePageViewProps) {
   const themeClass = getProfileThemeClass(profile.themeKey);
   const usePublicLayout = !embedded || constrained;
-  const links = [...profile.socialLinks].sort((a, b) => a.displayOrder - b.displayOrder);
+  const links = [...profile.socialLinks].sort(sortLinks);
+  const groups = [...(profile.linkGroups ?? [])].sort((a, b) => a.order - b.order);
+  const knownGroupIds = new Set(groups.map((group) => group.id));
+  const ungrouped = links.filter(
+    (link) => !link.groupId || !knownGroupIds.has(link.groupId),
+  );
 
   const linkedFormSlugs = new Set(
     links
@@ -68,8 +148,8 @@ export function ProfilePageView({
         className={cn(
           'profile-theme-scope text-[var(--foreground)]',
           themeClass,
-          usePublicLayout && 'profile-page-public bg-[var(--background)]',
-          !usePublicLayout && 'bg-[var(--background)]',
+          usePublicLayout && !constrained && 'profile-page-public bg-[var(--background)]',
+          (constrained || !usePublicLayout) && 'bg-[var(--background)]',
           embedded || constrained
             ? fillHeight
               ? 'min-h-full'
@@ -81,6 +161,7 @@ export function ProfilePageView({
           className={cn(
             'relative mx-auto w-full',
             usePublicLayout ? 'max-w-lg px-5 pb-10' : 'max-w-md px-3 py-4',
+            constrained && 'px-4 pb-6 pt-5',
           )}
         >
           <div className={cn(usePublicLayout ? 'space-y-6' : 'space-y-5')}>
@@ -88,7 +169,7 @@ export function ProfilePageView({
 
             {links.length > 0 ? (
               <section className="space-y-2.5" aria-label="الروابط">
-                {links.map((link) => (
+                {ungrouped.map((link) => (
                   <ProfileLinkButton
                     key={link.id}
                     link={link}
@@ -96,6 +177,19 @@ export function ProfilePageView({
                     onTrackClick={onTrackClick}
                   />
                 ))}
+                {groups.map((group) => {
+                  const groupLinks = links.filter((link) => link.groupId === group.id);
+                  if (groupLinks.length === 0) return null;
+                  return (
+                    <CollapsibleGroup
+                      key={group.id}
+                      group={group}
+                      links={groupLinks}
+                      preview={preview}
+                      onTrackClick={onTrackClick}
+                    />
+                  );
+                })}
               </section>
             ) : null}
 
@@ -125,7 +219,7 @@ export function ProfilePageView({
             ) : null}
           </div>
 
-          usePublicLayout && !preview && !constrained ? (
+          {usePublicLayout && !preview && !constrained ? (
             <footer className="mt-14 text-center">
               <a
                 href="/"
@@ -134,7 +228,7 @@ export function ProfilePageView({
                 أنشئ صفحتك على ركني
               </a>
             </footer>
-          ) : null
+          ) : null}
         </div>
       </div>
     </MediaUrlProvider>

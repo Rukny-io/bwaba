@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** Floating glass mobile dock shell — fade + safe area */
+/** Floating mobile dock shell — fade + safe area (mail-style) */
 export function MobileDockShell({
   children,
   className,
@@ -32,17 +32,14 @@ export function MobileDockShell({
             'linear-gradient(to top, color-mix(in srgb, var(--background) 88%, transparent) 20%, transparent 100%)',
         }}
       />
-      <div
-        dir="ltr"
-        className="pointer-events-auto relative mx-auto flex w-full max-w-[27rem] items-center justify-center gap-2 px-3"
-      >
+      <div className="pointer-events-auto relative mx-auto flex w-full max-w-[27rem] items-center justify-center gap-2 px-3">
         {children}
       </div>
     </div>
   );
 }
 
-/** Frosted glass pill container */
+/** Compact pill container — matches mail dock chrome */
 export function MobileDockPill({
   children,
   className,
@@ -59,14 +56,43 @@ export function MobileDockPill({
       dir={dir}
       aria-label={ariaLabel}
       className={cn(
-        'min-w-0 max-w-full rounded-full border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 shadow-[var(--card-shadow)] backdrop-blur-2xl dark:border-[var(--border)] dark:bg-[var(--surface)]/95',
+        'flex min-w-0 max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-[var(--border)] bg-[var(--field-background)] p-1.5',
+        '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
-      <div className="flex items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {children}
-      </div>
+      {children}
     </nav>
+  );
+}
+
+/** Circular action button beside the pill (e.g. More / Plus) */
+export function MobileDockFab({
+  icon: Icon,
+  label,
+  isActive,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  isActive?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={isActive}
+      onClick={onClick}
+      className={cn(
+        'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full border border-[var(--border)] outline-none transition-colors',
+        isActive
+          ? 'bg-[var(--foreground)] text-[var(--background)]'
+          : 'bg-[var(--field-background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+      )}
+    >
+      <Icon size={isActive ? 19 : 20} strokeWidth={isActive ? 2.2 : 2.1} aria-hidden />
+    </button>
   );
 }
 
@@ -77,6 +103,7 @@ export function MobileDockItem({
   href,
   onClick,
   showLabel = true,
+  forceLabel = false,
 }: {
   icon: LucideIcon;
   label: string;
@@ -84,28 +111,30 @@ export function MobileDockItem({
   href?: string;
   onClick?: () => void;
   showLabel?: boolean;
+  /** Always show label (e.g. Back) even when not active */
+  forceLabel?: boolean;
 }) {
-  const withLabel = isActive && showLabel;
+  const withLabel = (isActive && showLabel) || forceLabel;
 
   const inner = (
     <div
       className={cn(
         'relative flex h-11 min-w-11 items-center justify-center rounded-full transition-all duration-300 ease-out',
-        withLabel
-          ? 'gap-1.5 bg-[var(--foreground)] px-4 text-[var(--background)] shadow-md'
-          : isActive
-            ? 'bg-[var(--surface-secondary)] text-[var(--foreground)]'
+        isActive && showLabel
+          ? 'gap-1.5 bg-[var(--foreground)] px-3.5 text-[var(--background)]'
+          : forceLabel
+            ? 'gap-1.5 px-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             : 'px-2.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
       )}
     >
       <Icon
-        size={withLabel || isActive ? 19 : 21}
+        size={withLabel ? 18 : 20}
         strokeWidth={isActive ? 2.2 : 1.7}
         className="shrink-0"
         aria-hidden
       />
       {withLabel ? (
-        <span className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold tracking-tight">
+        <span className="max-w-[5.5rem] truncate text-[12px] font-semibold tracking-tight">
           {label}
         </span>
       ) : null}

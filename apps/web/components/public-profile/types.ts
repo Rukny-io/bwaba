@@ -9,6 +9,19 @@ export interface PublicSocialLink {
   thumbnail?: string | null;
   connectionId?: string | null;
   totalClicks?: number;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  groupId?: string | null;
+}
+
+export interface PublicLinkGroup {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  color: string;
+  icon: string | null;
+  order: number;
+  isExpanded: boolean;
 }
 
 export interface PublicProfile {
@@ -33,6 +46,7 @@ export interface PublicProfile {
     phoneNumber?: string | null;
   } | null;
   socialLinks: PublicSocialLink[];
+  linkGroups?: PublicLinkGroup[];
   _count?: {
     followers?: number;
     following?: number;

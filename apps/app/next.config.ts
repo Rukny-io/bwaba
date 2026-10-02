@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { authResolveAliases } from '../../packages/auth/next-resolve-aliases';
 import { formsSharedResolveAliases } from '../../packages/forms-shared/next-resolve-aliases';
+import { publicProfileUiResolveAliases } from '../../packages/public-profile-ui/next-resolve-aliases';
 import { thmanyahFontResolveAliases } from '../../packages/Thmanyah-Font-Family/next-resolve-aliases';
 import { herouiResolveAliases } from './packages/heroui-next-resolve-aliases';
 
@@ -34,6 +35,7 @@ const monorepoAliases = {
   ...formsSharedResolveAliases(),
   ...authResolveAliases(),
   ...thmanyahFontResolveAliases(),
+  ...publicProfileUiResolveAliases(),
   ...herouiResolveAliases(),
 };
 
@@ -53,7 +55,12 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: ['192.168.0.179', '127.0.0.1', 'localhost'],
-  transpilePackages: ['@rukny/forms-shared', '@rukny/auth', '@rukny/thmanyah-font'],
+  transpilePackages: [
+    '@rukny/forms-shared',
+    '@rukny/auth',
+    '@rukny/thmanyah-font',
+    '@rukny/public-profile-ui',
+  ],
   turbopack: {
     root: path.resolve(__dirname),
     resolveAlias: monorepoAliases,

@@ -7,6 +7,9 @@ import {
   MaxLength,
   IsIn,
   IsBoolean,
+  IsDateString,
+  MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -103,4 +106,47 @@ export class CreateSocialLinkDto {
   @IsBoolean()
   @IsOptional()
   isPinned?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'When the link becomes visible on the public profile (ISO date)',
+  })
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsDateString()
+  @IsOptional()
+  scheduledStartAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'When the link stops being visible on the public profile (ISO date)',
+  })
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsDateString()
+  @IsOptional()
+  scheduledEndAt?: string | null;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether the link requires a password before opening',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isLocked?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Notify the owner when someone clicks this link',
+  })
+  @IsBoolean()
+  @IsOptional()
+  notifyOnClick?: boolean;
+}
+
+export class UnlockSocialLinkDto {
+  @ApiProperty({
+    example: 'secret-pass',
+    description: 'Password required to unlock the link',
+  })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  password: string;
 }

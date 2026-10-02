@@ -3,6 +3,7 @@
 import { ProfileLinkChevron, ProfilePlatformIcon } from './profile-platform-icon';
 import type { PublicSocialLink } from '../types';
 import { cn } from '../utils';
+import { Lock } from 'lucide-react';
 
 function isHeaderOrText(platform: string): boolean {
   return platform === 'header' || platform === 'text';
@@ -73,13 +74,26 @@ export function ProfileLinkButton({ link, preview, onTrackClick }: ProfileLinkBu
   const content = (
     <>
       <ProfilePlatformIcon platform={link.platform} size="md" />
-      <span className="min-w-0 flex-1 truncate text-center">{label}</span>
+      <span className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate text-center">
+        <span className="truncate">{label}</span>
+        {link.isLocked ? (
+          <Lock className="size-3.5 shrink-0 text-[var(--muted-foreground)]" aria-hidden />
+        ) : null}
+      </span>
       <ProfileLinkChevron />
     </>
   );
 
   if (preview) {
     return <div className={className}>{content}</div>;
+  }
+
+  if (link.isLocked) {
+    return (
+      <button type="button" className={className} onClick={handleClick}>
+        {content}
+      </button>
+    );
   }
 
   return (

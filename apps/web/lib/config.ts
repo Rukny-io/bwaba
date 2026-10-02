@@ -4,7 +4,7 @@ export const API_PUBLIC_BASE =
 export const PUBLIC_SITE_URL = (
   process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  'http://localhost:3006'
+  'http://localhost:3011'
 ).replace(/\/$/, '');
 
 export function getBackendUrl(): string {

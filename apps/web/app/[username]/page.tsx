@@ -66,15 +66,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PublicProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const { embed, product: initialProductId } = await searchParams;
+  const isEmbed = embed === '1';
 
   if (!isValidProfileUsername(username)) {
     notFound();
   }
 
+  const fresh = isEmbed;
   const [profile, formsData, productsData] = await Promise.all([
-    fetchPublicProfile(username),
-    fetchPublicProfileForms(username),
-    fetchPublicProfileProducts(username),
+    fetchPublicProfile(username, { fresh }),
+    fetchPublicProfileForms(username, { fresh }),
+    fetchPublicProfileProducts(username, 48, { fresh }),
   ]);
 
   if (
@@ -91,7 +93,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
       forms={formsData.forms}
       products={productsData.products}
       initialProductId={initialProductId ?? null}
-      embed={embed === '1'}
+      embed={isEmbed}
     />
   );
 }

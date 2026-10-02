@@ -17,6 +17,19 @@ export interface PublicSocialLink {
   thumbnail?: string | null;
   connectionId?: string | null;
   totalClicks?: number;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  groupId?: string | null;
+}
+
+export interface PublicLinkGroup {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  color: string;
+  icon: string | null;
+  order: number;
+  isExpanded: boolean;
 }
 
 export interface PublicProfile {
@@ -40,6 +53,7 @@ export interface PublicProfile {
     phoneNumber?: string | null;
   } | null;
   socialLinks: PublicSocialLink[];
+  linkGroups?: PublicLinkGroup[];
   _count?: {
     followers?: number;
     following?: number;
@@ -89,10 +103,22 @@ export function getCanonicalStoreUrl(username: string): string {
 
 export { resolveProfileMediaUrl } from '@/lib/media-url';
 
-export async function fetchPublicProfile(username: string): Promise<PublicProfile | null> {
+type PublicFetchOptions = {
+  /** Bypass Next.js Data Cache (dashboard live preview / embed). */
+  fresh?: boolean;
+};
+
+function fetchCacheInit(fresh?: boolean): RequestInit {
+  return fresh ? { cache: 'no-store' } : { next: { revalidate: 60 } };
+}
+
+export async function fetchPublicProfile(
+  username: string,
+  options: PublicFetchOptions = {},
+): Promise<PublicProfile | null> {
   try {
     const res = await fetch(`${apiRoot()}/profiles/${encodeURIComponent(username)}`, {
-      next: { revalidate: 60 },
+      ...fetchCacheInit(options.fresh),
     });
     if (!res.ok) return null;
     return (await res.json()) as PublicProfile;
@@ -103,11 +129,12 @@ export async function fetchPublicProfile(username: string): Promise<PublicProfil
 
 export async function fetchPublicProfileCollections(
   username: string,
+  options: PublicFetchOptions = {},
 ): Promise<PublicProfileCollection[]> {
   try {
     const res = await fetch(
       `${apiRoot()}/stores/${encodeURIComponent(username)}/collections`,
-      { next: { revalidate: 60 } },
+      fetchCacheInit(options.fresh),
     );
     if (!res.ok) return [];
     return (await res.json()) as PublicProfileCollection[];
@@ -119,11 +146,12 @@ export async function fetchPublicProfileCollections(
 export async function fetchPublicProfileProducts(
   username: string,
   limit = 48,
+  options: PublicFetchOptions = {},
 ): Promise<PublicProfileProductsResponse> {
   try {
     const res = await fetch(
       `${apiRoot()}/stores/${encodeURIComponent(username)}/products?limit=${limit}`,
-      { next: { revalidate: 60 } },
+      fetchCacheInit(options.fresh),
     );
     if (!res.ok) return { products: [], total: 0, storeId: null };
     return (await res.json()) as PublicProfileProductsResponse;
@@ -134,11 +162,12 @@ export async function fetchPublicProfileProducts(
 
 export async function fetchPublicProfileForms(
   username: string,
+  options: PublicFetchOptions = {},
 ): Promise<PublicProfileFormsResponse> {
   try {
     const res = await fetch(
       `${apiRoot()}/forms/public/user/${encodeURIComponent(username)}?limit=24`,
-      { next: { revalidate: 60 } },
+      fetchCacheInit(options.fresh),
     );
     if (!res.ok) return { forms: [], featured: null };
     return (await res.json()) as PublicProfileFormsResponse;
@@ -156,6 +185,30 @@ export async function trackSocialLinkClick(linkId: string): Promise<void> {
   } catch {
     /* non-blocking */
   }
+}
+
+export async function unlockSocialLink(
+  linkId: string,
+  password: string,
+): Promise<{ url: string }> {
+  const res = await fetch(
+    `${apiRoot()}/social-links/${encodeURIComponent(linkId)}/unlock`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    },
+  );
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as
+      | { message?: string | string[] }
+      | null;
+    const message = Array.isArray(body?.message)
+      ? body.message.join(', ')
+      : body?.message;
+    throw new Error(message || 'كلمة المرور غير صحيحة');
+  }
+  return (await res.json()) as { url: string };
 }
 
 export function isProfilePubliclyVisible(profile: PublicProfile): boolean {

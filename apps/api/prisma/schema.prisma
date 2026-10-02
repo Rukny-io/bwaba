@@ -230,31 +230,36 @@ model RuknyVerifiedApplication {
 }
 
 model SocialLink {
-  id             String           @id
-  profileId      String
-  platform       String
-  username       String?
-  url            String
-  shortUrl       String?
-  displayOrder   Int              @default(0)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  title          String?
-  status         String           @default("active")
-  views          Int              @default(0)
-  groupId        String?
-  isPinned       Boolean          @default(false)
-  isPopular      Boolean          @default(false)
-  totalClicks    Int              @default(0)
-  layout         String           @default("classic")
-  thumbnail      String?
+  id               String           @id
+  profileId        String
+  platform         String
+  username         String?
+  url              String
+  shortUrl         String?
+  displayOrder     Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  title            String?
+  status           String           @default("active")
+  views            Int              @default(0)
+  groupId          String?
+  isPinned         Boolean          @default(false)
+  isPopular        Boolean          @default(false)
+  totalClicks      Int              @default(0)
+  layout           String           @default("classic")
+  thumbnail        String?
   /**
    * InstagramConnection.id for profile_card / media_grid layouts
    */
-  connectionId   String?
-  link_analytics link_analytics[]
-  group          LinkGroup?       @relation(fields: [groupId], references: [id])
-  profile        Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  connectionId     String?
+  scheduledStartAt DateTime?
+  scheduledEndAt   DateTime?
+  isLocked         Boolean          @default(false)
+  passwordHash     String?
+  notifyOnClick    Boolean          @default(false)
+  link_analytics   link_analytics[]
+  group            LinkGroup?       @relation(fields: [groupId], references: [id])
+  profile          Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([groupId])
   @@index([profileId])
@@ -2225,6 +2230,7 @@ enum NotificationType {
   SUPPORT_TICKET_REPLY
   SUPPORT_TICKET_STATUS_CHANGED
   SUPPORT_TICKET_CREATED
+  LINK_CLICK
 }
 
 enum OrderStatus {

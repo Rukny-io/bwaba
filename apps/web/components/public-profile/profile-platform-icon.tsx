@@ -11,6 +11,8 @@ interface ProfilePlatformIconProps {
   framed?: boolean;
   variant?: 'framed' | 'soft' | 'plain';
   className?: string;
+  /** Fraction of the shell filled by the mark (major platforms use a smaller fixed value) */
+  markScale?: number;
 }
 
 const SIZE = { sm: 'size-8', md: 'size-10' } as const;
@@ -22,6 +24,7 @@ export function ProfilePlatformIcon({
   framed,
   variant,
   className,
+  markScale = 0.78,
 }: ProfilePlatformIconProps) {
   const asset = getPlatformIconAsset(platform);
   const isForm = platform === 'form';
@@ -34,6 +37,7 @@ export function ProfilePlatformIcon({
         : 'rounded-lg';
 
   if (asset) {
+    const pct = `${Math.round(markScale * 100)}%`;
     return (
       <span
         className={cn(
@@ -43,14 +47,13 @@ export function ProfilePlatformIcon({
           className,
         )}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={asset.src}
           alt=""
           draggable={false}
-          className={cn(
-            asset.fill ? 'size-full object-cover' : IMG[size],
-            !asset.fill && 'object-contain',
-          )}
+          className="object-contain"
+          style={{ width: pct, height: pct }}
         />
       </span>
     );

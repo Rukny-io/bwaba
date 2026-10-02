@@ -48,6 +48,46 @@ export async function fetchLinkGroups(): Promise<LinkGroup[]> {
   return data;
 }
 
+export async function createLinkGroup(input: {
+  name: string;
+  nameAr?: string;
+  color?: string;
+  icon?: string;
+  isExpanded?: boolean;
+}): Promise<LinkGroup> {
+  const { data } = await api.post<LinkGroup>('/link-groups', {
+    color: '#6366f1',
+    ...input,
+  });
+  return data;
+}
+
+export async function updateLinkGroup(
+  id: string,
+  input: Partial<{
+    name: string;
+    nameAr: string | null;
+    color: string;
+    icon: string | null;
+    order: number;
+    isExpanded: boolean;
+  }>,
+): Promise<LinkGroup> {
+  const { data } = await api.put<LinkGroup>(`/link-groups/${id}`, input);
+  return data;
+}
+
+export async function deleteLinkGroup(id: string): Promise<void> {
+  await api.delete(`/link-groups/${id}`);
+}
+
+export async function moveLinksToGroup(
+  linkIds: string[],
+  groupId: string | null,
+): Promise<void> {
+  await api.patch('/social-links/bulk/move', { linkIds, groupId });
+}
+
 export function buildLinkPayload(title: string, url: string): CreateSocialLinkInput {
   const trimmedTitle = title.trim();
   const trimmedUrl = url.trim();

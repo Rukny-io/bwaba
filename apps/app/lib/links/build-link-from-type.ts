@@ -129,14 +129,14 @@ export function getLinkFormFields(type: LinkCatalogTypeId): {
       };
     case 'header':
       return {
-        titleLabel: 'نص العنوان',
-        titlePlaceholder: 'عنوان القسم',
+        titleLabel: 'نص عنوان القسم',
+        titlePlaceholder: 'مثال: تواصلي الاجتماعي',
         showTitle: true,
         valueLabel: '',
         valuePlaceholder: '',
         valueDir: 'rtl',
         valueType: 'text',
-        helpText: 'يظهر كعنوان فقط بدون رابط',
+        helpText: 'يظهر كعنوان فاصل غير قابل للنقر لتقسيم روابط صفحتك',
       };
     case 'text':
       return {

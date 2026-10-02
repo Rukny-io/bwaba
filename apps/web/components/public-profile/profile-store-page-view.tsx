@@ -18,7 +18,6 @@ import { MediaUrlProvider } from './media-url-context';
 import { getProfileThemeClass } from './profile-themes';
 import { ProfileHeader } from './profile-header';
 import { ProfileProductsSection } from './profile-products-section';
-import { ProfileTopBar } from './profile-top-bar';
 import { StoreCartProvider } from './store-cart-context';
 import { StoreCartFloating } from './store-cart-sheet';
 
@@ -58,7 +57,6 @@ export function ProfileStorePageView({
         >
           <div className="relative z-[1] mx-auto w-full max-w-lg space-y-6 px-4 pt-1 pb-28 sm:max-w-xl sm:px-5 max-sm:max-w-none">
             <div className="space-y-0">
-              <ProfileTopBar />
               <Link
                 href={profilePath}
                 className={cn(
@@ -71,7 +69,6 @@ export function ProfileStorePageView({
               </Link>
               <ProfileHeader
                 profile={profile}
-                withTopBar
                 productCount={products.length}
                 storeHref={profilePath}
                 showStoreButton={false}

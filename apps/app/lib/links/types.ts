@@ -19,6 +19,11 @@ export interface SocialLink {
   layout: LinkLayout;
   thumbnail: string | null;
   connectionId?: string | null;
+  scheduledStartAt?: string | null;
+  scheduledEndAt?: string | null;
+  isLocked: boolean;
+  notifyOnClick: boolean;
+  isPasswordProtected?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,10 +39,16 @@ export interface CreateSocialLinkInput {
   layout?: LinkLayout;
   connectionId?: string;
   isPinned?: boolean;
+  scheduledStartAt?: string | null;
+  scheduledEndAt?: string | null;
+  isLocked?: boolean;
+  notifyOnClick?: boolean;
 }
 
 export type UpdateSocialLinkInput = Partial<CreateSocialLinkInput> & {
   thumbnail?: string | null;
+  password?: string;
+  clearPassword?: boolean;
 };
 
 export interface LinkGroup {

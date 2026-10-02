@@ -240,11 +240,10 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
         className={cn(
           'profile-store-cart-anchor profile-store-chrome fixed z-[150]',
           themeClass,
-          'end-3 sm:end-4',
+          'inset-x-0 mx-auto',
           'bottom-[max(0.75rem,env(safe-area-inset-bottom))] mb-2',
-          'flex w-[min(320px,calc(100%-1.5rem))] flex-col items-stretch',
+          'flex w-[min(22rem,calc(100%-1.5rem))] flex-col items-stretch px-0',
         )}
-        dir="ltr"
       >
         <AnimatePresence mode="popLayout">
           {isCartOpen ? (
@@ -410,36 +409,45 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
 
         <motion.button
           type="button"
-          dir="ltr"
           onClick={() => (isCartOpen ? closeCart() : openCart())}
           aria-label={t('cart.openAria', { count: itemCount })}
           aria-expanded={isCartOpen}
-          whileTap={reduceMotion ? undefined : { scale: 0.99 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.985 }}
           transition={buttonTransition}
           className={cn(
             storeCartBarGlassClass,
-            'pointer-events-auto flex h-16 w-full touch-manipulation items-center justify-between gap-2 py-2 ps-2 pe-4',
+            'pointer-events-auto flex h-14 w-full touch-manipulation items-center gap-3 py-2 ps-2 pe-2',
+            'rounded-[1.75rem]',
           )}
         >
           <span
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/95 text-[14px] font-semibold tabular-nums text-[#161823]"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--foreground)]"
             aria-hidden
           >
-            {itemCount}
+            <ShoppingBag className="size-4" strokeWidth={2} />
+            <span
+              className={cn(
+                'absolute -end-0.5 -top-0.5 flex min-w-5 items-center justify-center rounded-full px-1',
+                'bg-[var(--foreground)] text-[10px] font-bold tabular-nums leading-none text-[var(--background)]',
+                'h-5',
+              )}
+            >
+              {itemCount}
+            </span>
           </span>
 
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1">
-            <span className="text-[10px] font-medium leading-none text-white/65">
+          <div className="min-w-0 flex-1 text-start">
+            <span className="block text-[10px] font-medium leading-none text-[var(--muted-foreground)]">
               {t('product.dialog.cartTotal')}
             </span>
             <span
               dir="ltr"
-              className="inline-flex max-w-full items-baseline justify-center gap-1 whitespace-nowrap"
+              className="mt-1 inline-flex max-w-full items-baseline gap-1 whitespace-nowrap"
             >
-              <span className="text-[16px] font-bold leading-none tabular-nums tracking-tight text-white">
+              <span className="text-[15px] font-bold leading-none tabular-nums tracking-tight text-[var(--foreground)]">
                 {formatProfilePriceAmount(subtotal)}
               </span>
-              <span className="text-[11px] font-semibold leading-none text-white/70">
+              <span className="text-[11px] font-semibold leading-none text-[var(--muted-foreground)]">
                 {currencyShort}
               </span>
             </span>
@@ -452,7 +460,10 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
               animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
               exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
               transition={{ duration: reduceMotion ? 0 : 0.22, ease: EASE_OUT }}
-              className="shrink-0 text-[12px] font-semibold text-white/90"
+              className={cn(
+                'inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5',
+                'bg-[var(--foreground)] text-[12px] font-semibold text-[var(--background)]',
+              )}
             >
               {isCartOpen ? t('cart.close') : t('cart.open')}
             </motion.span>

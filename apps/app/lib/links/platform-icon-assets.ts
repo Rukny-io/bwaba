@@ -9,8 +9,10 @@ export interface PlatformIconAsset {
     scale: number;
     align?: 'left' | 'center';
   };
-  /** ملء الإطار (مثل أيقونة تطبيق مربّعة) */
+  /** ملء الإطار (مثل أيقونة تطبيق مربّعة) — يُتجاهل داخل الدوائر */
   fill?: boolean;
+  /** تصحيح بصري لحجم الشعار داخل الدائرة (1 = افتراضي) */
+  opticalScale?: number;
 }
 
 /**
@@ -31,16 +33,16 @@ const ICONS = {
 
 /** مسارات من apps/app/public */
 export const PLATFORM_ICON_ASSETS: Partial<Record<LinkCatalogTypeId, PlatformIconAsset>> = {
-  instagram: { src: ICONS.instagram, brand: true },
-  youtube: { src: ICONS.youtube, brand: true },
-  x: { src: ICONS.x, brand: true },
-  linkedin: { src: ICONS.linkedin, brand: true },
-  telegram: { src: ICONS.telegram, brand: true },
-  snapchat: { src: ICONS.snapchat, brand: true },
-  tiktok: { src: ICONS.tiktok, brand: true, fill: true },
-  email: { src: ICONS.gmail, brand: true },
-  form: { src: ICONS.notion, brand: true },
-  whatsapp: { src: ICONS.whatsapp, brand: true, fill: true },
+  instagram: { src: ICONS.instagram, brand: true, opticalScale: 1 },
+  youtube: { src: ICONS.youtube, brand: true, opticalScale: 1 },
+  x: { src: ICONS.x, brand: true, opticalScale: 1 },
+  linkedin: { src: ICONS.linkedin, brand: true, opticalScale: 1 },
+  telegram: { src: ICONS.telegram, brand: true, opticalScale: 1 },
+  snapchat: { src: ICONS.snapchat, brand: true, opticalScale: 1 },
+  tiktok: { src: ICONS.tiktok, brand: true, fill: true, opticalScale: 1 },
+  email: { src: ICONS.gmail, brand: true, opticalScale: 1 },
+  form: { src: ICONS.notion, brand: true, opticalScale: 1 },
+  whatsapp: { src: ICONS.whatsapp, brand: true, fill: true, opticalScale: 1 },
 };
 
 export function getPlatformIconAsset(type: LinkCatalogTypeId): PlatformIconAsset | undefined {

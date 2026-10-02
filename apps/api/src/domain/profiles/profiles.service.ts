@@ -145,6 +145,8 @@ export class ProfilesService {
       await this.cacheManager.invalidate(`profile:username:${username}`);
       await this.cacheManager.invalidate(`profile:username:v2:${username}`);
       await this.cacheManager.invalidate(`profile:username:v3:${username}`);
+      await this.cacheManager.invalidate(`profile:username:v4:${username}`);
+      await this.cacheManager.invalidate(`profile:username:v5:${username}`);
     }
   }
 
@@ -159,6 +161,95 @@ export class ProfilesService {
       storageUsed: Number(profile.storageUsed || 0),
       storageLimit: Number(profile.storageLimit || 0),
     };
+  }
+
+  /** Filter schedule window, sort pins first, redact locked URLs, never expose passwordHash. */
+  private toPublicSocialLinks<
+    T extends {
+      id: string;
+      platform: string;
+      username?: string | null;
+      url: string;
+      title?: string | null;
+      displayOrder: number;
+      status?: string;
+      layout?: string | null;
+      thumbnail?: string | null;
+      connectionId?: string | null;
+      totalClicks?: number;
+      isPinned?: boolean;
+      isLocked?: boolean;
+      passwordHash?: string | null;
+      scheduledStartAt?: Date | null;
+      scheduledEndAt?: Date | null;
+      groupId?: string | null;
+    },
+  >(links: T[]) {
+    const now = Date.now();
+    return links
+      .filter((link) => {
+        if (link.status && link.status !== 'active') return false;
+        if (
+          link.scheduledStartAt &&
+          new Date(link.scheduledStartAt).getTime() > now
+        ) {
+          return false;
+        }
+        if (
+          link.scheduledEndAt &&
+          new Date(link.scheduledEndAt).getTime() < now
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const pinDiff = Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned));
+        if (pinDiff !== 0) return pinDiff;
+        return a.displayOrder - b.displayOrder;
+      })
+      .map((link) => {
+        const locked = Boolean(link.isLocked && link.passwordHash);
+        return {
+          id: link.id,
+          platform: link.platform,
+          username: link.username ?? null,
+          title: link.title ?? null,
+          displayOrder: link.displayOrder,
+          layout: link.layout ?? 'classic',
+          thumbnail: link.thumbnail ?? null,
+          connectionId: link.connectionId ?? null,
+          totalClicks: link.totalClicks ?? 0,
+          isPinned: Boolean(link.isPinned),
+          isLocked: locked,
+          groupId: link.groupId ?? null,
+          url: locked ? '' : link.url,
+        };
+      });
+  }
+
+  private toPublicLinkGroups<
+    T extends {
+      id: string;
+      name: string;
+      nameAr?: string | null;
+      color: string;
+      icon?: string | null;
+      order: number;
+      isExpanded: boolean;
+    },
+  >(groups: T[]) {
+    return [...groups]
+      .sort((a, b) => a.order - b.order)
+      .map((group) => ({
+        id: group.id,
+        name: group.name,
+        nameAr: group.nameAr ?? null,
+        color: group.color,
+        icon: group.icon ?? null,
+        order: group.order,
+        isExpanded: group.isExpanded,
+      }));
   }
 
   /**
@@ -275,7 +366,7 @@ export class ProfilesService {
    */
   async findByUsername(username: string, requesterId?: string) {
     // Cache only the public (non-owner) view so owner PII cannot poison shared cache
-    const cacheKey = `profile:username:v3:${username}`;
+    const cacheKey = `profile:username:v5:${username}`;
 
     const publicProfile = await this.cacheManager.wrap(
       cacheKey,
@@ -299,7 +390,10 @@ export class ProfilesService {
             },
             socialLinks: {
               where: { status: 'active' },
-              orderBy: { displayOrder: 'asc' },
+              orderBy: [{ isPinned: 'desc' }, { displayOrder: 'asc' }],
+            },
+            linkGroups: {
+              orderBy: { order: 'asc' },
             },
           },
         });
@@ -380,6 +474,8 @@ export class ProfilesService {
           verificationLevel: profile.user.verificationLevel,
           email: publicEmail,
           phone: publicPhone,
+          socialLinks: this.toPublicSocialLinks(profile.socialLinks),
+          linkGroups: this.toPublicLinkGroups(profile.linkGroups),
           _count: {
             followers: followersCount,
             following: followingCount,

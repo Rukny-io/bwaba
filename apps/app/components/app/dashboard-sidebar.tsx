@@ -10,7 +10,7 @@ import {
   APP_BASE,
   bottomNavItems,
   isNavItemActive,
-  isProductsSection,
+  isStoreDockMode,
   mainTopNavTabs,
   middleNavItems,
   productsSubNavTabs,
@@ -102,7 +102,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ avatarUrl, userName }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const inProductsSection = isProductsSection(pathname);
+  const inProductsSection = isStoreDockMode(pathname);
   const primaryTabs = inProductsSection ? productsSubNavTabs : mainTopNavTabs;
   const primaryHrefs = new Set(primaryTabs.map((item) => item.href));
   const secondaryTabs = [...middleNavItems, ...bottomNavItems].filter(

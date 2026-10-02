@@ -11,6 +11,7 @@ const repoRoot = path.resolve(appDir, '../..');
 const workspaceDeps = [
   { name: '@rukny/auth', src: 'packages/auth' },
   { name: '@rukny/forms-shared', src: 'packages/forms-shared' },
+  { name: '@rukny/public-profile-ui', src: 'packages/public-profile-ui' },
   { name: '@rukny/thmanyah-font', src: 'packages/Thmanyah-Font-Family' },
 ];
 

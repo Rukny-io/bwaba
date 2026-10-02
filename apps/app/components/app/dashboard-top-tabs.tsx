@@ -8,7 +8,7 @@ import {
   mainTopNavTabs,
   productsSubNavTabs,
   isNavItemActive,
-  isProductsSection,
+  isStoreDockMode,
 } from '@/components/app/nav-config';
 import { ChevronRight } from 'lucide-react';
 import {
@@ -65,7 +65,7 @@ export function DashboardTopTabs({
 }: DashboardTopTabsProps) {
   const pathname = usePathname();
   const profileActive = isNavItemActive(pathname, `${APP_BASE}/settings`);
-  const inProductsSection = isProductsSection(pathname);
+  const inProductsSection = isStoreDockMode(pathname);
   const tabs = inProductsSection ? productsSubNavTabs : mainTopNavTabs;
 
   return (

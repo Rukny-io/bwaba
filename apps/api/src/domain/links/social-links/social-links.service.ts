@@ -3,8 +3,11 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import * as bcrypt from 'bcryptjs';
+import { NotificationType, type SocialLink } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { CacheManager } from '../../../core/cache/cache.manager';
 import {
@@ -18,6 +21,11 @@ import {
 import { UrlShortenerService } from '../url-shortener/url-shortener.service';
 import { OwnableService } from '../../../core/common/services/ownable.service';
 import { generateSocialLinkId } from '../../../core/common/utils/secure-id.util';
+import { BCRYPT_ROUNDS } from '../../auth/password.constants';
+
+type OwnerLinkResponse = Omit<SocialLink, 'passwordHash'> & {
+  isPasswordProtected: boolean;
+};
 
 @Injectable()
 export class SocialLinksService extends OwnableService {
@@ -27,6 +35,26 @@ export class SocialLinksService extends OwnableService {
     private readonly cacheManager: CacheManager,
   ) {
     super();
+  }
+
+  private toOwnerLink(link: SocialLink): OwnerLinkResponse {
+    const { passwordHash, ...rest } = link;
+    return {
+      ...rest,
+      isPasswordProtected: Boolean(passwordHash),
+    };
+  }
+
+  private parseOptionalDate(
+    value: string | null | undefined,
+  ): Date | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value === '') return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid schedule date');
+    }
+    return date;
   }
 
   private async allocateLinkId(): Promise<string> {
@@ -52,6 +80,15 @@ export class SocialLinksService extends OwnableService {
       );
       await this.cacheManager.invalidate(
         `profile:username:v2:${profile.username}`,
+      );
+      await this.cacheManager.invalidate(
+        `profile:username:v3:${profile.username}`,
+      );
+      await this.cacheManager.invalidate(
+        `profile:username:v4:${profile.username}`,
+      );
+      await this.cacheManager.invalidate(
+        `profile:username:v5:${profile.username}`,
       );
     }
   }
@@ -99,28 +136,34 @@ export class SocialLinksService extends OwnableService {
 
     const id = await this.allocateLinkId();
 
+    const { scheduledStartAt, scheduledEndAt, isLocked: _isLocked, ...restCreate } =
+      createDto;
+
     const link = await this.prisma.socialLink.create({
       data: {
-        ...createDto,
+        ...restCreate,
         id,
         profileId: profile.id,
         shortUrl,
         displayOrder,
+        scheduledStartAt: this.parseOptionalDate(scheduledStartAt) ?? undefined,
+        scheduledEndAt: this.parseOptionalDate(scheduledEndAt) ?? undefined,
       },
     });
 
     await this.invalidateProfileCache(userId);
-    return link;
+    return this.toOwnerLink(link);
   }
 
   /**
    * Find all social links for a profile
    */
   async findByProfile(profileId: string) {
-    return this.prisma.socialLink.findMany({
+    const links = await this.prisma.socialLink.findMany({
       where: { profileId },
-      orderBy: { displayOrder: 'asc' },
+      orderBy: [{ isPinned: 'desc' }, { displayOrder: 'asc' }],
     });
+    return links.map((link) => this.toOwnerLink(link));
   }
 
   /**
@@ -132,7 +175,7 @@ export class SocialLinksService extends OwnableService {
       where: { userId },
       include: {
         socialLinks: {
-          orderBy: { displayOrder: 'asc' },
+          orderBy: [{ isPinned: 'desc' }, { displayOrder: 'asc' }],
         },
       },
     });
@@ -141,7 +184,7 @@ export class SocialLinksService extends OwnableService {
       throw new NotFoundException('Profile not found');
     }
 
-    return profile.socialLinks;
+    return profile.socialLinks.map((link) => this.toOwnerLink(link));
   }
 
   /**
@@ -164,7 +207,11 @@ export class SocialLinksService extends OwnableService {
       throw new NotFoundException('Social link not found');
     }
 
-    return link;
+    const { passwordHash: _passwordHash, ...rest } = link;
+    return {
+      ...rest,
+      isPasswordProtected: Boolean(link.passwordHash),
+    };
   }
 
   /**
@@ -192,16 +239,52 @@ export class SocialLinksService extends OwnableService {
       shortUrl = await this.urlShortener.shorten(updateDto.url, userId);
     }
 
+    const {
+      password,
+      clearPassword,
+      scheduledStartAt,
+      scheduledEndAt,
+      isLocked,
+      ...rest
+    } = updateDto;
+
+    const data: Record<string, unknown> = {
+      ...rest,
+      shortUrl,
+    };
+
+    if (scheduledStartAt !== undefined) {
+      data.scheduledStartAt = this.parseOptionalDate(scheduledStartAt);
+    }
+    if (scheduledEndAt !== undefined) {
+      data.scheduledEndAt = this.parseOptionalDate(scheduledEndAt);
+    }
+
+    if (clearPassword || isLocked === false) {
+      data.passwordHash = null;
+      data.isLocked = false;
+    } else if (password) {
+      data.passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      data.isLocked = true;
+    } else if (isLocked !== undefined) {
+      if (isLocked && !link.passwordHash) {
+        throw new BadRequestException(
+          'Cannot lock a link without setting a password',
+        );
+      }
+      data.isLocked = isLocked;
+      if (!isLocked) {
+        data.passwordHash = null;
+      }
+    }
+
     const updated = await this.prisma.socialLink.update({
       where: { id: linkId },
-      data: {
-        ...updateDto,
-        shortUrl,
-      },
+      data,
     });
 
     await this.invalidateProfileCache(userId);
-    return updated;
+    return this.toOwnerLink(updated);
   }
 
   /**
@@ -300,14 +383,14 @@ export class SocialLinksService extends OwnableService {
       if (shortCode) {
         const stats = await this.urlShortener.getUrlStats(shortCode, userId);
         return {
-          ...link,
+          ...this.toOwnerLink(link),
           stats,
         };
       }
     }
 
     return {
-      ...link,
+      ...this.toOwnerLink(link),
       stats: null,
     };
   }
@@ -458,6 +541,11 @@ export class SocialLinksService extends OwnableService {
   ) {
     const link = await this.prisma.socialLink.findUnique({
       where: { id: linkId },
+      include: {
+        profile: {
+          select: { userId: true },
+        },
+      },
     });
 
     if (!link) {
@@ -527,9 +615,62 @@ export class SocialLinksService extends OwnableService {
       });
     }
 
+    if (link.notifyOnClick && link.profile?.userId) {
+      const label = link.title?.trim() || link.username?.trim() || link.platform;
+      try {
+        await this.prisma.notifications.create({
+          data: {
+            id: randomUUID(),
+            userId: link.profile.userId,
+            type: NotificationType.LINK_CLICK,
+            title: 'نقرة جديدة على رابط',
+            message: `تم النقر على «${label}»`,
+            data: {
+              linkId: link.id,
+              title: label,
+              platform: link.platform,
+            },
+          },
+        });
+      } catch {
+        // Notification failure must not block click tracking
+      }
+    }
+
     return {
       success: true,
       message: 'Click tracked successfully',
     };
+  }
+
+  /**
+   * Unlock a password-protected social link (public)
+   */
+  async unlock(linkId: string, password: string) {
+    const link = await this.prisma.socialLink.findUnique({
+      where: { id: linkId },
+      select: {
+        id: true,
+        url: true,
+        isLocked: true,
+        passwordHash: true,
+        status: true,
+      },
+    });
+
+    if (!link || link.status !== 'active') {
+      throw new NotFoundException('Social link not found');
+    }
+
+    if (!link.isLocked || !link.passwordHash) {
+      return { url: link.url };
+    }
+
+    const valid = await bcrypt.compare(password, link.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('كلمة المرور غير صحيحة');
+    }
+
+    return { url: link.url };
   }
 }

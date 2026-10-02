@@ -7,6 +7,19 @@ export interface PublicSocialLink {
   displayOrder: number;
   layout?: string;
   thumbnail?: string | null;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  groupId?: string | null;
+}
+
+export interface PublicLinkGroup {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  color: string;
+  icon: string | null;
+  order: number;
+  isExpanded: boolean;
 }
 
 export interface PublicProfile {
@@ -20,6 +33,7 @@ export interface PublicProfile {
   themeKey?: string | null;
   isRuknyVerified?: boolean;
   socialLinks: PublicSocialLink[];
+  linkGroups?: PublicLinkGroup[];
 }
 
 export interface PublicProfileForm {

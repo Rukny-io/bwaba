@@ -150,8 +150,8 @@ export const LINK_CATALOG_ITEMS: LinkCatalogItem[] = [
   },
   {
     id: 'header',
-    label: 'عنوان',
-    description: 'عنوان قسم بدون رابط',
+    label: 'عنوان قسم',
+    description: 'فاصل نصي غير قابل للنقر لتقسيم روابطك',
     categories: ['text'],
     platform: 'header',
   },

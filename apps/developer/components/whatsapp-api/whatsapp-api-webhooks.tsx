@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { WhatsappApiWebhookCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
+import { waApiPanel } from '@/components/whatsapp-api/whatsapp-api-shared';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { WEBHOOK_EVENTS } from '@/lib/whatsapp-api-catalog';
 import { appWhatsappHref } from '@/lib/whatsapp-routes';
@@ -12,9 +13,9 @@ export function WhatsappApiWebhooks() {
   const { app } = useCurrentApp();
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h2 className="text-base font-semibold">{d.inboundTitle}</h2>
+    <>
+      <section className={waApiPanel}>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{d.inboundTitle}</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
           {d.inboundDesc}
         </p>
@@ -25,8 +26,8 @@ export function WhatsappApiWebhooks() {
         </ol>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl">
-        <h2 className="text-sm font-semibold">{d.webhooksTitle}</h2>
+      <section className={waApiPanel}>
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">{d.webhooksTitle}</h2>
         <p className="mt-2 text-[13px] text-[var(--muted-foreground)]">
           {d.webhooksDesc}
         </p>
@@ -41,7 +42,7 @@ export function WhatsappApiWebhooks() {
             {WEBHOOK_EVENTS.map((event) => (
               <li
                 key={event}
-                className="rounded-lg bg-[var(--surface-secondary)] px-2.5 py-1 font-mono text-[12px] text-[var(--foreground)]"
+                className="rounded-xl bg-[var(--surface-secondary)] px-2.5 py-1 font-mono text-[12px] text-[var(--foreground)]"
               >
                 {event}
               </li>
@@ -56,12 +57,12 @@ export function WhatsappApiWebhooks() {
         </Link>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h2 className="text-sm font-semibold">{d.webhookVerifyTitle}</h2>
+      <section className={waApiPanel}>
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">{d.webhookVerifyTitle}</h2>
         <div className="mt-4">
           <WhatsappApiWebhookCodePanel copyLabel={d.copy} />
         </div>
       </section>
-    </div>
+    </>
   );
 }

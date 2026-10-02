@@ -143,11 +143,42 @@ export class PhoneNumbersService {
 
       return { success: true, status: 'ACTIVE' };
     } catch (error) {
-      const errorData = error.response?.data?.error || {};
-      throw new BadRequestException({
-        message: 'Failed to register phone number',
-        error: errorData.message || error.message,
-      });
+      const metaError = error?.response?.data?.error || {};
+      const metaMessage =
+        typeof metaError.message === 'string' ? metaError.message : '';
+      const metaCode = metaError.code != null ? String(metaError.code) : '';
+
+      // Meta #133005 — number already has a two-step PIN; caller must use that PIN.
+      if (
+        metaCode === '133005' ||
+        /pin mismatch|two step verification pin/i.test(metaMessage)
+      ) {
+        throw new BadRequestException(
+          'Two-step PIN mismatch. Enter the existing 6-digit PIN for this number in Meta (WhatsApp Manager), or reset it there first.',
+        );
+      }
+
+      // Meta #133016 — register/deregister rate limit for this phone number.
+      if (
+        metaCode === '133016' ||
+        /too many attempts for this phone number/i.test(metaMessage)
+      ) {
+        throw new BadRequestException(
+          'Too many registration attempts for this phone number. Wait about 1 hour (sometimes up to a few hours), then try again with the correct PIN. Do not keep retrying.',
+        );
+      }
+
+      if (/already registered|already been registered/i.test(metaMessage)) {
+        await this.prisma.developerPhoneNumber.update({
+          where: { id: phone.id },
+          data: { status: 'ACTIVE' },
+        });
+        return { success: true, status: 'ACTIVE', alreadyRegistered: true };
+      }
+
+      throw new BadRequestException(
+        metaMessage || 'Failed to register phone number',
+      );
     }
   }
 

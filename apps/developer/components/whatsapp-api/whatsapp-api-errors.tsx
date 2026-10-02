@@ -1,4 +1,4 @@
-import { getWhatsappApiErrorCopy } from '@/components/whatsapp-api/whatsapp-api-shared';
+import { getWhatsappApiErrorCopy, waApiPanelFlush } from '@/components/whatsapp-api/whatsapp-api-shared';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { COMMON_ERRORS } from '@/lib/whatsapp-api-catalog';
 
@@ -7,9 +7,9 @@ export function WhatsappApiErrors() {
   const errorCopy = getWhatsappApiErrorCopy();
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
+    <section className={waApiPanelFlush}>
       <div className="border-b border-[var(--border)]/40 px-4 py-4 sm:px-5">
-        <h2 className="text-sm font-semibold">{d.errorsTitle}</h2>
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">{d.errorsTitle}</h2>
         <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
           {d.errorsDesc}
         </p>

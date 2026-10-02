@@ -3,7 +3,7 @@
 @source "../components/**/*.{js,ts,jsx,tsx}";
 
 :root {
-  --background: #fafafa;
+  --background: #ffffff;
   --foreground: #111111;
   --card: #ffffff;
   --card-foreground: #111111;
@@ -55,10 +55,10 @@
 html,
 body {
   font-family: var(--font-sans);
+  background-color: var(--background);
 }
 
 body {
-  background-color: var(--background);
   color: var(--foreground);
 }
 

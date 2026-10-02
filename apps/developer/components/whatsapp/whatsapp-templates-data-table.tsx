@@ -25,6 +25,8 @@ import {
   CircleX,
   Filter,
   ListFilter,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -74,7 +76,15 @@ function statusBadgeVariant(status: string) {
   return 'secondary' as const;
 }
 
-export function WhatsappTemplatesDataTable({ data }: { data: WhatsappTemplate[] }) {
+export function WhatsappTemplatesDataTable({
+  data,
+  onDelete,
+  deletingName,
+}: {
+  data: WhatsappTemplate[];
+  onDelete?: (name: string) => void;
+  deletingName?: string | null;
+}) {
   const id = useId();
   const w = useTranslations().whatsapp;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,9 +148,53 @@ export function WhatsappTemplatesDataTable({ data }: { data: WhatsappTemplate[] 
         },
         filterFn: statusFilterFn,
       },
+      ...(onDelete
+        ? ([
+            {
+              id: 'actions',
+              header: () => <span className="sr-only">{w.deleteTemplate}</span>,
+              cell: ({ row }) => {
+                const name = row.original.name;
+                const busy = deletingName === name;
+                return (
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-[12px] text-[var(--muted-foreground)] hover:text-[var(--danger)]"
+                      disabled={Boolean(deletingName)}
+                      onClick={() => {
+                        const msg = w.deleteTemplateConfirm.replace('{name}', name);
+                        if (!window.confirm(msg)) return;
+                        onDelete(name);
+                      }}
+                    >
+                      {busy ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                      {w.deleteTemplate}
+                    </Button>
+                  </div>
+                );
+              },
+            } satisfies ColumnDef<WhatsappTemplate>,
+          ] as ColumnDef<WhatsappTemplate>[])
+        : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- labels from dictionary
-    [w.templateName, w.templateLanguage, w.templateCategory, w.templateStatus],
+    [
+      w.templateName,
+      w.templateLanguage,
+      w.templateCategory,
+      w.templateStatus,
+      w.deleteTemplate,
+      w.deleteTemplateConfirm,
+      onDelete,
+      deletingName,
+    ],
   );
 
   const table = useReactTable({

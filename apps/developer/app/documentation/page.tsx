@@ -1,109 +1,191 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import {
-  ArrowRight,
-  BookOpen,
-  ClipboardList,
-  Mail,
-  MessageCircle,
-  type LucideIcon,
-} from 'lucide-react';
-import {
+  DOCUMENTATION_BASE,
   DOCUMENTATION_PRODUCTS,
-  type DocumentationProductId,
 } from '@/lib/documentation-nav';
 import { cn } from '@/lib/utils';
 
-const PRODUCT_ICONS: Record<DocumentationProductId, LucideIcon> = {
-  'email-api': Mail,
-  forms: ClipboardList,
-  'whatsapp-api': MessageCircle,
+type HubLink = {
+  label: string;
+  href: string;
 };
+
+type HubSection = {
+  title: string;
+  links: HubLink[];
+};
+
+const FEATURED = DOCUMENTATION_PRODUCTS.map((product) => ({
+  title: product.title,
+  description: product.description,
+  href: product.href,
+  available: product.available,
+}));
+
+const SECTIONS: HubSection[] = [
+  {
+    title: 'Email API',
+    links: [
+      { label: 'Overview', href: `${DOCUMENTATION_BASE}/email-api` },
+      { label: 'Get started', href: `${DOCUMENTATION_BASE}/email-api/get-started` },
+      { label: 'Use cases', href: `${DOCUMENTATION_BASE}/email-api/use-cases` },
+      { label: 'Best practices', href: `${DOCUMENTATION_BASE}/email-api/best-practices` },
+      { label: 'Messages', href: `${DOCUMENTATION_BASE}/email-api/messages` },
+      { label: 'Domains', href: `${DOCUMENTATION_BASE}/email-api/domains` },
+      { label: 'Testing', href: `${DOCUMENTATION_BASE}/email-api/testing` },
+      { label: 'Quotas & limits', href: `${DOCUMENTATION_BASE}/email-api/quotas` },
+      { label: 'Errors', href: `${DOCUMENTATION_BASE}/email-api/errors` },
+    ],
+  },
+  {
+    title: 'Forms',
+    links: [
+      { label: 'Overview', href: `${DOCUMENTATION_BASE}/forms` },
+      { label: 'Get started', href: `${DOCUMENTATION_BASE}/forms/get-started` },
+      { label: 'Linking forms', href: `${DOCUMENTATION_BASE}/forms/linking` },
+      { label: 'Website domain', href: `${DOCUMENTATION_BASE}/forms/domains` },
+      { label: 'Embedding', href: `${DOCUMENTATION_BASE}/forms/embedding` },
+      { label: 'Embed events', href: `${DOCUMENTATION_BASE}/forms/events` },
+      { label: 'Webhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
+    ],
+  },
+  {
+    title: 'Authentication',
+    links: [
+      {
+        label: 'API authentication',
+        href: `${DOCUMENTATION_BASE}/email-api/authentication`,
+      },
+      { label: 'Developer dashboard', href: '/login?next=/apps' },
+    ],
+  },
+  {
+    title: 'SDKs & reference',
+    links: [
+      { label: 'Node.js SDK', href: `${DOCUMENTATION_BASE}/email-api/sdk` },
+      { label: 'REST & curl', href: `${DOCUMENTATION_BASE}/email-api/rest` },
+      { label: 'API reference', href: `${DOCUMENTATION_BASE}/email-api/reference` },
+      { label: 'Sending examples', href: `${DOCUMENTATION_BASE}/email-api/send` },
+    ],
+  },
+  {
+    title: 'Developer guides',
+    links: [
+      { label: 'Email API overview', href: `${DOCUMENTATION_BASE}/email-api` },
+      { label: 'Forms overview', href: `${DOCUMENTATION_BASE}/forms` },
+      { label: 'Embed a form', href: `${DOCUMENTATION_BASE}/forms/get-started` },
+      { label: 'SMTP', href: `${DOCUMENTATION_BASE}/email-api/smtp` },
+    ],
+  },
+  {
+    title: 'Messaging',
+    links: [
+      { label: 'Email messages', href: `${DOCUMENTATION_BASE}/email-api/messages` },
+      { label: 'Forms webhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
+      { label: 'Email testing', href: `${DOCUMENTATION_BASE}/email-api/testing` },
+    ],
+  },
+];
+
+function FeaturedCard({
+  title,
+  description,
+  href,
+  available,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  available: boolean;
+}) {
+  const inner = (
+    <article
+      className={cn(
+        'group flex h-full min-h-[11rem] flex-col justify-between rounded-xl border border-[var(--border)]/50 bg-[var(--surface)] p-5 transition-colors sm:p-6',
+        available &&
+          'hover:bg-[color-mix(in_srgb,var(--surface-secondary)_40%,var(--surface))]',
+        !available && 'opacity-70',
+      )}
+    >
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--foreground)] sm:text-xl">
+          {title}
+        </h2>
+        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-[14px] sm:leading-6">
+          {description}
+        </p>
+      </div>
+      <p className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-[var(--foreground)]">
+        {available ? (
+          <>
+            Docs
+            <ArrowRight
+              className="size-3.5 transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </>
+        ) : (
+          <span className="text-[var(--muted-foreground)]">Coming soon</span>
+        )}
+      </p>
+    </article>
+  );
+
+  if (!available) return <div>{inner}</div>;
+  return (
+    <Link href={href} className="block">
+      {inner}
+    </Link>
+  );
+}
+
+function DocsSection({ section }: { section: HubSection }) {
+  return (
+    <section className="min-w-0">
+      <h2 className="text-[15px] font-semibold text-[var(--foreground)]">
+        {section.title}
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {section.links.map((link) => (
+          <li key={link.href + link.label}>
+            <Link
+              href={link.href}
+              className="text-[13px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export default function DocumentationHubPage() {
   return (
-    <main className="mx-auto w-full max-w-[960px] px-4 py-14 sm:px-6 sm:py-20">
-      <div className="max-w-2xl">
-        <p className="inline-flex items-center gap-2 text-[13px] font-medium text-[var(--muted-foreground)]">
-          <BookOpen className="size-3.5" />
-          Documentation
-        </p>
-        <h1 className="mt-3 text-[2.25rem] font-semibold tracking-tight sm:text-5xl sm:leading-[1.1]">
-          Build with Rukny
+    <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
+      <header className="max-w-3xl">
+        <h1 className="text-[2rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.75rem] sm:leading-[1.15]">
+          Rukny Developer Documentation
         </h1>
-        <p className="mt-4 text-base leading-7 text-[var(--muted-foreground)] sm:text-[17px] sm:leading-8">
-          Guides for Email API, Forms embeds, and more — practical paths from
-          the developer portal to production.
+        <p className="mt-4 text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
+          Learn how to send and receive data with Rukny APIs, and how to
+          implement the products and SDKs that fit your application.
         </p>
+      </header>
+
+      <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {FEATURED.map((item) => (
+          <FeaturedCard key={item.title} {...item} />
+        ))}
+      </section>
+
+      <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-12 lg:gap-y-14">
+        {SECTIONS.map((section) => (
+          <DocsSection key={section.title} section={section} />
+        ))}
       </div>
-
-      <section className="mt-14">
-        <h2 className="text-[13px] font-medium text-[var(--muted-foreground)]">
-          Products
-        </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {DOCUMENTATION_PRODUCTS.map((product) => {
-            const Icon = PRODUCT_ICONS[product.id];
-            const card = (
-              <article
-                className={cn(
-                  'group h-full rounded-2xl bg-[var(--surface-secondary)] p-5 transition-colors',
-                  product.available &&
-                    'hover:bg-[color-mix(in_srgb,var(--surface-secondary)_82%,var(--foreground)_6%)]',
-                  !product.available && 'opacity-65',
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-[var(--surface)]">
-                    <Icon className="size-4 text-[var(--foreground)]" />
-                  </div>
-                  {product.available ? (
-                    <ArrowRight className="size-4 text-[var(--muted-foreground)] transition-transform group-hover:translate-x-0.5" />
-                  ) : (
-                    <span className="text-[12px] text-[var(--muted-foreground)]">
-                      Coming soon
-                    </span>
-                  )}
-                </div>
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">
-                  {product.title}
-                </h3>
-                <p className="mt-2 text-[13px] leading-6 text-[var(--muted-foreground)]">
-                  {product.description}
-                </p>
-              </article>
-            );
-
-            return product.available ? (
-              <Link key={product.id} href={product.href} className="block">
-                {card}
-              </Link>
-            ) : (
-              <div key={product.id}>{card}</div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mt-12 grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/login?next=/apps"
-          className="rounded-2xl bg-[var(--surface-secondary)] p-5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_82%,var(--foreground)_6%)]"
-        >
-          <h3 className="text-[15px] font-semibold">Developer dashboard</h3>
-          <p className="mt-2 text-[13px] leading-6 text-[var(--muted-foreground)]">
-            Create apps, install products, manage keys, and use Try it.
-          </p>
-        </Link>
-        <Link
-          href="/documentation/forms/get-started"
-          className="rounded-2xl bg-[var(--surface-secondary)] p-5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_82%,var(--foreground)_6%)]"
-        >
-          <h3 className="text-[15px] font-semibold">Embed a form</h3>
-          <p className="mt-2 text-[13px] leading-6 text-[var(--muted-foreground)]">
-            Link a form, set your website domain, and paste the iframe snippet.
-          </p>
-        </Link>
-      </section>
     </main>
   );
 }

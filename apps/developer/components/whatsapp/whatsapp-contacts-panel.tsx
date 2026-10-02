@@ -68,7 +68,7 @@ export function WhatsappContactsPanel() {
       </DashboardGrid>
 
       {showForm ? (
-        <section className="dashboard-panel space-y-3 rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+        <section className="dashboard-panel space-y-3 p-4 sm:p-5">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -138,7 +138,7 @@ export function WhatsappContactsPanel() {
         />
       ) : (
         <>
-          <div className="dashboard-panel divide-y divide-[var(--border)]/30 overflow-hidden rounded-2xl p-0 sm:rounded-3xl">
+          <div className="dashboard-panel divide-y divide-[var(--border)]/30 overflow-hidden p-0">
             {contacts.map((c) => (
               <div
                 key={c.id}

@@ -25,6 +25,8 @@ const WEBHOOK_EVENTS = [
   'message.received',
   'template.approved',
   'template.rejected',
+  'template.status_updated',
+  'account.status_updated',
 ] as const;
 
 function formatCount(value: number): string {
@@ -100,7 +102,7 @@ export function WhatsappWebhooksPanel() {
       ) : null}
 
       {showForm ? (
-        <section className="dashboard-panel space-y-4 rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+        <section className="dashboard-panel space-y-4 p-4 sm:p-5">
           <input
             type="url"
             value={url}
@@ -172,7 +174,7 @@ export function WhatsappWebhooksPanel() {
           {list.map((hook) => (
             <section
               key={hook.id}
-              className="dashboard-panel space-y-3 rounded-2xl p-4 sm:rounded-3xl sm:p-5"
+              className="dashboard-panel space-y-3 p-4 sm:p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <code

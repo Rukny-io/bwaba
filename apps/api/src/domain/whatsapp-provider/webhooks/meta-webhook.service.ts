@@ -93,12 +93,21 @@ export class MetaWebhookService {
 
       if (!log) return;
 
+      const now = new Date();
       await this.prisma.whatsappMessageLog.update({
         where: { id: log.id },
         data: {
           status: mappedStatus as any,
-          ...(statusValue === 'failed' && status?.errors?.[0]
-            ? { errorMessage: status.errors[0].message }
+          ...(mappedStatus === 'SENT' && !log.sentAt ? { sentAt: now } : {}),
+          ...(mappedStatus === 'DELIVERED' ? { deliveredAt: now } : {}),
+          ...(mappedStatus === 'READ' ? { readAt: now } : {}),
+          ...(mappedStatus === 'FAILED'
+            ? {
+                failedAt: now,
+                ...(status?.errors?.[0]
+                  ? { errorMessage: status.errors[0].message }
+                  : {}),
+              }
             : {}),
         },
       });
@@ -224,7 +233,7 @@ export class MetaWebhookService {
 
       await this.webhookDelivery.dispatchEvent(
         account.userId,
-        'template.status_update',
+        'template.status_updated',
         {
           templateName: messageTemplateName,
           templateId: template?.id,
@@ -233,6 +242,29 @@ export class MetaWebhookService {
         },
         account.developerAppId,
       );
+
+      if (event === 'APPROVED') {
+        await this.webhookDelivery.dispatchEvent(
+          account.userId,
+          'template.approved',
+          {
+            templateName: messageTemplateName,
+            templateId: template?.id,
+          },
+          account.developerAppId,
+        );
+      } else if (event === 'REJECTED') {
+        await this.webhookDelivery.dispatchEvent(
+          account.userId,
+          'template.rejected',
+          {
+            templateName: messageTemplateName,
+            templateId: template?.id,
+            reason: value?.reason,
+          },
+          account.developerAppId,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Failed to handle template status update: ${error.message}`,
@@ -301,7 +333,7 @@ export class MetaWebhookService {
 
       await this.webhookDelivery.dispatchEvent(
         account.userId,
-        'account.update',
+        'account.status_updated',
         {
           accountId: account.id,
           wabaId: payloadWabaId,

@@ -149,8 +149,12 @@
   --overlay-shadow: var(--card-shadow-hover);
 }
 
+html,
 body {
   background: var(--background);
+}
+
+body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }

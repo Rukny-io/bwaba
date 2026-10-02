@@ -20,7 +20,7 @@ export function WhatsappApiTemplates() {
   }
 
   return (
-    <div className="space-y-4">
+    <>
       {TEMPLATE_ENDPOINTS.map((endpoint) => (
         <WhatsappApiEndpointCard
           key={endpoint.id}
@@ -34,6 +34,6 @@ export function WhatsappApiTemplates() {
           tryHref={tryHref(endpoint.id)}
         />
       ))}
-    </div>
+    </>
   );
 }

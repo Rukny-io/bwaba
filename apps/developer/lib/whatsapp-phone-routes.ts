@@ -18,6 +18,13 @@ export function appWhatsappPhoneHref(
   return found?.slug ? `${base}/${found.slug}` : base;
 }
 
+export function appWhatsappPhoneCreateTemplateHref(
+  appId: string,
+  phoneId: string,
+): string {
+  return `${appWhatsappPhoneHref(appId, phoneId, 'templates')}/new`;
+}
+
 export function isWhatsappPhoneTabActive(
   pathname: string,
   appId: string,

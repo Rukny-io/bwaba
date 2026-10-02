@@ -162,13 +162,19 @@
   --landing-outline-inset: rgba(255, 255, 255, 0.12);
 }
 
+html,
 body {
   background: var(--background);
+}
+
+body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
 
+.dark html,
 .dark body,
+[data-theme="dark"] html,
 [data-theme="dark"] body {
   background:
     radial-gradient(ellipse 120% 80% at 50% -20%, #1a2030 0%, transparent 55%),

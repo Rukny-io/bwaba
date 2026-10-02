@@ -177,3 +177,14 @@ export async function createWhatsappTemplate(
   );
   return data;
 }
+
+export async function deleteWhatsappTemplate(
+  appId: string,
+  name: string,
+): Promise<{ success: boolean }> {
+  const { data } = await api.delete<{ success: boolean }>(
+    `/developer/whatsapp/templates/${encodeURIComponent(name)}`,
+    appParams(appId),
+  );
+  return data;
+}

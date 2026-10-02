@@ -4,6 +4,13 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, Phone, Play, Shield } from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useApiKeys } from '@/hooks/use-api-keys';
 import { executeWhatsappApiTry } from '@/lib/api/whatsapp-api-try';
 import {
@@ -230,7 +237,7 @@ export function WhatsappApiTryIt({
     endpoint?.tryPath?.includes('{name}');
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
+    <section className="dashboard-panel overflow-hidden p-0">
       <div className="border-b border-[var(--border)]/40 px-4 py-4 sm:px-5">
         <h2 className="text-base font-semibold text-[var(--foreground)]">
           {labels.title}
@@ -246,19 +253,23 @@ export function WhatsappApiTryIt({
             <span className="text-[12.5px] font-medium text-[var(--muted-foreground)]">
               {labels.endpoint}
             </span>
-            <select
+            <Select
               value={endpoint.id}
-              onChange={(e) =>
-                handleEndpointChange(e.target.value as WhatsappApiEndpointId)
+              onValueChange={(value) =>
+                handleEndpointChange(value as WhatsappApiEndpointId)
               }
-              className="h-10 w-full rounded-xl bg-[var(--surface-secondary)] px-3 text-[13px] text-[var(--foreground)] outline-none"
             >
-              {ALL_TRYABLE.map((ep) => (
-                <option key={ep.id} value={ep.id}>
-                  {ep.method} {ep.path} — {summaries[ep.summaryKey] ?? ep.id}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 border-0 bg-[var(--surface-secondary)] text-[13px] focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_TRYABLE.map((ep) => (
+                  <SelectItem key={ep.id} value={ep.id}>
+                    {ep.method} {ep.path} — {summaries[ep.summaryKey] ?? ep.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
 
           <label className="block space-y-1.5">
@@ -272,19 +283,21 @@ export function WhatsappApiTryIt({
                 …
               </div>
             ) : testKeys.length > 0 ? (
-              <select
-                value={apiKeySlug}
-                onChange={(e) => setApiKeySlug(e.target.value)}
-                className="h-10 w-full rounded-xl bg-[var(--surface-secondary)] px-3 font-mono text-[13px] text-[var(--foreground)] outline-none"
-                dir="ltr"
-              >
-                <option value="">{labels.apiKeyPlaceholder}</option>
-                {testKeys.map((key) => (
-                  <option key={key.slug} value={key.slug}>
-                    {key.name} — rk_test_…{key.keySuffix}
-                  </option>
-                ))}
-              </select>
+              <Select value={apiKeySlug || undefined} onValueChange={setApiKeySlug}>
+                <SelectTrigger
+                  className="h-10 border-0 bg-[var(--surface-secondary)] font-mono text-[13px] focus:ring-0"
+                  dir="ltr"
+                >
+                  <SelectValue placeholder={labels.apiKeyPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {testKeys.map((key) => (
+                    <SelectItem key={key.slug} value={key.slug}>
+                      {key.name} — rk_test_…{key.keySuffix}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
               <p className="text-[13px] text-[var(--muted-foreground)]">
                 {labels.apiKeyEmpty}{' '}
@@ -397,7 +410,7 @@ export function WhatsappApiTryIt({
           </div>
         </div>
 
-        <div className="flex min-h-[18rem] flex-col rounded-2xl bg-[var(--surface-secondary)] p-4">
+        <div className="flex min-h-[18rem] flex-col rounded-xl bg-[var(--surface-secondary)] p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-[12.5px] font-medium text-[var(--muted-foreground)]">
               {labels.response}

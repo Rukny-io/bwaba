@@ -4,12 +4,14 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
+import { QuotaService } from '../shared/quota.service';
 import { ConnectWabaDto } from './dto/connect-waba.dto';
 import { generateNumericPublicId } from '../shared/public-id.util';
 
@@ -35,6 +37,7 @@ export class WabaService {
     private prisma: PrismaService,
     private metaApi: MetaApiService,
     private tokenEncryption: TokenEncryptionService,
+    private quotaService: QuotaService,
     private configService: ConfigService,
   ) {}
 
@@ -62,12 +65,21 @@ export class WabaService {
       tokenData = await this.metaApi.exchangeCodeForToken(dto.code);
     } catch (error) {
       this.logger.error(`Failed to exchange code: ${error.message}`);
+      const metaMessage =
+        error?.response?.data?.error?.message || error?.message;
       throw new BadRequestException(
-        'Failed to exchange authorization code. Please try again.',
+        metaMessage
+          ? `Failed to exchange authorization code: ${metaMessage}`
+          : 'Failed to exchange authorization code. Please try again.',
       );
     }
 
     const accessToken = tokenData.access_token;
+    if (!accessToken) {
+      throw new BadRequestException(
+        'Meta did not return an access token. Restart Embedded Signup.',
+      );
+    }
 
     const debugInfo = await this.metaApi.debugToken(accessToken);
     const granularScopes = debugInfo.data?.granular_scopes || [];
@@ -80,7 +92,7 @@ export class WabaService {
 
     if (wabaIds.length === 0 && !dto.wabaId) {
       throw new BadRequestException(
-        'No WhatsApp Business Account found. Please complete the Embedded Signup process.',
+        'No WhatsApp Business Account found in the authorization. Complete Embedded Signup including WABA selection, then try again.',
       );
     }
 
@@ -200,7 +212,7 @@ export class WabaService {
       });
     }
 
-    await this.syncPhoneNumbers(accountId, wabaId, accessToken);
+    await this.syncPhoneNumbers(accountId, wabaId, accessToken, userId);
 
     let webhookSubscribed = false;
     try {
@@ -336,6 +348,7 @@ export class WabaService {
       } catch (error) {
         const message =
           error.response?.data?.error?.message || error.message || '';
+        const metaCode = error.response?.data?.error?.code;
         const alreadyRegistered = /already registered|already been registered/i.test(
           message,
         );
@@ -356,6 +369,13 @@ export class WabaService {
           continue;
         }
 
+        const pinMismatch =
+          metaCode === 133005 ||
+          /pin mismatch|two step verification pin/i.test(message);
+        const rateLimited =
+          metaCode === 133016 ||
+          /too many attempts for this phone number/i.test(message);
+
         this.logger.warn(
           `Failed to register phone ${phone.phoneNumberId}: ${message}`,
         );
@@ -363,9 +383,14 @@ export class WabaService {
           phoneNumberId: phone.phoneNumberId,
           phoneId: phone.phoneId,
           displayPhoneNumber: phone.displayPhoneNumber,
-          pin,
+          // Do not surface a newly generated PIN when Meta expects an existing one.
+          pin: pinMismatch || rateLimited ? '' : pin,
           registered: false,
-          error: message,
+          error: pinMismatch
+            ? 'Two-step PIN mismatch — register with the existing PIN in Meta'
+            : rateLimited
+              ? 'Too many registration attempts — wait before trying again'
+              : message,
         });
       }
     }
@@ -498,12 +523,26 @@ export class WabaService {
 
     if (!account) throw new NotFoundException('WABA account not found');
 
+    if (account.accessTokenEncrypted) {
+      try {
+        const accessToken = this.tokenEncryption.decrypt(
+          account.accessTokenEncrypted,
+        );
+        await this.metaApi.unsubscribeFromWebhooks(account.wabaId, accessToken);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to unsubscribe Meta webhooks for WABA ${account.wabaId}: ${error.message}`,
+        );
+      }
+    }
+
     await this.prisma.developerWhatsappAccount.update({
       where: { id: accountId },
       data: {
         status: 'DISCONNECTED',
         disconnectedAt: new Date(),
         accessTokenEncrypted: null,
+        webhookSubscribed: false,
       },
     });
 
@@ -560,7 +599,7 @@ export class WabaService {
       },
     });
 
-    await this.syncPhoneNumbers(accountId, account.wabaId, accessToken);
+    await this.syncPhoneNumbers(accountId, account.wabaId, accessToken, userId);
 
     return this.prisma.developerWhatsappAccount.findUnique({
       where: { id: accountId },
@@ -584,6 +623,7 @@ export class WabaService {
     accountId: string,
     wabaId: string,
     accessToken: string,
+    userId: string,
   ) {
     try {
       const phoneData = await this.metaApi.getPhoneNumbers(wabaId, accessToken);
@@ -593,6 +633,10 @@ export class WabaService {
           where: { phoneNumberId: phone.id },
           select: { id: true, phoneId: true },
         });
+
+        if (!existingPhone) {
+          await this.quotaService.enforceQuota(userId, 'phoneNumbers');
+        }
 
         const phoneId =
           existingPhone?.phoneId ?? (await this.generateUniquePhoneId());
@@ -638,6 +682,9 @@ export class WabaService {
         });
       }
     } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
       this.logger.warn(
         `Failed to sync phone numbers for WABA ${wabaId}: ${error.message}`,
       );

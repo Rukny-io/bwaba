@@ -4,6 +4,12 @@ import { WhatsappTemplatesPanel } from '@/components/whatsapp/whatsapp-templates
 import { useWhatsappPhone } from '@/components/whatsapp/whatsapp-phone-context';
 
 export default function WhatsappPhoneTemplatesPage() {
-  const { appId, accountId } = useWhatsappPhone();
-  return <WhatsappTemplatesPanel appId={appId} accountId={accountId} />;
+  const { appId, phoneId, accountId } = useWhatsappPhone();
+  return (
+    <WhatsappTemplatesPanel
+      appId={appId}
+      phoneId={phoneId}
+      accountId={accountId}
+    />
+  );
 }

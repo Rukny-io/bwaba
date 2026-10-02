@@ -39,6 +39,28 @@ html:has(.profile-page-public) body::-webkit-scrollbar {
   height: 0;
 }
 
+/*
+ * Sync html/body with the active profile theme so iOS Safari safe-area /
+ * overscroll matches the page (avoids grey #fafafa body vs white content).
+ */
+html:has(.profile-page-public.profile-theme-classic),
+html:has(.profile-page-public.profile-theme-classic) body {
+  background-color: #ffffff;
+  color-scheme: light;
+}
+
+html:has(.profile-page-public.profile-theme-dark),
+html:has(.profile-page-public.profile-theme-dark) body {
+  background-color: #121212;
+  color-scheme: dark;
+}
+
+html:has(.profile-page-public.profile-theme-minimal),
+html:has(.profile-page-public.profile-theme-minimal) body {
+  background-color: #fafafa;
+  color-scheme: light;
+}
+
 .profile-page-glow {
   pointer-events: none;
   position: absolute;

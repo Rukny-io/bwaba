@@ -97,13 +97,23 @@ export class QuotaService {
     if (resource === 'phoneNumbers') {
       const limits = await this.getEffectiveLimits(userId);
       const max = resolveLimitValue(limits.maxPhoneNumbers);
+      // Phones on disconnected WABAs must not consume quota — otherwise
+      // reconnect/add-phone fails after a prior disconnect on Free (max 1).
       const count = await this.prisma.developerPhoneNumber.count({
-        where: { account: { userId }, status: { not: 'BANNED' } },
+        where: {
+          status: { not: 'BANNED' },
+          account: {
+            userId,
+            status: { not: 'DISCONNECTED' },
+          },
+        },
       });
       if (count >= max) {
-        throw new ForbiddenException(
-          `Phone number limit reached (${max === Number.MAX_SAFE_INTEGER ? 'unlimited' : max}). Upgrade to Pro.`,
-        );
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'LIMIT_REACHED',
+          message: `Phone number limit reached (${max === Number.MAX_SAFE_INTEGER ? 'unlimited' : max}). Upgrade to Pro.`,
+        });
       }
     }
   }

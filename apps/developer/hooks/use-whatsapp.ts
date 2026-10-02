@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   connectWhatsappAccount,
   createWhatsappTemplate,
+  deleteWhatsappTemplate,
   disconnectWhatsappAccount,
   getEmbeddedSignupConfig,
   getPhoneNumber,
@@ -133,6 +134,11 @@ export function useWhatsappMutations(appId: string) {
     onSuccess: invalidate,
   });
 
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (name: string) => deleteWhatsappTemplate(appId, name),
+    onSuccess: invalidate,
+  });
+
   return {
     connectMutation,
     disconnectMutation,
@@ -142,5 +148,6 @@ export function useWhatsappMutations(appId: string) {
     testMessageMutation,
     syncTemplatesMutation,
     createTemplateMutation,
+    deleteTemplateMutation,
   };
 }

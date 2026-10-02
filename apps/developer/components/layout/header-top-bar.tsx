@@ -13,12 +13,13 @@ import {
   Users,
   AlertTriangle,
   HelpCircle,
-  AppWindow,
-  LogIn,
-  Shield,
-  FileText,
+  BookOpen,
+  ClipboardList,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
 import { Dropdown } from '@heroui/react';
+import { useCurrentApp } from '@/components/providers/app-context';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
@@ -31,6 +32,8 @@ import { useMasterWallet } from '@/hooks/use-wallet';
 import { formatIqd } from '@/lib/wallet-format';
 import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
 import { appToast } from '@/lib/app-toast';
+import { appTools, appWhatsappApi } from '@/lib/app-routes';
+import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 
 const DEFAULT_TOP_UP_AMOUNT = 10_000;
 
@@ -45,7 +48,11 @@ export function HeaderTopBar({
 }) {
   const t = useTranslations();
   const pathname = usePathname();
+  const { appId } = useCurrentApp();
   const appsActive = pathname === '/apps' || pathname.startsWith('/apps/');
+  const toolsHref = appTools(appId);
+  const toolsActive =
+    pathname === toolsHref || pathname.startsWith(`${toolsHref}/`);
   const { data: wallet } = useMasterWallet();
   const [topUpBusy, setTopUpBusy] = useState(false);
 
@@ -93,41 +100,55 @@ export function HeaderTopBar({
           {t.topbar.myApps}
         </Link>
 
-        <button
-          type="button"
-          className={cn(dashboardTopTabsChipClass, 'hidden lg:inline-flex')}
-        >
-          {t.topbar.requiredActions}
-        </button>
-
-        <button
-          type="button"
+        <Link
+          href={toolsHref}
+          aria-current={toolsActive ? 'page' : undefined}
           className={cn(dashboardTopTabsChipClass, 'hidden lg:inline-flex')}
         >
           {t.topbar.tools}
-        </button>
+        </Link>
 
         <Dropdown>
           <Dropdown.Trigger className={cn(chipTriggerClass, 'hidden lg:inline-flex')}>
             {t.topbar.docs}
             <ChevronDown size={14} className="opacity-70" />
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" offset={14} className="min-w-[13rem]">
+          <Dropdown.Popover placement="bottom start" offset={14} className="min-w-[14rem]">
             <Dropdown.Menu>
-              <Dropdown.Item id="doc-app" textValue={t.topbar.docAppDev} className="gap-2">
-                <AppWindow className="size-4 shrink-0" />
-                {t.topbar.docAppDev}
+              <Dropdown.Item
+                id="doc-email"
+                textValue={t.topbar.docEmailApi}
+                href={`${DOCUMENTATION_BASE}/email-api`}
+                className="gap-2"
+              >
+                <Mail className="size-4 shrink-0" />
+                {t.topbar.docEmailApi}
               </Dropdown.Item>
-              <Dropdown.Item id="doc-fb" textValue={t.topbar.docFbLogin} className="gap-2">
-                <LogIn className="size-4 shrink-0" />
-                {t.topbar.docFbLogin}
+              <Dropdown.Item
+                id="doc-forms"
+                textValue={t.topbar.docForms}
+                href={`${DOCUMENTATION_BASE}/forms`}
+                className="gap-2"
+              >
+                <ClipboardList className="size-4 shrink-0" />
+                {t.topbar.docForms}
               </Dropdown.Item>
-              <Dropdown.Item id="doc-platform" textValue={t.topbar.docPlatform} className="gap-2">
-                <Shield className="size-4 shrink-0" />
-                {t.topbar.docPlatform}
+              <Dropdown.Item
+                id="doc-whatsapp"
+                textValue={t.topbar.docWhatsappApi}
+                href={appWhatsappApi(appId)}
+                className="gap-2"
+              >
+                <MessageCircle className="size-4 shrink-0" />
+                {t.topbar.docWhatsappApi}
               </Dropdown.Item>
-              <Dropdown.Item id="doc-all" textValue={t.topbar.docAll} className="gap-2">
-                <FileText className="size-4 shrink-0" />
+              <Dropdown.Item
+                id="doc-all"
+                textValue={t.topbar.docAll}
+                href={DOCUMENTATION_BASE}
+                className="gap-2"
+              >
+                <BookOpen className="size-4 shrink-0" />
                 {t.topbar.docAll}
               </Dropdown.Item>
             </Dropdown.Menu>

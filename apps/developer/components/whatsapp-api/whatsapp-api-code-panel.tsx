@@ -12,6 +12,7 @@ import {
 } from '@/lib/whatsapp-api-code-samples';
 import type { WhatsappApiEndpoint } from '@/lib/whatsapp-api-catalog';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+import { waApiCodeBlock } from '@/components/whatsapp-api/whatsapp-api-shared';
 
 const LANGUAGES: { id: CodeSampleLanguage; label: string }[] = [
   { id: 'curl', label: 'curl' },
@@ -62,7 +63,7 @@ export function WhatsappApiCodePanel({
               type="button"
               onClick={() => setRecipeId(recipe.id)}
               className={cn(
-                'rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors',
+                'rounded-xl px-2.5 py-1 text-[12px] font-medium transition-colors',
                 recipeId === recipe.id
                   ? 'bg-[var(--foreground)] text-[var(--background)]'
                   : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
@@ -82,7 +83,7 @@ export function WhatsappApiCodePanel({
               type="button"
               onClick={() => setLanguage(item.id)}
               className={cn(
-                'rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors',
+                'rounded-xl px-2.5 py-1 text-[12px] font-medium transition-colors',
                 language === item.id
                   ? 'bg-[var(--foreground)] text-[var(--background)]'
                   : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
@@ -102,10 +103,7 @@ export function WhatsappApiCodePanel({
         </button>
       </div>
 
-      <pre
-        className="overflow-x-auto rounded-2xl bg-[var(--surface-secondary)] p-4 text-[12px] leading-relaxed text-[var(--foreground)]"
-        dir="ltr"
-      >
+      <pre className={waApiCodeBlock} dir="ltr">
         <code>{code}</code>
       </pre>
     </div>
@@ -133,7 +131,7 @@ export function WhatsappApiWebhookCodePanel({ copyLabel }: { copyLabel: string }
               type="button"
               onClick={() => setLanguage(item.id)}
               className={cn(
-                'rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors',
+                'rounded-xl px-2.5 py-1 text-[12px] font-medium transition-colors',
                 language === item.id
                   ? 'bg-[var(--foreground)] text-[var(--background)]'
                   : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
@@ -152,10 +150,7 @@ export function WhatsappApiWebhookCodePanel({ copyLabel }: { copyLabel: string }
           {copyLabel}
         </button>
       </div>
-      <pre
-        className="overflow-x-auto rounded-2xl bg-[var(--surface-secondary)] p-4 text-[12px] leading-relaxed text-[var(--foreground)]"
-        dir="ltr"
-      >
+      <pre className={waApiCodeBlock} dir="ltr">
         <code>{code}</code>
       </pre>
     </div>

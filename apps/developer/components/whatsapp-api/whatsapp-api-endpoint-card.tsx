@@ -4,11 +4,15 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { WhatsappApiEndpoint } from '@/lib/whatsapp-api-catalog';
 import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
+import {
+  waApiBtnSecondary,
+  waApiPanelFlush,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
 
 const methodClass: Record<string, string> = {
-  GET: 'bg-[color-mix(in_srgb,#0f766e_18%,transparent)] text-[#0f766e]',
-  POST: 'bg-[color-mix(in_srgb,#2563eb_16%,transparent)] text-[#2563eb]',
-  DELETE: 'bg-[color-mix(in_srgb,#b91c1c_14%,transparent)] text-[#b91c1c]',
+  GET: 'bg-[color-mix(in_srgb,var(--success)_14%,var(--background))] text-[var(--success)]',
+  POST: 'bg-[color-mix(in_srgb,var(--primary)_14%,var(--background))] text-[var(--primary)]',
+  DELETE: 'bg-[color-mix(in_srgb,var(--danger)_14%,var(--background))] text-[var(--danger)]',
 };
 
 interface WhatsappApiEndpointCardProps {
@@ -22,6 +26,7 @@ interface WhatsappApiEndpointCardProps {
   tryHref?: string;
   tryLabel?: string;
   hideCode?: boolean;
+  className?: string;
 }
 
 export function WhatsappApiEndpointCard({
@@ -35,9 +40,10 @@ export function WhatsappApiEndpointCard({
   tryHref,
   tryLabel,
   hideCode = false,
+  className,
 }: WhatsappApiEndpointCardProps) {
   return (
-    <article className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
+    <article className={cn(waApiPanelFlush, className)}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)]/40 px-4 py-4 sm:px-5">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -67,17 +73,14 @@ export function WhatsappApiEndpointCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {tryHref && tryLabel ? (
-            <Link
-              href={tryHref}
-              className="rounded-xl bg-[var(--surface-secondary)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_85%,var(--foreground)_6%)]"
-            >
+            <Link href={tryHref} className={cn(waApiBtnSecondary, 'h-8 px-3 text-[12.5px]')}>
               {tryLabel}
             </Link>
           ) : onTry && tryLabel ? (
             <button
               type="button"
               onClick={onTry}
-              className="rounded-xl bg-[var(--surface-secondary)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_85%,var(--foreground)_6%)]"
+              className={cn(waApiBtnSecondary, 'h-8 px-3 text-[12.5px]')}
             >
               {tryLabel}
             </button>

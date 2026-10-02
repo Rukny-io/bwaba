@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { connection } from "next/server";
 import { thmanyahSans } from "@rukny/thmanyah-font/next";
@@ -19,6 +19,16 @@ export const metadata: Metadata = {
     icon: "/rukny-logo.svg",
     apple: "/rukny-logo.svg",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 const themeBootScript = `(function(){try{var t=localStorage.getItem('heroui-theme')||'light';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;

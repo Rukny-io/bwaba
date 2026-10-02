@@ -31,6 +31,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#ffffff',
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -85,7 +86,7 @@ export default async function RootLayout({
       <body
         className={cn(
           bodyFontClass,
-          'min-h-full bg-white text-[#1D1D1D] antialiased',
+          'min-h-full bg-background text-[#1D1D1D] antialiased',
           fontUtility,
         )}
       >

@@ -2,6 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  Code2,
+  LayoutGrid,
+  MessageSquare,
+  Play,
+  ScrollText,
+  Webhook,
+  type LucideIcon,
+} from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import {
@@ -14,6 +23,15 @@ import {
 } from '@/lib/whatsapp-api-routes';
 import { cn } from '@/lib/utils';
 
+const SECTION_ICONS: Partial<Record<WhatsappApiSectionId, LucideIcon>> = {
+  overview: LayoutGrid,
+  messages: MessageSquare,
+  templates: ScrollText,
+  webhooks: Webhook,
+  try: Play,
+  sdks: Code2,
+};
+
 export function WhatsappApiNav() {
   const pathname = usePathname();
   const { app } = useCurrentApp();
@@ -21,7 +39,7 @@ export function WhatsappApiNav() {
 
   return (
     <nav
-      className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label={d.title}
     >
       {WHATSAPP_API_NAV_SECTIONS.map((item) => {
@@ -31,6 +49,7 @@ export function WhatsappApiNav() {
           app.appId,
           item.id as WhatsappApiSectionId,
         );
+        const Icon = SECTION_ICONS[item.id as WhatsappApiSectionId];
 
         return (
           <Link
@@ -38,12 +57,15 @@ export function WhatsappApiNav() {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[13px] font-medium transition-colors',
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-medium transition-colors',
               active
-                ? 'bg-[var(--foreground)] text-[var(--background)] shadow-sm'
-                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_88%,var(--foreground)_6%)] hover:text-[var(--foreground)]',
+                ? 'bg-[var(--foreground)] text-[var(--background)]'
+                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
             )}
           >
+            {Icon ? (
+              <Icon className="size-3.5" strokeWidth={active ? 2 : 1.75} aria-hidden />
+            ) : null}
             {d[item.labelKey]}
           </Link>
         );

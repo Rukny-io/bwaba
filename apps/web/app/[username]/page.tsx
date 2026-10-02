@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { LivePublicProfile } from '@/components/public-profile/live-public-profile';
 import { PUBLIC_SITE_URL } from '@/lib/config';
 import { getLocale } from '@/lib/i18n-server';
 import { getMessages } from '@/lib/i18n';
+import { getProfileThemeBackground } from '@/lib/profile-themes';
 import { isValidProfileUsername } from '@/lib/profile-routes';
 import {
   fetchPublicProfile,
@@ -18,6 +19,20 @@ type Props = {
   params: Promise<{ username: string }>;
   searchParams: Promise<{ embed?: string; product?: string }>;
 };
+
+export async function generateViewport({ params }: Props): Promise<Viewport> {
+  const { username } = await params;
+  const themeColor = !isValidProfileUsername(username)
+    ? '#ffffff'
+    : getProfileThemeBackground((await fetchPublicProfile(username))?.themeKey);
+
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor,
+  };
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;

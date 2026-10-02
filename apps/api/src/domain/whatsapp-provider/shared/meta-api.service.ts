@@ -221,6 +221,15 @@ export class MetaApiService {
     return response.data;
   }
 
+  /**
+   * إلغاء اشتراك التطبيق من أحداث WABA (عند disconnect)
+   */
+  async unsubscribeFromWebhooks(wabaId: string, accessToken: string) {
+    const client = this.createClient(accessToken);
+    const response = await client.delete(`/${wabaId}/subscribed_apps`);
+    return response.data;
+  }
+
   // ==================
   // 🔄 Token Exchange
   // ==================

@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import { CircleCheck, Clock, Loader2, Plus, RefreshCw, ScrollText, XCircle } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
-import { CreateTemplateDialog } from '@/components/whatsapp/create-template-dialog';
 import { WhatsappTemplatesDataTable } from '@/components/whatsapp/whatsapp-templates-data-table';
 import {
   WhatsappEmptyState,
@@ -14,6 +13,7 @@ import {
 } from '@/components/whatsapp/whatsapp-ui';
 import { useWhatsappAccounts, useWhatsappMutations, useWhatsappTemplates } from '@/hooks/use-whatsapp';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
+import { appWhatsappPhoneCreateTemplateHref } from '@/lib/whatsapp-phone-routes';
 import { cn } from '@/lib/utils';
 
 function formatCount(value: number): string {
@@ -22,9 +22,12 @@ function formatCount(value: number): string {
 
 export function WhatsappTemplatesPanel({
   appId,
+  phoneId,
   accountId: accountIdProp,
 }: {
   appId: string;
+  /** Public phone id — templates are managed inside this phone workspace. */
+  phoneId: string;
   accountId?: string;
 }) {
   const w = useTranslations().whatsapp;
@@ -32,8 +35,9 @@ export function WhatsappTemplatesPanel({
   const accountId =
     accountIdProp ?? accounts?.find((a) => a.status === 'ACTIVE')?.id;
   const { data: templates, isLoading } = useWhatsappTemplates(appId, accountId);
-  const { syncTemplatesMutation, createTemplateMutation } = useWhatsappMutations(appId);
-  const [createOpen, setCreateOpen] = useState(false);
+  const { syncTemplatesMutation, deleteTemplateMutation } = useWhatsappMutations(appId);
+
+  const createHref = appWhatsappPhoneCreateTemplateHref(appId, phoneId);
 
   const approvedCount =
     templates?.filter((t) => t.status.toUpperCase() === 'APPROVED').length ?? 0;
@@ -46,18 +50,20 @@ export function WhatsappTemplatesPanel({
     <div className="dashboard-section-stack">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted-foreground)]">
-          {accountIdProp ? w.templatesPhoneScopeHint : w.templatesPageDesc}
+          {w.templatesPhoneScopeHint}
         </p>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={!accountId}
-            onClick={() => setCreateOpen(true)}
-            className={whatsappBtnPrimary}
-          >
-            <Plus className="size-3.5" />
-            {w.createTemplate}
-          </button>
+          {accountId ? (
+            <Link href={createHref} className={whatsappBtnPrimary}>
+              <Plus className="size-3.5" />
+              {w.createTemplate}
+            </Link>
+          ) : (
+            <button type="button" disabled className={whatsappBtnPrimary}>
+              <Plus className="size-3.5" />
+              {w.createTemplate}
+            </button>
+          )}
           <button
             type="button"
             disabled={!accountId || syncTemplatesMutation.isPending}
@@ -118,37 +124,31 @@ export function WhatsappTemplatesPanel({
               title={w.noTemplates}
               description={w.noTemplatesDesc}
               action={
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className={whatsappBtnPrimary}
-                >
+                <Link href={createHref} className={whatsappBtnPrimary}>
                   <Plus className="size-3.5" />
                   {w.createTemplate}
-                </button>
+                </Link>
               }
             />
           ) : (
-            <WhatsappTemplatesDataTable data={templates} />
+            <WhatsappTemplatesDataTable
+              data={templates}
+              deletingName={
+                deleteTemplateMutation.isPending
+                  ? (deleteTemplateMutation.variables ?? null)
+                  : null
+              }
+              onDelete={(name) =>
+                deleteTemplateMutation.mutate(name, {
+                  onSuccess: () => appToast.success(w.deleteTemplateDone),
+                  onError: (e) =>
+                    appToast.error(getApiErrorMessage(e, w.deleteTemplateFailed)),
+                })
+              }
+            />
           )}
         </>
       )}
-
-      <CreateTemplateDialog
-        open={createOpen}
-        accountId={accountId}
-        isPending={createTemplateMutation.isPending}
-        onClose={() => setCreateOpen(false)}
-        onSubmit={(payload) =>
-          createTemplateMutation.mutate(payload, {
-            onSuccess: () => {
-              appToast.success(w.createTemplateSuccess);
-              setCreateOpen(false);
-            },
-            onError: (e) => appToast.error(getApiErrorMessage(e, w.createTemplateFailed)),
-          })
-        }
-      />
     </div>
   );
 }

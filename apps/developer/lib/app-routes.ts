@@ -59,6 +59,10 @@ export function appAnalytics(appId: string): string {
   return `${appBase(appId)}/analytics`;
 }
 
+export function appTools(appId: string): string {
+  return `${appBase(appId)}/tools`;
+}
+
 export function appCreation(): string {
   return "/apps/creation";
 }

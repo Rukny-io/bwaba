@@ -85,7 +85,7 @@ export function WhatsappPhoneChrome({ children }: { children: React.ReactNode })
 
   if (isError || !phone) {
     return (
-      <section className="dashboard-panel rounded-2xl p-6 text-center sm:rounded-3xl">
+      <section className="dashboard-panel p-6 text-center">
         <p className="text-sm text-[var(--muted-foreground)]">{w.phoneNotFound}</p>
         <Link
           href={appWhatsappHref(appId, 'phones')}
@@ -99,7 +99,7 @@ export function WhatsappPhoneChrome({ children }: { children: React.ReactNode })
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="dashboard-panel rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+      <section className="dashboard-panel p-4 sm:p-5">
         <div className="flex flex-col gap-4">
           <Link
             href={appWhatsappHref(appId, 'phones')}

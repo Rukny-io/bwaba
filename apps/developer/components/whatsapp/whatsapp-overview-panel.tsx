@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import {
+  ArrowUpRight,
   CircleCheck,
   Key,
   Loader2,
   MessageSquare,
   Phone,
   RefreshCw,
+  ScrollText,
   Unplug,
   Webhook,
 } from 'lucide-react';
@@ -41,6 +43,16 @@ function formatConnectedDate(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
+function pickPreferredPhone(
+  phones: WhatsappPhoneSummary[],
+): WhatsappPhoneSummary | null {
+  if (!phones.length) return null;
+  return (
+    phones.find((p) => p.status === 'ACTIVE' || p.status === 'CONNECTED') ??
+    phones[0]
+  );
+}
+
 function AccountStatusBadge({ status }: { status: string }) {
   const w = useTranslations().whatsapp;
   const isActive = status === 'ACTIVE';
@@ -49,7 +61,7 @@ function AccountStatusBadge({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        'rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
         isActive &&
           'bg-[color-mix(in_srgb,var(--success)_14%,var(--background))] text-[var(--success)]',
         isPending &&
@@ -64,35 +76,65 @@ function AccountStatusBadge({ status }: { status: string }) {
   );
 }
 
+function qualityTone(rating: string | null | undefined): string {
+  const value = (rating || '').toUpperCase();
+  if (value === 'GREEN') {
+    return 'bg-[color-mix(in_srgb,var(--success)_14%,var(--background))] text-[var(--success)]';
+  }
+  if (value === 'YELLOW' || value === 'ORANGE') {
+    return 'bg-[color-mix(in_srgb,var(--warning)_14%,var(--background))] text-[var(--warning)]';
+  }
+  if (value === 'RED') {
+    return 'bg-[color-mix(in_srgb,var(--danger)_14%,var(--background))] text-[var(--danger)]';
+  }
+  return 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]';
+}
+
 function PhoneListRow({ appId, phone }: { appId: string; phone: WhatsappPhoneSummary }) {
   const w = useTranslations().whatsapp;
+  const display = phone.displayPhoneNumber || phone.phoneNumber;
+  const name = phone.verifiedName || w.businessName;
 
   return (
     <li>
       <Link
         href={appWhatsappPhoneHref(appId, phone.phoneId)}
-        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_50%,transparent)] sm:px-5"
+        className="group dashboard-panel flex items-center gap-3.5 p-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_55%,var(--surface))] sm:gap-4 sm:p-4"
       >
-        <div className="min-w-0">
-          <p className="font-mono text-sm font-semibold text-[var(--foreground)]" dir="ltr">
-            {phone.displayPhoneNumber || phone.phoneNumber}
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
+          <Phone className="size-4" strokeWidth={1.75} aria-hidden />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate font-mono text-[14px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[15px]"
+            dir="ltr"
+          >
+            {display}
           </p>
-          <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
-            {phone.verifiedName || w.businessName}
-          </p>
-          <p className="mt-0.5 font-mono text-[10px] text-[var(--muted-foreground)]" dir="ltr">
-            {phone.phoneId}
+          <p className="mt-0.5 truncate text-[12.5px] text-[var(--muted-foreground)]">
+            {name}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
           {phone.qualityRating ? (
-            <span className="text-[11px] text-[var(--muted-foreground)]">
-              {w.quality}:{' '}
-              <span className="font-medium text-[var(--foreground)]">{phone.qualityRating}</span>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                qualityTone(phone.qualityRating),
+              )}
+            >
+              {phone.qualityRating}
             </span>
           ) : null}
           <PhoneStatusBadge status={phone.status} />
         </div>
+
+        <ArrowUpRight
+          className="size-4 shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--foreground)]"
+          aria-hidden
+        />
       </Link>
     </li>
   );
@@ -121,7 +163,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
       <WhatsappEmptyState
         icon={MessageSquare}
         title={w.notConnected}
-        description={`${w.notConnectedDesc} ${w.connectHint}`}
+        description={w.notConnectedDesc}
         action={<EmbeddedSignupButton appId={appId} />}
       />
     );
@@ -133,21 +175,30 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
     (p) => p.status === 'ACTIVE' || p.status === 'CONNECTED',
   ).length;
   const previewPhones = phones.slice(0, 4);
+  const preferredPhone = pickPreferredPhone(phones);
+  const templatesHref = preferredPhone
+    ? appWhatsappPhoneHref(appId, preferredPhone.phoneId, 'templates')
+    : appWhatsappHref(appId, 'phones');
 
   return (
     <div className="dashboard-section-stack">
-      <section className="dashboard-panel rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+      <section className="dashboard-panel p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
-                {activeAccount.businessName || activeAccount.verifiedName || 'WABA'}
-              </h2>
-              <AccountStatusBadge status={activeAccount.status} />
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
+              <MessageSquare className="size-4" strokeWidth={1.75} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-semibold text-[var(--foreground)] sm:text-lg">
+                  {activeAccount.businessName || activeAccount.verifiedName || 'WABA'}
+                </h2>
+                <AccountStatusBadge status={activeAccount.status} />
+              </div>
+              <p className="mt-1.5 font-mono text-[11px] text-[var(--muted-foreground)] sm:text-xs" dir="ltr">
+                {w.wabaId}: {activeAccount.wabaId}
+              </p>
             </div>
-            <p className="mt-1.5 font-mono text-xs text-[var(--muted-foreground)]" dir="ltr">
-              {w.wabaId}: {activeAccount.wabaId}
-            </p>
           </div>
 
           <div className="flex flex-wrap gap-2 sm:shrink-0">
@@ -216,7 +267,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
       </DashboardGrid>
 
       {activeAccount.onboarding?.paymentMethodRequired !== false ? (
-        <div className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_28%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-4 sm:px-5">
+        <div className="rounded-xl bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-4 sm:px-5">
           <p className="text-[13px] leading-relaxed text-[var(--foreground)]">
             {w.paymentRequiredBanner}
           </p>
@@ -248,8 +299,8 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
       ) : null}
 
       {phoneCount === 0 ? (
-        <div className="space-y-3">
-          <p className="rounded-2xl bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-3 text-[13px] leading-relaxed text-[var(--warning)] sm:px-5">
+        <section className="dashboard-panel space-y-3 p-4 sm:p-5">
+          <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)]">
             {w.phonesPendingMeta}
           </p>
           {activeAccount.wabaId ? (
@@ -259,60 +310,69 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
               wabaId={activeAccount.wabaId}
             />
           ) : null}
-        </div>
-      ) : null}
-
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
-            {w.linkedPhones}
-          </h3>
-          <div className="flex flex-wrap items-center gap-2">
-            {activeAccount?.wabaId ? (
-              <EmbeddedSignupButton
-                appId={appId}
-                mode="add-phone"
-                wabaId={activeAccount.wabaId}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[var(--surface-secondary)] px-3 text-[12.5px] font-medium text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_85%,var(--foreground)_6%)] disabled:opacity-40"
-              />
-            ) : null}
-            <Link
-              href={appWhatsappHref(appId, 'phones')}
-              className="text-[12.5px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            >
-              {w.managePhones}
-            </Link>
+        </section>
+      ) : (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
+                {w.linkedPhones}
+              </h3>
+              <p className="mt-0.5 text-[12px] text-[var(--muted-foreground)]">
+                {formatCount(phoneCount)} · {w.metricPhonesHint}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {activeAccount.wabaId ? (
+                <EmbeddedSignupButton
+                  appId={appId}
+                  mode="add-phone"
+                  wabaId={activeAccount.wabaId}
+                  compact
+                  variant="secondary"
+                />
+              ) : null}
+              <Link href={appWhatsappHref(appId, 'phones')} className={whatsappBtnSecondary}>
+                {w.managePhones}
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {previewPhones.length > 0 ? (
-          <ul className="dashboard-panel divide-y divide-[var(--border)]/30 overflow-hidden rounded-2xl sm:rounded-3xl">
+          <ul className="space-y-2.5">
             {previewPhones.map((phone) => (
               <PhoneListRow key={phone.id} appId={appId} phone={phone} />
             ))}
           </ul>
-        ) : (
-          <WhatsappEmptyState icon={Phone} title={w.noPhones} />
-        )}
 
-        {phoneCount > previewPhones.length ? (
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {w.phonesMore.replace('{count}', String(phoneCount - previewPhones.length))}
-          </p>
-        ) : null}
-      </section>
+          {phoneCount > previewPhones.length ? (
+            <Link
+              href={appWhatsappHref(appId, 'phones')}
+              className="inline-flex text-[12.5px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            >
+              {w.phonesMore.replace('{count}', String(phoneCount - previewPhones.length))}
+            </Link>
+          ) : null}
+        </section>
+      )}
 
-      <section className="space-y-3 sm:space-y-4">
-        <h3 className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
-          {d.quickActions}
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.quickActions}</h3>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           <DashboardQuickAction
             href={appWhatsappHref(appId, 'phones')}
             title={w.navPhones}
             description={w.actionPhonesDesc}
             icon={Phone}
             isRtl={isRtl}
+            className="rounded-[1.25rem] sm:rounded-[1.25rem]"
+          />
+          <DashboardQuickAction
+            href={templatesHref}
+            title={w.navTemplates}
+            description={w.actionTemplatesDesc}
+            icon={ScrollText}
+            isRtl={isRtl}
+            className="rounded-[1.25rem] sm:rounded-[1.25rem]"
           />
           <DashboardQuickAction
             href={appWhatsappApi(appId)}
@@ -320,6 +380,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
             description={w.actionApiDocsDesc}
             icon={MessageSquare}
             isRtl={isRtl}
+            className="rounded-[1.25rem] sm:rounded-[1.25rem]"
           />
           <DashboardQuickAction
             href={appApiKeysNew(appId)}
@@ -327,6 +388,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
             description={w.actionApiKeyDesc}
             icon={Key}
             isRtl={isRtl}
+            className="rounded-[1.25rem] sm:rounded-[1.25rem]"
           />
           <DashboardQuickAction
             href={appWhatsappHref(appId, 'webhooks')}
@@ -334,6 +396,7 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
             description={w.actionWebhooksDesc}
             icon={Webhook}
             isRtl={isRtl}
+            className="rounded-[1.25rem] sm:rounded-[1.25rem]"
           />
         </div>
       </section>

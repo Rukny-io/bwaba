@@ -19,9 +19,22 @@ export class TemplatesService {
     private tokenEncryption: TokenEncryptionService,
   ) {}
 
-  private async resolveDeveloperAppId(userId: string, appId: string) {
+  /**
+   * Accepts either the public 16-digit appId (JWT portal) or the internal
+   * developerApp UUID (API-key public routes).
+   */
+  private async resolveDeveloperAppId(userId: string, appIdOrUuid: string) {
+    const looksLikeUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        appIdOrUuid,
+      );
+
     const app = await this.prisma.developerApp.findFirst({
-      where: { appId, userId, status: 'ACTIVE' },
+      where: {
+        userId,
+        status: 'ACTIVE',
+        ...(looksLikeUuid ? { id: appIdOrUuid } : { appId: appIdOrUuid }),
+      },
       select: { id: true },
     });
 

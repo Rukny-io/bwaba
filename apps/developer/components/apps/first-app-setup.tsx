@@ -106,7 +106,7 @@ function Step1AppDetails({
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.step1Desc}</p>
       </div>
 
-      <div className="dashboard-card space-y-4 rounded-2xl p-5">
+      <div className="dashboard-panel space-y-4 p-4 sm:p-5">
         <TextField isRequired>
           <Label className="text-xs font-medium text-[var(--foreground)]">{labels.appName}</Label>
           <Input
@@ -147,7 +147,7 @@ function Step2UseCases({ labels }: { labels: Record<string, string> }) {
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.step2Desc}</p>
       </div>
 
-      <div className="rounded-2xl border border-[color-mix(in_srgb,var(--primary)_30%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_6%,var(--background))] p-5">
+      <div className="dashboard-panel border border-[color-mix(in_srgb,var(--primary)_22%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_6%,var(--surface))] p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
             <Package className="size-5 text-[var(--primary)]" />
@@ -155,7 +155,7 @@ function Step2UseCases({ labels }: { labels: Record<string, string> }) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-[var(--foreground)]">{labels.useCaseOther}</h3>
-              <div className="flex size-5 items-center justify-center rounded-full bg-[var(--primary)]">
+              <div className="flex size-5 items-center justify-center rounded-xl bg-[var(--primary)]">
                 <Check className="size-3 text-[var(--primary-foreground)]" />
               </div>
             </div>
@@ -255,11 +255,11 @@ function Step3AppType({
               onClick={() => onChange({ appType: type.value })}
               onKeyDown={(e) => handleKeyDown(e, type.value)}
               className={cn(
-                'group flex w-full items-start gap-3.5 rounded-2xl border p-4 text-start transition-all duration-200',
+                'group flex w-full items-start gap-3.5 rounded-xl border p-4 text-start transition-all duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
                 selected
-                  ? 'border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_7%,var(--background))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_12%,transparent)]'
-                  : 'border-[var(--border)] bg-[var(--background)] hover:border-[color-mix(in_srgb,var(--primary)_22%,var(--border))] hover:bg-[var(--surface-secondary)]',
+                  ? 'border-[color-mix(in_srgb,var(--primary)_45%,var(--border))] bg-[color-mix(in_srgb,var(--primary)_7%,var(--surface))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_12%,transparent)]'
+                  : 'border-[var(--border)] bg-[var(--surface)] hover:border-[color-mix(in_srgb,var(--primary)_22%,var(--border))] hover:bg-[var(--surface-secondary)]',
               )}
             >
               <RadioIndicator selected={selected} />
@@ -337,7 +337,7 @@ function Step4Verification({
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.step4Desc}</p>
       </div>
 
-      <div className="dashboard-card space-y-4 rounded-2xl p-5">
+      <div className="dashboard-panel space-y-4 p-4 sm:p-5">
         <TextField isRequired>
           <Label className="text-xs font-medium text-[var(--foreground)]">{labels.phoneLabel}</Label>
           <Input
@@ -355,7 +355,7 @@ function Step4Verification({
         {!otpSent && !otpVerified ? (
           <Button
             type="button"
-            className="h-10 w-full rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
+            className="h-10 w-full rounded-xl bg-[var(--foreground)] font-medium text-[var(--background)]"
             isDisabled={!data.phoneNumber || data.phoneNumber.length < 10 || isSending}
             onPress={onSendOtp}
           >
@@ -602,7 +602,7 @@ export function FirstAppSetup({ defaultEmail = '' }: { defaultEmail?: string }) 
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 flex-1 rounded-xl font-medium"
+                className="h-10 flex-1 rounded-xl font-medium"
                 onPress={handleBack}
               >
                 <BackArrow className="size-4" />
@@ -614,7 +614,7 @@ export function FirstAppSetup({ defaultEmail = '' }: { defaultEmail?: string }) 
               <Button
                 type="button"
                 className={cn(
-                  'h-11 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]',
+                  'h-10 rounded-xl bg-[var(--foreground)] font-medium text-[var(--background)]',
                   step === 1 ? 'w-full' : 'flex-1',
                 )}
                 isDisabled={!canProceed}
@@ -626,7 +626,7 @@ export function FirstAppSetup({ defaultEmail = '' }: { defaultEmail?: string }) 
             ) : (
               <Button
                 type="button"
-                className="h-11 flex-1 rounded-xl bg-[var(--primary)] font-medium text-[var(--primary-foreground)]"
+                className="h-10 flex-1 rounded-xl bg-[var(--foreground)] font-medium text-[var(--background)]"
                 isDisabled={!otpVerified || createApp.isPending}
                 onPress={() => void handleCreate()}
               >

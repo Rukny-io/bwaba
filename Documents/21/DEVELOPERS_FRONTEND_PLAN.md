@@ -1421,9 +1421,10 @@ interface PaginationProps {
 // 8. الـ popup يُغلق
 // 9. الصفحة تُحدّث (invalidate queries)
 
-// متطلبات:
-// - NEXT_PUBLIC_WHATSAPP_APP_ID في env
-// - NEXT_PUBLIC_WHATSAPP_CONFIG_ID في env
+// متطلبات (على API — يُجلب عبر GET /developer/whatsapp/embedded-signup-config):
+// - WHATSAPP_APP_ID
+// - WHATSAPP_CONFIG_ID
+// - WHATSAPP_APP_SECRET (لتبادل الـ code)
 ```
 
 ### 8.2 WABA Status Card
@@ -2126,8 +2127,16 @@ apps/developers/
 ### البيئة المطلوبة
 
 ```env
-# .env.local — developers app
-NEXT_PUBLIC_WHATSAPP_APP_ID=              # Meta App ID
-NEXT_PUBLIC_WHATSAPP_CONFIG_ID=           # Embedded Signup Config ID
-API_BACKEND_URL=http://localhost:3001     # (موجود)
+# API server (.env / .env.dev) — Embedded Signup config is served via
+# GET /developer/whatsapp/embedded-signup-config (not NEXT_PUBLIC_* on the portal)
+WHATSAPP_APP_ID=
+WHATSAPP_APP_SECRET=
+WHATSAPP_CONFIG_ID=
+WHATSAPP_GRAPH_API_VERSION=v25.0
+META_WEBHOOK_VERIFY_TOKEN=
+WHATSAPP_VERIFY_TOKEN=
+ENCRYPTION_KEY=   # 32+ chars; AES-GCM for WABA tokens
+
+# developers app
+API_BACKEND_URL=http://localhost:3001
 ```

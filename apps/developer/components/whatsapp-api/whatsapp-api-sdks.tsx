@@ -3,18 +3,22 @@
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { SEND_MESSAGE_RECIPES } from '@/lib/whatsapp-api-code-samples';
 import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
+import {
+  waApiCodeBlock,
+  waApiPanel,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
 
 export function WhatsappApiSdks() {
   const d = WHATSAPP_API_COPY;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h2 className="text-base font-semibold">{d.sdksTitle}</h2>
+    <>
+      <section className={waApiPanel}>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{d.sdksTitle}</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
           {d.sdksDesc}
         </p>
-        <div className="mt-4 rounded-2xl bg-[var(--surface-secondary)] p-4" dir="ltr">
+        <div className="mt-4 rounded-xl bg-[var(--surface-secondary)] p-4" dir="ltr">
           <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
             npm
           </p>
@@ -24,12 +28,9 @@ export function WhatsappApiSdks() {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.sdksQuickstartTitle}</h3>
-        <pre
-          className="mt-4 overflow-x-auto rounded-2xl bg-[var(--surface-secondary)] p-4 text-[12px] leading-relaxed text-[var(--foreground)]"
-          dir="ltr"
-        >
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.sdksQuickstartTitle}</h3>
+        <pre className={`mt-4 ${waApiCodeBlock}`} dir="ltr">
           <code>{`import { RuknyWhatsApp } from '@rukny/whatsapp';
 
 const wa = new RuknyWhatsApp({
@@ -69,8 +70,8 @@ import { verifyWebhookSignature } from '@rukny/whatsapp';`}</code>
         </p>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.sdksMethodsTitle}</h3>
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.sdksMethodsTitle}</h3>
         <ul className="mt-3 space-y-2 text-[13px] text-[var(--muted-foreground)]" dir="ltr">
           <li>
             <code className="text-[var(--foreground)]">messages.sendText()</code>
@@ -96,15 +97,15 @@ import { verifyWebhookSignature } from '@rukny/whatsapp';`}</code>
         </ul>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.sdksExamplesTitle}</h3>
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.sdksExamplesTitle}</h3>
         <div className="mt-4">
           <WhatsappApiCodePanel recipes={SEND_MESSAGE_RECIPES} copyLabel={d.copy} />
         </div>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.sdksOpenApiTitle}</h3>
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.sdksOpenApiTitle}</h3>
         <p className="mt-2 text-[13px] text-[var(--muted-foreground)]">{d.sdksOpenApiDesc}</p>
         <code
           className="mt-3 block break-all rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 font-mono text-[12px] text-[var(--foreground)]"
@@ -113,6 +114,6 @@ import { verifyWebhookSignature } from '@rukny/whatsapp';`}</code>
           packages/whatsapp/openapi/public-v1.yaml
         </code>
       </section>
-    </div>
+    </>
   );
 }

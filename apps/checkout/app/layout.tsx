@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { thmanyahSans } from '@rukny/thmanyah-font/next';
 import { LOCALE_STORAGE_KEY } from '@/lib/i18n/messages';
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
     icon: '/rukny-logo.svg',
     apple: '/rukny-logo.svg',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#ffffff',
 };
 
 export default async function RootLayout({

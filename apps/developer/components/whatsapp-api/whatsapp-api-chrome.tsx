@@ -6,6 +6,10 @@ import { ExternalLink, KeyRound } from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
 import { WhatsappApiNav } from '@/components/whatsapp-api/whatsapp-api-nav';
+import {
+  waApiBtnPrimary,
+  waApiBtnSecondary,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { appApiKeysNew, appWhatsapp } from '@/lib/app-routes';
 import { cn } from '@/lib/utils';
@@ -24,17 +28,14 @@ export function WhatsappApiChrome({ children }: { children: ReactNode }) {
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
             <Link
               href={appApiKeysNew(app.appId)}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[var(--foreground)] px-3.5 text-[13px] font-medium text-[var(--background)] transition-opacity hover:opacity-90 sm:flex-none"
+              className={cn(waApiBtnPrimary, 'flex-1 sm:flex-none')}
             >
               <KeyRound className="size-3.5" />
               {d.createKey}
             </Link>
             <Link
               href={appWhatsapp(app.appId)}
-              className={cn(
-                'inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--border)]',
-                'bg-[var(--surface)] px-3.5 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] sm:flex-none',
-              )}
+              className={cn(waApiBtnSecondary, 'flex-1 sm:flex-none')}
             >
               WhatsApp Business
               <ExternalLink className="size-3.5 opacity-60" />
@@ -44,7 +45,7 @@ export function WhatsappApiChrome({ children }: { children: ReactNode }) {
       >
         <WhatsappApiNav />
       </DashboardPageHeader>
-      {children}
+      <div className="space-y-5 sm:space-y-6">{children}</div>
     </div>
   );
 }

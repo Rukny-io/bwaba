@@ -14,67 +14,69 @@
   --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
-  /* ── Brand palette (matches apps/forms) ── */
-  --brand-blue: #3b82f6;
-  --brand-blue-soft: #dbeafe;
-  --brand-slate: #e2e8f0;
+  /* ── Brand palette (matches apps/mail — mono) ── */
+  --brand-blue: #111111;
+  --brand-blue-soft: #f5f5f5;
+  --brand-blue-hover: #2a2a2a;
+  --brand-slate: #e8e8e8;
+  --brand-teal: #111111;
 
   /* ── Core ── */
-  --background: #fafbfc;
-  --foreground: #0f172a;
-  --muted: #64748b;
-  --muted-foreground: #64748b;
+  --background: #fafafa;
+  --foreground: #111111;
+  --muted: #666666;
+  --muted-foreground: #666666;
   --border: var(--brand-slate);
-  --separator: #eef2f6;
+  --separator: #f0f0f0;
 
   /* ── Primary & secondary ── */
   --primary: var(--brand-blue);
   --primary-foreground: #ffffff;
   --secondary: var(--brand-blue-soft);
-  --secondary-foreground: #1e40af;
+  --secondary-foreground: #111111;
 
-  --accent: var(--brand-blue);
+  --accent: #111111;
   --accent-foreground: #ffffff;
 
   /* ── Surfaces ── */
   --surface: #ffffff;
-  --surface-foreground: #0f172a;
-  --surface-secondary: #f1f5f9;
-  --surface-secondary-foreground: #0f172a;
+  --surface-foreground: #111111;
+  --surface-secondary: #f5f5f5;
+  --surface-secondary-foreground: #111111;
   --surface-tertiary: var(--brand-blue-soft);
-  --surface-tertiary-foreground: #1e40af;
+  --surface-tertiary-foreground: #111111;
 
   --overlay: #ffffff;
-  --overlay-foreground: #0f172a;
+  --overlay-foreground: #111111;
 
   --field-background: #ffffff;
-  --field-foreground: #0f172a;
+  --field-foreground: #111111;
   --field-placeholder: var(--muted);
 
   /* ── Semantic ── */
-  --danger: #ef4444;
+  --danger: #dc2626;
   --danger-foreground: #ffffff;
-  --success: #10b981;
-  --success-foreground: #064e3b;
-  --warning: #f59e0b;
+  --success: #16a34a;
+  --success-foreground: #14532d;
+  --warning: #d97706;
   --warning-foreground: #78350f;
 
-  --default: #f1f5f9;
-  --default-foreground: #0f172a;
-  --focus: var(--brand-blue);
-  --scrollbar: #cbd5e1;
+  --default: #f5f5f5;
+  --default-foreground: #111111;
+  --focus: #111111;
+  --scrollbar: #d4d4d4;
   --segment: #ffffff;
-  --segment-foreground: #0f172a;
+  --segment-foreground: #111111;
 
   --brand-soft-lime: #dcfce7;
   --card-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 4px 16px rgba(15, 23, 42, 0.03);
-  --card-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.08);
+    0 1px 2px rgba(17, 17, 17, 0.04),
+    0 4px 16px rgba(17, 17, 17, 0.03);
+  --card-shadow-hover: 0 4px 20px rgba(17, 17, 17, 0.08);
 
   --landing-glass-bg: rgba(255, 255, 255, 0.88);
-  --landing-glass-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-  --landing-glass-ring: rgba(15, 23, 42, 0.06);
+  --landing-glass-shadow: 0 20px 60px rgba(17, 17, 17, 0.08);
+  --landing-glass-ring: rgba(17, 17, 17, 0.06);
 
   --radius: 1rem;
   --field-radius: 1rem;
@@ -92,54 +94,56 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --brand-blue: #60a5fa;
-  --brand-blue-soft: #1e3a5f;
-  --brand-slate: #2d3748;
+  --brand-blue: #f5f5f5;
+  --brand-blue-soft: #262626;
+  --brand-blue-hover: #e5e5e5;
+  --brand-slate: #2a2a2a;
+  --brand-teal: #f5f5f5;
 
-  --background: #0b0e13;
-  --foreground: #f1f5f9;
-  --muted: #94a3b8;
-  --muted-foreground: #94a3b8;
-  --border: #2a3140;
-  --separator: #252b38;
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --muted: #a3a3a3;
+  --muted-foreground: #a3a3a3;
+  --border: #2a2a2a;
+  --separator: #1a1a1a;
 
-  --primary: var(--brand-blue);
-  --primary-foreground: #ffffff;
-  --secondary: #1a2030;
-  --secondary-foreground: #e2e8f0;
+  --primary: #f5f5f5;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
 
-  --accent: var(--brand-blue);
-  --accent-foreground: #e2e8f0;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
 
-  --surface: #12161e;
-  --surface-foreground: #f1f5f9;
-  --surface-secondary: #1a2030;
-  --surface-secondary-foreground: #e2e8f0;
-  --surface-tertiary: #222a3a;
-  --surface-tertiary-foreground: #e2e8f0;
+  --surface: #141414;
+  --surface-foreground: #f5f5f5;
+  --surface-secondary: #1a1a1a;
+  --surface-secondary-foreground: #e5e5e5;
+  --surface-tertiary: #262626;
+  --surface-tertiary-foreground: #f5f5f5;
 
-  --overlay: #161b26;
-  --overlay-foreground: #f1f5f9;
+  --overlay: #171717;
+  --overlay-foreground: #f5f5f5;
 
-  --field-background: #161b26;
-  --field-foreground: #f1f5f9;
+  --field-background: #171717;
+  --field-foreground: #f5f5f5;
   --field-placeholder: var(--muted);
 
   --danger: #f87171;
-  --danger-foreground: #0f172a;
-  --success: #34d399;
-  --success-foreground: #064e3b;
+  --danger-foreground: #0a0a0a;
+  --success: #4ade80;
+  --success-foreground: #14532d;
   --warning: #fbbf24;
   --warning-foreground: #78350f;
 
-  --default: #1a2030;
-  --default-foreground: #f1f5f9;
-  --focus: var(--brand-blue);
-  --scrollbar: #3d4658;
-  --segment: #1a2030;
-  --segment-foreground: #f1f5f9;
+  --default: #1a1a1a;
+  --default-foreground: #f5f5f5;
+  --focus: #f5f5f5;
+  --scrollbar: #404040;
+  --segment: #1a1a1a;
+  --segment-foreground: #f5f5f5;
 
-  --brand-soft-lime: rgba(52, 211, 153, 0.16);
+  --brand-soft-lime: rgba(74, 222, 128, 0.16);
   --card-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.05),
     0 8px 32px rgba(0, 0, 0, 0.35);
@@ -147,23 +151,29 @@
     0 0 0 1px rgba(255, 255, 255, 0.07),
     0 12px 40px rgba(0, 0, 0, 0.45);
 
-  --landing-glass-bg: rgba(22, 27, 38, 0.84);
+  --landing-glass-bg: rgba(20, 20, 20, 0.84);
   --landing-glass-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.07),
     0 12px 40px rgba(0, 0, 0, 0.45);
   --landing-glass-ring: rgba(255, 255, 255, 0.08);
 }
 
+html,
 body {
   background: var(--background);
+}
+
+body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
 
+.dark html,
 .dark body,
+[data-theme="dark"] html,
 [data-theme="dark"] body {
   background:
-    radial-gradient(ellipse 120% 80% at 50% -20%, #1a2030 0%, transparent 55%),
+    radial-gradient(ellipse 120% 80% at 50% -20%, #1a1a1a 0%, transparent 55%),
     var(--background);
 }
 
@@ -222,7 +232,7 @@ body {
 
   .dashboard-card {
     border: none;
-    border-radius: 2rem;
+    border-radius: 1.25rem;
     background: var(--surface);
     box-shadow: none;
     transition:
@@ -291,7 +301,7 @@ body {
 }
 
 .dashboard-panel {
-  border-radius: 2rem;
+  border-radius: 1.25rem;
   border: none;
   background: var(--surface);
   box-shadow: none;
@@ -300,7 +310,7 @@ body {
 
 @media (min-width: 640px) {
   .dashboard-panel {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
 }
 

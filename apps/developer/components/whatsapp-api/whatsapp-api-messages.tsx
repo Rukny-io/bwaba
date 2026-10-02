@@ -4,7 +4,10 @@ import Link from 'next/link';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { WhatsappApiEndpointCard } from '@/components/whatsapp-api/whatsapp-api-endpoint-card';
 import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
-import { getWhatsappApiSummaries } from '@/components/whatsapp-api/whatsapp-api-shared';
+import {
+  getWhatsappApiSummaries,
+  waApiPanel,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { SEND_MESSAGE_RECIPES } from '@/lib/whatsapp-api-code-samples';
 import {
@@ -26,9 +29,11 @@ export function WhatsappApiMessages() {
   const otherEndpoints = MESSAGE_ENDPOINTS.filter((ep) => ep.id !== 'sendMessage');
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h2 className="text-base font-semibold">{d.templatesGuideTitle}</h2>
+    <>
+      <section className={waApiPanel}>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">
+          {d.templatesGuideTitle}
+        </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
           {d.templatesGuideDesc}
         </p>
@@ -46,7 +51,7 @@ export function WhatsappApiMessages() {
       </section>
 
       {sendMessage ? (
-        <article className="overflow-hidden rounded-2xl bg-[var(--surface)] sm:rounded-3xl">
+        <>
           <WhatsappApiEndpointCard
             endpoint={sendMessage}
             summary={summaries[sendMessage.summaryKey]}
@@ -58,13 +63,13 @@ export function WhatsappApiMessages() {
             tryHref={tryHref(sendMessage.id)}
             hideCode
           />
-          <div className="border-t border-[var(--border)]/40 p-4 sm:p-5">
+          <section className={waApiPanel}>
             <WhatsappApiCodePanel
               recipes={SEND_MESSAGE_RECIPES}
               copyLabel={d.copy}
             />
-          </div>
-        </article>
+          </section>
+        </>
       ) : null}
 
       {otherEndpoints.map((endpoint) => (
@@ -80,6 +85,6 @@ export function WhatsappApiMessages() {
           tryHref={tryHref(endpoint.id)}
         />
       ))}
-    </div>
+    </>
   );
 }

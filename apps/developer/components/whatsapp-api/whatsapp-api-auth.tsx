@@ -6,6 +6,10 @@ import { useState } from 'react';
 import en from '@/dictionaries/en.json';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { CodeSnippetCard } from '@/components/forms/code-snippet-card';
+import {
+  waApiBtnSecondary,
+  waApiPanel,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
 import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { WHATSAPP_API_PUBLIC_BASE } from '@/lib/whatsapp-api-catalog';
 import { appApiKeysNew, appWallet } from '@/lib/app-routes';
@@ -58,11 +62,11 @@ export function WhatsappApiAuth() {
         <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
           {title}
         </p>
-        <ul className="mt-2 divide-y divide-[var(--border)]/30 overflow-hidden rounded-xl border border-[var(--border)]/40">
+        <ul className="mt-2 divide-y divide-[var(--border)]/30 overflow-hidden rounded-xl bg-[var(--surface-secondary)]">
           {scopes.map((scope) => (
             <li
               key={scope}
-              className="flex flex-col gap-0.5 bg-[var(--background)] px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+              className="flex flex-col gap-0.5 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
             >
               <code className="font-mono text-[12.5px] text-[var(--foreground)]">
                 {scope}
@@ -78,9 +82,9 @@ export function WhatsappApiAuth() {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h2 className="text-base font-semibold">{d.authTitle}</h2>
+    <>
+      <section className={waApiPanel}>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{d.authTitle}</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
           {d.authDesc}
         </p>
@@ -89,8 +93,8 @@ export function WhatsappApiAuth() {
         </p>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.baseUrlTitle}</h3>
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.baseUrlTitle}</h3>
         <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
           {d.baseUrlDesc}
         </p>
@@ -104,7 +108,7 @@ export function WhatsappApiAuth() {
           <button
             type="button"
             onClick={() => void copyBaseUrl()}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[var(--surface-secondary)] px-3 text-[12.5px] font-medium text-[var(--foreground)]"
+            className={waApiBtnSecondary}
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             {d.copy}
@@ -112,8 +116,8 @@ export function WhatsappApiAuth() {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.authHeaderTitle}</h3>
+      <section className={waApiPanel}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.authHeaderTitle}</h3>
         <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
           {d.authHeaderDesc}
         </p>
@@ -159,8 +163,8 @@ export function WhatsappApiAuth() {
         language="javascript"
       />
 
-      <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.securityTitle}</h3>
+      <section className={`space-y-4 ${waApiPanel}`}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.securityTitle}</h3>
         <ul className="list-disc space-y-2 ps-5 text-[13px] text-[var(--muted-foreground)]">
           <li>{d.securityBullet1}</li>
           <li>{d.securityBullet2}</li>
@@ -169,11 +173,11 @@ export function WhatsappApiAuth() {
         </ul>
       </section>
 
-      <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 sm:rounded-3xl sm:p-6">
-        <h3 className="text-sm font-semibold">{d.scopesTitle}</h3>
+      <section className={`space-y-4 ${waApiPanel}`}>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">{d.scopesTitle}</h3>
         <ScopeGroup title={d.scopeDescWhatsapp} scopes={WHATSAPP_SCOPES} />
         <ScopeGroup title={d.scopeDescForms} scopes={FORMS_SCOPES} />
       </section>
-    </div>
+    </>
   );
 }

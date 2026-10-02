@@ -34,31 +34,31 @@ function PhonePickerCard({ appId, phone }: { appId: string; phone: WhatsappPhone
   return (
     <Link
       href={appWhatsappPhoneHref(appId, phone.phoneId)}
-      className="dashboard-panel group flex flex-col gap-4 rounded-2xl p-5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_60%,var(--surface))] sm:rounded-3xl sm:p-6"
+      className="dashboard-panel group flex flex-col gap-3.5 p-4 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_55%,var(--surface))] sm:p-5"
     >
       <div className="flex items-start gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-          <Phone className="size-5" strokeWidth={1.6} />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
+          <Phone className="size-4" strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3
-              className="font-mono text-base font-semibold text-[var(--foreground)] sm:text-lg"
+              className="font-mono text-[15px] font-semibold text-[var(--foreground)]"
               dir="ltr"
             >
               {phone.displayPhoneNumber || phone.phoneNumber}
             </h3>
             <PhoneStatusBadge status={phone.status} />
           </div>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          <p className="mt-1 truncate text-[13px] text-[var(--muted-foreground)]">
             {phone.verifiedName || w.businessName}
           </p>
-          <p className="mt-2 font-mono text-[11px] text-[var(--muted-foreground)]" dir="ltr">
+          <p className="mt-1.5 font-mono text-[11px] text-[var(--muted-foreground)]" dir="ltr">
             {w.phonePublicId}: {phone.phoneId}
           </p>
         </div>
       </div>
-      <p className="text-[12.5px] font-medium text-[var(--primary)] group-hover:underline">
+      <p className="text-[12.5px] font-medium text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--foreground)]">
         {w.openPhoneWorkspace}
       </p>
     </Link>
@@ -108,178 +108,158 @@ export function PhoneCard({
   const isPending = phone.status === 'PENDING';
 
   return (
-    <article className="dashboard-panel overflow-hidden rounded-2xl sm:rounded-3xl">
-      <header className="flex flex-col gap-4 border-b border-[var(--border)]/30 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Phone className="size-5" strokeWidth={1.6} />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3
-                className="font-mono text-base font-semibold text-[var(--foreground)] sm:text-lg"
+    <article className="dashboard-panel space-y-4 p-4 sm:space-y-5 sm:p-5">
+      <dl className="grid gap-2.5 sm:grid-cols-3">
+        <PhoneStatBox label={w.quality} value={phone.qualityRating || '—'} />
+        <PhoneStatBox label={w.messagingLimit} value={phone.messagingLimit || '—'} />
+        <PhoneStatBox label={w.phoneNumberId} value={phone.phoneNumberId} dir="ltr" />
+      </dl>
+
+      {isPending ? (
+        <PhoneActionSection
+          title={w.registerPhone}
+          description={w.registerPhoneDesc}
+          variant="highlight"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
+                {w.registerPin}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={registerId === phone.id ? pin : ''}
+                onChange={(e) => {
+                  setRegisterId(phone.id);
+                  setPin(e.target.value.replace(/\D/g, '').slice(0, 6));
+                }}
+                placeholder="000000"
+                className={cn(inputClass, 'font-mono tracking-[0.2em]')}
                 dir="ltr"
-              >
-                {phone.displayPhoneNumber || phone.phoneNumber}
-              </h3>
-              <PhoneStatusBadge status={phone.status} />
+              />
             </div>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {phone.verifiedName || w.businessName}
-            </p>
-            <p className="mt-1 font-mono text-[11px] text-[var(--muted-foreground)]" dir="ltr">
-              {w.phoneNumberId}: {phone.phoneNumberId}
-            </p>
+            <button
+              type="button"
+              disabled={registerMutation.isPending || pin.length !== 6}
+              onClick={() =>
+                registerMutation.mutate(
+                  { phoneId: phone.id, pin },
+                  {
+                    onSuccess: () => appToast.success(w.registerPhone),
+                    onError: (e) => appToast.error(getApiErrorMessage(e)),
+                  },
+                )
+              }
+              className={cn(whatsappBtnPrimary, 'sm:min-w-[8.5rem]')}
+            >
+              {registerMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              {w.registerPhone}
+            </button>
           </div>
-        </div>
-      </header>
+        </PhoneActionSection>
+      ) : null}
 
-      <div className="space-y-5 p-5 sm:p-6">
-        <dl className="grid gap-3 sm:grid-cols-3">
-          <PhoneStatBox label={w.quality} value={phone.qualityRating || '—'} />
-          <PhoneStatBox label={w.messagingLimit} value={phone.messagingLimit || '—'} />
-          <PhoneStatBox
-            label={w.businessName}
-            value={phone.verifiedName || '—'}
-          />
-        </dl>
-
-        {isPending ? (
-          <PhoneActionSection
-            title={w.registerPhone}
-            description={w.registerPhoneDesc}
-            variant="highlight"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                  {w.registerPin}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={registerId === phone.id ? pin : ''}
-                  onChange={(e) => {
-                    setRegisterId(phone.id);
-                    setPin(e.target.value.replace(/\D/g, '').slice(0, 6));
-                  }}
-                  placeholder="000000"
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={registerMutation.isPending || pin.length !== 6}
-                onClick={() =>
-                  registerMutation.mutate(
-                    { phoneId: phone.id, pin },
-                    {
-                      onSuccess: () => appToast.success(w.registerPhone),
-                      onError: (e) => appToast.error(getApiErrorMessage(e)),
-                    },
-                  )
-                }
-                className={whatsappBtnPrimary}
-              >
-                {w.registerPhone}
-              </button>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <PhoneActionSection title={w.sendTest} description={w.sendTestDesc}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
+                {w.testRecipient}
+              </label>
+              <input
+                type="tel"
+                value={testId === phone.id ? testTo : ''}
+                onChange={(e) => {
+                  setTestId(phone.id);
+                  setTestTo(e.target.value);
+                }}
+                placeholder="+9647XXXXXXXX"
+                className={inputClass}
+                dir="ltr"
+              />
             </div>
-          </PhoneActionSection>
-        ) : null}
+            <button
+              type="button"
+              disabled={testMessageMutation.isPending || !testTo.trim()}
+              onClick={() =>
+                testMessageMutation.mutate(
+                  { phoneId: phone.id, to: testTo.trim() },
+                  {
+                    onSuccess: () => appToast.success(w.testSent),
+                    onError: (e) => appToast.error(getApiErrorMessage(e)),
+                  },
+                )
+              }
+              className={whatsappBtnSecondary}
+            >
+              {testMessageMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Send className="size-3.5" />
+              )}
+              {w.sendTest}
+            </button>
+          </div>
+        </PhoneActionSection>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <PhoneActionSection title={w.sendTest} description={w.sendTestDesc}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                  {w.testRecipient}
-                </label>
-                <input
-                  type="tel"
-                  value={testId === phone.id ? testTo : ''}
-                  onChange={(e) => {
-                    setTestId(phone.id);
-                    setTestTo(e.target.value);
-                  }}
-                  placeholder="+9647XXXXXXXX"
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={testMessageMutation.isPending || !testTo.trim()}
-                onClick={() =>
-                  testMessageMutation.mutate(
-                    { phoneId: phone.id, to: testTo.trim() },
-                    {
-                      onSuccess: () => appToast.success(w.testSent),
-                      onError: (e) => appToast.error(getApiErrorMessage(e)),
-                    },
-                  )
-                }
-                className={whatsappBtnSecondary}
-              >
-                <Send className="size-4" />
-                {w.sendTest}
-              </button>
+        <PhoneActionSection title={w.editProfile} description={w.editProfileDesc}>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
+                {w.profileAbout}
+              </label>
+              <input
+                type="text"
+                value={profileId === phone.id ? about : ''}
+                onChange={(e) => {
+                  setProfileId(phone.id);
+                  setAbout(e.target.value);
+                }}
+                placeholder={w.profileAbout}
+                className={inputClass}
+              />
             </div>
-          </PhoneActionSection>
-
-          <PhoneActionSection title={w.editProfile} description={w.editProfileDesc}>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                  {w.profileAbout}
-                </label>
-                <input
-                  type="text"
-                  value={profileId === phone.id ? about : ''}
-                  onChange={(e) => {
-                    setProfileId(phone.id);
-                    setAbout(e.target.value);
-                  }}
-                  placeholder={w.profileAbout}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                  {w.profileEmail}
-                </label>
-                <input
-                  type="email"
-                  value={profileId === phone.id ? email : ''}
-                  onChange={(e) => {
-                    setProfileId(phone.id);
-                    setEmail(e.target.value);
-                  }}
-                  placeholder="hello@example.com"
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={profileMutation.isPending}
-                onClick={() =>
-                  profileMutation.mutate(
-                    { phoneId: phone.id, body: { about, email } },
-                    {
-                      onSuccess: () => appToast.success(w.profileSaved),
-                      onError: (e) => appToast.error(getApiErrorMessage(e)),
-                    },
-                  )
-                }
-                className={whatsappBtnPrimary}
-              >
-                {w.editProfile}
-              </button>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
+                {w.profileEmail}
+              </label>
+              <input
+                type="email"
+                value={profileId === phone.id ? email : ''}
+                onChange={(e) => {
+                  setProfileId(phone.id);
+                  setEmail(e.target.value);
+                }}
+                placeholder="hello@example.com"
+                className={inputClass}
+                dir="ltr"
+              />
             </div>
-          </PhoneActionSection>
-        </div>
+            <button
+              type="button"
+              disabled={profileMutation.isPending}
+              onClick={() =>
+                profileMutation.mutate(
+                  { phoneId: phone.id, body: { about, email } },
+                  {
+                    onSuccess: () => appToast.success(w.profileSaved),
+                    onError: (e) => appToast.error(getApiErrorMessage(e)),
+                  },
+                )
+              }
+              className={whatsappBtnPrimary}
+            >
+              {profileMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              {w.editProfile}
+            </button>
+          </div>
+        </PhoneActionSection>
       </div>
     </article>
   );

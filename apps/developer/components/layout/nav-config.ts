@@ -134,6 +134,7 @@ export function resolvePageLabel(pathname: string): string {
   const segments = pathname.split('/').filter(Boolean);
   const last = segments[segments.length - 1];
   const labels: Record<string, string> = {
+    tools: 'أدوات المطوّرين',
     dashboard: 'الرئيسية',
     analytics: 'التحليلات',
     'api-keys': 'مفاتيح API',

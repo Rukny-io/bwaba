@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Layers } from 'lucide-react';
 import type { DeveloperApp } from '@/lib/api/types';
 import { appDashboard } from '@/lib/app-routes';
 import { AppCard } from '@/components/apps/app-card';
+import { DashboardEmptyState } from '@/components/app/dashboard-empty-state';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { AppsLocaleBar } from '@/components/apps/apps-locale-bar';
 
@@ -32,21 +33,21 @@ export function AppsListPage({ apps }: AppsListPageProps) {
       </header>
 
       {isEmpty ? (
-        <div className="dashboard-card flex flex-col items-center gap-4 p-8 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))] text-[var(--primary)]">
-            <Layers className="size-7" />
-          </span>
-          <p className="max-w-sm text-sm leading-relaxed text-[var(--muted-foreground)]">
-            {a.emptyBody}
-          </p>
+        <DashboardEmptyState
+          icon={Layers}
+          title={a.titleEmpty}
+          description={a.emptyBody}
+          className="dashboard-panel bg-[var(--surface)]"
+          compact
+        >
           <Link
             href="/apps/creation"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-6 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--foreground)] px-5 text-[13px] font-medium text-[var(--background)] transition-opacity hover:opacity-90"
           >
             <Plus className="size-4" />
             {a.createApp}
           </Link>
-        </div>
+        </DashboardEmptyState>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {apps.map((app) => (
@@ -55,12 +56,12 @@ export function AppsListPage({ apps }: AppsListPageProps) {
 
           <Link
             href="/apps/creation"
-            className="dashboard-card group flex min-h-[120px] flex-col items-center justify-center gap-2 border-2 border-dashed border-transparent p-5 transition-colors hover:bg-[var(--surface-secondary)]"
+            className="dashboard-panel group flex min-h-[120px] flex-col items-center justify-center gap-2.5 border border-dashed border-[var(--border)] bg-transparent p-5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_55%,var(--surface))]"
           >
-            <span className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--primary)] transition-colors group-hover:bg-[var(--primary)] group-hover:text-[var(--primary-foreground)]">
-              <Plus className="size-5" />
+            <span className="flex size-10 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--foreground)] transition-colors group-hover:bg-[var(--foreground)] group-hover:text-[var(--background)]">
+              <Plus className="size-4" strokeWidth={1.75} />
             </span>
-            <span className="text-sm font-semibold text-[var(--foreground)]">
+            <span className="text-[13px] font-semibold text-[var(--foreground)]">
               {a.createNew}
             </span>
           </Link>

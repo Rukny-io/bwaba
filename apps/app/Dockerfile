@@ -11,6 +11,7 @@ WORKDIR /app
 # file: dependencies need shared packages present before npm install
 COPY packages/auth ./packages/auth
 COPY packages/forms-shared ./packages/forms-shared
+COPY packages/public-profile-ui ./packages/public-profile-ui
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/app/package.json apps/app/package-lock.json* ./apps/app/
 # postinstall runs scripts/materialize-workspace-deps.mjs
@@ -32,6 +33,7 @@ RUN rm -rf node_modules .next
 COPY --from=deps /app/apps/app/node_modules ./node_modules
 COPY --from=deps /app/packages/auth /app/packages/auth
 COPY --from=deps /app/packages/forms-shared /app/packages/forms-shared
+COPY --from=deps /app/packages/public-profile-ui /app/packages/public-profile-ui
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
 # Materialize file: dependencies (symlinks can confuse Turbopack package exports)
@@ -39,6 +41,8 @@ RUN rm -rf node_modules/@rukny/auth \
   && cp -a /app/packages/auth node_modules/@rukny/auth \
   && rm -rf node_modules/@rukny/forms-shared \
   && cp -a /app/packages/forms-shared node_modules/@rukny/forms-shared \
+  && rm -rf node_modules/@rukny/public-profile-ui \
+  && cp -a /app/packages/public-profile-ui node_modules/@rukny/public-profile-ui \
   && rm -rf node_modules/@rukny/thmanyah-font \
   && cp -a /app/packages/Thmanyah-Font-Family node_modules/@rukny/thmanyah-font
 
@@ -72,8 +76,10 @@ ENV RUKNY_PREVIEW_ACCESS_KEY=${RUKNY_PREVIEW_ACCESS_KEY}
 
 RUN test -f node_modules/@rukny/auth/src/server/index.ts \
   && test -f node_modules/@rukny/forms-shared/src/apply-security-headers.ts \
+  && test -f node_modules/@rukny/public-profile-ui/next-resolve-aliases.ts \
   && test -f node_modules/@rukny/thmanyah-font/src/next.ts \
-  && test -f /app/packages/Thmanyah-Font-Family/fonts/thmanyahsans/thmanyahsans-Regular.woff2
+  && test -f /app/packages/Thmanyah-Font-Family/fonts/thmanyahsans/thmanyahsans-Regular.woff2 \
+  && test -f /app/packages/public-profile-ui/next-resolve-aliases.ts
 
 RUN npm run build
 

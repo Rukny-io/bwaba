@@ -14,6 +14,7 @@ import {
   resolveGoogleClientCredentials,
   resolveGoogleIntegrationRedirectUri,
 } from '../google/google-oauth-config';
+import { signIntegrationOAuthState } from '../../core/common/utils/integration-oauth-state.util';
 
 @Injectable()
 export class GoogleDriveService {
@@ -44,9 +45,10 @@ export class GoogleDriveService {
   getAuthUrl(formId: string, userId: string, userEmail?: string): string {
     const scopes = [...GOOGLE_FORMS_INTEGRATION_SCOPES];
 
-    const state = Buffer.from(
-      JSON.stringify({ formId, userId, type: 'drive' }),
-    ).toString('base64');
+    const state = signIntegrationOAuthState(
+      { formId, userId, type: 'drive' },
+      this.config.get<string>('JWT_SECRET')!,
+    );
 
     const authOptions: {
       access_type: 'offline';

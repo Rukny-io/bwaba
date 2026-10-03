@@ -36,7 +36,9 @@
     "mail:body-encryption:staging-validate": "ts-node src/scripts/mail-body-encryption-staging-validate.ts",
     "mail:body-encryption:gate": "bash scripts/run-mail-encryption-gate.sh",
     "mail:body-encryption:pilot-seed": "ts-node src/scripts/mail-body-encryption-pilot-seed.ts",
-    "mail:body-encryption:provision-kms": "ts-node src/scripts/provision-mail-body-kms-node.ts"
+    "mail:body-encryption:provision-kms": "ts-node src/scripts/provision-mail-body-kms-node.ts",
+    "scan:routes": "ts-node scripts/scan-unprotected-routes.ts",
+    "audit:public-routes": "ts-node scripts/scan-unprotected-routes.ts --public"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1136.0",

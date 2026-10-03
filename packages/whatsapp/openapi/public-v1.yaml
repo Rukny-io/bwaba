@@ -139,3 +139,83 @@ paths:
       responses:
         '200':
           description: Sync started
+  /whatsapp/media:
+    post:
+      tags: [Media]
+      summary: Upload media for WhatsApp messages
+      operationId: uploadMedia
+      parameters:
+        - in: query
+          name: phone_number_id
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Media uploaded
+  /whatsapp/contacts:
+    get:
+      tags: [Contacts]
+      summary: List contacts
+      operationId: listContacts
+      responses:
+        '200':
+          description: Contact list
+    post:
+      tags: [Contacts]
+      summary: Create contact
+      operationId: createContact
+      responses:
+        '201':
+          description: Created
+  /whatsapp/contacts/{id}:
+    get:
+      tags: [Contacts]
+      summary: Get contact
+      operationId: getContact
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contact
+    patch:
+      tags: [Contacts]
+      summary: Update contact
+      operationId: updateContact
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Contacts]
+      summary: Delete contact
+      operationId: deleteContact
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted

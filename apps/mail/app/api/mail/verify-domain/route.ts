@@ -2,17 +2,20 @@ import { NextResponse } from "next/server";
 import {
   deleteMailDomainBinding,
   findMailAppIdByDomain,
+  getMailDomainBinding,
   upsertMailDomainBinding,
 } from "@/lib/mail-domain-bindings";
 import { createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
+import { mailCookieOptions } from "@/lib/mail-cookies";
 import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
 } from "@/lib/ses";
 import { mailSetupCacheKey, redisDel, redisSetJson } from "@/lib/redis";
+import { resolveDkimTokens } from "@/lib/mail-domain-tokens";
 import { verifyDomainDns } from "@/lib/verify-dns";
 
 export async function POST(request: Request) {
@@ -26,7 +29,6 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     domain?: string;
-    tokens?: string[];
   } | null;
   const domain = body?.domain;
   if (!domain || typeof domain !== "string") {
@@ -51,16 +53,18 @@ export async function POST(request: Request) {
     await deleteMailDomainBinding(owner);
   }
 
-  const result = await verifyDomainDns(domain, Array.isArray(body?.tokens) ? body.tokens : []);
+  const binding = await getMailDomainBinding(session.appId);
+  const bindingTokens = binding?.domain === normalized ? binding.dkimTokens ?? [] : [];
+  const result = await verifyDomainDns(domain, bindingTokens);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  const response = NextResponse.json(result);
+  const tokens = resolveDkimTokens(result.ses?.tokens ?? [], bindingTokens);
+  const response = NextResponse.json({ ...result, tokens });
 
   if (normalized) {
     const status = result.verified ? "ACTIVE" : "PENDING_DNS";
-    const tokens = Array.isArray(body?.tokens) ? body.tokens : result.ses?.tokens ?? [];
     try {
       await upsertMailDomainBinding(session.appId, {
         domain: normalized,
@@ -101,21 +105,18 @@ export async function POST(request: Request) {
     }
 
     if (result.verified) {
-      response.cookies.set(MAIL_READY_COOKIE, "1", {
-        path: "/",
-        maxAge: 31536000,
-        sameSite: "lax",
-      });
-      response.cookies.set(MAIL_READY_APP_COOKIE, session.appId, {
-        path: "/",
-        maxAge: 31536000,
-        sameSite: "lax",
-      });
+      response.cookies.set(MAIL_READY_COOKIE, "1", mailCookieOptions(31536000));
+      response.cookies.set(
+        MAIL_READY_APP_COOKIE,
+        session.appId,
+        mailCookieOptions(31536000),
+      );
     }
 
     if (result.verified && sync.activated) {
       return NextResponse.json({
         ...result,
+        tokens,
         activated: true,
         needsCheckout: false,
       });
@@ -128,6 +129,7 @@ export async function POST(request: Request) {
       const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sync.checkoutSessionId)}`;
       return NextResponse.json({
         ...result,
+        tokens,
         needsCheckout: true,
         checkoutUrl,
         checkoutSessionId: sync.checkoutSessionId,

@@ -87,9 +87,9 @@ export async function proxy(request: NextRequest) {
   const isProtected = matchesPrefix(pathname, PROTECTED_PREFIXES);
   const isAuthPage = matchesPrefix(pathname, AUTH_PAGES);
 
-  // Public marketing landing for guests; console home for signed-in users.
+  // Public marketing landing for guests; console home only for a valid session.
   if (pathname === '/') {
-    if (auth.isAuthenticated) {
+    if (auth.isAuthenticated && auth.user && !auth.tokenExpired) {
       return rememberLastApp(
         request,
         NextResponse.redirect(new URL('/apps', request.url)),
@@ -99,27 +99,27 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAuthPage) {
+    const session = request.nextUrl.searchParams.get('session');
+
+    if (session === 'expired' || session === 'invalid') {
+      // Drop broken tokens so guests can reach public routes (e.g. /).
+      const response = NextResponse.next();
+      for (const name of [
+        'access_token',
+        'refresh_token',
+        'csrf_token',
+        '__Secure-access_token',
+        '__Secure-refresh_token',
+        '__Host-csrf_token',
+      ]) {
+        response.cookies.delete({ name, path: '/' });
+      }
+      return rememberLastApp(request, response);
+    }
+
     if (auth.isAuthenticated && auth.user && pathname !== '/callback') {
-      const session = request.nextUrl.searchParams.get('session');
       const nextParam = request.nextUrl.searchParams.get('next');
       const target = resolveClientNext(nextParam, '/apps');
-
-      if (session === 'expired' || session === 'invalid') {
-        if (auth.tokenExpired) {
-          const response = NextResponse.next();
-          for (const name of [
-            'access_token',
-            'refresh_token',
-            '__Secure-access_token',
-            '__Secure-refresh_token',
-          ]) {
-            response.cookies.delete(name);
-          }
-          return rememberLastApp(request, response);
-        }
-        return rememberLastApp(request, NextResponse.next());
-      }
-
       return rememberLastApp(
         request,
         NextResponse.redirect(new URL(target, request.url)),

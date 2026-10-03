@@ -9,100 +9,67 @@ import {
   DocSection,
   DocTable,
 } from '@/components/documentation/docs-article';
+import { emailTestingCopy } from '@/lib/documentation-content/email-api/remaining';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Testing — Email API | Rukny Documentation',
-  description: 'Test keys, portal Try it, and safe sandbox habits for Email API.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailTestingCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'modes', label: 'Test vs live' },
-  { id: 'try-it', label: 'Try it console' },
-  { id: 'checklist', label: 'Pre-launch checklist' },
-];
+export default async function EmailApiTestingPage() {
+  const c = docCopy(await getCurrentLocale(), emailTestingCopy);
 
-export default function EmailApiTestingPage() {
   return (
     <DocumentationArticle
-      title="Testing"
-      description="Validate your integration without emailing customers or spending live quota. Switch environments by changing the API key — not your application logic."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="modes" title="Test vs live">
+      <DocSection id="modes" title={c.toc[0]!.label}>
         <DocTable
-          headers={['', 'Test', 'Live']}
-          rows={[
-            [
-              'Key prefix',
-              <DocInlineCode key="t">rk_test_</DocInlineCode>,
-              <DocInlineCode key="l">rk_live_</DocInlineCode>,
-            ],
-            ['Recipients', 'Account email or verified domain', 'Any authorized recipient'],
-            ['Quota', 'Does not consume live quota', 'Counts against plan'],
-            ['Idempotency', 'Recommended', 'Required'],
-          ]}
+          headers={[...c.modeHeaders]}
+          rows={c.modeRows.map((row, index) =>
+            index === 0
+              ? [
+                  row[0],
+                  <DocInlineCode key="t">{row[1]}</DocInlineCode>,
+                  <DocInlineCode key="l">{row[2]}</DocInlineCode>,
+                ]
+              : row,
+          )}
         />
-        <DocCallout title="Tip">
-          Keep the same code path for both environments. Load the key from{' '}
-          <DocInlineCode>process.env.RUKNY_API_KEY</DocInlineCode> so staging and
-          production differ only by configuration.
+        <DocCallout title={c.tipTitle}>
+          {c.tipBody.split('process.env.RUKNY_API_KEY')[0]}
+          <DocInlineCode>process.env.RUKNY_API_KEY</DocInlineCode>
+          {c.tipBody.split('process.env.RUKNY_API_KEY')[1]}
         </DocCallout>
       </DocSection>
 
-      <DocSection id="try-it" title="Try it console">
+      <DocSection id="try-it" title={c.toc[1]!.label}>
+        <p>{c.tryBody}</p>
         <p>
-          The portal includes a Try it panel that sends with a test key on your
-          behalf. Use it to confirm domain + sender setup before writing backend
-          code.
-        </p>
-        <p>
-          Open your app → Email API → Try it after{' '}
+          {c.tryBeforeLink}{' '}
           <Link
             href="/login?next=/apps"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            signing in
+            {c.tryLink}
           </Link>
           .
         </p>
       </DocSection>
 
-      <DocSection id="checklist" title="Pre-launch checklist">
-        <DocFeatureGrid
-          items={[
-            {
-              title: 'Domain verified',
-              description: 'DNS records pass and status is verified.',
-            },
-            {
-              title: 'Sender authorized',
-              description: 'from address is linked to the app.',
-            },
-            {
-              title: 'Test send works',
-              description: 'SDK or Try it delivers to your account email.',
-            },
-            {
-              title: 'Status polling works',
-              description: 'getStatus returns a sensible lifecycle state.',
-            },
-            {
-              title: 'Idempotency wired',
-              description: 'Retries reuse the same business key.',
-            },
-            {
-              title: 'Live key scoped',
-              description: 'Production key has only the scopes you need.',
-            },
-          ]}
-        />
+      <DocSection id="checklist" title={c.toc[2]!.label}>
+        <DocFeatureGrid items={c.checklist} />
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/email-api/domains', label: 'Domains' }}
+        prev={{ href: '/documentation/email-api/domains', label: c.prevLabel }}
         next={{
           href: '/documentation/email-api/quotas',
-          label: 'Quotas & limits',
+          label: c.nextLabel,
         }}
       />
     </DocumentationArticle>

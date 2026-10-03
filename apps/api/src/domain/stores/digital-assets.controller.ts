@@ -28,6 +28,7 @@ import { PlanGuard } from '../../core/common/guards/plan.guard';
 import { CheckFeature } from '../../core/common/decorators/auth/plan.decorator';
 import { DigitalAssetsService } from './digital-assets.service';
 import { FileValidationPipe } from '../../core/common/pipes/file-validation.pipe';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('Digital Assets')
 @Controller('stores/products')
@@ -158,6 +159,7 @@ export class DigitalAssetsController {
   /**
    * الحصول على معلومات الملف الرقمي
    */
+  @Public()
   @Get(':id/digital-file')
   @ApiOperation({ summary: 'معلومات الملف الرقمي' })
   getDigitalAsset(@Param('id') productId: string) {
@@ -167,6 +169,7 @@ export class DigitalAssetsController {
   /**
    * الحصول على رابط المعاينة
    */
+  @Public()
   @Get(':id/digital-preview')
   @ApiOperation({ summary: 'رابط معاينة المنتج الرقمي' })
   async getPreviewUrl(@Param('id') productId: string) {
@@ -197,6 +200,7 @@ export class DownloadsController {
   /**
    * تحميل ملف رقمي عبر رمز التحميل
    */
+  @Public()
   @Get(':token')
   @ApiOperation({ summary: 'تحميل ملف رقمي' })
   @ApiResponse({ status: 200, description: 'رابط التحميل المؤقت' })

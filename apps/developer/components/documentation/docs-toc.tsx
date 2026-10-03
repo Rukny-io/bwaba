@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
 
 export interface DocTocItem {
@@ -9,6 +10,7 @@ export interface DocTocItem {
 }
 
 export function DocsOnThisPage({ items }: { items: DocTocItem[] }) {
+  const d = useTranslations().docs;
   const [activeId, setActiveId] = useState(items[0]?.id ?? null);
 
   useEffect(() => {
@@ -45,11 +47,11 @@ export function DocsOnThisPage({ items }: { items: DocTocItem[] }) {
   return (
     <aside className="hidden shrink-0 xl:block">
       <nav
-        aria-label="On this page"
+        aria-label={d.onThisPage}
         className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain sm:top-[3.75rem] sm:max-h-[calc(100dvh-3.75rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--muted-foreground)]">
-          On this page
+          {d.onThisPage}
         </p>
         <div className="flex flex-col border-s border-[var(--border)] ps-px">
           {items.map((item) => {

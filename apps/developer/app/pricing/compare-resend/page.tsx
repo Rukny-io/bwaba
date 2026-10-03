@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { DocumentationShell } from '@/components/documentation/docs-shell';
+import { DocumentationShell } from '@/components/documentation/documentation-shell';
 import {
   EMAIL_ADDON_PLANS,
   EMAIL_AUTOMATION_PRICING,

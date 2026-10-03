@@ -740,6 +740,11 @@ body {
   pointer-events: none;
 }
 
+.dev-frame-cta--onDark .dev-frame-tick,
+.dev-frame-cta--ghostOnDark .dev-frame-tick {
+  color: #ffffff;
+}
+
 .dev-frame-tick::before,
 .dev-frame-tick::after {
   content: "";
@@ -1012,4 +1017,98 @@ body {
 .dev-cta-panel:hover {
   border-color: #111111;
   box-shadow: 0 16px 40px -28px rgba(17, 17, 17, 0.35);
+}
+
+/* ── Public marketing (aligned with apps/web antigravity) ── */
+.public-marketing {
+  --background: #ffffff;
+  --foreground: #111111;
+  --muted: #666666;
+  --muted-foreground: #666666;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --surface: #fafafa;
+  --surface-secondary: #f5f5f5;
+  color: #1d1d1d;
+  background-color: #ffffff;
+  text-align: start;
+}
+
+.public-marketing a,
+.public-marketing button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(17, 17, 17, 0.08);
+}
+
+.public-marketing .public-mkt-atmosphere {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.public-marketing .public-mkt-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.45;
+}
+
+.public-marketing .public-mkt-orb--hero {
+  top: -8rem;
+  left: 50%;
+  width: min(72vw, 42rem);
+  height: min(72vw, 42rem);
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(245, 245, 245, 0.95) 0%, rgba(255, 255, 255, 0) 72%);
+}
+
+.public-marketing .public-mkt-orb--warm {
+  bottom: 18%;
+  right: -10%;
+  width: 24rem;
+  height: 24rem;
+  background: radial-gradient(circle, rgba(255, 247, 237, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.public-marketing .public-mkt-orb--cool {
+  top: 42%;
+  left: -12%;
+  width: 22rem;
+  height: 22rem;
+  background: radial-gradient(circle, rgba(239, 246, 255, 0.75) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.home-hero-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-hero-enter {
+    animation: homeHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-hero-enter-delayed {
+    animation: homeHeroEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+}
+
+@keyframes homeHeroEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-enter,
+  .home-hero-enter-delayed {
+    animation: none !important;
+  }
 }

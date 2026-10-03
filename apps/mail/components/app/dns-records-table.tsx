@@ -4,7 +4,10 @@ import { useState } from "react";
 import { Check, Copy, Download } from "lucide-react";
 import { cn } from "@heroui/react";
 import type { MailDnsRecord } from "@/lib/mail-domain";
-import { recordsAsZoneFile } from "@/lib/mail-domain";
+import {
+  fetchDnsZoneExport,
+  type DnsZoneExportResponse,
+} from "@/lib/verify-domain-client";
 
 function downloadFile(filename: string, contents: string, type: string) {
   const blob = new Blob([contents], { type });
@@ -84,6 +87,7 @@ export function DnsRecordsTable({
   layout = "list",
   checking = false,
   onCheck,
+  onFreshZone,
 }: {
   records: MailDnsRecord[];
   domain: string;
@@ -91,9 +95,29 @@ export function DnsRecordsTable({
   layout?: "list" | "board";
   checking?: boolean;
   onCheck?: () => void;
+  onFreshZone?: (fresh: DnsZoneExportResponse) => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const large = layout === "board";
+
+  async function loadFreshZoneFile() {
+    setExporting(true);
+    setExportError("");
+    try {
+      const fresh = await fetchDnsZoneExport(domain);
+      onFreshZone?.(fresh);
+      return fresh.zoneFile;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not export DNS from SES.";
+      setExportError(message);
+      throw error;
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function copy(id: string, value: string) {
     await navigator.clipboard.writeText(value);
@@ -109,17 +133,27 @@ export function DnsRecordsTable({
           <button
             type="button"
             className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)]"
-            onClick={() =>
-              downloadFile(`${domain}-dns.txt`, recordsAsZoneFile(domain, records), "text/plain")
-            }
+            disabled={exporting}
+            onClick={() => {
+              void loadFreshZoneFile()
+                .then((zoneFile) =>
+                  downloadFile(`${domain}-dns.txt`, zoneFile, "text/plain"),
+                )
+                .catch(() => undefined);
+            }}
           >
             <Download className="size-3.5" />
-            Export
+            {exporting ? "Refreshing…" : "Export"}
           </button>
           <button
             type="button"
             className="inline-flex h-8 items-center rounded-full px-3 hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)]"
-            onClick={() => void copy("bind", recordsAsZoneFile(domain, records))}
+            disabled={exporting}
+            onClick={() => {
+              void loadFreshZoneFile()
+                .then((zoneFile) => copy("bind", zoneFile))
+                .catch(() => undefined);
+            }}
           >
             {copied === "bind" ? "Copied" : "Copy"}
           </button>
@@ -135,6 +169,10 @@ export function DnsRecordsTable({
           ) : null}
         </div>
       </div>
+
+      {exportError ? (
+        <p className="text-sm text-[var(--danger)]" role="alert">{exportError}</p>
+      ) : null}
 
       <ul className="grid gap-3">
         {groupedRecords(records).map((group) => (

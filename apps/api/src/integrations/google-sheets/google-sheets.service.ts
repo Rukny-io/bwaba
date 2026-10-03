@@ -13,6 +13,12 @@ import {
   resolveGoogleClientCredentials,
   resolveGoogleIntegrationRedirectUri,
 } from '../google/google-oauth-config';
+import {
+  integrationOAuthStateLegacyAllowed,
+  parseLegacyIntegrationOAuthState,
+  signIntegrationOAuthState,
+  verifyIntegrationOAuthState,
+} from '../../core/common/utils/integration-oauth-state.util';
 
 // Google Sheets cell character limit
 const MAX_CELL_LENGTH = 50000;
@@ -136,9 +142,9 @@ export class GoogleSheetsService {
   getAuthUrl(formId: string, userId: string, userEmail?: string): string {
     const scopes = [...GOOGLE_FORMS_INTEGRATION_SCOPES];
 
-    // Encode state with formId and userId
-    const state = Buffer.from(JSON.stringify({ formId, userId })).toString(
-      'base64',
+    const state = signIntegrationOAuthState(
+      { formId, userId },
+      this.oauthStateSecret(),
     );
 
     const authOptions: {
@@ -168,12 +174,31 @@ export class GoogleSheetsService {
   /**
    * Exchange authorization code for tokens and save integration
    */
+  parseOAuthState(state: string): { formId: string; userId: string } {
+    const verified = verifyIntegrationOAuthState<{
+      formId: string;
+      userId: string;
+    }>(state, this.oauthStateSecret());
+    if (verified?.formId && verified?.userId) return verified;
+
+    if (integrationOAuthStateLegacyAllowed()) {
+      const legacy = parseLegacyIntegrationOAuthState(state);
+      if (
+        legacy &&
+        typeof legacy === 'object' &&
+        typeof legacy.formId === 'string' &&
+        typeof legacy.userId === 'string'
+      ) {
+        return { formId: legacy.formId, userId: legacy.userId };
+      }
+    }
+
+    throw new NotFoundException('Invalid OAuth state');
+  }
+
   async exchangeCodeForTokens(code: string, state: string) {
     try {
-      // Decode state
-      const { formId, userId } = JSON.parse(
-        Buffer.from(state, 'base64').toString(),
-      );
+      const { formId, userId } = this.parseOAuthState(state);
 
       // Verify form belongs to user
       const form = await this.prisma.form.findFirst({
@@ -888,5 +913,9 @@ export class GoogleSheetsService {
 
     // Return new auth URL
     return this.getAuthUrl(formId, userId);
+  }
+
+  private oauthStateSecret(): string {
+    return this.config.get<string>('JWT_SECRET')!;
   }
 }

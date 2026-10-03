@@ -1,89 +1,96 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useTranslations } from '@/components/providers/translations-provider';
+import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 import {
-  DOCUMENTATION_BASE,
-  DOCUMENTATION_PRODUCTS,
-} from '@/lib/documentation-nav';
+  localizeDocumentationProducts,
+  type DocsCopy,
+} from '@/lib/documentation-i18n';
 import { cn } from '@/lib/utils';
 
-type HubLink = {
-  label: string;
-  href: string;
+type HubLinkKey = keyof DocsCopy['hubLinks'];
+type HubSectionKey = keyof DocsCopy['hubSections'];
+
+type HubSectionDef = {
+  sectionKey: HubSectionKey;
+  links: { labelKey: HubLinkKey; href: string }[];
 };
 
-type HubSection = {
-  title: string;
-  links: HubLink[];
-};
-
-const FEATURED = DOCUMENTATION_PRODUCTS.map((product) => ({
-  title: product.title,
-  description: product.description,
-  href: product.href,
-  available: product.available,
-}));
-
-const SECTIONS: HubSection[] = [
+const HUB_SECTIONS: HubSectionDef[] = [
   {
-    title: 'Email API',
+    sectionKey: 'emailApi',
     links: [
-      { label: 'Overview', href: `${DOCUMENTATION_BASE}/email-api` },
-      { label: 'Get started', href: `${DOCUMENTATION_BASE}/email-api/get-started` },
-      { label: 'Use cases', href: `${DOCUMENTATION_BASE}/email-api/use-cases` },
-      { label: 'Best practices', href: `${DOCUMENTATION_BASE}/email-api/best-practices` },
-      { label: 'Messages', href: `${DOCUMENTATION_BASE}/email-api/messages` },
-      { label: 'Domains', href: `${DOCUMENTATION_BASE}/email-api/domains` },
-      { label: 'Testing', href: `${DOCUMENTATION_BASE}/email-api/testing` },
-      { label: 'Quotas & limits', href: `${DOCUMENTATION_BASE}/email-api/quotas` },
-      { label: 'Errors', href: `${DOCUMENTATION_BASE}/email-api/errors` },
+      { labelKey: 'emailOverview', href: `${DOCUMENTATION_BASE}/email-api` },
+      { labelKey: 'emailGetStarted', href: `${DOCUMENTATION_BASE}/email-api/get-started` },
+      { labelKey: 'emailUseCases', href: `${DOCUMENTATION_BASE}/email-api/use-cases` },
+      { labelKey: 'emailBestPractices', href: `${DOCUMENTATION_BASE}/email-api/best-practices` },
+      { labelKey: 'emailMessages', href: `${DOCUMENTATION_BASE}/email-api/messages` },
+      { labelKey: 'emailDomains', href: `${DOCUMENTATION_BASE}/email-api/domains` },
+      { labelKey: 'emailTesting', href: `${DOCUMENTATION_BASE}/email-api/testing` },
+      { labelKey: 'emailQuotas', href: `${DOCUMENTATION_BASE}/email-api/quotas` },
+      { labelKey: 'emailErrors', href: `${DOCUMENTATION_BASE}/email-api/errors` },
     ],
   },
   {
-    title: 'Forms',
+    sectionKey: 'forms',
     links: [
-      { label: 'Overview', href: `${DOCUMENTATION_BASE}/forms` },
-      { label: 'Get started', href: `${DOCUMENTATION_BASE}/forms/get-started` },
-      { label: 'Linking forms', href: `${DOCUMENTATION_BASE}/forms/linking` },
-      { label: 'Website domain', href: `${DOCUMENTATION_BASE}/forms/domains` },
-      { label: 'Embedding', href: `${DOCUMENTATION_BASE}/forms/embedding` },
-      { label: 'Embed events', href: `${DOCUMENTATION_BASE}/forms/events` },
-      { label: 'Webhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
+      { labelKey: 'formsOverview', href: `${DOCUMENTATION_BASE}/forms` },
+      { labelKey: 'formsGetStarted', href: `${DOCUMENTATION_BASE}/forms/get-started` },
+      { labelKey: 'formsLinking', href: `${DOCUMENTATION_BASE}/forms/linking` },
+      { labelKey: 'formsDomains', href: `${DOCUMENTATION_BASE}/forms/domains` },
+      { labelKey: 'formsEmbedding', href: `${DOCUMENTATION_BASE}/forms/embedding` },
+      { labelKey: 'formsEvents', href: `${DOCUMENTATION_BASE}/forms/events` },
+      { labelKey: 'formsWebhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
     ],
   },
   {
-    title: 'Authentication',
+    sectionKey: 'authentication',
     links: [
       {
-        label: 'API authentication',
+        labelKey: 'authEmail',
         href: `${DOCUMENTATION_BASE}/email-api/authentication`,
       },
-      { label: 'Developer dashboard', href: '/login?next=/apps' },
+      { labelKey: 'authDashboard', href: '/login?next=/apps' },
     ],
   },
   {
-    title: 'SDKs & reference',
+    sectionKey: 'sdks',
     links: [
-      { label: 'Node.js SDK', href: `${DOCUMENTATION_BASE}/email-api/sdk` },
-      { label: 'REST & curl', href: `${DOCUMENTATION_BASE}/email-api/rest` },
-      { label: 'API reference', href: `${DOCUMENTATION_BASE}/email-api/reference` },
-      { label: 'Sending examples', href: `${DOCUMENTATION_BASE}/email-api/send` },
+      { labelKey: 'sdkNode', href: `${DOCUMENTATION_BASE}/email-api/sdk` },
+      { labelKey: 'sdkRest', href: `${DOCUMENTATION_BASE}/email-api/rest` },
+      { labelKey: 'sdkReference', href: `${DOCUMENTATION_BASE}/email-api/reference` },
+      { labelKey: 'sdkSend', href: `${DOCUMENTATION_BASE}/email-api/send` },
     ],
   },
   {
-    title: 'Developer guides',
+    sectionKey: 'guides',
     links: [
-      { label: 'Email API overview', href: `${DOCUMENTATION_BASE}/email-api` },
-      { label: 'Forms overview', href: `${DOCUMENTATION_BASE}/forms` },
-      { label: 'Embed a form', href: `${DOCUMENTATION_BASE}/forms/get-started` },
-      { label: 'SMTP', href: `${DOCUMENTATION_BASE}/email-api/smtp` },
+      { labelKey: 'guideEmail', href: `${DOCUMENTATION_BASE}/email-api` },
+      { labelKey: 'guideForms', href: `${DOCUMENTATION_BASE}/forms` },
+      { labelKey: 'guideEmbed', href: `${DOCUMENTATION_BASE}/forms/get-started` },
+      { labelKey: 'guideSmtp', href: `${DOCUMENTATION_BASE}/email-api/smtp` },
     ],
   },
   {
-    title: 'Messaging',
+    sectionKey: 'messaging',
     links: [
-      { label: 'Email messages', href: `${DOCUMENTATION_BASE}/email-api/messages` },
-      { label: 'Forms webhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
-      { label: 'Email testing', href: `${DOCUMENTATION_BASE}/email-api/testing` },
+      { labelKey: 'msgWhatsapp', href: `${DOCUMENTATION_BASE}/whatsapp-api` },
+      {
+        labelKey: 'msgWhatsappMessages',
+        href: `${DOCUMENTATION_BASE}/whatsapp-api/messages`,
+      },
+      {
+        labelKey: 'msgWhatsappTemplates',
+        href: `${DOCUMENTATION_BASE}/whatsapp-api/templates`,
+      },
+      {
+        labelKey: 'msgWhatsappWebhooks',
+        href: `${DOCUMENTATION_BASE}/whatsapp-api/webhooks`,
+      },
+      { labelKey: 'msgEmail', href: `${DOCUMENTATION_BASE}/email-api/messages` },
+      { labelKey: 'msgFormsWebhooks', href: `${DOCUMENTATION_BASE}/forms/webhooks` },
     ],
   },
 ];
@@ -93,40 +100,56 @@ function FeaturedCard({
   description,
   href,
   available,
+  docsCta,
+  comingSoon,
+  isRtl,
 }: {
   title: string;
   description: string;
   href: string;
   available: boolean;
+  docsCta: string;
+  comingSoon: string;
+  isRtl: boolean;
 }) {
+  const Arrow = isRtl ? ArrowLeft : ArrowRight;
+
   const inner = (
     <article
       className={cn(
-        'group flex h-full min-h-[11rem] flex-col justify-between rounded-xl border border-[var(--border)]/50 bg-[var(--surface)] p-5 transition-colors sm:p-6',
-        available &&
-          'hover:bg-[color-mix(in_srgb,var(--surface-secondary)_40%,var(--surface))]',
+        'group relative flex h-full min-h-[12rem] flex-col justify-between overflow-hidden rounded-2xl border border-[#EBEBEB] bg-white p-5 transition-colors sm:p-6',
+        available && 'hover:border-[#D4D4D4] hover:bg-[#FAFAFA]',
         !available && 'opacity-70',
       )}
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#E5E5E5] to-transparent"
+        aria-hidden
+      />
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--foreground)] sm:text-xl">
+        <h2 className="text-lg font-semibold tracking-tight text-[#1D1D1D] sm:text-xl">
           {title}
         </h2>
-        <p className="text-[13px] leading-relaxed text-[var(--muted-foreground)] sm:text-[14px] sm:leading-6">
+        <p className="text-[13px] leading-relaxed text-[#6B6F76] sm:text-[14px] sm:leading-6">
           {description}
         </p>
       </div>
-      <p className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-[var(--foreground)]">
+      <p className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#1D1D1D]">
         {available ? (
           <>
-            Docs
-            <ArrowRight
-              className="size-3.5 transition-transform group-hover:translate-x-0.5"
+            {docsCta}
+            <Arrow
+              className={cn(
+                'size-3.5 transition-transform',
+                isRtl
+                  ? 'group-hover:-translate-x-0.5'
+                  : 'group-hover:translate-x-0.5',
+              )}
               aria-hidden
             />
           </>
         ) : (
-          <span className="text-[var(--muted-foreground)]">Coming soon</span>
+          <span className="text-[#9CA3AF]">{comingSoon}</span>
         )}
       </p>
     </article>
@@ -140,50 +163,71 @@ function FeaturedCard({
   );
 }
 
-function DocsSection({ section }: { section: HubSection }) {
-  return (
-    <section className="min-w-0">
-      <h2 className="text-[15px] font-semibold text-[var(--foreground)]">
-        {section.title}
-      </h2>
-      <ul className="mt-3 space-y-2">
-        {section.links.map((link) => (
-          <li key={link.href + link.label}>
-            <Link
-              href={link.href}
-              className="text-[13px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 export default function DocumentationHubPage() {
+  const t = useTranslations();
+  const d = t.docs;
+  const isRtl = t.common.locale === 'ar';
+  const featured = localizeDocumentationProducts(d);
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
-      <header className="max-w-3xl">
-        <h1 className="text-[2rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.75rem] sm:leading-[1.15]">
-          Rukny Developer Documentation
+    <main className="relative mx-auto w-full max-w-6xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
+      <div
+        className="pointer-events-none absolute inset-x-0 -top-14 h-64 bg-[radial-gradient(ellipse_at_top,rgba(245,245,245)_0%,transparent_70%)]"
+        aria-hidden
+      />
+
+      <header className="relative max-w-3xl">
+        <p className="text-[13px] font-medium text-[#9CA3AF]">{d.brandDocs}</p>
+        <h1 className="mt-2 text-[2rem] font-semibold tracking-tight text-[#1D1D1D] sm:text-[2.75rem] sm:leading-[1.15]">
+          {d.title}
         </h1>
-        <p className="mt-4 text-[15px] leading-7 text-[var(--muted-foreground)] sm:text-base sm:leading-8">
-          Learn how to send and receive data with Rukny APIs, and how to
-          implement the products and SDKs that fit your application.
+        <p className="mt-4 text-[15px] leading-7 text-[#6B6F76] sm:text-base sm:leading-8">
+          {d.subtitle}
         </p>
       </header>
 
-      <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURED.map((item) => (
-          <FeaturedCard key={item.title} {...item} />
-        ))}
+      <section className="relative mt-12" aria-labelledby="docs-products-heading">
+        <h2
+          id="docs-products-heading"
+          className="mb-4 text-[13px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF]"
+        >
+          {d.featuredTitle}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {featured.map((item) => (
+            <FeaturedCard
+              key={item.id}
+              title={item.title}
+              description={item.description}
+              href={item.href}
+              available={item.available}
+              docsCta={d.docsCta}
+              comingSoon={d.comingSoon}
+              isRtl={isRtl}
+            />
+          ))}
+        </div>
       </section>
 
-      <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-12 lg:gap-y-14">
-        {SECTIONS.map((section) => (
-          <DocsSection key={section.title} section={section} />
+      <div className="relative mt-16 grid gap-10 border-t border-[#EBEBEB] pt-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-12 lg:gap-y-14">
+        {HUB_SECTIONS.map((section) => (
+          <section key={section.sectionKey} className="min-w-0">
+            <h2 className="text-[15px] font-semibold text-[#1D1D1D]">
+              {d.hubSections[section.sectionKey]}
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {section.links.map((link) => (
+                <li key={link.href + link.labelKey}>
+                  <Link
+                    href={link.href}
+                    className="text-[13px] text-[#6B6F76] transition-colors hover:text-[#1D1D1D]"
+                  >
+                    {d.hubLinks[link.labelKey]}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
       </div>
     </main>

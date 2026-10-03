@@ -28,6 +28,7 @@ import {
 } from '../../core/common/guards/auth/jwt-auth.guard';
 import { GoogleDriveService } from './google-drive.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
 
@@ -158,6 +159,7 @@ export class GoogleDriveController {
     };
   }
 
+  @Public()
   @Post('upload-public/:slug')
   @ApiOperation({
     summary: 'Upload files to Google Drive for public form submission',
@@ -364,6 +366,7 @@ export class GoogleDriveController {
     }
   }
 
+  @Public()
   @Post('signature/:formId')
   @ApiOperation({ summary: 'Upload signature to Google Drive' })
   async uploadSignature(

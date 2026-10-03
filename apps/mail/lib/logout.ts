@@ -1,4 +1,5 @@
 import { clearCsrfToken } from "@rukny/auth/client/csrf-cookie";
+import { clearMailClientCookie } from "@/lib/mail-cookies";
 import {
   MAIL_BOUND_DOMAIN_COOKIE,
   MAIL_DOMAIN_MAP_COOKIE,
@@ -9,7 +10,7 @@ import {
 import { clearMailAppIdCookie } from "@/lib/mail-app-id";
 
 function clearCookie(name: string) {
-  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  clearMailClientCookie(name);
 }
 
 function clearMailSessionCookies() {

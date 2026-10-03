@@ -1,5 +1,5 @@
-/** bcrypt cost factor for account passwords */
-export const BCRYPT_ROUNDS = 12;
+/** @deprecated Import from core/common/constants/crypto.constants */
+export { BCRYPT_ROUNDS, OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 /** Minimum password length */
 export const PASSWORD_MIN_LENGTH = 10;

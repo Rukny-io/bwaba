@@ -19,11 +19,11 @@ import {
 import { normalizePhoneNumber } from '../../forms/utils/form-phone-verification-check.util';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { OTP_BCRYPT_ROUNDS } from '../../../core/common/constants/crypto.constants';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_COOLDOWN_SECONDS = 60;
-const BCRYPT_ROUNDS = 10;
 
 const APP_SETTINGS_SELECT = {
   id: true,
@@ -140,7 +140,7 @@ export class AppsService {
     }
 
     const code = this.generateOtpCode();
-    const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+    const codeHash = await bcrypt.hash(code, OTP_BCRYPT_ROUNDS);
 
     if (this.isDevOtpBypass()) {
       this.logger.warn(

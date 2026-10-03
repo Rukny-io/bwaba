@@ -1,18 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MonitoringService } from './monitoring.service';
-import { HealthController } from './health.controller';
 import { MetricsService } from './metrics.service';
 
 /**
- * 📊 Monitoring Module
- *
- * مراقبة صحة التطبيق والأداء:
- * - Health checks
- * - Prometheus metrics
- * - Performance tracking
+ * Monitoring utilities (metrics services). Not registered in AppModule —
+ * health endpoints live in core/health. Import this module only when wiring
+ * MetricsInterceptor or Prometheus export explicitly.
  */
 @Module({
-  controllers: [HealthController],
   providers: [MonitoringService, MetricsService],
   exports: [MonitoringService, MetricsService],
 })

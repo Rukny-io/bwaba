@@ -36,6 +36,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileValidationPipe } from '../../core/common/pipes/file-validation.pipe';
 import { generateSecureFilename } from '../../core/common/utils/file-security.util';
 import { FormTeamAccessService } from './form-team/form-team-access.service';
+import { getClientIp } from './utils/client-ip.util';
 
 interface PresignFileInfo {
   name: string;
@@ -59,14 +60,6 @@ export class FormsUploadController {
     private publicUpload: FormsPublicUploadService,
     private formTeamAccess: FormTeamAccessService,
   ) {}
-
-  private getClientIp(req: ExpressRequest): string {
-    const forwarded = req.headers['x-forwarded-for'];
-    if (typeof forwarded === 'string' && forwarded.length > 0) {
-      return forwarded.split(',')[0].trim();
-    }
-    return req.ip || req.socket.remoteAddress || '127.0.0.1';
-  }
 
   @Post(':id/upload')
   @UseGuards(JwtAuthGuard)
@@ -446,7 +439,7 @@ export class FormsUploadController {
     @Param('slug') slug: string,
     @Req() req: ExpressRequest,
   ) {
-    return this.publicUpload.createSession(slug, this.getClientIp(req));
+    return this.publicUpload.createSession(slug, getClientIp(req));
   }
 
   @Public()
@@ -488,7 +481,7 @@ export class FormsUploadController {
       slug,
       body.sessionToken,
       body.files || [],
-      this.getClientIp(req),
+      getClientIp(req),
     );
   }
 

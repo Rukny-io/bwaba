@@ -11,6 +11,7 @@ import { RedisService } from '../../core/cache/redis.service';
 import { WhatsAppBusinessService } from '../../integrations/whatsapp-business/whatsapp-business.service';
 import { EmailService } from '../../integrations/email/email.service';
 import * as crypto from 'crypto';
+import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 import {
   RequestCheckoutOtpDto,
   VerifyCheckoutOtpDto,
@@ -657,7 +658,7 @@ export class CheckoutAuthService {
 
     // Store hashed code
     const bcrypt = await import('bcryptjs');
-    const codeHash = await bcrypt.hash(code, 10);
+    const codeHash = await bcrypt.hash(code, OTP_BCRYPT_ROUNDS);
 
     await this.prismaAny.whatsappOtp.create({
       data: {

@@ -14,6 +14,13 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
+import {
+  integrationOAuthStateLegacyAllowed,
+  parseLegacyIntegrationOAuthState,
+  signIntegrationOAuthState,
+  verifyIntegrationOAuthState,
+} from '../../core/common/utils/integration-oauth-state.util';
 
 @Controller('google/calendar')
 export class GoogleCalendarController {
@@ -38,9 +45,10 @@ export class GoogleCalendarController {
   @UseGuards(JwtAuthGuard)
   async authorize(@Req() req: any, @Query('returnUrl') returnUrl?: string) {
     // Encode returnUrl in state to redirect back after auth
-    const state = returnUrl
-      ? Buffer.from(returnUrl).toString('base64')
-      : 'default';
+    const state = signIntegrationOAuthState(
+      { returnUrl: returnUrl || '/app/events/create' },
+      this.oauthStateSecret(),
+    );
     // Pass user's email as login_hint to skip account selection
     const userEmail = req.user?.email;
     const authUrl = this.googleCalendarService.getAuthUrl(state, userEmail);
@@ -54,21 +62,14 @@ export class GoogleCalendarController {
    * OAuth callback - receives authorization code
    * GET /api/v1/google/calendar/callback?code=xxx&state=xxx
    */
+  @Public()
   @Get('callback')
   async callback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    // Decode returnUrl from state
-    let returnUrl = '/app/events/create';
-    if (state && state !== 'default') {
-      try {
-        returnUrl = Buffer.from(state, 'base64').toString('utf-8');
-      } catch (e) {
-        console.error('Error decoding state:', e);
-      }
-    }
+    let returnUrl = this.resolveReturnUrlFromState(state);
 
     if (!code) {
       return res.redirect(
@@ -160,5 +161,25 @@ export class GoogleCalendarController {
   @UseGuards(JwtAuthGuard)
   async unlinkCalendar(@Req() req) {
     return this.googleCalendarService.unlinkGoogleCalendar(req.user.id);
+  }
+
+  private oauthStateSecret(): string {
+    return this.configService.get<string>('JWT_SECRET')!;
+  }
+
+  private resolveReturnUrlFromState(state: string): string {
+    const verified = verifyIntegrationOAuthState<{ returnUrl?: string }>(
+      state,
+      this.oauthStateSecret(),
+    );
+    if (verified?.returnUrl) return verified.returnUrl;
+
+    if (integrationOAuthStateLegacyAllowed()) {
+      if (!state || state === 'default') return '/app/events/create';
+      const legacy = parseLegacyIntegrationOAuthState(state);
+      if (typeof legacy === 'string' && legacy.startsWith('/')) return legacy;
+    }
+
+    return '/app/events/create';
   }
 }

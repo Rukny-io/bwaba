@@ -177,6 +177,7 @@ export function createMiddleware(config: MiddlewareConfig) {
         response.cookies.delete('csrf_token');
         response.cookies.delete('__Secure-access_token');
         response.cookies.delete('__Secure-refresh_token');
+        response.cookies.delete('__Secure-csrf_token');
         response.cookies.delete('__Host-csrf_token');
         return response;
       }

@@ -5,11 +5,46 @@ import {
   MinLength,
   Matches,
   IsOptional,
+  Length,
 } from 'class-validator';
 
 /**
  * 🚀 DTOs لترقية الحساب
  */
+
+/**
+ * طلب OTP لترقية الحساب
+ */
+export class RequestUpgradeOtpDto {
+  @ApiProperty({
+    description: 'رقم الهاتف المرتبط بالطلبات',
+    example: '+9647701234567',
+  })
+  @IsString()
+  @Matches(/^\+964[0-9]{10}$/, {
+    message: 'رقم الهاتف يجب أن يكون بالصيغة العراقية: +964XXXXXXXXXX',
+  })
+  phoneNumber: string;
+}
+
+/**
+ * التحقق من OTP قبل الترقية
+ */
+export class VerifyUpgradeOtpDto {
+  @ApiProperty({ example: '+9647701234567' })
+  @IsString()
+  @Matches(/^\+964[0-9]{10}$/)
+  phoneNumber: string;
+
+  @ApiProperty({ description: 'معرف OTP من request-otp' })
+  @IsString()
+  otpId: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  @Length(6, 6)
+  code: string;
+}
 
 /**
  * طلب ترقية الحساب
@@ -47,6 +82,12 @@ export class UpgradeAccountDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiProperty({
+    description: 'رمز التحقق من خطوة verify-otp',
+  })
+  @IsString()
+  upgradeToken: string;
 }
 
 /**
@@ -64,6 +105,12 @@ export class GuestDataSummaryDto {
 
   @ApiProperty({ example: true, description: 'هل يمكن الترقية؟' })
   canUpgrade: boolean;
+
+  @ApiPropertyOptional({
+    description: 'يتطلب verify-otp لعرض البيانات الفعلية',
+    example: true,
+  })
+  requiresVerification?: boolean;
 }
 
 /**

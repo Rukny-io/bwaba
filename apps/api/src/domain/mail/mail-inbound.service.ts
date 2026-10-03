@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -41,6 +42,13 @@ import {
 import { MailBodyCryptoService } from './crypto/mail-body-crypto.service';
 import { MailBodyEncryptionPolicy } from './crypto/mail-body-encryption.policy';
 import { toPrismaBytes } from './crypto/mail-body-crypto.types';
+import {
+  asSnsEnvelope,
+  assertExpectedSnsTopic,
+  confirmSnsSubscription,
+  isSnsEnvelope,
+  verifySnsSignature,
+} from '../../core/common/utils/sns-signature.util';
 
 type SesReceiptAction = {
   type?: string;
@@ -227,62 +235,61 @@ export class MailInboundService {
   }
 
   async handleSnsPayload(body: unknown): Promise<{ ok: true; handled: string }> {
-    const envelope = body as {
-      Type?: string;
-      SubscribeURL?: string;
-      Message?: string;
-      TopicArn?: string;
-    };
+    if (isSnsEnvelope(body)) {
+      const envelope = asSnsEnvelope(body);
+      await verifySnsSignature(envelope);
+      assertExpectedSnsTopic(
+        envelope.TopicArn!,
+        this.config.get<string>('MAIL_SES_SNS_TOPIC_ARN'),
+      );
 
-    if (envelope?.Type === 'SubscriptionConfirmation' && envelope.SubscribeURL) {
-      await this.confirmSubscription(envelope.SubscribeURL);
-      return { ok: true, handled: 'subscription_confirmation' };
-    }
-
-    if (envelope?.Type === 'Notification' && typeof envelope.Message === 'string') {
-      let notification: SesReceivedNotification;
-      try {
-        notification = JSON.parse(envelope.Message) as SesReceivedNotification;
-      } catch {
-        this.logger.warn('SNS Notification Message is not valid JSON');
-        return { ok: true, handled: 'ignored_invalid_message' };
+      if (
+        envelope.Type === 'SubscriptionConfirmation' &&
+        envelope.SubscribeURL
+      ) {
+        await confirmSnsSubscription(envelope.SubscribeURL);
+        return { ok: true, handled: 'subscription_confirmation' };
       }
-      return this.handleSesNotification(notification);
+
+      if (
+        envelope.Type === 'Notification' &&
+        typeof envelope.Message === 'string'
+      ) {
+        let notification: SesReceivedNotification;
+        try {
+          notification = JSON.parse(
+            envelope.Message,
+          ) as SesReceivedNotification;
+        } catch {
+          this.logger.warn('SNS Notification Message is not valid JSON');
+          return { ok: true, handled: 'ignored_invalid_message' };
+        }
+        return this.handleSesNotification(notification);
+      }
+
+      throw new BadRequestException('Unsupported SNS message type.');
     }
 
-    // Direct SES JSON (useful for local/manual tests)
-    if (
-      body &&
-      typeof body === 'object' &&
-      ('notificationType' in body || 'receipt' in body || 'mail' in body)
-    ) {
+    if (this.allowDirectSesJson() && this.isDirectSesPayload(body)) {
       return this.handleSesNotification(body as SesReceivedNotification);
     }
 
-    this.logger.warn('Unrecognized SES/SNS webhook payload');
-    return { ok: true, handled: 'ignored' };
+    throw new ForbiddenException('Invalid or unsigned SES/SNS webhook payload.');
   }
 
-  private async confirmSubscription(url: string) {
-    try {
-      const parsed = new URL(url);
-      if (
-        parsed.protocol !== 'https:' ||
-        !parsed.hostname.endsWith('.amazonaws.com')
-      ) {
-        this.logger.warn(`Refusing non-AWS SubscribeURL: ${url}`);
-        return;
-      }
-      const res = await fetch(url, { method: 'GET' });
-      this.logger.log(
-        `SNS subscription confirmation GET ${res.status} ${parsed.hostname}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        'Failed to confirm SNS subscription',
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
+  private allowDirectSesJson(): boolean {
+    if (this.config.get<string>('NODE_ENV') !== 'production') return true;
+    return this.config.get<string>('MAIL_SES_ALLOW_DIRECT_JSON') === 'true';
+  }
+
+  private isDirectSesPayload(body: unknown): boolean {
+    return (
+      Boolean(body) &&
+      typeof body === 'object' &&
+      ('notificationType' in (body as object) ||
+        'receipt' in (body as object) ||
+        'mail' in (body as object))
+    );
   }
 
   private async handleSesNotification(

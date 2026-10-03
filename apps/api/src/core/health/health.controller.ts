@@ -5,6 +5,7 @@ import {
   Headers,
   ForbiddenException,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from '../database/prisma/prisma.service';
@@ -36,7 +37,12 @@ export class HealthController {
       return; // Allow in development without secret
     }
 
-    if (providedSecret !== expectedSecret) {
+    const provided = Buffer.from(providedSecret ?? '');
+    const expected = Buffer.from(expectedSecret);
+    if (
+      provided.length !== expected.length ||
+      !timingSafeEqual(provided, expected)
+    ) {
       throw new ForbiddenException('Invalid health secret');
     }
   }
@@ -191,7 +197,10 @@ export class HealthController {
     summary: 'Database health check',
     description: 'Quick database connectivity check',
   })
-  async dbCheck() {
+  async dbCheck(@Headers('x-health-secret') healthSecret?: string) {
+    if (process.env.NODE_ENV === 'production') {
+      this.verifyHealthSecret(healthSecret);
+    }
     const health = await this.prisma.getHealthStatus();
     return {
       status: health.connected ? 'ok' : 'error',
@@ -207,7 +216,10 @@ export class HealthController {
     summary: 'Cache health check',
     description: 'Redis and cache status check',
   })
-  async cacheCheck() {
+  async cacheCheck(@Headers('x-health-secret') healthSecret?: string) {
+    if (process.env.NODE_ENV === 'production') {
+      this.verifyHealthSecret(healthSecret);
+    }
     const [redisStatus, cacheMetrics] = await Promise.all([
       this.redis.getConnectionStatus(),
       this.cacheManager.getMetrics(),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { deleteMailDomainBinding } from "@/lib/mail-domain-bindings";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
+import { mailCookieClearOptions } from "@/lib/mail-cookies";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
 import {
   mailSetupCacheKey,
@@ -36,7 +37,7 @@ export async function DELETE() {
   });
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-  response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+  response.cookies.set(MAIL_READY_COOKIE, "", mailCookieClearOptions());
+  response.cookies.set(MAIL_READY_APP_COOKIE, "", mailCookieClearOptions());
   return response;
 }

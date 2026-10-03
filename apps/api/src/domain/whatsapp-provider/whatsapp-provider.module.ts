@@ -34,6 +34,9 @@ import { MessagingSecurityService } from './messaging/messaging-security.service
 import { WhatsAppMessageIdempotencyService } from './messaging/whatsapp-message-idempotency.service';
 import { WhatsappApiTryController } from './messaging/whatsapp-api-try.controller';
 import { WhatsappApiTryService } from './messaging/whatsapp-api-try.service';
+import { MediaController } from './media/media.controller';
+import { MediaService } from './media/media.service';
+import { ContactsApiController } from './contacts/contacts-api.controller';
 
 @Module({
   imports: [PrismaModule, RedisModule, ConfigModule, DeveloperModule],
@@ -44,6 +47,8 @@ import { WhatsappApiTryService } from './messaging/whatsapp-api-try.service';
     PhoneNumbersController,
     MetaWebhookController,
     WhatsappApiTryController,
+    MediaController,
+    ContactsApiController,
   ],
   providers: [
     MetaApiService,
@@ -57,6 +62,7 @@ import { WhatsappApiTryService } from './messaging/whatsapp-api-try.service';
     TemplatesService,
     PhoneNumbersService,
     MetaWebhookService,
+    MediaService,
   ],
   exports: [
     MetaApiService,

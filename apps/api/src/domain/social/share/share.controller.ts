@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { ShareService } from './share.service';
 import { JwtAuthGuard } from '../../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { CustomQRDto, TrackShareDto, QRCodeFormat } from './dto';
 
 @ApiTags('Share & QR Codes')
@@ -24,6 +25,7 @@ import { CustomQRDto, TrackShareDto, QRCodeFormat } from './dto';
 export class ShareController {
   constructor(private readonly shareService: ShareService) {}
 
+  @Public()
   @Get('profile/:username/qr')
   @ApiOperation({ summary: 'Generate QR code for profile' })
   @ApiQuery({ name: 'format', required: false, enum: QRCodeFormat })
@@ -39,6 +41,7 @@ export class ShareController {
     return this.shareService.generateProfileQR(username, format, size);
   }
 
+  @Public()
   @Get('profile/:username/share-links')
   @ApiOperation({ summary: 'Get share links for all social platforms' })
   @ApiResponse({
@@ -50,6 +53,7 @@ export class ShareController {
     return this.shareService.getProfileShareLinks(username);
   }
 
+  @Public()
   @Get('social-link/:linkId/qr')
   @ApiOperation({ summary: 'Generate QR code for social link' })
   @ApiQuery({ name: 'format', required: false, enum: QRCodeFormat })

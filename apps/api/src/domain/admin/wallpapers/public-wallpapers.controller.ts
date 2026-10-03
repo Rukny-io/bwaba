@@ -2,7 +2,9 @@ import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { WallpapersService } from './wallpapers.service';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 
+@Public()
 @Controller('wallpapers')
 @SkipThrottle()
 export class PublicWallpapersController {

@@ -17,6 +17,7 @@ import { PlanGuard } from '../../core/common/guards/plan.guard';
 import { CheckFeature } from '../../core/common/decorators/auth/plan.decorator';
 import { CurrentUser } from '../../core/common/decorators/auth/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @Controller('integrations/google-sheets')
 export class GoogleSheetsController {
@@ -55,6 +56,7 @@ export class GoogleSheetsController {
   /**
    * OAuth callback - exchange code for tokens and export data
    */
+  @Public()
   @Get('callback')
   async handleCallback(
     @Query('code') code: string,
@@ -68,10 +70,8 @@ export class GoogleSheetsController {
         state,
       );
 
-      // Decode state to get formId and userId
-      const { formId, userId } = JSON.parse(
-        Buffer.from(state, 'base64').toString(),
-      );
+      const { formId, userId } =
+        this.googleSheetsService.parseOAuthState(state);
 
       // Create spreadsheet and export data automatically
       try {

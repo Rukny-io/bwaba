@@ -40,7 +40,7 @@ export function MailAppPage() {
 
     (async () => {
       try {
-        const restored = await restoreDomainSetupRequest();
+        const { setup: restored } = await restoreDomainSetupRequest();
         if (cancelled) return;
 
         if (restored) {

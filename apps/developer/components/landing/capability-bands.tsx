@@ -1,89 +1,45 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { DevReveal } from '@/components/landing/dev-reveal';
+import type { LandingCopy } from '@/lib/landing-copy';
+import { agLayout, productTints } from '@/lib/ag-theme';
 
-type LandingLocale = 'ar' | 'en';
-
-const COPY = {
-  ar: {
-    eyebrow: 'Products',
-    title: 'قدرات جاهزة للإنتاج',
-    bands: [
-      {
-        title: 'WhatsApp API',
-        desc: 'Embedded Signup، قوالب، محفظة IQD، وwebhooks للتسليم والوارد.',
-        href: '/documentation',
-        cta: 'التوثيق',
-      },
-      {
-        title: 'Email API',
-        desc: 'نطاقات موثّقة، رسائل معاملاتية، وSDK جاهز للخادم.',
-        href: '/documentation/email-api',
-        cta: 'Email API',
-      },
-      {
-        title: 'Forms',
-        desc: 'نماذج قابلة للتضمين مع أحداث وwebhooks وربط بالتطبيق.',
-        href: '/documentation/forms',
-        cta: 'Forms',
-      },
-    ],
-  },
-  en: {
-    eyebrow: 'Products',
-    title: 'Production-ready capabilities',
-    bands: [
-      {
-        title: 'WhatsApp API',
-        desc: 'Embedded Signup, templates, IQD wallet, and delivery webhooks.',
-        href: '/documentation',
-        cta: 'Docs',
-      },
-      {
-        title: 'Email API',
-        desc: 'Verified domains, transactional mail, and a server SDK.',
-        href: '/documentation/email-api',
-        cta: 'Email API',
-      },
-      {
-        title: 'Forms',
-        desc: 'Embeddable forms with events, webhooks, and app linking.',
-        href: '/documentation/forms',
-        cta: 'Forms',
-      },
-    ],
-  },
-} as const;
-
-export function CapabilityBands({ locale = 'ar' }: { locale?: LandingLocale }) {
-  const t = COPY[locale];
-
+export function CapabilityBands({ copy }: { copy: LandingCopy }) {
   return (
-    <section className="border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto w-full max-w-[1280px] px-5 py-16 min-[720px]:px-8 min-[720px]:py-20">
-        <p className="eyebrow-label">{t.eyebrow}</p>
-        <h2 className="mt-3 max-w-xl text-2xl font-semibold tracking-tight text-[var(--foreground)] min-[720px]:text-3xl">
-          {t.title}
-        </h2>
-        <div className="mt-10 divide-y divide-[var(--border)] border border-[var(--border)]">
-          {t.bands.map((band) => (
-            <article
-              key={band.title}
-              className="grid gap-4 px-5 py-8 min-[720px]:grid-cols-[1fr_auto] min-[720px]:items-center min-[720px]:px-8"
-            >
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--foreground)]">
+    <section className={`${agLayout.sectionMuted} py-20 sm:py-24 md:py-28`}>
+      <div className={agLayout.container}>
+        <DevReveal>
+          <p className={agLayout.eyebrow}>{copy.productsEyebrow}</p>
+          <h2 className={`${agLayout.sectionTitle} mt-4`}>
+            {copy.productsTitle}
+            <span className="text-[#9CA3AF]">{copy.productsTitleMuted}</span>
+          </h2>
+        </DevReveal>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          {copy.bands.map((band, index) => (
+            <DevReveal key={band.title} delay={index * 0.06}>
+              <article
+                className={`flex h-full flex-col rounded-[2rem] p-7 sm:p-8 ${productTints[band.tint]}`}
+              >
+                <h3 className="text-[1.15rem] font-medium tracking-[-0.02em] text-[#1D1D1D]">
                   {band.title}
                 </h3>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+                <p className="mt-2 flex-1 text-[14px] leading-[1.8] text-[#6B6F76]">
                   {band.desc}
                 </p>
-              </div>
-              <Link
-                href={band.href}
-                className="inline-flex h-10 w-fit items-center border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
-              >
-                {band.cta}
-              </Link>
-            </article>
+                <Link
+                  href={band.href}
+                  className="mt-6 inline-flex items-center gap-1 text-[14px] font-medium text-[#1D1D1D] transition-opacity hover:opacity-70"
+                >
+                  {band.cta}
+                  <ArrowLeft
+                    className="size-3.5 opacity-50 rtl:rotate-180"
+                    aria-hidden
+                  />
+                </Link>
+              </article>
+            </DevReveal>
           ))}
         </div>
       </div>

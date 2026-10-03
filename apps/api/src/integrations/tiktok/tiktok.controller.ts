@@ -17,6 +17,13 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { TikTokService } from './tiktok.service';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
+import {
+  integrationOAuthStateLegacyAllowed,
+  parseLegacyIntegrationOAuthState,
+  signIntegrationOAuthState,
+  verifyIntegrationOAuthState,
+} from '../../core/common/utils/integration-oauth-state.util';
 
 @Controller('integrations/tiktok')
 export class TikTokController {
@@ -36,11 +43,15 @@ export class TikTokController {
   @Get('auth')
   @UseGuards(JwtAuthGuard)
   async authorize(@Req() req: any, @Res() res: Response) {
-    const state = Buffer.from(req.user.id).toString('base64url');
+    const state = signIntegrationOAuthState(
+      { userId: req.user.id },
+      this.oauthStateSecret(),
+    );
     const authUrl = this.tikTokService.getAuthUrl(state);
     return res.redirect(authUrl);
   }
 
+  @Public()
   @Get('callback')
   async callback(
     @Query('code') code: string,
@@ -53,7 +64,10 @@ export class TikTokController {
       return res.redirect(`${redirectBase}?tiktok=error&reason=${error ?? 'no_code'}`);
     }
     try {
-      const userId = Buffer.from(state, 'base64url').toString('utf8');
+      const userId = this.resolveUserIdFromState(state);
+      if (!userId) {
+        return res.redirect(`${redirectBase}?tiktok=error&reason=invalid_state`);
+      }
       const result = await this.tikTokService.exchangeCodeAndSave(code, userId);
 
       try {
@@ -100,6 +114,7 @@ export class TikTokController {
     return this.tikTokService.getBlocks(req.user.id);
   }
 
+  @Public()
   @Get('blocks/public/:userId')
   async getPublicBlocks(@Param('userId') userId: string) {
     return this.tikTokService.getPublicData(userId);
@@ -123,5 +138,23 @@ export class TikTokController {
   @UseGuards(JwtAuthGuard)
   async createBlock(@Req() req: any, @Body('type') type: 'FEED') {
     return this.tikTokService.createBlock(req.user.id, type);
+  }
+
+  private oauthStateSecret(): string {
+    return this.config.get<string>('JWT_SECRET')!;
+  }
+
+  private resolveUserIdFromState(state: string): string | null {
+    const verified = verifyIntegrationOAuthState<{ userId: string }>(
+      state,
+      this.oauthStateSecret(),
+    );
+    if (verified?.userId) return verified.userId;
+
+    if (!integrationOAuthStateLegacyAllowed()) return null;
+    const legacy = parseLegacyIntegrationOAuthState(state);
+    if (typeof legacy === 'string') return legacy;
+    if (legacy && typeof legacy.userId === 'string') return legacy.userId;
+    return null;
   }
 }

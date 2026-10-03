@@ -8,109 +8,106 @@ import {
   DocPager,
   DocSection,
 } from '@/components/documentation/docs-article';
+import { formsEmbeddingCopy } from '@/lib/documentation-content/forms/pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { buildIframeEmbedCode, getPublicFormUrl } from '@/lib/forms-urls';
-
-export const metadata: Metadata = {
-  title: 'Embedding — Forms | Rukny Documentation',
-  description:
-    'Embed a linked Rukny form on your website with a secure iframe snippet.',
-};
-
-const TOC = [
-  { id: 'requirements', label: 'Requirements' },
-  { id: 'snippet', label: 'iframe snippet' },
-  { id: 'public-link', label: 'Public link' },
-  { id: 'troubleshooting', label: 'Troubleshooting' },
-];
 
 const EXAMPLE_SLUG = 'your-form-slug';
 const EXAMPLE_IFRAME = buildIframeEmbedCode(EXAMPLE_SLUG);
 const EXAMPLE_PUBLIC = getPublicFormUrl(EXAMPLE_SLUG, false);
 
-export default function FormsEmbeddingPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), formsEmbeddingCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
+
+export default async function FormsEmbeddingPage() {
+  const c = docCopy(await getCurrentLocale(), formsEmbeddingCopy);
+
   return (
     <DocumentationArticle
       productId="forms"
-      title="Embedding"
-      description="Paste the Connect iframe onto your site. Embedding requires a published form and your app website origin."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="requirements" title="Requirements">
+      <DocSection id="requirements" title={c.toc[0]!.label}>
         <ul className="list-disc space-y-2 ps-5">
-          <li>Form linked to your developer app</li>
-          <li>Form status is published</li>
-          <li>
-            Website URL set under Settings → Domains (
-            <Link
-              href="/documentation/forms/domains"
-              className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-            >
-              details
-            </Link>
-            )
-          </li>
+          {c.requirements.map((item, index) => (
+            <li key={item}>
+              {item}
+              {index === 2 ? (
+                <>
+                  {' '}
+                  (
+                  <Link
+                    href="/documentation/forms/domains"
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    {c.detailsLink}
+                  </Link>
+                  )
+                </>
+              ) : null}
+            </li>
+          ))}
         </ul>
-        <DocCallout title="Connect panel">
-          Open app → Forms → <strong>Connect</strong> for a live preview and
-          copy buttons. Prefer that snippet over typing URLs by hand.
-        </DocCallout>
+        <DocCallout title={c.calloutTitle}>{c.calloutBody}</DocCallout>
       </DocSection>
 
-      <DocSection id="snippet" title="iframe snippet">
+      <DocSection id="snippet" title={c.snippetTitle}>
         <p>
-          Use <DocInlineCode>data-rukny-form</DocInlineCode> so the{' '}
+          {c.snippetP1Before}{' '}
+          <DocInlineCode>data-rukny-form</DocInlineCode>{' '}
           <Link
             href="/documentation/forms/events"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            event listener
+            {c.snippetP1Link}
           </Link>{' '}
-          can find the frame for auto-resize. Replace the slug with yours:
+          {c.snippetP1After}
         </p>
         <DocCode>{EXAMPLE_IFRAME}</DocCode>
         <p>
-          The embed URL includes <DocInlineCode>?embed=1</DocInlineCode> so the
-          form renders in embed mode (chrome suited for iframes).
+          {c.snippetP2.split('?embed=1')[0]}
+          <DocInlineCode>?embed=1</DocInlineCode>
+          {c.snippetP2.split('?embed=1')[1]}
         </p>
       </DocSection>
 
-      <DocSection id="public-link" title="Public link">
-        <p>
-          Every form also has a standalone public page (no iframe). Share it
-          when you do not need an on-site embed:
-        </p>
+      <DocSection id="public-link" title={c.publicTitle}>
+        <p>{c.publicBody}</p>
         <DocCode>{EXAMPLE_PUBLIC}</DocCode>
       </DocSection>
 
-      <DocSection id="troubleshooting" title="Troubleshooting">
+      <DocSection id="troubleshooting" title={c.troubleshootingTitle}>
         <ul className="list-disc space-y-2 ps-5">
-          <li>
-            <strong>Embed blocked / no preview</strong> — set the website URL,
-            then publish the form.
-          </li>
-          <li>
-            <strong>Blank frame on your site</strong> — confirm the page origin
-            matches the configured website origin (scheme, host, port).
-          </li>
-          <li>
-            <strong>Wrong height</strong> — add the{' '}
-            <Link
-              href="/documentation/forms/events"
-              className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-            >
-              resize listener
-            </Link>
-            .
-          </li>
+          {c.troubleshooting.map((item, index) => (
+            <li key={item.title}>
+              <strong>{item.title}</strong>{' '}
+              {index === 2 ? (
+                <>
+                  —{' '}
+                  <Link
+                    href="/documentation/forms/events"
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    {c.resizeLink}
+                  </Link>
+                  .
+                </>
+              ) : (
+                item.body
+              )}
+            </li>
+          ))}
         </ul>
       </DocSection>
 
       <DocPager
-        prev={{
-          href: '/documentation/forms/domains',
-          label: 'Website domain',
-        }}
-        next={{ href: '/documentation/forms/events', label: 'Embed events' }}
+        prev={{ href: '/documentation/forms/domains', label: c.prevLabel }}
+        next={{ href: '/documentation/forms/events', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

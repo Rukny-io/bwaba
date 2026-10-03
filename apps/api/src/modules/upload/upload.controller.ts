@@ -17,6 +17,21 @@ import {
 import { memoryStorage } from 'multer';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { FileValidationPipe } from '../../core/common/pipes/file-validation.pipe';
+
+const BANNER_ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+];
+const BANNER_MAX_SIZE = 50 * 1024 * 1024; // 50MB (matches VIDEO_MAX_SIZE_MB default)
 
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
@@ -39,7 +54,13 @@ export class UploadController {
     }),
   )
   async uploadBanners(
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles(
+      new FileValidationPipe({
+        allowedTypes: BANNER_ALLOWED_TYPES,
+        maxSize: BANNER_MAX_SIZE,
+      }),
+    )
+    files: Express.Multer.File[],
     @Req() req,
   ) {
     const userId = req.user?.id;

@@ -11,6 +11,7 @@ import { WhatsAppBusinessService } from '../../integrations/whatsapp-business/wh
 import S3Service from '../../services/s3.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 /**
  * 📦 خدمة تتبع الطلبات - Order Tracking Service
@@ -26,7 +27,6 @@ const OTP_LENGTH = 6;
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
 const TRACKING_SESSION_MINUTES = 30;
-const BCRYPT_ROUNDS = 10;
 
 // Interfaces
 export interface TrackingOtpRequest {
@@ -180,7 +180,7 @@ export class OrderTrackingService {
 
     // 4. توليد OTP جديد
     const otpCode = this.generateOtpCode();
-    const codeHash = await bcrypt.hash(otpCode, BCRYPT_ROUNDS);
+    const codeHash = await bcrypt.hash(otpCode, OTP_BCRYPT_ROUNDS);
 
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);

@@ -1,6 +1,7 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { Request } from 'express';
+import type { Request } from 'express';
+import { getClientIp } from '../utils/client-ip.util';
 
 /**
  * 🔒 User-based Throttler Guard
@@ -23,8 +24,8 @@ export class ThrottlerUserGuard extends ThrottlerGuard {
    * تخطي Rate Limiting للطلبات الداخلية من Docker (SSR من Next.js)
    */
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest();
-    const ip = this.getClientIp(req);
+    const req = context.switchToHttp().getRequest<Request>();
+    const ip = getClientIp(req);
     const userAgent = req.headers?.['user-agent'] || '';
 
     // Skip throttling for internal requests (Next.js SSR on localhost)
@@ -54,24 +55,7 @@ export class ThrottlerUserGuard extends ThrottlerGuard {
     }
 
     // إذا لم يكن مسجلاً، استخدم IP address الحقيقي خلف reverse proxy
-    const ip = this.getClientIp(req);
+    const ip = getClientIp(req as Request);
     return `ip:${ip}`;
-  }
-
-  private getClientIp(req: Record<string, any>): string {
-    const forwarded = req.headers?.['x-forwarded-for'];
-    if (typeof forwarded === 'string' && forwarded.length > 0) {
-      const firstIp = forwarded.split(',')[0]?.trim();
-      if (firstIp) {
-        return firstIp;
-      }
-    }
-
-    const realIp = req.headers?.['x-real-ip'];
-    if (typeof realIp === 'string' && realIp.length > 0) {
-      return realIp;
-    }
-
-    return req.ip || req.socket?.remoteAddress || 'unknown';
   }
 }

@@ -32,7 +32,7 @@ import { useMasterWallet } from '@/hooks/use-wallet';
 import { formatIqd } from '@/lib/wallet-format';
 import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
 import { appToast } from '@/lib/app-toast';
-import { appTools, appWhatsappApi } from '@/lib/app-routes';
+import { appTools } from '@/lib/app-routes';
 import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 
 const DEFAULT_TOP_UP_AMOUNT = 10_000;
@@ -136,7 +136,7 @@ export function HeaderTopBar({
               <Dropdown.Item
                 id="doc-whatsapp"
                 textValue={t.topbar.docWhatsappApi}
-                href={appWhatsappApi(appId)}
+                href={`${DOCUMENTATION_BASE}/whatsapp-api`}
                 className="gap-2"
               >
                 <MessageCircle className="size-4 shrink-0" />

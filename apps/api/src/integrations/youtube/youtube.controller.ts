@@ -17,6 +17,13 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { YouTubeService } from './youtube.service';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
+import {
+  integrationOAuthStateLegacyAllowed,
+  parseLegacyIntegrationOAuthState,
+  signIntegrationOAuthState,
+  verifyIntegrationOAuthState,
+} from '../../core/common/utils/integration-oauth-state.util';
 
 @Controller('integrations/youtube')
 export class YouTubeController {
@@ -39,7 +46,10 @@ export class YouTubeController {
   @Get('auth')
   @UseGuards(JwtAuthGuard)
   async authorize(@Req() req: any, @Res() res: Response) {
-    const state = Buffer.from(req.user.id).toString('base64url');
+    const state = signIntegrationOAuthState(
+      { userId: req.user.id },
+      this.oauthStateSecret(),
+    );
     const authUrl = this.youtubeService.getAuthUrl(state);
     return res.redirect(authUrl);
   }
@@ -48,6 +58,7 @@ export class YouTubeController {
    * OAuth callback — Google redirects here with code
    * GET /api/v1/integrations/youtube/callback?code=xxx&state=xxx
    */
+  @Public()
   @Get('callback')
   async callback(
     @Query('code') code: string,
@@ -64,7 +75,10 @@ export class YouTubeController {
     }
 
     try {
-      const userId = Buffer.from(state, 'base64url').toString('utf8');
+      const userId = this.resolveUserIdFromState(state);
+      if (!userId) {
+        return res.redirect(`${redirectBase}?youtube=error&reason=invalid_state`);
+      }
       const result = await this.youtubeService.exchangeCodeAndSave(
         code,
         userId,
@@ -150,6 +164,7 @@ export class YouTubeController {
   /**
    * Get public blocks + videos for a user (by userId)
    */
+  @Public()
   @Get('blocks/public/:userId')
   async getPublicBlocks(@Param('userId') userId: string) {
     const blocks = await this.youtubeService.getActiveBlocks(userId);
@@ -174,5 +189,23 @@ export class YouTubeController {
   @HttpCode(HttpStatus.OK)
   async deleteBlock(@Req() req: any, @Param('blockId') blockId: string) {
     return this.youtubeService.deleteBlock(req.user.id, blockId);
+  }
+
+  private oauthStateSecret(): string {
+    return this.config.get<string>('JWT_SECRET')!;
+  }
+
+  private resolveUserIdFromState(state: string): string | null {
+    const verified = verifyIntegrationOAuthState<{ userId: string }>(
+      state,
+      this.oauthStateSecret(),
+    );
+    if (verified?.userId) return verified.userId;
+
+    if (!integrationOAuthStateLegacyAllowed()) return null;
+    const legacy = parseLegacyIntegrationOAuthState(state);
+    if (typeof legacy === 'string') return legacy;
+    if (legacy && typeof legacy.userId === 'string') return legacy.userId;
+    return null;
   }
 }

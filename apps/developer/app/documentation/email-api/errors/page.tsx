@@ -7,66 +7,41 @@ import {
   DocSection,
   DocTable,
 } from '@/components/documentation/docs-article';
+import { emailErrorsCopy } from '@/lib/documentation-content/email-api/short-pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { EMAIL_ERROR_CATALOG } from '@/lib/email-api-catalog';
 
-export const metadata: Metadata = {
-  title: 'Errors — Email API | Rukny Documentation',
-  description: 'HTTP status codes and SDK error handling for the Email API.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailErrorsCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'http', label: 'HTTP status codes' },
-  { id: 'common', label: 'Common causes' },
-  { id: 'sdk', label: 'SDK errors' },
-];
+export default async function EmailApiErrorsDocsPage() {
+  const c = docCopy(await getCurrentLocale(), emailErrorsCopy);
 
-export default function EmailApiErrorsDocsPage() {
   return (
     <DocumentationArticle
-      title="Errors"
-      description="Failures use standard HTTP status codes. The Node SDK surfaces them as RuknyEmailError with status and body."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="http" title="HTTP status codes">
+      <DocSection id="http" title={c.toc[0]!.label}>
         <DocTable
-          headers={['Status', 'Code', 'Description']}
+          headers={[...c.httpHeaders]}
           rows={EMAIL_ERROR_CATALOG.map((item) => [
             <DocInlineCode key={item.status}>{String(item.status)}</DocInlineCode>,
             item.code,
-            item.description,
+            c.errorDescriptions[item.status] ?? item.description,
           ])}
         />
       </DocSection>
 
-      <DocSection id="common" title="Common causes">
-        <DocTable
-          headers={['Symptom', 'Likely fix']}
-          rows={[
-            [
-              '403 sender not authorized',
-              'Verify domain, then authorize the from address for this app.',
-            ],
-            [
-              '403 product not installed',
-              'Install Email API on the app that owns the API key.',
-            ],
-            [
-              '403 recipient suppressed',
-              'Remove the address from suppression only if bounce was a mistake.',
-            ],
-            [
-              '400 missing Idempotency-Key',
-              'Send an 8–128 character key on every live POST.',
-            ],
-            [
-              '402 quota exceeded',
-              'Upgrade plan, buy an overage pack, or wait for the next cycle. Use test keys meanwhile.',
-            ],
-          ]}
-        />
+      <DocSection id="common" title={c.toc[1]!.label}>
+        <DocTable headers={[...c.commonHeaders]} rows={c.commonRows} />
       </DocSection>
 
-      <DocSection id="sdk" title="SDK errors">
+      <DocSection id="sdk" title={c.toc[2]!.label}>
         <DocCode>{`import { RuknyEmail, RuknyEmailError } from '@rukny/email';
 
 const email = new RuknyEmail({ apiKey: process.env.RUKNY_API_KEY! });
@@ -88,19 +63,28 @@ try {
   throw error;
 }`}</DocCode>
         <p>
-          Retry <DocInlineCode>429</DocInlineCode> and{' '}
-          <DocInlineCode>5xx</DocInlineCode> with backoff. Fix the request for{' '}
-          <DocInlineCode>4xx</DocInlineCode> before retrying with a new
-          idempotency key only when the business event itself is new.
+          {c.sdkBody.includes('429') ? (
+            <>
+              {c.sdkBody.split('429')[0]}
+              <DocInlineCode>429</DocInlineCode>
+              {c.sdkBody.split('429')[1]?.split('5xx')[0]}
+              <DocInlineCode>5xx</DocInlineCode>
+              {c.sdkBody.split('5xx')[1]?.split('4xx')[0]}
+              <DocInlineCode>4xx</DocInlineCode>
+              {c.sdkBody.split('4xx')[1]}
+            </>
+          ) : (
+            c.sdkBody
+          )}
         </p>
       </DocSection>
 
       <DocPager
         prev={{
           href: '/documentation/email-api/quotas',
-          label: 'Quotas & limits',
+          label: c.prevLabel,
         }}
-        next={{ href: '/documentation/email-api/sdk', label: 'Node.js SDK' }}
+        next={{ href: '/documentation/email-api/sdk', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

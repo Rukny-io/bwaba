@@ -6,6 +6,7 @@ import {
   resolveSafeNext,
 } from "@/lib/auth-redirect";
 import { isValidMailAppId, MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
+import { mailCookieClearOptions, mailCookieOptions } from "@/lib/mail-cookies";
 import { checkMailAuth } from "@/lib/middleware-auth";
 import { MAIL_READY_COOKIE } from "@/lib/ses";
 import {
@@ -112,11 +113,7 @@ function clearAuthCookies(response: NextResponse) {
 }
 
 function clearMailAppCookie(response: NextResponse) {
-  response.cookies.set(MAIL_APP_ID_COOKIE, "", {
-    path: "/",
-    maxAge: 0,
-    sameSite: "lax",
-  });
+  response.cookies.set(MAIL_APP_ID_COOKIE, "", mailCookieClearOptions());
   return response;
 }
 
@@ -272,11 +269,11 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = rewritePath;
     const response = secureResponse(NextResponse.rewrite(url));
-    response.cookies.set(MAIL_APP_ID_COOKIE, appId, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 90,
-      sameSite: "lax",
-    });
+    response.cookies.set(
+      MAIL_APP_ID_COOKIE,
+      appId,
+      mailCookieOptions(60 * 60 * 24 * 90),
+    );
     response.headers.set("x-user-id", auth.user.id);
     response.headers.set("x-user-email", auth.user.email);
     response.headers.set("x-user-role", auth.user.role);

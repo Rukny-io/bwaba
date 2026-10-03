@@ -7,100 +7,54 @@ import {
   DocSection,
   DocSteps,
 } from '@/components/documentation/docs-article';
+import { formsWebhooksCopy } from '@/lib/documentation-content/forms/pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Webhooks — Forms | Rukny Documentation',
-  description:
-    'Receive form submissions on your server via webhooks configured in Forms.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), formsWebhooksCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'when', label: 'When to use webhooks' },
-  { id: 'setup', label: 'Setup' },
-  { id: 'portal', label: 'In the developer portal' },
-];
+export default async function FormsWebhooksPage() {
+  const c = docCopy(await getCurrentLocale(), formsWebhooksCopy);
 
-export default function FormsWebhooksPage() {
   return (
     <DocumentationArticle
       productId="forms"
-      title="Webhooks"
-      description="Push each submission to your backend. Webhooks are configured in the Forms product integrations — the developer Connect page only surfaces status."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="when" title="When to use webhooks">
+      <DocSection id="when" title={c.toc[0]!.label}>
         <p>
-          Use a webhook when your server must store answers, sync a CRM, or
-          trigger workflows. Prefer{' '}
+          {c.whenBefore}{' '}
           <Link
             href="/documentation/forms/events"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            embed events
+            {c.whenLink}
           </Link>{' '}
-          for lightweight UI updates in the browser.
+          {c.whenAfter}
         </p>
       </DocSection>
 
-      <DocSection id="setup" title="Setup">
+      <DocSection id="setup" title={c.setupTitle}>
         <DocSteps
-          steps={[
-            {
-              title: 'Open form integrations',
-              body: (
-                <p>
-                  In the{' '}
-                  <Link
-                    href="https://forms.rukny.io"
-                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Forms dashboard
-                  </Link>
-                  , open the form → Integrations (or use Configure webhook from
-                  Connect in the developer portal).
-                </p>
-              ),
-            },
-            {
-              title: 'Add your HTTPS endpoint',
-              body: (
-                <p>
-                  Provide a URL your server can receive. Verify the payload and
-                  authenticate the request according to the Forms integration
-                  settings.
-                </p>
-              ),
-            },
-            {
-              title: 'Submit a test response',
-              body: (
-                <p>
-                  Send a test submission and confirm your endpoint receives it
-                  before going live.
-                </p>
-              ),
-            },
-          ]}
+          steps={c.steps.map((step) => ({
+            title: step.title,
+            body: <p>{step.body}</p>,
+          }))}
         />
-        <DocCallout title="Security">
-          Keep webhook URLs private. Prefer HTTPS, reject unexpected payloads,
-          and avoid exposing internal networks (SSRF-safe receivers).
-        </DocCallout>
+        <DocCallout title={c.securityTitle}>{c.securityBody}</DocCallout>
       </DocSection>
 
-      <DocSection id="portal" title="In the developer portal">
-        <p>
-          On Connect, if a webhook is already enabled you will see the URL
-          (truncated when long). If not, the page links out to Forms integrations
-          to configure one. Linking or unlinking the form in the developer app
-          does not remove webhook settings in Forms.
-        </p>
+      <DocSection id="portal" title={c.portalTitle}>
+        <p>{c.portalBody}</p>
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/forms/events', label: 'Embed events' }}
+        prev={{ href: '/documentation/forms/events', label: c.prevLabel }}
       />
     </DocumentationArticle>
   );

@@ -6,10 +6,21 @@ export type DomainVerifyResponse = {
   verified: boolean;
   waiting?: boolean;
   results: { id: string; status: DnsRecordStatus }[];
+  /** Live DKIM tokens from SES (authoritative). */
+  tokens?: string[];
   error?: string;
   needsCheckout?: boolean;
   checkoutUrl?: string;
   checkoutSessionId?: string;
+};
+
+export type DnsZoneExportResponse = {
+  domain: string;
+  tokens: string[];
+  tokensChanged: boolean;
+  records: MailDomainSetup["records"];
+  zoneFile: string;
+  ses: { dkim: string; sending: boolean };
 };
 
 function apiErrorMessage(
@@ -69,24 +80,34 @@ export async function createDomainRequest(domain: string): Promise<MailDomainSet
 
 let restoreInflight: Promise<MailDomainSetup | null> | null = null;
 
+export type RestoreDomainSetupResult = {
+  setup: MailDomainSetup | null;
+  tokensChanged: boolean;
+};
+
 /** Dedupes concurrent remounts (e.g. React Strict Mode) onto one network call. */
-export async function restoreDomainSetupRequest(): Promise<MailDomainSetup | null> {
+export async function restoreDomainSetupRequest(): Promise<RestoreDomainSetupResult> {
   if (restoreInflight) return restoreInflight;
 
   restoreInflight = (async () => {
     const response = await sessionFetch("/api/mail/setup", {
       headers: { Accept: "application/json" },
     });
-    const { data } = await readApiJson<{ setup?: MailDomainSetup | null; error?: string }>(
-      response,
-    );
+    const { data } = await readApiJson<{
+      setup?: MailDomainSetup | null;
+      tokensChanged?: boolean;
+      error?: string;
+    }>(response);
     if (response.status === 200 && (data.setup === null || data.setup === undefined)) {
-      return null;
+      return { setup: null, tokensChanged: false };
     }
     if (!response.ok || !data.setup) {
       throw new Error(apiErrorMessage(data, "Could not restore this domain."));
     }
-    return data.setup;
+    return {
+      setup: data.setup,
+      tokensChanged: data.tokensChanged === true,
+    };
   })().finally(() => {
     restoreInflight = null;
   });
@@ -105,14 +126,27 @@ export async function deleteDomainRequest(domain: string) {
   }
 }
 
+export async function fetchDnsZoneExport(domain: string): Promise<DnsZoneExportResponse> {
+  const response = await sessionFetch(
+    `/api/mail/domains/dns-zone?domain=${encodeURIComponent(domain)}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const { data } = await readApiJson<DnsZoneExportResponse & { error?: string }>(
+    response,
+  );
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(data, "Could not export DNS from SES."));
+  }
+  return data;
+}
+
 export async function verifyDomainRequest(
   domain: string,
-  tokens: string[] = [],
 ): Promise<DomainVerifyResponse> {
   const response = await sessionFetch("/api/mail/verify-domain", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ domain, tokens }),
+    body: JSON.stringify({ domain }),
   });
   const { data } = await readApiJson<
     DomainVerifyResponse & { error?: string; message?: string }

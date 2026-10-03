@@ -14,6 +14,7 @@ import {
 import { ArrowLeft, ArrowRight, Check, Globe, ShieldCheck } from "lucide-react";
 import { DnsRecordsTable } from "@/components/app/dns-records-table";
 import { applyDnsCheckResults, normalizeDomain, validateDomain, type MailDomainSetup } from "@/lib/mail-domain";
+import { applySesDkimTokens } from "@/lib/mail-domain-tokens";
 import {
   readMailDomainSetup,
   setMailWizardDismissed,
@@ -134,8 +135,11 @@ export function MailSetupWizard() {
     });
 
     try {
-      const result = await verifyDomainRequest(setup.domain, setup.dkimTokens ?? []);
-      const next = applyDnsCheckResults(setup, result.results, result.verified, result.waiting);
+      const result = await verifyDomainRequest(setup.domain);
+      const base = result.tokens?.length
+        ? applySesDkimTokens(setup, result.tokens)
+        : setup;
+      const next = applyDnsCheckResults(base, result.results, result.verified, result.waiting);
       persist(next);
       if (result.verified) {
         setMailWizardDismissed(false);

@@ -144,6 +144,7 @@ import { EmailApiModule } from '../email-api/email-api.module';
     DevFormsService,
     DevProductsService,
     DeveloperRateLimitService,
+    ContactsService,
   ],
 })
 export class DeveloperModule {}

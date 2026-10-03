@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { DocumentationShell } from '@/components/documentation/docs-shell';
+import { DocumentationShell } from '@/components/documentation/documentation-shell';
 import { PricingSection } from '@/components/landing/pricing-section';
 
 export const metadata: Metadata = {

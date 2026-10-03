@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/common/guards/roles.guard';
 import { Roles } from '../../core/common/decorators/auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('Event Categories')
 @Controller('events/categories')
@@ -40,6 +41,7 @@ export class CategoriesController {
     return this.categoriesService.create(createCategoryDto);
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Get all categories (Public)' })
   @ApiResponse({ status: 200, description: 'List of all categories' })
@@ -57,6 +59,7 @@ export class CategoriesController {
     return this.categoriesService.getStatistics();
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a category by ID (Public)' })
   @ApiResponse({ status: 200, description: 'Category details' })
@@ -65,6 +68,7 @@ export class CategoriesController {
     return this.categoriesService.findOne(id);
   }
 
+  @Public()
   @Get(':id/events')
   @ApiOperation({ summary: 'Get all events in a category (Public)' })
   @ApiResponse({ status: 200, description: 'List of events in category' })

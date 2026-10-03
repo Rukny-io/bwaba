@@ -14,9 +14,11 @@ import {
   redisGetJson,
   redisSetJson,
 } from "@/lib/redis";
+import { dkimTokensMatch } from "@/lib/mail-domain-tokens";
 import { getSesDomainStatusCached } from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
+import { mailCookieClearOptions, mailCookieOptions } from "@/lib/mail-cookies";
 import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
@@ -43,19 +45,15 @@ function withReadyCookies(
   active: boolean,
 ) {
   if (active) {
-    response.cookies.set(MAIL_READY_COOKIE, "1", {
-      path: "/",
-      maxAge: 31536000,
-      sameSite: "lax",
-    });
-    response.cookies.set(MAIL_READY_APP_COOKIE, appId, {
-      path: "/",
-      maxAge: 31536000,
-      sameSite: "lax",
-    });
+    response.cookies.set(MAIL_READY_COOKIE, "1", mailCookieOptions(31536000));
+    response.cookies.set(
+      MAIL_READY_APP_COOKIE,
+      appId,
+      mailCookieOptions(31536000),
+    );
   } else {
-    response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    response.cookies.set(MAIL_READY_COOKIE, "", mailCookieClearOptions());
+    response.cookies.set(MAIL_READY_APP_COOKIE, "", mailCookieClearOptions());
   }
   return response;
 }
@@ -74,15 +72,6 @@ export async function GET() {
   }
 
   const cacheKey = mailSetupCacheKey(session.appId);
-  const cachedSetup = await redisGetJson<MailDomainSetup>(cacheKey);
-  if (cachedSetup?.domain) {
-    return withReadyCookies(
-      NextResponse.json({ setup: cachedSetup }),
-      session.appId,
-      cachedSetup.status === "ACTIVE",
-    );
-  }
-
   const binding = await getMailDomainBinding(session.appId);
   if (!binding?.domain) {
     return NextResponse.json({ setup: null });
@@ -90,6 +79,19 @@ export async function GET() {
 
   try {
     const status = await getSesDomainStatusCached(binding.domain);
+    const cachedSetup = await redisGetJson<MailDomainSetup>(cacheKey);
+    if (
+      cachedSetup?.domain === binding.domain &&
+      cachedSetup.dkimTokens?.length &&
+      status.tokens.length > 0 &&
+      dkimTokensMatch(cachedSetup.dkimTokens, status.tokens)
+    ) {
+      return withReadyCookies(
+        NextResponse.json({ setup: cachedSetup, tokensChanged: false }),
+        session.appId,
+        cachedSetup.status === "ACTIVE",
+      );
+    }
     if (!status.found || status.tokens.length === 0) {
       await deleteMailDomainBinding(session.appId);
       await redisDel(cacheKey);
@@ -103,6 +105,7 @@ export async function GET() {
     const active = status.sending && status.dkim === "SUCCESS";
     const setup = buildSetupFromSes(binding.domain, status.tokens, active);
     const checkedAt = new Date().toISOString();
+    const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], status.tokens);
 
     try {
       await upsertMailDomainBinding(session.appId, {
@@ -124,7 +127,10 @@ export async function GET() {
     });
 
     return withReadyCookies(
-      NextResponse.json({ setup }),
+      NextResponse.json({
+        setup,
+        tokensChanged,
+      }),
       session.appId,
       setup.status === "ACTIVE",
     );

@@ -6,98 +6,67 @@ import {
   DocPager,
   DocSection,
 } from '@/components/documentation/docs-article';
+import { formsLinkingCopy } from '@/lib/documentation-content/forms/pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Linking forms — Forms | Rukny Documentation',
-  description:
-    'How linking a Rukny form to a developer app works, and what blocks linking.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), formsLinkingCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'why', label: 'Why link' },
-  { id: 'how', label: 'How to link' },
-  { id: 'rules', label: 'Rules' },
-  { id: 'unlink', label: 'Unlink' },
-];
+export default async function FormsLinkingPage() {
+  const c = docCopy(await getCurrentLocale(), formsLinkingCopy);
 
-export default function FormsLinkingPage() {
   return (
     <DocumentationArticle
       productId="forms"
-      title="Linking forms"
-      description="Linking attaches a form you own to one developer app so you can manage embed settings and snippets from that app."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="why" title="Why link">
-        <p>
-          Linking scopes the form to your app: Connect snippets, embed readiness,
-          and the Forms hub list all live under that app. Without a link, the
-          form still works in Forms — it just is not wired into the developer
-          portal.
-        </p>
+      <DocSection id="why" title={c.toc[0]!.label}>
+        <p>{c.why}</p>
       </DocSection>
 
-      <DocSection id="how" title="How to link">
+      <DocSection id="how" title={c.howTitle}>
         <ol className="list-decimal space-y-2 ps-5">
-          <li>
-            Open your app →{' '}
-            <Link
-              href="/login?next=/apps"
-              className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-            >
-              Forms
-            </Link>
-            .
-          </li>
-          <li>
-            Choose <strong>Link form</strong>.
-          </li>
-          <li>Select a form that is not linked elsewhere.</li>
-          <li>
-            Open <strong>Connect</strong> when you are ready to embed.
-          </li>
+          {c.howSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
         </ol>
-        <DocCallout title="Create from the hub">
-          <strong>Create form</strong> opens the Forms builder with your app id
-          so you can return and link after publishing.
-        </DocCallout>
+        <DocCallout title={c.calloutTitle}>{c.calloutBody}</DocCallout>
       </DocSection>
 
-      <DocSection id="rules" title="Rules">
+      <DocSection id="rules" title={c.rulesTitle}>
         <ul className="list-disc space-y-2 ps-5">
-          <li>You can only link forms you own (or can manage).</li>
-          <li>A form can be linked to only one developer app at a time.</li>
-          <li>
-            Linking does not require a website domain — embedding does. See{' '}
-            <Link
-              href="/documentation/forms/domains"
-              className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-            >
-              Website domain
-            </Link>
-            .
-          </li>
-          <li>
-            Draft forms can be linked, but they must be published before the
-            public page and embed are ready.
-          </li>
+          {c.rules.map((rule, index) => (
+            <li key={rule}>
+              {rule}
+              {index === 2 ? (
+                <>
+                  {' '}
+                  <Link
+                    href="/documentation/forms/domains"
+                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                  >
+                    {c.domainLink}
+                  </Link>
+                  .
+                </>
+              ) : null}
+            </li>
+          ))}
         </ul>
       </DocSection>
 
-      <DocSection id="unlink" title="Unlink">
-        <p>
-          Unlink from the Forms hub when you want to move the form to another
-          app or stop embedding under this app. Unlinking does not delete the
-          form or its responses in Forms.
-        </p>
+      <DocSection id="unlink" title={c.unlinkTitle}>
+        <p>{c.unlinkBody}</p>
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/forms/get-started', label: 'Get started' }}
-        next={{
-          href: '/documentation/forms/domains',
-          label: 'Website domain',
-        }}
+        prev={{ href: '/documentation/forms/get-started', label: c.prevLabel }}
+        next={{ href: '/documentation/forms/domains', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

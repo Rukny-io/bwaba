@@ -21,6 +21,7 @@ import {
   MAIL_SHELL_COOKIE,
 } from "@/lib/ses";
 import { resolveMailRequestOrigin } from "@/lib/auth-redirect";
+import { mailCookieClearOptions, mailCookieOptions } from "@/lib/mail-cookies";
 
 type RouteCtx = { params: Promise<{ appId: string }> };
 
@@ -48,10 +49,10 @@ export async function GET(request: Request, ctx: RouteCtx) {
   }>(`/mail/apps/${encodeURIComponent(appId)}`);
   if (!appResult.ok) {
     const response = NextResponse.redirect(new URL("/apps?error=not_found", origin));
-    response.cookies.set(MAIL_APP_ID_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    response.cookies.set(MAIL_SHELL_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    response.cookies.set(MAIL_APP_ID_COOKIE, "", mailCookieClearOptions());
+    response.cookies.set(MAIL_READY_COOKIE, "", mailCookieClearOptions());
+    response.cookies.set(MAIL_READY_APP_COOKIE, "", mailCookieClearOptions());
+    response.cookies.set(MAIL_SHELL_COOKIE, "", mailCookieClearOptions());
     return response;
   }
 
@@ -120,47 +121,35 @@ export async function GET(request: Request, ctx: RouteCtx) {
   const response = NextResponse.redirect(new URL(landing, origin), 303);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("Pragma", "no-cache");
-  response.cookies.set(MAIL_APP_ID_COOKIE, appId, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 90,
-    sameSite: "lax",
-  });
-  response.cookies.set(MAIL_BOUND_DOMAIN_COOKIE, "", {
-    path: "/",
-    maxAge: 0,
-    sameSite: "lax",
-  });
+  response.cookies.set(
+    MAIL_APP_ID_COOKIE,
+    appId,
+    mailCookieOptions(60 * 60 * 24 * 90),
+  );
+  response.cookies.set(MAIL_BOUND_DOMAIN_COOKIE, "", mailCookieClearOptions());
   // Entering a workspace always unlocks console chrome (sidebar + top nav).
-  response.cookies.set(MAIL_SHELL_COOKIE, "1", {
-    path: "/",
-    maxAge: 31536000,
-    sameSite: "lax",
-  });
+  response.cookies.set(MAIL_SHELL_COOKIE, "1", mailCookieOptions(31536000));
 
   if (domainReady) {
-    response.cookies.set(MAIL_READY_COOKIE, "1", {
-      path: "/",
-      maxAge: 31536000,
-      sameSite: "lax",
-    });
-    response.cookies.set(MAIL_READY_APP_COOKIE, appId, {
-      path: "/",
-      maxAge: 31536000,
-      sameSite: "lax",
-    });
+    response.cookies.set(MAIL_READY_COOKIE, "1", mailCookieOptions(31536000));
+    response.cookies.set(
+      MAIL_READY_APP_COOKIE,
+      appId,
+      mailCookieOptions(31536000),
+    );
   } else {
-    response.cookies.set(MAIL_READY_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    response.cookies.set(MAIL_READY_APP_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    response.cookies.set(MAIL_READY_COOKIE, "", mailCookieClearOptions());
+    response.cookies.set(MAIL_READY_APP_COOKIE, "", mailCookieClearOptions());
   }
 
   if (hasActivePlan) {
-    response.cookies.set(MAIL_PLAN_COOKIE, "1", {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-      sameSite: "lax",
-    });
+    response.cookies.set(
+      MAIL_PLAN_COOKIE,
+      "1",
+      mailCookieOptions(60 * 60 * 24 * 30),
+    );
   } else {
-    response.cookies.set(MAIL_PLAN_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    response.cookies.set(MAIL_PLAN_COOKIE, "", mailCookieClearOptions());
   }
 
   return response;

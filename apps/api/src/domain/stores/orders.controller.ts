@@ -32,6 +32,7 @@ import {
   OrderFiltersDto,
 } from './dto/order.dto';
 import { TrackOrderDto, TrackOrderResponse } from './dto/checkout-otp.dto';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -44,6 +45,7 @@ export class OrdersController {
    * 🔐 تتبع الطلب (عام - آمن)
    * يتطلب رقم الطلب + آخر 4 أرقام من الهاتف
    */
+  @Public()
   @Post('track')
   @ApiOperation({
     summary: 'تتبع طلب بدون تسجيل دخول',

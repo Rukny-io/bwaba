@@ -5,26 +5,32 @@ import {
   DocPager,
   DocSection,
 } from '@/components/documentation/docs-article';
-import { SEND_EXAMPLES } from '@/lib/email-api-send-catalog';
+import {
+  emailSendChromeCopy,
+  getLocalizedSendExamples,
+} from '@/lib/documentation-content/email-api/send-examples';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Sending examples — Email API | Rukny Documentation',
-  description:
-    'Send email with Node.js, Python, PHP, Go, Rust, SMTP, and more using the Rukny Email API.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailSendChromeCopy);
+  return { title: c.indexMetaTitle, description: c.indexMetaDescription };
+}
 
-const TOC = [{ id: 'languages', label: 'Choose your stack' }];
+export default async function EmailApiSendIndexPage() {
+  const locale = await getCurrentLocale();
+  const c = docCopy(locale, emailSendChromeCopy);
+  const examples = getLocalizedSendExamples(locale);
 
-export default function EmailApiSendIndexPage() {
   return (
     <DocumentationArticle
-      title="Sending examples"
-      description="Pick your language or integration method. Every example uses the same verified senders, quotas, and delivery pipeline — REST or SMTP."
-      toc={TOC}
+      title={c.indexTitle}
+      description={c.indexDescription}
+      toc={[{ id: 'languages', label: c.indexToc }]}
     >
-      <DocSection id="languages" title="Choose your stack">
+      <DocSection id="languages" title={c.indexToc}>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          {SEND_EXAMPLES.map((item) => (
+          {examples.map((item) => (
             <DocLinkCard
               key={item.id}
               href={`/documentation/email-api/send/${item.id}`}
@@ -36,10 +42,13 @@ export default function EmailApiSendIndexPage() {
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/email-api/messages', label: 'Messages' }}
+        prev={{
+          href: '/documentation/email-api/messages',
+          label: c.prevMessages,
+        }}
         next={{
           href: '/documentation/email-api/send/node',
-          label: 'Node.js',
+          label: examples[0]?.label ?? 'Node.js',
         }}
       />
     </DocumentationArticle>

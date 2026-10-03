@@ -10,114 +10,80 @@ import {
   DocTable,
   DocH3,
 } from '@/components/documentation/docs-article';
+import { emailSdkCopy } from '@/lib/documentation-content/email-api/remaining';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { SDK_INSTALL, SDK_QUICKSTART } from '@/lib/email-api-code-samples';
 
-export const metadata: Metadata = {
-  title: 'Node.js SDK — Email API | Rukny Documentation',
-  description: 'Install and use @rukny/email for server-side transactional email.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailSdkCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'install', label: 'Install' },
-  { id: 'quickstart', label: 'Quickstart' },
-  { id: 'config', label: 'Configuration' },
-  { id: 'methods', label: 'Methods' },
-  { id: 'errors', label: 'Errors' },
-];
+export default async function EmailApiSdkDocsPage() {
+  const c = docCopy(await getCurrentLocale(), emailSdkCopy);
 
-export default function EmailApiSdkDocsPage() {
   return (
     <DocumentationArticle
-      title="Node.js SDK"
-      description="@rukny/email is the recommended way to send email and check status from Node.js and TypeScript. Server-side only."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="install" title="Install">
+      <DocSection id="install" title={c.toc[0]!.label}>
         <DocCode>{SDK_INSTALL}</DocCode>
-        <DocCallout title="Server-side only">
-          The package throws if it detects a browser runtime so API keys cannot
-          leak to clients.
-        </DocCallout>
+        <DocCallout title={c.serverOnlyTitle}>{c.serverOnlyBody}</DocCallout>
       </DocSection>
 
-      <DocSection id="quickstart" title="Quickstart">
+      <DocSection id="quickstart" title={c.toc[1]!.label}>
         <DocCode>{SDK_QUICKSTART}</DocCode>
       </DocSection>
 
-      <DocSection id="config" title="Configuration">
+      <DocSection id="config" title={c.toc[2]!.label}>
         <DocTable
-          headers={['Option', 'Required', 'Description']}
-          rows={[
-            [
-              <DocInlineCode key="k">apiKey</DocInlineCode>,
-              'Yes',
-              'Your rk_live_ or rk_test_ key',
-            ],
-            [
-              <DocInlineCode key="b">baseUrl</DocInlineCode>,
-              'No',
-              'Defaults to https://api.rukny.io/api/v1',
-            ],
-            [
-              <DocInlineCode key="t">timeoutMs</DocInlineCode>,
-              'No',
-              'Request timeout (default 30000)',
-            ],
-            [
-              <DocInlineCode key="f">fetch</DocInlineCode>,
-              'No',
-              'Custom fetch implementation for tests',
-            ],
-          ]}
+          headers={[...c.configHeaders]}
+          rows={c.configRows.map((row) => [
+            <DocInlineCode key={row.opt}>{row.opt}</DocInlineCode>,
+            row.required,
+            row.desc,
+          ])}
         />
       </DocSection>
 
-      <DocSection id="methods" title="Methods">
-        <DocH3>Messages</DocH3>
+      <DocSection id="methods" title={c.toc[3]!.label}>
+        <DocH3>{c.methodsTitle}</DocH3>
         <DocTable
-          headers={['Method', 'Description']}
-          rows={[
-            [
-              <DocInlineCode key="s">
-                messages.send(input, {'{ idempotencyKey }'})
-              </DocInlineCode>,
-              'Send one transactional email',
-            ],
-            [
-              <DocInlineCode key="g">messages.getStatus(id)</DocInlineCode>,
-              'Read delivery status',
-            ],
-          ]}
+          headers={[...c.methodHeaders]}
+          rows={c.methods.map(([method, desc]) => [
+            <DocInlineCode key={method}>{method}</DocInlineCode>,
+            desc,
+          ])}
         />
-        <DocCallout>
-          Verify domains and authorize senders in the{' '}
-          <Link
-            href="/login?next=/apps"
-            className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-          >
-            developer portal
-          </Link>
-          , then send with the SDK.
-        </DocCallout>
       </DocSection>
 
-      <DocSection id="errors" title="Errors">
+      <DocSection id="errors" title={c.toc[4]!.label}>
         <p>
-          Failed requests throw <DocInlineCode>RuknyEmailError</DocInlineCode>.
-          See the{' '}
+          {c.errorsBody.includes('RuknyEmailError') ? (
+            <>
+              {c.errorsBody.split('RuknyEmailError')[0]}
+              <DocInlineCode>RuknyEmailError</DocInlineCode>
+              {c.errorsBody.split('RuknyEmailError')[1]}
+            </>
+          ) : (
+            c.errorsBody
+          )}{' '}
           <Link
             href="/documentation/email-api/errors"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            Errors
-          </Link>{' '}
-          guide for status meanings and retry rules.
+            {c.prevLabel}
+          </Link>
+          .
         </p>
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/email-api/errors', label: 'Errors' }}
-        next={{ href: '/documentation/email-api/rest', label: 'REST & curl' }}
+        prev={{ href: '/documentation/email-api/errors', label: c.prevLabel }}
+        next={{ href: '/documentation/email-api/rest', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

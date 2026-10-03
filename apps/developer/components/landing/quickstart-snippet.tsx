@@ -1,19 +1,8 @@
-type LandingLocale = 'ar' | 'en';
+import type { LandingCopy } from '@/lib/landing-copy';
+import { agLayout } from '@/lib/ag-theme';
+import { DevReveal } from '@/components/landing/dev-reveal';
 
-const COPY = {
-  ar: {
-    eyebrow: 'Quickstart',
-    title: 'أرسل أول رسالة في دقائق',
-    support: 'مفتاح API واحد وطلب HTTP — بدون SDK إلزامي.',
-  },
-  en: {
-    eyebrow: 'Quickstart',
-    title: 'Send your first message in minutes',
-    support: 'One API key and an HTTP request — SDK optional.',
-  },
-} as const;
-
-const SNIPPET = `curl -X POST https://api.rukny.io/v1/whatsapp/messages \\
+const SNIPPET = `curl -X POST https://api.rukny.io/api/v1/whatsapp/messages \\
   -H "X-API-Key: rk_live_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -22,27 +11,30 @@ const SNIPPET = `curl -X POST https://api.rukny.io/v1/whatsapp/messages \\
     "text": { "body": "Hello from Rukny" }
   }'`;
 
-export function QuickstartSnippet({ locale = 'ar' }: { locale?: LandingLocale }) {
-  const t = COPY[locale];
-
+export function QuickstartSnippet({ copy }: { copy: LandingCopy }) {
   return (
-    <section className="border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto grid w-full max-w-[1280px] gap-8 px-5 py-16 min-[720px]:grid-cols-2 min-[720px]:items-center min-[720px]:px-8 min-[720px]:py-20">
-        <div>
-          <p className="eyebrow-label">{t.eyebrow}</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] min-[720px]:text-3xl">
-            {t.title}
+    <section className={`${agLayout.sectionMuted} py-20 sm:py-24 md:py-28`}>
+      <div className={`${agLayout.container} grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center lg:gap-14`}>
+        <DevReveal>
+          <p className={agLayout.eyebrow}>{copy.quickstartEyebrow}</p>
+          <h2 className={`${agLayout.sectionTitle} mt-4`}>
+            {copy.quickstartTitle}
+            <span className="text-[#9CA3AF]">{copy.quickstartTitleMuted}</span>
           </h2>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
-            {t.support}
-          </p>
-        </div>
-        <pre
-          dir="ltr"
-          className="overflow-x-auto border border-[var(--border)] bg-[var(--surface)] p-4 text-[12px] leading-relaxed text-[var(--foreground)] min-[720px]:p-5 min-[720px]:text-[13px]"
-        >
-          <code>{SNIPPET}</code>
-        </pre>
+          <p className={`${agLayout.lead} mt-4 max-w-md`}>{copy.quickstartSupport}</p>
+        </DevReveal>
+
+        <DevReveal delay={0.08}>
+          <div
+            dir="ltr"
+            className="overflow-hidden rounded-[2rem] bg-[#1D1D1D] p-5 sm:p-7"
+          >
+            <p className="font-mono text-[11px] text-white/40">curl</p>
+            <pre className="mt-4 overflow-x-auto font-mono text-[12px] leading-[1.7] text-white/90 sm:text-[12.5px]">
+              <code>{SNIPPET}</code>
+            </pre>
+          </div>
+        </DevReveal>
       </div>
     </section>
   );

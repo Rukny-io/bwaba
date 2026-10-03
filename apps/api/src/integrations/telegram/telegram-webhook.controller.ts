@@ -10,6 +10,7 @@ import { ApiTags, ApiBody } from '@nestjs/swagger';
 import { TelegramService } from './telegram.service';
 import { TelegramSessionService } from './telegram-session.service';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 interface TelegramUpdate {
   update_id: number;
@@ -60,6 +61,7 @@ export class TelegramWebhookController {
   /**
    * 🎣 استقبال Webhook من Telegram
    */
+  @Public()
   @Post('webhook')
   @ApiBody({ type: Object })
   async handleWebhook(

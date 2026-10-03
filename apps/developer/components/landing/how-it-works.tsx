@@ -1,75 +1,43 @@
-type LandingLocale = 'ar' | 'en';
+import {
+  DevReveal,
+  DevStagger,
+  DevStaggerItem,
+} from '@/components/landing/dev-reveal';
+import type { LandingCopy } from '@/lib/landing-copy';
+import { agLayout } from '@/lib/ag-theme';
 
-const COPY = {
-  ar: {
-    eyebrow: 'How it works',
-    title: 'من التسجيل إلى الإنتاج',
-    steps: [
-      {
-        n: '01',
-        title: 'أنشئ تطبيقاً',
-        desc: 'كل المفاتيح والنطاقات والفوترة مرتبطة بتطبيقك.',
-      },
-      {
-        n: '02',
-        title: 'فعّل المنتج',
-        desc: 'اربط WhatsApp أو أضف نطاقاً لـ Email أو انشر نموذجاً.',
-      },
-      {
-        n: '03',
-        title: 'أرسل عبر API',
-        desc: 'استخدم المفتاح في الخادم، راقب السجلات، واستقبل الـ webhooks.',
-      },
-    ],
-  },
-  en: {
-    eyebrow: 'How it works',
-    title: 'From signup to production',
-    steps: [
-      {
-        n: '01',
-        title: 'Create an app',
-        desc: 'Keys, domains, and billing stay scoped to your application.',
-      },
-      {
-        n: '02',
-        title: 'Enable a product',
-        desc: 'Connect WhatsApp, verify an Email domain, or publish a form.',
-      },
-      {
-        n: '03',
-        title: 'Call the API',
-        desc: 'Use your key server-side, watch logs, and receive webhooks.',
-      },
-    ],
-  },
-} as const;
-
-export function HowItWorks({ locale = 'ar' }: { locale?: LandingLocale }) {
-  const t = COPY[locale];
-
+export function HowItWorks({ copy }: { copy: LandingCopy }) {
   return (
-    <section className="border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto w-full max-w-[1280px] px-5 py-16 min-[720px]:px-8 min-[720px]:py-20">
-        <p className="eyebrow-label">{t.eyebrow}</p>
-        <h2 className="mt-3 max-w-xl text-2xl font-semibold tracking-tight text-[var(--foreground)] min-[720px]:text-3xl">
-          {t.title}
-        </h2>
-        <ol className="mt-10 grid gap-6 min-[720px]:grid-cols-3">
-          {t.steps.map((step) => (
-            <li key={step.n} className="border-t border-[var(--border)] pt-5">
-              <p className="font-mono text-xs font-semibold text-[var(--primary)]">
-                {step.n}
-              </p>
-              <h3 className="mt-3 text-lg font-semibold text-[var(--foreground)]">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-                {step.desc}
-              </p>
-            </li>
+    <section className="bg-white py-20 sm:py-24 md:py-28">
+      <div className={agLayout.container}>
+        <DevReveal>
+          <p className={agLayout.eyebrow}>{copy.howEyebrow}</p>
+          <h2 className={`${agLayout.sectionTitle} mt-4`}>
+            {copy.howTitle}
+            <span className="text-[#9CA3AF]">{copy.howTitleMuted}</span>
+          </h2>
+        </DevReveal>
+
+        <DevStagger
+          className="mt-12 grid gap-4 sm:grid-cols-3 sm:gap-4"
+          stagger={0.08}
+        >
+          {copy.howSteps.map((step, index) => (
+            <DevStaggerItem key={step.n} index={index} as="div">
+              <div className="rounded-[2rem] bg-[#FAFAFA] p-7 sm:p-8">
+                <p className="select-none text-[clamp(2rem,4vw,2.75rem)] font-medium leading-none tracking-[-0.05em] text-[#EBEBEB]">
+                  {step.n}
+                </p>
+                <h3 className="mt-5 text-[1.05rem] font-medium tracking-[-0.02em] text-[#1D1D1D]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-[14px] leading-[1.8] text-[#6B6F76]">
+                  {step.desc}
+                </p>
+              </div>
+            </DevStaggerItem>
           ))}
-        </ol>
+        </DevStagger>
       </div>
     </section>
   );

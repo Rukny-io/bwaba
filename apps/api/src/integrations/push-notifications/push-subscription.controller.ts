@@ -15,6 +15,7 @@ import {
   PushSubscriptionService,
   PushSubscriptionInput,
 } from './push-subscription.service';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @Controller('push-subscriptions')
 export class PushSubscriptionController {
@@ -26,6 +27,7 @@ export class PushSubscriptionController {
    * Public VAPID key for browser subscription (safe to expose).
    * GET /push-subscriptions/vapid-public-key
    */
+  @Public()
   @Get('vapid-public-key')
   getVapidPublicKey() {
     const key = process.env.VAPID_PUBLIC_KEY;

@@ -9,111 +9,84 @@ import {
   DocH3,
 } from '@/components/documentation/docs-article';
 import { EmailApiCodePanel } from '@/components/email-api/email-api-code-panel';
+import { emailMessagesCopy } from '@/lib/documentation-content/email-api/final-pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { MESSAGE_ENDPOINTS } from '@/lib/email-api-catalog';
 import { SEND_EMAIL_RECIPES } from '@/lib/email-api-code-samples';
 
-export const metadata: Metadata = {
-  title: 'Messages — Email API | Rukny Documentation',
-  description: 'Send transactional email and read delivery status with Rukny Email API.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailMessagesCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'send', label: 'Send' },
-  { id: 'fields', label: 'Fields' },
-  { id: 'status', label: 'Status' },
-  { id: 'lifecycle', label: 'Lifecycle' },
-  { id: 'limits', label: 'Limits' },
-];
-
-export default function EmailApiMessagesDocsPage() {
-  const send = MESSAGE_ENDPOINTS[0];
-  const status = MESSAGE_ENDPOINTS[1];
+export default async function EmailApiMessagesDocsPage() {
+  const c = docCopy(await getCurrentLocale(), emailMessagesCopy);
+  const send = MESSAGE_ENDPOINTS[0]!;
+  const status = MESSAGE_ENDPOINTS[1]!;
 
   return (
     <DocumentationArticle
-      title="Messages"
-      description="Send one transactional email per request, then poll its operational status. Bodies and recipient addresses are never returned by the status endpoint."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="send" title="Send a message">
+      <DocSection id="send" title={c.toc[0]!.label}>
         <p>
           <DocInlineCode>
             {send.method} {send.path}
           </DocInlineCode>{' '}
-          · scope <DocInlineCode>email:send</DocInlineCode>
+          · {c.scopeLabel} <DocInlineCode>email:send</DocInlineCode>
         </p>
-        <p>{send.summary}</p>
+        <p>{c.summaries.sendMessage}</p>
         <EmailApiCodePanel recipes={SEND_EMAIL_RECIPES} />
       </DocSection>
 
-      <DocSection id="fields" title="Request fields">
+      <DocSection id="fields" title={c.toc[1]!.label}>
         <DocTable
-          headers={['Field', 'Type', 'Required', 'Notes']}
+          headers={[...c.fieldHeaders]}
           rows={(send.fields ?? []).map((field) => [
             <DocInlineCode key={field.name}>{field.name}</DocInlineCode>,
             field.type,
-            field.required ? 'Yes' : 'No',
+            field.required ? c.yes : c.no,
             field.description,
           ])}
         />
       </DocSection>
 
-      <DocSection id="status" title="Read delivery status">
+      <DocSection id="status" title={c.toc[2]!.label}>
         <p>
           <DocInlineCode>
             {status.method} {status.path}
           </DocInlineCode>{' '}
-          · scope <DocInlineCode>email:read</DocInlineCode>
+          · {c.scopeLabel} <DocInlineCode>email:read</DocInlineCode>
         </p>
-        <p>{status.summary}</p>
+        <p>{c.summaries.getMessage}</p>
         <EmailApiCodePanel endpoint={status} defaultLanguage="sdk" />
       </DocSection>
 
-      <DocSection id="lifecycle" title="Status lifecycle">
+      <DocSection id="lifecycle" title={c.toc[3]!.label}>
         <DocTable
-          headers={['Status', 'Meaning']}
-          rows={[
-            [<DocInlineCode key="q">queued</DocInlineCode>, 'Accepted and waiting for the provider'],
-            [<DocInlineCode key="s">sent</DocInlineCode>, 'Handed off to the email provider'],
-            [
-              <DocInlineCode key="d">delivered</DocInlineCode>,
-              'Provider reported successful delivery',
-            ],
-            [
-              <DocInlineCode key="b">bounced</DocInlineCode>,
-              'Hard bounce — recipient may be suppressed',
-            ],
-            [
-              <DocInlineCode key="c">complained</DocInlineCode>,
-              'Marked as spam — recipient suppressed',
-            ],
-            [
-              <DocInlineCode key="f">failed</DocInlineCode>,
-              'Could not be sent (validation or provider error)',
-            ],
-          ]}
+          headers={[...c.statusHeaders]}
+          rows={c.statuses.map(([code, meaning]) => [
+            <DocInlineCode key={code}>{code}</DocInlineCode>,
+            meaning,
+          ])}
         />
-        <DocH3>What status does not include</DocH3>
-        <p>
-          For privacy, status responses never include the subject, body, or full
-          recipient address — only the message id, status, and timestamps.
-        </p>
+        <DocH3>{c.privacyTitle}</DocH3>
+        <p>{c.privacyBody}</p>
       </DocSection>
 
-      <DocSection id="limits" title="MVP limits">
-        <DocCallout>
-          One recipient per request. No attachments, CC, or BCC yet. The{' '}
-          <DocInlineCode>from</DocInlineCode> address must be verified and
-          authorized for the app that owns the API key.
-        </DocCallout>
+      <DocSection id="limits" title={c.toc[4]!.label}>
+        <DocCallout>{c.limitsBody}</DocCallout>
       </DocSection>
 
       <DocPager
         prev={{
           href: '/documentation/email-api/authentication',
-          label: 'Authentication',
+          label: c.prevLabel,
         }}
-        next={{ href: '/documentation/email-api/domains', label: 'Domains' }}
+        next={{ href: '/documentation/email-api/domains', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

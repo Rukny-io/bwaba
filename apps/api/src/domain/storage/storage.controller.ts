@@ -30,6 +30,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { timingSafeEqual } from 'crypto';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { StorageService } from './storage.service';
 import { FileCategory } from '@prisma/client';
 
@@ -386,6 +387,7 @@ export class StorageController {
    * استدعاء من Cron خارجي (مزود الاستضافة) إذا Nest Cron لا يعمل (مثلاً حاويات تنام).
    * يتطلب رأس X-Cron-Secret مطابقاً لـ CRON_SECRET في البيئة.
    */
+  @Public()
   @Post('cron/purge-expired')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

@@ -281,6 +281,7 @@ export class ProductsController {
   /**
    * الحصول على صور المنتج
    */
+  @Public()
   @Get(':id/images')
   @ApiOperation({ summary: 'الحصول على صور المنتج' })
   @ApiResponse({ status: 200, description: 'تم الحصول على الصور بنجاح' })

@@ -1,3 +1,5 @@
+import { clearMailClientCookie, setMailClientCookie } from "@/lib/mail-cookies";
+
 export const MAIL_APP_ID_COOKIE = "rukny_mail_app_id";
 export const MAIL_APP_ID_PATTERN = /^\d{16}$/;
 
@@ -18,10 +20,9 @@ export function readMailAppIdFromDocument(): string | null {
 export function writeMailAppIdCookie(appId: string) {
   if (typeof document === "undefined") return;
   if (!isValidMailAppId(appId)) return;
-  document.cookie = `${MAIL_APP_ID_COOKIE}=${encodeURIComponent(appId)}; Path=/; Max-Age=${60 * 60 * 24 * 90}; SameSite=Lax`;
+  setMailClientCookie(MAIL_APP_ID_COOKIE, appId, 60 * 60 * 24 * 90);
 }
 
 export function clearMailAppIdCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = `${MAIL_APP_ID_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  clearMailClientCookie(MAIL_APP_ID_COOKIE);
 }

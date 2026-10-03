@@ -33,11 +33,11 @@ import { MAIL_APP_ID_PATTERN } from './mail-app-id.util';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
+import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_COOLDOWN_SECONDS = 60;
-const BCRYPT_ROUNDS = 10;
 const OTP_TYPE = 'MAIL_APP_VERIFICATION' as const;
 
 @Injectable()
@@ -186,7 +186,7 @@ export class MailAppsService {
     }
 
     const code = this.generateOtpCode();
-    const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+    const codeHash = await bcrypt.hash(code, OTP_BCRYPT_ROUNDS);
 
     if (this.isDevOtpBypass()) {
       this.logger.warn(

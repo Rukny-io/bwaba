@@ -15,8 +15,10 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import * as crypto from 'crypto';
 import { MetaWebhookService } from './meta-webhook.service';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('Meta Webhooks')
+@Public()
 @Controller({ path: 'webhooks/meta', version: '1' })
 export class MetaWebhookController {
   constructor(

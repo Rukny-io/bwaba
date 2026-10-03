@@ -1,3 +1,4 @@
+import { clearMailClientCookie, setMailClientCookie } from "@/lib/mail-cookies";
 import {
   MAIL_DOMAIN_STORAGE_KEY,
   MAIL_READY_APP_COOKIE,
@@ -22,11 +23,11 @@ function resolveAppId(appId?: string | null) {
 }
 
 function setCookie(name: string, value: string, maxAge: number) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+  setMailClientCookie(name, value, maxAge);
 }
 
 function clearCookie(name: string) {
-  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  clearMailClientCookie(name);
 }
 
 function syncReadyCookies(setup: MailDomainSetup, appId: string | null) {

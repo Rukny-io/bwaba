@@ -103,7 +103,17 @@ export const envSchema = z.object({
     .default('false')
     .transform((val) => val === 'true'),
 
+  // WhatsApp / WABA token encryption (64 hex chars = 32 bytes)
+  ENCRYPTION_KEY: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{64}$/,
+      'ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes). Generate with: openssl rand -hex 32',
+    )
+    .optional(),
+
   // Security
+  GLOBAL_AUTH_MODE: z.enum(['report', 'enforce']).optional(),
   INTERNAL_API_SECRET: z
     .string()
     .min(32, 'INTERNAL_API_SECRET must be at least 32 characters')
@@ -174,6 +184,23 @@ export function validateEnv<T extends Record<string, unknown>>(
     throw new Error(
       `❌ Environment validation failed:\n${errorMessage}\n\n` +
         `Please check your .env file and ensure all required variables are set.`,
+    );
+  }
+
+  const nodeEnv = String(config.NODE_ENV ?? result.data.NODE_ENV ?? 'development');
+  const authMode = String(config.GLOBAL_AUTH_MODE ?? '').toLowerCase();
+  if (nodeEnv === 'production' && authMode === 'report') {
+    throw new Error(
+      '❌ Environment validation failed:\n' +
+        'GLOBAL_AUTH_MODE cannot be "report" in production. Use GLOBAL_AUTH_MODE=enforce.',
+    );
+  }
+
+  const encryptionKey = String(config.ENCRYPTION_KEY ?? '').trim();
+  if (nodeEnv === 'production' && !/^[0-9a-fA-F]{64}$/.test(encryptionKey)) {
+    throw new Error(
+      '❌ Environment validation failed:\n' +
+        'ENCRYPTION_KEY is required in production (64 hex characters). Generate with: openssl rand -hex 32',
     );
   }
 

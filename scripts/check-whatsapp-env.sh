@@ -74,4 +74,24 @@ else
   fi
 fi
 echo ""
+
+# --- Tech Provider (developer product) ---
+echo "3) WhatsApp Tech Provider (developer API)"
+MISSING=()
+for key in WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIG_ID ENCRYPTION_KEY; do
+  if [[ -z "${!key:-}" ]]; then
+    MISSING+=("$key")
+  fi
+done
+VERIFY="${META_WEBHOOK_VERIFY_TOKEN:-${WHATSAPP_VERIFY_TOKEN:-}}"
+if [[ -z "$VERIFY" ]]; then
+  MISSING+=("META_WEBHOOK_VERIFY_TOKEN or WHATSAPP_VERIFY_TOKEN")
+fi
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  echo "   ❌ Missing: ${MISSING[*]}"
+else
+  echo "   ✅ Core Tech Provider vars present"
+  echo "   Graph API version: ${WHATSAPP_GRAPH_API_VERSION:-v25.0}"
+fi
+echo ""
 echo "After fixing .env, run: docker compose --env-file $ENV_FILE up -d api"

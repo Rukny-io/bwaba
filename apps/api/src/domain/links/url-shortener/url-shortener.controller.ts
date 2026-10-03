@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { UrlShortenerService } from './url-shortener.service';
 import { JwtAuthGuard } from '../../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { CreateShortUrlDto } from './dto';
 
 // 🔒 Allowed domains for redirect (prevent Open Redirect attacks)
@@ -58,6 +59,7 @@ export class UrlShortenerController {
   /**
    * Redirect short URL to original URL
    */
+  @Public()
   @Get('s/:code')
   @ApiOperation({ summary: 'Redirect to original URL' })
   @ApiParam({ name: 'code', description: 'Short URL code' })

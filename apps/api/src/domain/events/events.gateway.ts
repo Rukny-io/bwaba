@@ -74,23 +74,41 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Subscribe to specific event updates
   @SubscribeMessage('join-event')
-  handleJoinEvent(
+  async handleJoinEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { eventId: string; role?: 'organizer' | 'attendee' },
   ) {
-    const { eventId, role } = data;
-    const room = `event:${eventId}`;
+    const userId = (client as any).userId as string | undefined;
+    if (!userId) {
+      return { success: false, message: 'Unauthorized' };
+    }
 
+    const { eventId, role } = data;
+    if (!eventId) {
+      return { success: false, message: 'Missing eventId' };
+    }
+
+    const access = await this.getEventRoomAccess(userId, eventId);
+    if (!access) {
+      return { success: false, message: 'Event not found or access denied' };
+    }
+
+    const room = `event:${eventId}`;
     client.join(room);
     this.logger.log(`Client ${client.id} joined event room: ${room}`);
 
-    // Join role-specific room if provided
     if (role === 'organizer') {
+      if (!access.isOrganizer) {
+        return { success: false, message: 'Not authorized as organizer' };
+      }
       client.join(`${room}:organizers`);
       this.logger.log(
         `Client ${client.id} joined organizers room: ${room}:organizers`,
       );
     } else if (role === 'attendee') {
+      if (!access.isAttendee) {
+        return { success: false, message: 'Not registered for this event' };
+      }
       client.join(`${room}:attendees`);
       this.logger.log(
         `Client ${client.id} joined attendees room: ${room}:attendees`,
@@ -406,6 +424,42 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // ==================== Auth Helpers ====================
+
+  private async getEventRoomAccess(
+    userId: string,
+    eventId: string,
+  ): Promise<{ isOrganizer: boolean; isAttendee: boolean } | null> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        userId: true,
+        organizers: {
+          where: { userId, status: 'ACCEPTED' },
+          select: { id: true },
+          take: 1,
+        },
+        registrations: {
+          where: {
+            userId,
+            status: { not: 'CANCELLED' },
+          },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!event) return null;
+
+    const isOrganizer =
+      event.userId === userId || event.organizers.length > 0;
+    const isAttendee = event.registrations.length > 0;
+
+    if (!isOrganizer && !isAttendee) return null;
+
+    return { isOrganizer, isAttendee };
+  }
+
   private async authenticate(
     client: Socket,
   ): Promise<{ userId: string } | null> {

@@ -88,6 +88,8 @@ export function extractRefreshToken(request: NextRequest): string | undefined {
 export function extractCsrfToken(request: NextRequest): string | undefined {
   return (
     request.cookies.get(COOKIE_NAMES.csrfToken)?.value ||
+    request.cookies.get('__Secure-csrf_token')?.value ||
+    request.cookies.get('__Host-csrf_token')?.value ||
     request.cookies.get('csrf_token')?.value
   );
 }
@@ -466,6 +468,7 @@ export function createAuthMiddleware(config: MiddlewareConfig) {
         response.cookies.delete({ name: 'csrf_token', ...deleteOptions });
         response.cookies.delete({ name: '__Secure-access_token', ...deleteOptions });
         response.cookies.delete({ name: '__Secure-refresh_token', ...deleteOptions });
+        response.cookies.delete({ name: '__Secure-csrf_token', ...deleteOptions });
         response.cookies.delete({ name: '__Host-csrf_token', ...deleteOptions });
         return response;
       }

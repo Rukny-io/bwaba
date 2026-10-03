@@ -9,92 +9,96 @@ import {
   DocSection,
   DocTable,
 } from '@/components/documentation/docs-article';
+import { formsEventsCopy } from '@/lib/documentation-content/forms/pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { buildEmbedListenerSnippet } from '@/lib/forms-urls';
-
-export const metadata: Metadata = {
-  title: 'Embed events — Forms | Rukny Documentation',
-  description:
-    'Listen for Rukny form postMessage events for submissions and iframe resize.',
-};
-
-const TOC = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'events', label: 'Event types' },
-  { id: 'snippet', label: 'Listener snippet' },
-  { id: 'security', label: 'Origin checks' },
-];
 
 const LISTENER = buildEmbedListenerSnippet();
 
-export default function FormsEventsPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), formsEventsCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
+
+export default async function FormsEventsPage() {
+  const c = docCopy(await getCurrentLocale(), formsEventsCopy);
+
   return (
     <DocumentationArticle
       productId="forms"
-      title="Embed events"
-      description="The embedded form posts window messages to the parent page. Use them to close modals, track conversions, or resize the iframe."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="overview" title="Overview">
+      <DocSection id="overview" title={c.toc[0]!.label}>
         <p>
-          Messages use <DocInlineCode>event.data.type === &apos;rukny:form&apos;</DocInlineCode>.
-          Add a listener on the page that hosts the iframe — the same page as
-          your{' '}
+          {c.overviewBefore}{' '}
+          <DocInlineCode>event.data.type === &apos;rukny:form&apos;</DocInlineCode>
+          .{' '}
           <Link
             href="/documentation/forms/embedding"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            embed snippet
+            {c.overviewLink}
           </Link>
-          .
+          {c.overviewAfter}
         </p>
       </DocSection>
 
-      <DocSection id="events" title="Event types">
+      <DocSection id="events" title={c.eventsTitle}>
         <DocTable
-          headers={['event', 'When', 'Useful fields']}
+          headers={[...c.headers]}
           rows={[
             [
               <DocInlineCode key="submitted">submitted</DocInlineCode>,
-              'After a successful submission',
+              c.submittedWhen,
               <>
-                <DocInlineCode>slug</DocInlineCode> and related payload fields
+                <DocInlineCode>slug</DocInlineCode> {c.submittedFields}
               </>,
             ],
             [
               <DocInlineCode key="resize">resize</DocInlineCode>,
-              'When the form height changes',
+              c.resizeWhen,
               <>
-                <DocInlineCode>height</DocInlineCode> (number, pixels)
+                <DocInlineCode>height</DocInlineCode> {c.resizeFields}
               </>,
             ],
           ]}
         />
       </DocSection>
 
-      <DocSection id="snippet" title="Listener snippet">
+      <DocSection id="snippet" title={c.snippetTitle}>
         <p>
-          Mark your iframe with <DocInlineCode>data-rukny-form</DocInlineCode>{' '}
-          so resize can target it:
+          {c.snippetIntro.split('data-rukny-form')[0]}
+          <DocInlineCode>data-rukny-form</DocInlineCode>
+          {c.snippetIntro.split('data-rukny-form')[1]}
         </p>
         <DocCode>{LISTENER}</DocCode>
-        <DocCallout title="Tip" tone="tip">
-          Connect in the portal copies this snippet for you. Keep it on every
-          page that embeds the form if you rely on auto-height.
+        <DocCallout title={c.tipTitle} tone="tip">
+          {c.tipBody}
         </DocCallout>
       </DocSection>
 
-      <DocSection id="security" title="Origin checks">
+      <DocSection id="security" title={c.securityTitle}>
         <p>
-          In production, validate <DocInlineCode>event.origin</DocInlineCode>{' '}
-          against the Rukny public site origin that serves{' '}
-          <DocInlineCode>/f/…</DocInlineCode> embeds. Do not trust messages from
-          unexpected origins.
+          {c.securityBody.includes('event.origin') ? (
+            <>
+              {c.securityBody.split('event.origin')[0]}
+              <DocInlineCode>event.origin</DocInlineCode>
+              {c.securityBody.split('event.origin')[1]?.split('/f/…')[0]}
+              <DocInlineCode>/f/…</DocInlineCode>
+              {c.securityBody.split('/f/…')[1]}
+            </>
+          ) : (
+            c.securityBody
+          )}
         </p>
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/forms/embedding', label: 'Embedding' }}
-        next={{ href: '/documentation/forms/webhooks', label: 'Webhooks' }}
+        prev={{ href: '/documentation/forms/embedding', label: c.prevLabel }}
+        next={{ href: '/documentation/forms/webhooks', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

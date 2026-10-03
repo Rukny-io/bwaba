@@ -26,6 +26,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { SocialLinksService } from './social-links.service';
 import { UploadService } from '../../../infrastructure/upload/upload.service';
 import {
@@ -69,6 +70,7 @@ export class SocialLinksController {
     return this.socialLinksService.findMyLinks(req.user.id);
   }
 
+  @Public()
   @Get('profile/:profileId')
   @ApiOperation({ summary: 'Get all social links for a profile (public)' })
   @ApiParam({ name: 'profileId', description: 'Profile ID' })
@@ -80,6 +82,7 @@ export class SocialLinksController {
     return this.socialLinksService.findByProfile(profileId);
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a single social link' })
   @ApiParam({ name: 'id', description: 'Social link ID' })
@@ -237,6 +240,7 @@ export class SocialLinksController {
 
   // ============= PUBLIC TRACKING ENDPOINT =============
 
+  @Public()
   @Post(':id/unlock')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Unlock a password-protected social link (public)' })
@@ -248,6 +252,7 @@ export class SocialLinksController {
     return this.socialLinksService.unlock(id, dto.password);
   }
 
+  @Public()
   @Post(':id/track-click')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Track a click on a social link (public endpoint)' })

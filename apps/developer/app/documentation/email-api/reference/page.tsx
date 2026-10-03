@@ -6,72 +6,71 @@ import {
   DocSection,
   DocTable,
 } from '@/components/documentation/docs-article';
+import { emailReferenceCopy } from '@/lib/documentation-content/email-api/short-pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import {
   EMAIL_API_PUBLIC_BASE,
   MESSAGE_ENDPOINTS,
 } from '@/lib/email-api-catalog';
 
-export const metadata: Metadata = {
-  title: 'API reference — Email API | Rukny Documentation',
-  description: 'REST endpoint reference for the public Rukny Email API.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailReferenceCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'base', label: 'Base URL' },
-  { id: 'auth', label: 'Auth headers' },
-  { id: 'messages', label: 'Messages' },
-];
+export default async function EmailApiReferencePage() {
+  const c = docCopy(await getCurrentLocale(), emailReferenceCopy);
 
-export default function EmailApiReferencePage() {
   return (
     <DocumentationArticle
-      title="API reference"
-      description="Public endpoints you call with an API key. Domain and sender setup happen in the developer portal."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="base" title="Base URL">
+      <DocSection id="base" title={c.toc[0]!.label}>
         <p>
           <DocInlineCode>{EMAIL_API_PUBLIC_BASE}</DocInlineCode>
         </p>
       </DocSection>
 
-      <DocSection id="auth" title="Auth headers">
+      <DocSection id="auth" title={c.toc[1]!.label}>
         <DocTable
-          headers={['Header', 'Required', 'Notes']}
+          headers={[...c.headersAuth]}
           rows={[
             [
               <DocInlineCode key="k">X-API-Key</DocInlineCode>,
-              'Always',
-              'rk_live_… or rk_test_…',
+              c.authRows[0]!.required,
+              c.authRows[0]!.notes,
             ],
             [
               <DocInlineCode key="i">Idempotency-Key</DocInlineCode>,
-              'When sending',
-              'Required on POST /email/messages (8–128 chars)',
+              c.authRows[1]!.required,
+              c.authRows[1]!.notes,
             ],
             [
               <DocInlineCode key="c">Content-Type</DocInlineCode>,
-              'JSON bodies',
-              'application/json',
+              c.authRows[2]!.required,
+              c.authRows[2]!.notes,
             ],
           ]}
         />
       </DocSection>
 
-      <DocSection id="messages" title="Messages">
+      <DocSection id="messages" title={c.toc[2]!.label}>
         <DocTable
-          headers={['Method', 'Path', 'Scopes', 'Summary']}
+          headers={[...c.headersMessages]}
           rows={MESSAGE_ENDPOINTS.map((endpoint) => [
             endpoint.method,
             <DocInlineCode key={endpoint.id}>{endpoint.path}</DocInlineCode>,
             endpoint.scopes.join(', '),
-            endpoint.summary,
+            c.summaries[endpoint.id] ?? endpoint.summary,
           ])}
         />
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/email-api/rest', label: 'REST & curl' }}
+        prev={{ href: '/documentation/email-api/rest', label: c.prevLabel }}
       />
     </DocumentationArticle>
   );

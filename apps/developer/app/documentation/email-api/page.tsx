@@ -9,151 +9,123 @@ import {
   DocSection,
   DocInlineCode,
 } from '@/components/documentation/docs-article';
+import { emailOverviewCopy } from '@/lib/documentation-content/email-api/overview';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Email API | Rukny Documentation',
-  description:
-    'Send transactional email from verified domains with the Rukny Email API and @rukny/email.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailOverviewCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'what-you-can-build', label: 'What you can build' },
-  { id: 'how-it-works', label: 'How it works' },
-  { id: 'where-to-start', label: 'Where to start' },
-  { id: 'integration-paths', label: 'Integration paths' },
-  { id: 'not-included', label: 'What it is not' },
-];
+export default async function EmailApiOverviewPage() {
+  const c = docCopy(await getCurrentLocale(), emailOverviewCopy);
 
-export default function EmailApiOverviewPage() {
   return (
     <DocumentationArticle
-      title="Email API"
-      description="Send reliable transactional email from your backend — OTPs, magic links, receipts, and product alerts — using verified domains and app-scoped API keys."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="what-you-can-build" title="What you can build">
-        <DocFeatureGrid
-          items={[
-            {
-              title: 'Authentication mail',
-              description: 'One-time codes, password resets, and sign-in links.',
-            },
-            {
-              title: 'Lifecycle alerts',
-              description: 'Welcome notes, order updates, and delivery notices.',
-            },
-            {
-              title: 'Product notifications',
-              description: 'Account changes, billing receipts, and security alerts.',
-            },
-            {
-              title: 'Safe testing',
-              description:
-                'Test keys limited to your account email or verified domains.',
-            },
-          ]}
-        />
+      <DocSection id="what-you-can-build" title={c.toc[0]!.label}>
+        <DocFeatureGrid items={c.features} />
       </DocSection>
 
-      <DocSection id="how-it-works" title="How it works">
+      <DocSection id="how-it-works" title={c.toc[1]!.label}>
         <p>
-          Each app installs Email API, verifies a sending domain, authorizes a
-          sender address, then calls the API with an{' '}
-          <DocInlineCode>X-API-Key</DocInlineCode>. Every live send needs an{' '}
-          <DocInlineCode>Idempotency-Key</DocInlineCode> so retries never
-          duplicate messages or billing.
+          {c.howItWorks.beforeKey}{' '}
+          <DocInlineCode>X-API-Key</DocInlineCode>
+          {c.howItWorks.mid}{' '}
+          <DocInlineCode>Idempotency-Key</DocInlineCode>{' '}
+          {c.howItWorks.afterIdem}
         </p>
-        <DocCallout title="Recommended">
-          Use the official Node package <DocInlineCode>@rukny/email</DocInlineCode>{' '}
-          on your server. It handles headers, typing, and errors for you.
+        <DocCallout title={c.recommendedTitle}>
+          {c.recommendedBodyBefore}{' '}
+          <DocInlineCode>@rukny/email</DocInlineCode>{' '}
+          {c.recommendedBodyAfter}
         </DocCallout>
       </DocSection>
 
-      <DocSection id="where-to-start" title="Where to start">
+      <DocSection id="where-to-start" title={c.whereToStart.title}>
         <div className="space-y-2.5">
           <DocLinkCard
             href="/documentation/email-api/get-started"
-            title="Get started"
-            description="Install the product, verify DNS, create a key, and send your first email."
+            title={c.whereToStart.getStarted.title}
+            description={c.whereToStart.getStarted.description}
           />
           <DocLinkCard
             href="/documentation/email-api/use-cases"
-            title="Use cases"
-            description="Copy-ready patterns for OTP, receipts, and magic links."
+            title={c.whereToStart.useCases.title}
+            description={c.whereToStart.useCases.description}
           />
           <DocLinkCard
             href="/documentation/email-api/send"
-            title="Sending examples"
-            description="Node.js, Python, PHP, Go, SMTP, CLI, and every major stack."
+            title={c.whereToStart.send.title}
+            description={c.whereToStart.send.description}
           />
           <DocLinkCard
             href="/documentation/email-api/sdk"
-            title="Node.js SDK"
-            description="Install @rukny/email and ship with a few lines of TypeScript."
+            title={c.whereToStart.sdk.title}
+            description={c.whereToStart.sdk.description}
           />
           <DocLinkCard
             href="/documentation/email-api/reference"
-            title="API reference"
-            description="Methods, paths, scopes, and response shapes."
+            title={c.whereToStart.reference.title}
+            description={c.whereToStart.reference.description}
           />
         </div>
       </DocSection>
 
-      <DocSection id="integration-paths" title="Integration paths">
-        <p>Pick the path that fits your stack:</p>
+      <DocSection id="integration-paths" title={c.integrationPaths.title}>
+        <p>{c.integrationPaths.intro}</p>
         <ul className="list-disc space-y-2 ps-5">
           <li>
             <Link
               href="/documentation/email-api/sdk"
               className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
             >
-              Node.js SDK
+              {c.integrationPaths.sdk}
             </Link>{' '}
-            — preferred for TypeScript and Node backends.
+            {c.integrationPaths.sdkNote}
           </li>
           <li>
             <Link
               href="/documentation/email-api/send"
               className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
             >
-              Sending examples
+              {c.integrationPaths.send}
             </Link>{' '}
-            — Node, Python, PHP, Go, Rust, SMTP, CLI, and more.
+            {c.integrationPaths.sendNote}
           </li>
           <li>
             <Link
               href="/documentation/email-api/rest"
               className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
             >
-              REST & curl
+              {c.integrationPaths.rest}
             </Link>{' '}
-            — any language that can make HTTPS requests.
+            {c.integrationPaths.restNote}
           </li>
           <li>
             <Link
               href="/login?next=/apps"
               className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
             >
-              Portal Try it
+              {c.integrationPaths.portal}
             </Link>{' '}
-            — send a safe test message without writing code first.
+            {c.integrationPaths.portalNote}
           </li>
         </ul>
       </DocSection>
 
-      <DocSection id="not-included" title="What it is not">
-        <p>
-          Email API is not a mailbox, inbox, or marketing campaign tool. For a
-          full mailbox experience use Rukny Mail. For bulk marketing or
-          attachments, wait for later API releases — the MVP focuses on one
-          recipient, text/HTML bodies, and high deliverability.
-        </p>
+      <DocSection id="not-included" title={c.notIncluded.title}>
+        <p>{c.notIncluded.body}</p>
       </DocSection>
 
       <DocPager
         next={{
           href: '/documentation/email-api/get-started',
-          label: 'Get started',
+          label: c.nextLabel,
         }}
       />
     </DocumentationArticle>

@@ -8,18 +8,23 @@ import {
   DocSection,
 } from '@/components/documentation/docs-article';
 import {
-  getSendExample,
-  getSendExamplePager,
-  type SendExampleId,
-} from '@/lib/email-api-send-catalog';
+  emailSendChromeCopy,
+  getLocalizedSendExample,
+  getLocalizedSendExamplePager,
+} from '@/lib/documentation-content/email-api/send-examples';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
+import type { SendExampleId } from '@/lib/email-api-send-catalog';
 
-export function SendExampleArticle({ id }: { id: SendExampleId }) {
-  const example = getSendExample(id);
+export async function SendExampleArticle({ id }: { id: SendExampleId }) {
+  const locale = await getCurrentLocale();
+  const example = getLocalizedSendExample(id, locale);
   if (!example) return null;
 
-  const pager = getSendExamplePager(id);
+  const chrome = docCopy(locale, emailSendChromeCopy);
+  const pager = getLocalizedSendExamplePager(id, locale);
   const toc = [
-    { id: 'prerequisites', label: 'Prerequisites' },
+    { id: 'prerequisites', label: chrome.prerequisites },
     ...example.sections.map((section) => ({
       id: section.id,
       label: section.title,
@@ -32,22 +37,23 @@ export function SendExampleArticle({ id }: { id: SendExampleId }) {
       description={example.description}
       toc={toc}
     >
-      <DocSection id="prerequisites" title="Prerequisites">
+      <DocSection id="prerequisites" title={chrome.prerequisites}>
         <ul className="list-disc space-y-2 ps-5">
           {example.prerequisites.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
-        <DocCallout title="Before you send">
-          Verify your domain and authorize a sender in the{' '}
+        <DocCallout title={chrome.beforeSendTitle}>
+          {chrome.beforeSendBefore}{' '}
           <Link
             href="/login?next=/apps"
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
-            developer portal
+            {chrome.beforeSendLink}
           </Link>
-          . Live sends require an <DocInlineCode>Idempotency-Key</DocInlineCode>{' '}
-          on REST requests (SMTP uses Message-ID).
+          {chrome.beforeSendAfter.split('Idempotency-Key')[0]}
+          <DocInlineCode>Idempotency-Key</DocInlineCode>
+          {chrome.beforeSendAfter.split('Idempotency-Key')[1]}
         </DocCallout>
       </DocSection>
 

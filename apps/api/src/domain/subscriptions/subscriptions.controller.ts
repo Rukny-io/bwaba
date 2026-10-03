@@ -9,6 +9,7 @@ import {
 import { Role } from '@prisma/client';
 import { SubscriptionsService } from './subscriptions.service';
 import { UpgradePlanDto, AdminSetPlanDto } from './dto/subscription.dto';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -18,6 +19,7 @@ export class SubscriptionsController {
    * 📋 جلب جميع الباقات (عام - بدون تسجيل دخول)
    * GET /subscriptions/plans
    */
+  @Public()
   @Get('plans')
   getPlans() {
     return this.subscriptionsService.getPlansOverview();

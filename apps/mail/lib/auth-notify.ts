@@ -10,6 +10,7 @@ import {
   MAIL_SHELL_COOKIE,
 } from "@/lib/ses";
 import { MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
+import { clearMailClientCookie } from "@/lib/mail-cookies";
 
 const AUTH_REDIRECT_LOCK_KEY = "__mail_auth_redirect_lock__";
 
@@ -35,7 +36,7 @@ function clearClientMailCookies() {
     MAIL_DOMAIN_MAP_COOKIE,
   ];
   for (const name of names) {
-    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+    clearMailClientCookie(name);
   }
 }
 

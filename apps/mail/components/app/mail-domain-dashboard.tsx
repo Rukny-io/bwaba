@@ -12,6 +12,7 @@ import {
   syncMailDomainRecords,
   type MailDomainSetup,
 } from "@/lib/mail-domain";
+import { applySesDkimTokens, dkimTokensMatch } from "@/lib/mail-domain-tokens";
 import { writeMailDomainSetup } from "@/lib/mail-domain-storage";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
@@ -49,8 +50,12 @@ function Pill({
 
 export function MailDomainDashboard({
   setup: initial,
+  tokensChanged: tokensChangedProp = false,
+  onTokensChanged,
 }: {
   setup: MailDomainSetup;
+  tokensChanged?: boolean;
+  onTokensChanged?: (changed: boolean) => void;
 }) {
   const pathname = usePathname();
   const slot = parseMailSlot(pathname);
@@ -58,7 +63,17 @@ export function MailDomainDashboard({
 
   const [setup, setSetup] = useState(() => syncMailDomainRecords(initial));
   const [checking, setChecking] = useState(false);
+  const [tokensChanged, setTokensChanged] = useState(tokensChangedProp);
   const verified = setup.status === "ACTIVE";
+
+  useEffect(() => {
+    setTokensChanged(tokensChangedProp);
+  }, [tokensChangedProp]);
+
+  function markTokensChanged(changed: boolean) {
+    setTokensChanged(changed);
+    onTokensChanged?.(changed);
+  }
 
   useEffect(() => {
     const synced = syncMailDomainRecords(initial);
@@ -95,13 +110,16 @@ export function MailDomainDashboard({
       })),
     });
     try {
-      const result = await verifyDomainRequest(
-        setup.domain,
-        setup.dkimTokens ?? [],
-      );
+      const result = await verifyDomainRequest(setup.domain);
+      if (result.tokens?.length && !dkimTokensMatch(setup.dkimTokens, result.tokens)) {
+        markTokensChanged(true);
+      }
+      const base = result.tokens?.length
+        ? applySesDkimTokens(setup, result.tokens)
+        : setup;
       persist(
         applyDnsCheckResults(
-          setup,
+          base,
           result.results,
           result.verified,
           result.waiting,
@@ -172,6 +190,16 @@ export function MailDomainDashboard({
 
       <MailDomainQuotaBanner domain={setup.domain} compact />
 
+      {tokensChanged ? (
+        <div
+          className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_35%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-3 text-sm text-[var(--foreground)]"
+          role="status"
+        >
+          DKIM tokens were refreshed from AWS SES. Re-export DNS records and update any
+          outdated CNAME rows at your DNS host.
+        </div>
+      ) : null}
+
       <DnsRecordsTable
         domain={setup.domain}
         records={setup.records}
@@ -179,6 +207,12 @@ export function MailDomainDashboard({
         layout="board"
         checking={checking}
         onCheck={() => void recheck()}
+        onFreshZone={(fresh) => {
+          if (fresh.tokensChanged) {
+            markTokensChanged(true);
+            persist(applySesDkimTokens(setup, fresh.tokens));
+          }
+        }}
       />
 
       {mailFeatureFlags.outboundBimi ? (

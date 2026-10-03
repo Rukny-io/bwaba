@@ -105,6 +105,95 @@ export const FORMS_DOC_NAV_GROUPS: DocumentationNavGroup[] = [
 export const FORMS_DOC_NAV: DocumentationNavItem[] =
   FORMS_DOC_NAV_GROUPS.flatMap((group) => group.items);
 
+const whatsappBase = `${DOCUMENTATION_BASE}/whatsapp-api`;
+
+export const WHATSAPP_API_DOC_NAV_GROUPS: DocumentationNavGroup[] = [
+  {
+    label: 'Guides',
+    items: [
+      { slug: '', label: 'Overview', href: whatsappBase },
+      {
+        slug: 'get-started',
+        label: 'Get started',
+        href: `${whatsappBase}/get-started`,
+      },
+      {
+        slug: 'use-cases',
+        label: 'Use cases',
+        href: `${whatsappBase}/use-cases`,
+      },
+      {
+        slug: 'best-practices',
+        label: 'Best practices',
+        href: `${whatsappBase}/best-practices`,
+      },
+    ],
+  },
+  {
+    label: 'Core concepts',
+    items: [
+      {
+        slug: 'authentication',
+        label: 'Authentication',
+        href: `${whatsappBase}/authentication`,
+      },
+      {
+        slug: 'messages',
+        label: 'Messages',
+        href: `${whatsappBase}/messages`,
+      },
+      {
+        slug: 'templates',
+        label: 'Templates',
+        href: `${whatsappBase}/templates`,
+      },
+      {
+        slug: 'webhooks',
+        label: 'Webhooks',
+        href: `${whatsappBase}/webhooks`,
+      },
+      { slug: 'errors', label: 'Errors', href: `${whatsappBase}/errors` },
+    ],
+  },
+  {
+    label: 'Sending examples',
+    collapsible: true,
+    items: [
+      { slug: 'send', label: 'Overview', href: `${whatsappBase}/send` },
+      {
+        slug: 'send/text',
+        label: 'Text message',
+        href: `${whatsappBase}/send/text`,
+      },
+      {
+        slug: 'send/template',
+        label: 'Template message',
+        href: `${whatsappBase}/send/template`,
+      },
+      {
+        slug: 'send/otp',
+        label: 'OTP / authentication',
+        href: `${whatsappBase}/send/otp`,
+      },
+    ],
+  },
+  {
+    label: 'Build',
+    items: [
+      { slug: 'sdk', label: 'Node.js SDK', href: `${whatsappBase}/sdk` },
+      { slug: 'rest', label: 'REST & curl', href: `${whatsappBase}/rest` },
+      {
+        slug: 'reference',
+        label: 'API reference',
+        href: `${whatsappBase}/reference`,
+      },
+    ],
+  },
+];
+
+export const WHATSAPP_API_DOC_NAV: DocumentationNavItem[] =
+  WHATSAPP_API_DOC_NAV_GROUPS.flatMap((group) => group.items);
+
 export const DOCUMENTATION_PRODUCTS: DocumentationProduct[] = [
   {
     id: 'email-api',
@@ -131,9 +220,10 @@ export const DOCUMENTATION_PRODUCTS: DocumentationProduct[] = [
     title: 'WhatsApp API',
     description:
       'Send WhatsApp messages, templates, and OTPs with @rukny/whatsapp.',
-    href: `${DOCUMENTATION_BASE}/whatsapp-api`,
-    available: false,
-    nav: [],
+    href: whatsappBase,
+    available: true,
+    nav: WHATSAPP_API_DOC_NAV,
+    navGroups: WHATSAPP_API_DOC_NAV_GROUPS,
   },
 ];
 
@@ -147,7 +237,9 @@ export function isDocNavActive(pathname: string, href: string): boolean {
   const roots = [
     `${DOCUMENTATION_BASE}/email-api`,
     `${DOCUMENTATION_BASE}/forms`,
+    `${DOCUMENTATION_BASE}/whatsapp-api`,
     `${DOCUMENTATION_BASE}/email-api/send`,
+    `${DOCUMENTATION_BASE}/whatsapp-api/send`,
   ];
   if (roots.includes(href)) {
     return pathname === href || pathname === `${href}/`;

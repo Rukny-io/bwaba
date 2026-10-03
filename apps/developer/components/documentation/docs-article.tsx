@@ -1,13 +1,19 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
-import {
-  getDocumentationProduct,
-  type DocumentationProductId,
-} from '@/lib/documentation-nav';
+import { useTranslations } from '@/components/providers/translations-provider';
+import { type DocumentationProductId } from '@/lib/documentation-nav';
+import { getLocalizedDocumentationProduct } from '@/lib/documentation-i18n';
 import { DocsOnThisPage, type DocTocItem } from './docs-toc';
 import { DocsSidebar } from './docs-sidebar';
 import { cn } from '@/lib/utils';
+
+function useDocsRtl() {
+  const t = useTranslations();
+  return t.common.locale === 'ar';
+}
 
 export function DocumentationArticle({
   productId = 'email-api',
@@ -22,7 +28,9 @@ export function DocumentationArticle({
   toc?: DocTocItem[];
   children: ReactNode;
 }) {
-  const product = getDocumentationProduct(productId);
+  const t = useTranslations();
+  const d = t.docs;
+  const product = getLocalizedDocumentationProduct(productId, d);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-8 sm:px-6 sm:pt-10 lg:pb-16">
@@ -32,7 +40,7 @@ export function DocumentationArticle({
         <article className="min-w-0">
           <header className="mb-8 max-w-2xl sm:mb-10">
             <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
-              {product?.title ?? 'Documentation'}
+              {product?.title ?? d.brandDocs}
             </p>
             <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-[2.25rem] sm:leading-[1.15]">
               {title}
@@ -133,6 +141,9 @@ export function DocLinkCard({
   title: string;
   description: string;
 }) {
+  const isRtl = useDocsRtl();
+  const Arrow = isRtl ? ArrowLeft : ArrowRight;
+
   return (
     <Link
       href={href}
@@ -144,7 +155,12 @@ export function DocLinkCard({
           {description}
         </p>
       </div>
-      <ArrowRight className="mt-1 size-4 shrink-0 text-[var(--muted-foreground)] transition-transform group-hover:translate-x-0.5" />
+      <Arrow
+        className={cn(
+          'mt-1 size-4 shrink-0 text-[var(--muted-foreground)] transition-transform',
+          isRtl ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5',
+        )}
+      />
     </Link>
   );
 }
@@ -206,7 +222,7 @@ export function DocTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl bg-[var(--surface-secondary)]">
-      <table className="w-full min-w-[480px] text-left text-[13px]">
+      <table className="w-full min-w-[480px] text-start text-[13px]">
         <thead>
           <tr className="text-[var(--muted-foreground)]">
             {headers.map((header) => (
@@ -242,6 +258,10 @@ export function DocPager({
   prev?: { href: string; label: string };
   next?: { href: string; label: string };
 }) {
+  const isRtl = useDocsRtl();
+  const PrevArrow = isRtl ? ArrowRight : ArrowLeft;
+  const NextArrow = isRtl ? ArrowLeft : ArrowRight;
+
   return (
     <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-8 sm:flex-row sm:justify-between">
       {prev ? (
@@ -249,7 +269,12 @@ export function DocPager({
           href={prev.href}
           className="group inline-flex items-center gap-2 text-[14px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
         >
-          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
+          <PrevArrow
+            className={cn(
+              'size-4 transition-transform',
+              isRtl ? 'group-hover:translate-x-0.5' : 'group-hover:-translate-x-0.5',
+            )}
+          />
           {prev.label}
         </Link>
       ) : (
@@ -261,7 +286,12 @@ export function DocPager({
           className="group inline-flex items-center gap-2 text-[14px] font-medium text-[var(--foreground)]"
         >
           {next.label}
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          <NextArrow
+            className={cn(
+              'size-4 transition-transform',
+              isRtl ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5',
+            )}
+          />
         </Link>
       ) : null}
     </div>

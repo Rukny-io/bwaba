@@ -19,6 +19,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { ReviewsService } from './reviews.service';
 import {
   CreateReviewDto,
@@ -93,6 +94,7 @@ export class ReviewsController {
 
   // ============ Product Reviews (Public) ============
 
+  @Public()
   @Get('product/:productId')
   @ApiOperation({ summary: 'عرض تقييمات المنتج' })
   @ApiParam({ name: 'productId', description: 'معرف المنتج' })
@@ -112,6 +114,7 @@ export class ReviewsController {
     return this.reviewsService.getProductReviews(productId, filters);
   }
 
+  @Public()
   @Get('product/:productId/stats')
   @ApiOperation({ summary: 'إحصائيات تقييمات المنتج' })
   @ApiParam({ name: 'productId', description: 'معرف المنتج' })
@@ -122,6 +125,7 @@ export class ReviewsController {
 
   // ============ Store Reviews (Public) ============
 
+  @Public()
   @Get('store/:storeId')
   @ApiOperation({ summary: 'عرض تقييمات المتجر' })
   @ApiParam({ name: 'storeId', description: 'معرف المتجر' })
@@ -146,6 +150,7 @@ export class ReviewsController {
     return this.reviewsService.getStoreReviews(storeId, filters);
   }
 
+  @Public()
   @Get('store/:storeId/stats')
   @ApiOperation({ summary: 'إحصائيات تقييمات المتجر' })
   @ApiParam({ name: 'storeId', description: 'معرف المتجر' })

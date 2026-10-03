@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { SendExampleArticle } from '@/components/documentation/send-example-article';
+import { getLocalizedSendExample } from '@/lib/documentation-content/email-api/send-examples';
+import { getCurrentLocale } from '@/lib/dictionary';
 import {
   SEND_EXAMPLES,
   getSendExample,
@@ -17,12 +19,21 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const example = getSendExample(slug);
+  const locale = await getCurrentLocale();
+  const example = getLocalizedSendExample(slug as SendExampleId, locale);
   if (!example) {
-    return { title: 'Sending examples | Rukny Documentation' };
+    return {
+      title:
+        locale === 'ar'
+          ? 'أمثلة الإرسال | توثيق رُكني'
+          : 'Sending examples | Rukny Documentation',
+    };
   }
   return {
-    title: `${example.label} — Sending examples | Rukny Documentation`,
+    title:
+      locale === 'ar'
+        ? `${example.label} — أمثلة الإرسال | توثيق رُكني`
+        : `${example.label} — Sending examples | Rukny Documentation`,
     description: example.description,
   };
 }

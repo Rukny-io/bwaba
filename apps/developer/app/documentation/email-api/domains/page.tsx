@@ -1,132 +1,55 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import {
   DocumentationArticle,
   DocCallout,
   DocFeatureGrid,
-  DocInlineCode,
   DocPager,
   DocSection,
   DocSteps,
 } from '@/components/documentation/docs-article';
+import { emailDomainsCopy } from '@/lib/documentation-content/email-api/final-pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Domains — Email API | Rukny Documentation',
-  description:
-    'Verify your sending domain and authorize sender addresses in the Rukny developer portal.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailDomainsCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'why', label: 'Why domains matter' },
-  { id: 'flow', label: 'Setup in the portal' },
-  { id: 'senders', label: 'Authorize senders' },
-  { id: 'deliverability', label: 'Deliverability' },
-];
+export default async function EmailApiDomainsDocsPage() {
+  const c = docCopy(await getCurrentLocale(), emailDomainsCopy);
 
-export default function EmailApiDomainsDocsPage() {
   return (
     <DocumentationArticle
-      title="Domains"
-      description="Prove you own the domain you send from, then authorize the exact addresses your app may use. Do this in the developer portal — not with hand-written REST calls."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="why" title="Why domains matter">
-        <p>
-          Inbox providers trust mail that passes SPF and DKIM from a domain you
-          control. Until verification succeeds, live sending from that domain is
-          blocked.
-        </p>
+      <DocSection id="why" title={c.toc[0]!.label}>
+        <p>{c.whyBody}</p>
       </DocSection>
 
-      <DocSection id="flow" title="Setup in the portal">
+      <DocSection id="flow" title={c.toc[1]!.label}>
         <DocSteps
-          steps={[
-            {
-              title: 'Open Domains',
-              body: (
-                <p>
-                  Sign in to the{' '}
-                  <Link
-                    href="/login?next=/apps"
-                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-                  >
-                    developer dashboard
-                  </Link>
-                  , open your app → Email API → Domains.
-                </p>
-              ),
-            },
-            {
-              title: 'Add your domain',
-              body: (
-                <p>
-                  Enter a domain you control (for example{' '}
-                  <DocInlineCode>yourdomain.com</DocInlineCode>) and start
-                  verification.
-                </p>
-              ),
-            },
-            {
-              title: 'Publish DNS records',
-              body: (
-                <p>
-                  Copy the SPF / DKIM records shown in the portal into your DNS
-                  host. Propagation can take a few minutes to several hours.
-                </p>
-              ),
-            },
-            {
-              title: 'Refresh until verified',
-              body: (
-                <p>
-                  Use Refresh in the Domains UI until the domain status is
-                  verified.
-                </p>
-              ),
-            },
-          ]}
+          steps={c.steps.map((step) => ({
+            title: step.title,
+            body: <p>{step.body}</p>,
+          }))}
         />
-        <DocCallout title="Portal only">
-          Domain verification and sender authorization are managed in the
-          dashboard with your login session. Public API keys are for sending
-          messages and reading delivery status.
-        </DocCallout>
+        <DocCallout title={c.portalTitle}>{c.portalBody}</DocCallout>
       </DocSection>
 
-      <DocSection id="senders" title="Authorize senders">
-        <p>
-          After the domain is verified, authorize a sender such as{' '}
-          <DocInlineCode>noreply@yourdomain.com</DocInlineCode> for the app.
-          Only authorized addresses may appear in{' '}
-          <DocInlineCode>from</DocInlineCode> when you send.
-        </p>
+      <DocSection id="senders" title={c.toc[2]!.label}>
+        <p>{c.sendersBody}</p>
       </DocSection>
 
-      <DocSection id="deliverability" title="Deliverability">
-        <DocFeatureGrid
-          items={[
-            {
-              title: 'Hard bounces',
-              description:
-                'Invalid recipients are suppressed for your account automatically.',
-            },
-            {
-              title: 'Complaints',
-              description:
-                'Spam complaints suppress the address and protect your reputation.',
-            },
-            {
-              title: 'Sudden spikes',
-              description:
-                'A suspicious rise in bounces or complaints can pause sending for review.',
-            },
-          ]}
-        />
+      <DocSection id="deliverability" title={c.toc[3]!.label}>
+        <DocFeatureGrid items={c.deliverability} />
       </DocSection>
 
       <DocPager
-        prev={{ href: '/documentation/email-api/messages', label: 'Messages' }}
-        next={{ href: '/documentation/email-api/testing', label: 'Testing' }}
+        prev={{ href: '/documentation/email-api/messages', label: c.prevLabel }}
+        next={{ href: '/documentation/email-api/testing', label: c.nextLabel }}
       />
     </DocumentationArticle>
   );

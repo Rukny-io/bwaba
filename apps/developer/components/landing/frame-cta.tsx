@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-type FrameCtaVariant = 'primary' | 'ghost';
+type FrameCtaVariant = 'primary' | 'ghost' | 'onDark' | 'ghostOnDark';
 
 const variantClass: Record<FrameCtaVariant, string> = {
   primary:
     'border border-[#111111] bg-[#111111] text-white group-hover:border-[#111111] group-hover:bg-[#111111]',
   ghost:
     'border border-[#e8e8e8] bg-transparent text-[#666666] group-hover:border-[#111111]/30 group-hover:text-[#111111]',
+  onDark:
+    'border border-white bg-white text-[#1D1D1D] group-hover:border-white group-hover:bg-white',
+  ghostOnDark:
+    'border border-white/25 bg-transparent text-white group-hover:border-white/50 group-hover:text-white',
 };
 
 function CornerTicks() {

@@ -25,6 +25,7 @@ import { CreateEventDto, EventStatus } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { RegisterEventDto } from './dto/register-event.dto';
 import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
+import { Public } from '../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('Events')
 @Controller('events')
@@ -44,6 +45,7 @@ export class EventsController {
     return this.eventsService.create(req.user.id, createEventDto);
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Get all events (Public)' })
   @ApiQuery({ name: 'status', enum: EventStatus, required: false })
@@ -94,6 +96,7 @@ export class EventsController {
     return this.eventsService.getMyEvents(req.user.id);
   }
 
+  @Public()
   @Get('e/:slug')
   @ApiOperation({ summary: 'Get event by short slug (Share URL)' })
   @ApiResponse({ status: 200, description: 'Event retrieved successfully' })
@@ -103,6 +106,7 @@ export class EventsController {
     return this.eventsService.findBySlug(slug, userId);
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get event by ID (Public)' })
   @ApiResponse({ status: 200, description: 'Event retrieved successfully' })
@@ -129,6 +133,7 @@ export class EventsController {
     return this.eventsService.getEventRegistrations(id, req.user.id);
   }
 
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get event by slug (Public - Short URL)' })
   @ApiResponse({ status: 200, description: 'Event retrieved successfully' })

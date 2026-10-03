@@ -7,11 +7,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../core/database/prisma/prisma.service';
+import { Public } from '../core/common/decorators/auth/public.decorator';
 
 @Controller('dev')
 export class DevController {
   constructor(private prisma: PrismaService) {}
 
+  @Public()
   @Get('verification-code')
   async getVerificationCode(
     @Query('email') email?: string,

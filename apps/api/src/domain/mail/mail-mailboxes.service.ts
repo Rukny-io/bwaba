@@ -32,7 +32,7 @@ import {
 } from './dto/mail-mailbox.dto';
 import { assertMailboxDisplayName } from './mail-display-name.util';
 
-const BCRYPT_ROUNDS = 10;
+import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 const TOTP_ISSUER = 'Rukny Mail';
 
 function throwMailboxLoginFailed(message: string): never {
@@ -251,7 +251,7 @@ export class MailMailboxesService {
       );
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const passwordHash = await bcrypt.hash(dto.password, OTP_BCRYPT_ROUNDS);
 
     const aliasTaken = await this.prisma.mailAlias.findFirst({
       where: { domain, localPart },
@@ -405,7 +405,7 @@ export class MailMailboxesService {
       mailboxId,
     );
     this.assertPassword(dto.password);
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const passwordHash = await bcrypt.hash(dto.password, OTP_BCRYPT_ROUNDS);
     const updated = await this.prisma.mailMailbox.update({
       where: { id: existing.id },
       data: { passwordHash },

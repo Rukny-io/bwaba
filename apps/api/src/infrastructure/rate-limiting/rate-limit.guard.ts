@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RateLimitingService, RateLimitConfig } from './rate-limiting.service';
+import { getClientIp } from '../../core/common/utils/client-ip.util';
 import * as crypto from 'crypto';
 
 export const RATE_LIMIT_KEY = 'rate_limit';
@@ -51,7 +52,7 @@ export class RateLimitGuard implements CanActivate {
     const response = context.switchToHttp().getResponse();
 
     // الحصول على المعرفات
-    const ip = this.getClientIp(request);
+    const ip = getClientIp(request);
     const userId = request.user?.id || null;
     const endpoint = `${request.method}:${request.route?.path || request.url}`;
     const tier = request.user?.subscriptionTier || 'free';
@@ -113,14 +114,6 @@ export class RateLimitGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  private getClientIp(request: any): string {
-    const forwarded = request.headers['x-forwarded-for'];
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
-    }
-    return request.ip || request.connection?.remoteAddress || 'unknown';
   }
 
   private hashIp(ip: string): string {

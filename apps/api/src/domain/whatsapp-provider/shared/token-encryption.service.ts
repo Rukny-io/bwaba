@@ -19,11 +19,20 @@ export class TokenEncryptionService {
 
   constructor(private configService: ConfigService) {
     const masterKey = this.configService.get<string>('ENCRYPTION_KEY', '');
-    if (!masterKey || masterKey.length < 32) {
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+
+    if (nodeEnv === 'production') {
+      if (!masterKey || !/^[0-9a-fA-F]{64}$/.test(masterKey)) {
+        throw new Error(
+          'ENCRYPTION_KEY must be set to 64 hex characters in production',
+        );
+      }
+    } else if (!masterKey || masterKey.length < 32) {
       this.logger.warn(
         'ENCRYPTION_KEY not set or too short. Token encryption will use fallback.',
       );
     }
+
     // اشتقاق مفتاح 32 بايت من المفتاح الرئيسي
     this.encryptionKey = scryptSync(
       masterKey || 'default-dev-key-change-in-production',

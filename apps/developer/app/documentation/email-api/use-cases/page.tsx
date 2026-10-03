@@ -9,42 +9,32 @@ import {
   DocH3,
 } from '@/components/documentation/docs-article';
 import { EmailApiCodePanel } from '@/components/email-api/email-api-code-panel';
+import { emailUseCasesCopy } from '@/lib/documentation-content/email-api/final-pages';
+import { docCopy } from '@/lib/documentation-content/types';
+import { getCurrentLocale } from '@/lib/dictionary';
 import { SEND_EMAIL_RECIPES } from '@/lib/email-api-code-samples';
 
-export const metadata: Metadata = {
-  title: 'Use cases — Email API | Rukny Documentation',
-  description:
-    'Practical Email API patterns for OTPs, magic links, receipts, and alerts.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = docCopy(await getCurrentLocale(), emailUseCasesCopy);
+  return { title: c.metaTitle, description: c.metaDescription };
+}
 
-const TOC = [
-  { id: 'otp', label: 'OTP / verification' },
-  { id: 'magic-link', label: 'Magic link' },
-  { id: 'receipt', label: 'Receipt' },
-  { id: 'security', label: 'Security alert' },
-  { id: 'techniques', label: 'Techniques' },
-];
+export default async function EmailApiUseCasesPage() {
+  const c = docCopy(await getCurrentLocale(), emailUseCasesCopy);
 
-export default function EmailApiUseCasesPage() {
   return (
     <DocumentationArticle
-      title="Use cases"
-      description="Copy-ready patterns for the most common transactional emails. Each example assumes a verified domain and authorized sender."
-      toc={TOC}
+      title={c.title}
+      description={c.description}
+      toc={c.toc}
     >
-      <DocSection id="otp" title="OTP / verification code">
-        <p>
-          Keep the code short-lived, put it in both subject and body when
-          helpful, and always use a unique idempotency key per attempt.
-        </p>
+      <DocSection id="otp" title={c.toc[0]!.label}>
+        <p>{c.otpBody}</p>
         <EmailApiCodePanel recipes={SEND_EMAIL_RECIPES.filter((r) => r.id === 'otp')} />
       </DocSection>
 
-      <DocSection id="magic-link" title="Magic link / sign-in">
-        <p>
-          Prefer a single CTA URL. Avoid nesting tracking redirects that break
-          deliverability. Expire the token server-side.
-        </p>
+      <DocSection id="magic-link" title={c.toc[1]!.label}>
+        <p>{c.magicBody}</p>
         <DocCode>{`await email.messages.send(
   {
     from: 'noreply@yourdomain.com',
@@ -57,11 +47,8 @@ export default function EmailApiUseCasesPage() {
 );`}</DocCode>
       </DocSection>
 
-      <DocSection id="receipt" title="Order or payment receipt">
-        <p>
-          Keep receipts plain and scannable. Include order id in the subject for
-          searchability. Store the returned message id with the order record.
-        </p>
+      <DocSection id="receipt" title={c.toc[2]!.label}>
+        <p>{c.receiptBody}</p>
         <DocCode>{`await email.messages.send(
   {
     from: 'billing@yourdomain.com',
@@ -73,18 +60,21 @@ export default function EmailApiUseCasesPage() {
   },
   { idempotencyKey: \`receipt_\${order.id}\` },
 );`}</DocCode>
-        <DocCallout title="Idempotency tip">
-          Using <DocInlineCode>{`receipt_\${order.id}`}</DocInlineCode> means a
-          retry after a timeout returns the original send instead of emailing
-          twice.
+        <DocCallout title={c.idemTitle}>
+          {c.idemBody.includes('receipt_${order.id}') ? (
+            <>
+              {c.idemBody.split('receipt_${order.id}')[0]}
+              <DocInlineCode>{`receipt_\${order.id}`}</DocInlineCode>
+              {c.idemBody.split('receipt_${order.id}')[1]}
+            </>
+          ) : (
+            c.idemBody
+          )}
         </DocCallout>
       </DocSection>
 
-      <DocSection id="security" title="Security alert">
-        <p>
-          Send from a recognizable address. Include when and where the action
-          happened, plus a clear recovery path.
-        </p>
+      <DocSection id="security" title={c.toc[3]!.label}>
+        <p>{c.securityBody}</p>
         <DocCode>{`await email.messages.send(
   {
     from: 'security@yourdomain.com',
@@ -96,40 +86,23 @@ export default function EmailApiUseCasesPage() {
 );`}</DocCode>
       </DocSection>
 
-      <DocSection id="techniques" title="Techniques that work well">
-        <DocH3>Stable idempotency keys</DocH3>
-        <p>
-          Derive keys from business ids (<DocInlineCode>order_123</DocInlineCode>,{' '}
-          <DocInlineCode>otp_user_456_attempt_2</DocInlineCode>) instead of random
-          UUIDs when you want natural dedupe.
-        </p>
-        <DocH3>Text + HTML together</DocH3>
-        <p>
-          Provide both <DocInlineCode>bodyText</DocInlineCode> and{' '}
-          <DocInlineCode>bodyHtml</DocInlineCode> for better client compatibility.
-          At least one is required.
-        </p>
-        <DocH3>Store the message id</DocH3>
-        <p>
-          Persist <DocInlineCode>result.id</DocInlineCode> next to the user action
-          so support can look up delivery status later.
-        </p>
-        <DocH3>Test then live</DocH3>
-        <p>
-          Validate templates with <DocInlineCode>rk_test_</DocInlineCode> keys,
-          then swap to <DocInlineCode>rk_live_</DocInlineCode> without changing
-          your code path.
-        </p>
+      <DocSection id="techniques" title={c.toc[4]!.label}>
+        {c.techniques.map((item) => (
+          <div key={item.title}>
+            <DocH3>{item.title}</DocH3>
+            <p>{item.body}</p>
+          </div>
+        ))}
       </DocSection>
 
       <DocPager
         prev={{
           href: '/documentation/email-api/get-started',
-          label: 'Get started',
+          label: c.prevLabel,
         }}
         next={{
           href: '/documentation/email-api/best-practices',
-          label: 'Best practices',
+          label: c.nextLabel,
         }}
       />
     </DocumentationArticle>

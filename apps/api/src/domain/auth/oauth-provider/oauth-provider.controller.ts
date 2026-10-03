@@ -15,8 +15,10 @@ import type { Request, Response } from 'express';
 import { SkipThrottle } from '@nestjs/throttler';
 import { OAuthProviderService } from './oauth-provider.service';
 import { OAuthTokenDto } from './dto/oauth-token.dto';
+import { Public } from '../../../core/common/decorators/auth/public.decorator';
 
 @ApiTags('OAuth')
+@Public()
 @Controller('oauth')
 export class OAuthProviderController {
   constructor(private readonly oauth: OAuthProviderService) {}

@@ -13,17 +13,35 @@ export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 // Cookie Configuration
 // ============================================================================
 
-export const COOKIE_DOMAIN = IS_PRODUCTION 
-  ? process.env.COOKIE_DOMAIN || '.rukny.io' 
+export const COOKIE_SECURE =
+  IS_PRODUCTION &&
+  process.env.COOKIE_SECURE !== 'false' &&
+  process.env.COOKIE_SECURE !== '0';
+
+const usePrefixedCookieNames = IS_PRODUCTION && COOKIE_SECURE;
+
+export const COOKIE_DOMAIN = IS_PRODUCTION
+  ? process.env.COOKIE_DOMAIN === ''
+    ? undefined
+    : process.env.COOKIE_DOMAIN || '.rukny.io'
   : undefined;
 
-export const COOKIE_SECURE = IS_PRODUCTION;
+const isHostOnlyCookieConfig = usePrefixedCookieNames && !COOKIE_DOMAIN;
+
 export const COOKIE_SAME_SITE: 'strict' | 'lax' | 'none' = 'lax';
 
 export const COOKIE_NAMES = {
-  accessToken: IS_PRODUCTION ? '__Secure-access_token' : 'access_token',
-  refreshToken: IS_PRODUCTION ? '__Secure-refresh_token' : 'refresh_token',
-  csrfToken: IS_PRODUCTION ? '__Host-csrf_token' : 'csrf_token',
+  accessToken: usePrefixedCookieNames
+    ? '__Secure-access_token'
+    : 'access_token',
+  refreshToken: usePrefixedCookieNames
+    ? '__Secure-refresh_token'
+    : 'refresh_token',
+  csrfToken: isHostOnlyCookieConfig
+    ? '__Host-csrf_token'
+    : usePrefixedCookieNames
+      ? '__Secure-csrf_token'
+      : 'csrf_token',
 } as const;
 
 export const TOKEN_EXPIRY = {
@@ -56,7 +74,9 @@ export const AUTH_COOKIES: AuthCookies = {
     httpOnly: false,
     secure: COOKIE_SECURE,
     sameSite: COOKIE_SAME_SITE,
-    domain: COOKIE_DOMAIN,
+    domain: COOKIE_NAMES.csrfToken.startsWith('__Host-')
+      ? undefined
+      : COOKIE_DOMAIN,
     path: '/',
     maxAge: TOKEN_EXPIRY.csrfToken,
   },

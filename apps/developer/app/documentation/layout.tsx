@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { DocumentationShell } from '@/components/documentation/docs-shell';
+import { DocumentationShell } from '@/components/documentation/documentation-shell';
+import { getDictionary } from '@/lib/dictionary';
 
-export const metadata: Metadata = {
-  title: 'Documentation | Rukny Developers',
-  description:
-    'Learn how to build with Rukny APIs, SDKs, and developer products.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const dictionary = await getDictionary();
+  return {
+    title: dictionary.docs.metaTitle,
+    description: dictionary.docs.metaDescription,
+  };
+}
 
 export default function DocumentationLayout({
   children,

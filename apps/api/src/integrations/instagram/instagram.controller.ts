@@ -22,6 +22,12 @@ import { JwtAuthGuard } from '../../core/common/guards/auth/jwt-auth.guard';
 import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { InstagramWebhookGuard } from './guards/instagram-webhook.guard';
 import { SkipThrottle } from '@nestjs/throttler';
+import {
+  integrationOAuthStateLegacyAllowed,
+  parseLegacyIntegrationOAuthState,
+  signIntegrationOAuthState,
+  verifyIntegrationOAuthState,
+} from '../../core/common/utils/integration-oauth-state.util';
 
 @Controller('integrations/instagram')
 export class InstagramController {
@@ -115,14 +121,16 @@ export class InstagramController {
         ? opts.intent
         : undefined;
 
-    const statePayload = JSON.stringify({
-      userId,
-      redirect: opts.redirect || '/app/instagram',
-      redirectBase: opts.redirectBase,
-      intent: allowedIntent,
-      ...(opts.linkId ? { linkId: opts.linkId } : {}),
-    });
-    const state = Buffer.from(statePayload).toString('base64url');
+    const state = signIntegrationOAuthState(
+      {
+        userId,
+        redirect: opts.redirect || '/app/instagram',
+        redirectBase: opts.redirectBase,
+        intent: allowedIntent,
+        ...(opts.linkId ? { linkId: opts.linkId } : {}),
+      },
+      this.oauthStateSecret(),
+    );
     return this.instagramService.getAuthUrl(state);
   }
 
@@ -144,20 +152,20 @@ export class InstagramController {
     let intent: 'profile_card' | 'media_grid' | undefined;
     let existingLinkId: string | undefined;
 
-    try {
-      const decoded = Buffer.from(state, 'base64url').toString('utf8');
-      const parsed = JSON.parse(decoded);
-      userId = parsed.userId;
-      if (parsed.redirect) redirectPath = parsed.redirect;
-      if (parsed.redirectBase) redirectBase = parsed.redirectBase;
-      if (parsed.intent === 'profile_card' || parsed.intent === 'media_grid') {
-        intent = parsed.intent;
-      }
-      if (typeof parsed.linkId === 'string' && parsed.linkId) {
-        existingLinkId = parsed.linkId;
-      }
-    } catch {
-      userId = Buffer.from(state, 'base64url').toString('utf8');
+    const parsed = this.resolveInstagramState(state);
+    if (!parsed?.userId) {
+      return res.redirect(
+        `${this.appFrontendUrl}/app/instagram?instagram=error&reason=invalid_state`,
+      );
+    }
+    userId = parsed.userId;
+    if (parsed.redirect) redirectPath = parsed.redirect;
+    if (parsed.redirectBase) redirectBase = parsed.redirectBase;
+    if (parsed.intent === 'profile_card' || parsed.intent === 'media_grid') {
+      intent = parsed.intent;
+    }
+    if (typeof parsed.linkId === 'string' && parsed.linkId) {
+      existingLinkId = parsed.linkId;
     }
 
     const fullRedirect = `${redirectBase}${redirectPath}`;
@@ -351,6 +359,7 @@ export class InstagramController {
    * Instagram deauthorize callback
    * POST /api/v1/integrations/instagram/deauthorize
    */
+  @Public()
   @Post('deauthorize')
   @HttpCode(HttpStatus.OK)
   async deauthorize(@Body() body: { signed_request?: string }) {
@@ -361,6 +370,7 @@ export class InstagramController {
    * Data deletion request callback
    * POST /api/v1/integrations/instagram/data-deletion
    */
+  @Public()
   @Post('data-deletion')
   @HttpCode(HttpStatus.OK)
   async dataDeletion() {
@@ -642,5 +652,60 @@ export class InstagramController {
     @Param('mediaId') mediaId: string,
   ) {
     return this.instagramService.removeGridLink(req.user.id, blockId, mediaId);
+  }
+
+  private oauthStateSecret(): string {
+    return this.config.get<string>('JWT_SECRET')!;
+  }
+
+  private resolveInstagramState(state: string): {
+    userId: string;
+    redirect?: string;
+    redirectBase?: string;
+    intent?: 'profile_card' | 'media_grid';
+    linkId?: string;
+  } | null {
+    const verified = verifyIntegrationOAuthState<{
+      userId: string;
+      redirect?: string;
+      redirectBase?: string;
+      intent?: string;
+      linkId?: string;
+    }>(state, this.oauthStateSecret());
+    if (verified?.userId) {
+      return {
+        userId: verified.userId,
+        redirect: verified.redirect,
+        redirectBase: verified.redirectBase,
+        intent:
+          verified.intent === 'profile_card' || verified.intent === 'media_grid'
+            ? verified.intent
+            : undefined,
+        linkId: verified.linkId,
+      };
+    }
+
+    if (!integrationOAuthStateLegacyAllowed()) return null;
+    const legacy = parseLegacyIntegrationOAuthState(state);
+    if (typeof legacy === 'string') {
+      return { userId: legacy };
+    }
+    if (legacy && typeof legacy.userId === 'string') {
+      return {
+        userId: legacy.userId,
+        redirect:
+          typeof legacy.redirect === 'string' ? legacy.redirect : undefined,
+        redirectBase:
+          typeof legacy.redirectBase === 'string'
+            ? legacy.redirectBase
+            : undefined,
+        intent:
+          legacy.intent === 'profile_card' || legacy.intent === 'media_grid'
+            ? legacy.intent
+            : undefined,
+        linkId: typeof legacy.linkId === 'string' ? legacy.linkId : undefined,
+      };
+    }
+    return null;
   }
 }

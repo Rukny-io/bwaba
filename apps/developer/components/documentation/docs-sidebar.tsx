@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
+import { useTranslations } from '@/components/providers/translations-provider';
 import {
   DOCUMENTATION_BASE,
-  DOCUMENTATION_PRODUCTS,
-  getDocumentationProduct,
   isDocNavActive,
   type DocumentationNavGroup,
   type DocumentationProductId,
 } from '@/lib/documentation-nav';
+import {
+  getLocalizedDocumentationProduct,
+  localizeDocumentationProducts,
+} from '@/lib/documentation-i18n';
 import { cn } from '@/lib/utils';
 
 function DocsNavGroups({
@@ -103,8 +106,10 @@ export function DocsSidebar({
 }: {
   productId: DocumentationProductId;
 }) {
+  const t = useTranslations();
+  const d = t.docs;
   const pathname = usePathname();
-  const product = getDocumentationProduct(productId);
+  const product = getLocalizedDocumentationProduct(productId, d);
   const groups = product?.navGroups ?? [];
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -114,8 +119,8 @@ export function DocsSidebar({
         if (isDocNavActive(pathname, item.href)) return item.label;
       }
     }
-    return product?.title ?? 'Docs';
-  }, [groups, pathname, product?.title]);
+    return product?.title ?? d.brandDocs;
+  }, [groups, pathname, product?.title, d.brandDocs]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -137,13 +142,14 @@ export function DocsSidebar({
 
   if (!product || groups.length === 0) return null;
 
-  const availableProducts = DOCUMENTATION_PRODUCTS.filter((item) => item.available);
+  const availableProducts = localizeDocumentationProducts(d).filter(
+    (item) => item.available,
+  );
   const closeMobile = () => setMobileOpen(false);
 
   return (
     <>
-      {/* Mobile: compact sticky bar under header */}
-      <div className="sticky top-14 z-30 -mx-5 mb-6 border-b border-[var(--border)] bg-[var(--background)]/90 px-5 backdrop-blur-md sm:top-[3.75rem] sm:-mx-6 sm:px-6 lg:hidden">
+      <div className="sticky top-14 z-30 -mx-5 mb-6 border-b border-[var(--border)] bg-white/90 px-5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">
         <button
           type="button"
           aria-expanded={mobileOpen}
@@ -183,10 +189,10 @@ export function DocsSidebar({
                       href={item.href}
                       onClick={closeMobile}
                       className={cn(
-                        'inline-flex h-8 flex-1 items-center justify-center rounded-lg text-[12.5px] font-medium transition-colors',
+                        'inline-flex h-8 flex-1 items-center justify-center rounded-xl text-[12.5px] font-medium transition-colors',
                         active
-                          ? 'bg-[var(--foreground)] text-[var(--background)]'
-                          : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
+                          ? 'bg-[#1D1D1D] text-white'
+                          : 'bg-[#F5F5F5] text-[#6B6F76]',
                       )}
                     >
                       {item.title}
@@ -206,7 +212,7 @@ export function DocsSidebar({
               onClick={closeMobile}
               className="mt-4 inline-flex text-[13px] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             >
-              All documentation
+              {d.allDocs}
             </Link>
           </div>
         ) : null}
@@ -215,15 +221,14 @@ export function DocsSidebar({
       {mobileOpen ? (
         <button
           type="button"
-          aria-label="Close documentation menu"
+          aria-label={d.closeMenu}
           className="fixed inset-0 z-20 bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)] lg:hidden"
           onClick={closeMobile}
         />
       ) : null}
 
-      {/* Desktop sidebar — stretch with article row so sticky can follow scroll */}
       <aside className="hidden lg:block">
-        <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain pe-2 sm:top-[3.75rem] sm:max-h-[calc(100dvh-3.75rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain pe-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <p className="mb-4 px-3 text-[13px] font-semibold text-[var(--foreground)]">
             {product.title}
           </p>
@@ -237,7 +242,7 @@ export function DocsSidebar({
               href={DOCUMENTATION_BASE}
               className="block px-3 text-[12.5px] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
             >
-              All documentation
+              {d.allDocs}
             </Link>
           </div>
         </div>

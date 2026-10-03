@@ -3,12 +3,16 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { AddressesService } from './addresses.service';
+import { WhatsAppBusinessService } from '../../integrations/whatsapp-business/whatsapp-business.service';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 /**
  * 🚀 خدمة ترقية الحساب - Account Upgrade Service
@@ -23,6 +27,7 @@ export interface UpgradeAccountDto {
   email: string;
   password: string;
   name?: string;
+  upgradeToken: string;
 }
 
 export interface UpgradeResult {
@@ -37,6 +42,9 @@ export interface UpgradeResult {
 }
 
 const BCRYPT_ROUNDS = 12;
+const OTP_EXPIRY_MINUTES = 10;
+const MAX_OTP_ATTEMPTS = 3;
+const UPGRADE_TOKEN_MINUTES = 15;
 
 @Injectable()
 export class AccountUpgradeService {
@@ -52,13 +60,175 @@ export class AccountUpgradeService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly addressesService: AddressesService,
+    private readonly whatsappBusiness: WhatsAppBusinessService,
   ) {}
+
+  /**
+   * 📲 طلب OTP لترقية الحساب (رد موحّد لمنع enumeration)
+   */
+  async requestUpgradeOtp(phoneNumber: string): Promise<{
+    success: boolean;
+    message: string;
+    otpId: string;
+    expiresIn: number;
+  }> {
+    const hasGuestData = await this.hasGuestData(phoneNumber);
+
+    await this.prismaAny.whatsappOtp.updateMany({
+      where: {
+        phoneNumber,
+        type: 'APP_VERIFICATION',
+        verified: false,
+        expiresAt: { gt: new Date() },
+      },
+      data: { expiresAt: new Date() },
+    });
+
+    const otpCode = this.generateOtpCode();
+    const codeHash = await bcrypt.hash(otpCode, OTP_BCRYPT_ROUNDS);
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
+
+    const otpRecord = await this.prismaAny.whatsappOtp.create({
+      data: {
+        phoneNumber,
+        codeHash,
+        type: 'APP_VERIFICATION',
+        expiresAt,
+      },
+    });
+
+    if (hasGuestData) {
+      try {
+        await this.whatsappBusiness.sendOtp(phoneNumber, otpCode);
+      } catch (error) {
+        this.logger.error(
+          `Failed to send upgrade OTP to ${phoneNumber}: ${(error as Error).message}`,
+        );
+        throw new BadRequestException({
+          message: 'فشل في إرسال رمز التحقق. يرجى المحاولة لاحقاً.',
+          code: 'OTP_SEND_FAILED',
+        });
+      }
+    }
+
+    return {
+      success: true,
+      message:
+        'إذا كان الرقم مرتبطاً بطلبات، سيصلك رمز التحقق عبر واتساب خلال دقائق.',
+      otpId: otpRecord.id,
+      expiresIn: OTP_EXPIRY_MINUTES * 60,
+    };
+  }
+
+  /**
+   * ✅ التحقق من OTP وإصدار upgradeToken + ملخص البيانات
+   */
+  async verifyUpgradeOtp(input: {
+    phoneNumber: string;
+    code: string;
+    otpId: string;
+  }): Promise<{
+    success: boolean;
+    upgradeToken: string;
+    expiresIn: number;
+    summary: {
+      ordersCount: number;
+      addressesCount: number;
+      totalSpent: number;
+      canUpgrade: boolean;
+    };
+  }> {
+    const { phoneNumber, code, otpId } = input;
+    const otpRecord = await this.prismaAny.whatsappOtp.findUnique({
+      where: { id: otpId },
+    });
+
+    if (!otpRecord || otpRecord.type !== 'APP_VERIFICATION') {
+      throw new BadRequestException({
+        message: 'رمز التحقق غير صالح',
+        code: 'INVALID_OTP_ID',
+      });
+    }
+
+    if (otpRecord.phoneNumber !== phoneNumber) {
+      throw new BadRequestException({
+        message: 'رقم الهاتف غير متطابق',
+        code: 'PHONE_MISMATCH',
+      });
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException({
+        message: 'انتهت صلاحية رمز التحقق',
+        code: 'OTP_EXPIRED',
+      });
+    }
+
+    if (otpRecord.verified) {
+      throw new BadRequestException({
+        message: 'تم استخدام هذا الرمز مسبقاً',
+        code: 'OTP_ALREADY_USED',
+      });
+    }
+
+    if (otpRecord.attempts >= MAX_OTP_ATTEMPTS) {
+      throw new BadRequestException({
+        message: 'تم تجاوز الحد الأقصى للمحاولات',
+        code: 'MAX_ATTEMPTS_EXCEEDED',
+      });
+    }
+
+    await this.prismaAny.whatsappOtp.update({
+      where: { id: otpId },
+      data: { attempts: { increment: 1 } },
+    });
+
+    const isValid = await bcrypt.compare(code, otpRecord.codeHash);
+    if (!isValid) {
+      const remaining = MAX_OTP_ATTEMPTS - (otpRecord.attempts + 1);
+      throw new BadRequestException({
+        message: `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}`,
+        code: 'INVALID_OTP_CODE',
+        remainingAttempts: remaining,
+      });
+    }
+
+    if (!(await this.hasGuestData(phoneNumber))) {
+      throw new BadRequestException({
+        message: 'لا توجد بيانات ضيف مرتبطة بهذا الرقم',
+        code: 'NO_GUEST_DATA',
+      });
+    }
+
+    await this.prismaAny.whatsappOtp.update({
+      where: { id: otpId },
+      data: { verified: true, verifiedAt: new Date() },
+    });
+
+    const summary = await this.getGuestDataSummaryForPhone(phoneNumber);
+    const upgradeToken = this.jwtService.sign(
+      {
+        purpose: 'account_upgrade',
+        phoneNumber,
+      },
+      { expiresIn: `${UPGRADE_TOKEN_MINUTES}m` },
+    );
+
+    return {
+      success: true,
+      upgradeToken,
+      expiresIn: UPGRADE_TOKEN_MINUTES * 60,
+      summary,
+    };
+  }
 
   /**
    * 🚀 ترقية حساب ضيف إلى حساب كامل
    */
   async upgradeAccount(dto: UpgradeAccountDto): Promise<UpgradeResult> {
-    const { phoneNumber, email, password, name } = dto;
+    const { phoneNumber, email, password, name, upgradeToken } = dto;
+    this.assertUpgradeToken(phoneNumber, upgradeToken);
 
     // 1. التحقق من عدم وجود حساب بنفس البريد
     const existingEmail = await this.prisma.user.findFirst({
@@ -229,29 +399,54 @@ export class AccountUpgradeService {
   /**
    * 📊 جلب إحصائيات بيانات الضيف قبل الترقية
    */
-  async getGuestDataSummary(phoneNumber: string): Promise<{
+  getMaskedGuestSummary(): {
     ordersCount: number;
     addressesCount: number;
     totalSpent: number;
     canUpgrade: boolean;
+    requiresVerification: boolean;
+  } {
+    return {
+      ordersCount: 0,
+      addressesCount: 0,
+      totalSpent: 0,
+      canUpgrade: true,
+      requiresVerification: true,
+    };
+  }
+
+  async getGuestDataSummary(
+    phoneNumber: string,
+    upgradeToken?: string,
+  ): Promise<{
+    ordersCount: number;
+    addressesCount: number;
+    totalSpent: number;
+    canUpgrade: boolean;
+    requiresVerification?: boolean;
   }> {
-    // عدد الطلبات
+    if (!upgradeToken) {
+      return this.getMaskedGuestSummary();
+    }
+
+    this.assertUpgradeToken(phoneNumber, upgradeToken);
+    return this.getGuestDataSummaryForPhone(phoneNumber);
+  }
+
+  private async getGuestDataSummaryForPhone(phoneNumber: string) {
     const ordersCount = await this.prismaAny.orders.count({
       where: { phoneNumber },
     });
 
-    // عدد العناوين
     const addressesCount = await this.prisma.addresses.count({
       where: { phoneNumber },
     });
 
-    // إجمالي المشتريات
     const totalSpentResult = await this.prismaAny.orders.aggregate({
       where: { phoneNumber },
       _sum: { total: true },
     });
 
-    // التحقق من إمكانية الترقية (لا يوجد حساب كامل بنفس الرقم)
     const existingFullAccount = await this.prismaAny.user.findFirst({
       where: {
         phoneNumber,
@@ -265,6 +460,34 @@ export class AccountUpgradeService {
       totalSpent: Number(totalSpentResult._sum?.total || 0),
       canUpgrade: !existingFullAccount,
     };
+  }
+
+  private assertUpgradeToken(phoneNumber: string, upgradeToken: string) {
+    try {
+      const payload = this.jwtService.verify<{ purpose?: string; phoneNumber?: string }>(
+        upgradeToken,
+      );
+      if (
+        payload.purpose !== 'account_upgrade' ||
+        payload.phoneNumber !== phoneNumber
+      ) {
+        throw new UnauthorizedException('رمز التحقق غير صالح');
+      }
+    } catch {
+      throw new UnauthorizedException('رمز التحقق منتهي أو غير صالح');
+    }
+  }
+
+  private async hasGuestData(phoneNumber: string): Promise<boolean> {
+    const [ordersCount, addressesCount] = await Promise.all([
+      this.prismaAny.orders.count({ where: { phoneNumber } }),
+      this.prisma.addresses.count({ where: { phoneNumber } }),
+    ]);
+    return ordersCount > 0 || addressesCount > 0;
+  }
+
+  private generateOtpCode(): string {
+    return crypto.randomInt(100000, 1000000).toString();
   }
 
   /**

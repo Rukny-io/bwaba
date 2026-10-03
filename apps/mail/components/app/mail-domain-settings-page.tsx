@@ -19,6 +19,7 @@ export function MailDomainSettingsPage() {
   const appHref = withMailSlot("/app", slot);
 
   const [setup, setSetup] = useState<MailDomainSetup | null>(null);
+  const [tokensChanged, setTokensChanged] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -34,12 +35,14 @@ export function MailDomainSettingsPage() {
 
     (async () => {
       try {
-        const restored = await restoreDomainSetupRequest();
+        const { setup: restored, tokensChanged: refreshedTokens } =
+          await restoreDomainSetupRequest();
         if (cancelled) return;
 
         if (restored) {
           writeMailDomainSetup(restored, appId);
           setSetup(restored);
+          setTokensChanged(refreshedTokens);
         } else {
           writeMailDomainSetup(null, appId);
           setSetup(null);
@@ -75,5 +78,11 @@ export function MailDomainSettingsPage() {
     );
   }
 
-  return <MailDomainDashboard setup={setup} />;
+  return (
+    <MailDomainDashboard
+      setup={setup}
+      tokensChanged={tokensChanged}
+      onTokensChanged={setTokensChanged}
+    />
+  );
 }

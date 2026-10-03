@@ -78,7 +78,7 @@ export async function createDomainRequest(domain: string): Promise<MailDomainSet
   return data.setup;
 }
 
-let restoreInflight: Promise<MailDomainSetup | null> | null = null;
+let restoreInflight: Promise<RestoreDomainSetupResult> | null = null;
 
 export type RestoreDomainSetupResult = {
   setup: MailDomainSetup | null;

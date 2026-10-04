@@ -112,9 +112,9 @@ export class MailFilterRulesService {
   ) {
     if (!isPremiumRegexField(matchField)) return;
     const active = await this.subscriptions.getActiveLimitsForApp(mailAppUuid);
-    if (active?.plan !== MailPlan.PREMIUM) {
+    if (active?.plan !== MailPlan.PROFESSIONAL && active?.plan !== MailPlan.CUSTOM) {
       throw new BadRequestException(
-        'Regex filter rules require the Premium plan.',
+        'Regex filter rules require the Professional plan.',
       );
     }
   }

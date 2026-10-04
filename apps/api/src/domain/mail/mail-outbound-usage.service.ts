@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MailPlan, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
@@ -39,12 +40,19 @@ export class MailOutboundUsageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
+    private readonly config: ConfigService,
   ) {}
 
+  private isUnifiedBillingOnly(): boolean {
+    const raw = this.config.get<string>('MAIL_UNIFIED_BILLING_ONLY');
+    return raw === 'true' || raw === '1';
+  }
+
   async getUsageForMailApp(mailAppUuid: string): Promise<MailOutboundUsageView | null> {
-    const unified =
-      await this.unifiedEntitlement.getOutboundUsageForMailApp(mailAppUuid);
-    if (unified) {
+    if (this.isUnifiedBillingOnly()) {
+      const unified =
+        await this.unifiedEntitlement.getOutboundUsageForMailApp(mailAppUuid);
+      if (unified) {
       return {
         plan: MailPlan.STARTER,
         planId: unified.planId,
@@ -63,6 +71,7 @@ export class MailOutboundUsageService {
         packPriceIqd: null,
         unified: true,
       };
+      }
     }
 
     const sub = await this.prisma.mailSubscription.findUnique({
@@ -108,11 +117,13 @@ export class MailOutboundUsageService {
     mailAppUuid: string,
     count: number,
   ): Promise<{ remaining: number }> {
-    const unified = await this.unifiedEntitlement.reserveOutbound(
-      mailAppUuid,
-      count,
-    );
-    if (unified) return unified;
+    if (this.isUnifiedBillingOnly()) {
+      const unified = await this.unifiedEntitlement.reserveOutbound(
+        mailAppUuid,
+        count,
+      );
+      if (unified) return unified;
+    }
 
     const n = Math.max(1, Math.floor(count));
     const sub = await this.prisma.mailSubscription.findUnique({

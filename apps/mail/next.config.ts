@@ -47,6 +47,7 @@ const monorepoAliases = {
   jose: "./node_modules/jose",
   "@rukny/email-api-pricing":
     "./node_modules/@rukny/email-api-pricing/dist/index.js",
+  "@rukny/mail-pricing": "./node_modules/@rukny/mail-pricing/dist/index.js",
 };
 
 const API_BACKEND_URL =
@@ -62,6 +63,7 @@ const nextConfig: NextConfig = {
     "@heroui/styles",
     "@rukny/auth",
     "@rukny/email-api-pricing",
+    "@rukny/mail-pricing",
     "@rukny/forms-shared",
     "@rukny/thmanyah-font",
   ],

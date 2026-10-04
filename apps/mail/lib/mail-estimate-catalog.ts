@@ -1,6 +1,5 @@
 /**
- * @deprecated Legacy Starter/Standard/Premium estimate — /pricing/estimate uses Email API pricing.
- * Kept for backwards compatibility with mail-pricing-estimate.tsx.
+ * Mail hosted-email cost estimator — mirrors Billing checkout rules.
  */
 
 import {
@@ -23,16 +22,21 @@ export const MAIL_ESTIMATE_MAILBOX_MAX = 500;
 export const MAIL_ESTIMATE_INCLUDED_OUTBOUND: Record<MailPlanId, number> =
   MAIL_INCLUDED_OUTBOUND;
 
-/** Flat pack price used for overage (same on every plan). */
+export const MAIL_ESTIMATE_PACK_EMAILS = MAIL_OUTBOUND_PACK_EMAILS;
+
+export function packPriceForPlan(planId: MailPlanId): number | null {
+  return MAIL_OUTBOUND_PACK_PRICE_IQD[planId] ?? null;
+}
+
+/** Flat pack price on paid self-serve plans (Starter & Professional). */
 export const MAIL_ESTIMATE_PACK_PRICE_IQD =
   MAIL_OUTBOUND_PACK_PRICE_IQD.starter ?? 800;
 
-export const MAIL_ESTIMATE_PACK_EMAILS = MAIL_OUTBOUND_PACK_EMAILS;
-
-/** Volume chips aligned with plan quotas. */
 export const MAIL_ESTIMATE_VOLUME_PRESETS = [
+  { label: "1K", emails: 1_000 },
   { label: "4K", emails: 4_000 },
   { label: "10K", emails: 10_000 },
+  { label: "15K", emails: 15_000 },
   { label: "30K", emails: 30_000 },
   { label: "50K", emails: 50_000 },
   { label: "100K", emails: 100_000 },
@@ -63,11 +67,11 @@ export type MailEstimateBreakdown = {
   extraMailboxes: number;
   extraMailboxUnit: number;
   extraSeatsCost: number;
-  /** Prepaid packs for overage (ceil to 1K units × 800 IQD). */
   volumeCost: number;
-  /** Seats + packs — what Billing charges. */
   totalMonthly: number;
   overQuota: boolean;
+  packsAvailable: boolean;
+  upgradeRequired: boolean;
   packPriceIqd: number;
   highlights: string[];
 };
@@ -76,19 +80,10 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-/** Packs needed for billable emails (whole thousands, min 0). */
 export function packThousandsForEmails(billableEmails: number): number {
   const n = Math.max(0, Math.floor(billableEmails));
   if (n <= 0) return 0;
   return Math.ceil(n / MAIL_ESTIMATE_PACK_EMAILS);
-}
-
-export function rateForBillableEmails(billableEmails: number): number {
-  return packThousandsForEmails(billableEmails) * MAIL_ESTIMATE_PACK_PRICE_IQD;
-}
-
-export function estimateRawVolumeCost(emails: number): number {
-  return rateForBillableEmails(emails);
 }
 
 export function estimateMailMonthlyCost(
@@ -108,8 +103,12 @@ export function estimateMailMonthlyCost(
 
   const includedOutbound = MAIL_ESTIMATE_INCLUDED_OUTBOUND[input.planId];
   const billableEmails = Math.max(0, monthlyOutbound - includedOutbound);
-  const packThousands = packThousandsForEmails(billableEmails);
-  const volumeCost = packThousands * MAIL_ESTIMATE_PACK_PRICE_IQD;
+  const packsAvailable = packPriceForPlan(input.planId) != null;
+  const packPriceIqd = packsAvailable
+    ? (packPriceForPlan(input.planId) as number)
+    : MAIL_ESTIMATE_PACK_PRICE_IQD;
+  const packThousands = packsAvailable ? packThousandsForEmails(billableEmails) : 0;
+  const volumeCost = packThousands * packPriceIqd;
   const seatsCost = mailPlanMonthlyTotal(input.planId, mailboxes);
   const extraMailboxes = Math.max(0, mailboxes - plan.limits.mailboxesIncluded);
   const extraSeatsCost = extraMailboxes * plan.priceExtraMailbox;
@@ -130,11 +129,15 @@ export function estimateMailMonthlyCost(
     volumeCost,
     totalMonthly: seatsCost + volumeCost,
     overQuota: billableEmails > 0,
-    packPriceIqd: MAIL_ESTIMATE_PACK_PRICE_IQD,
+    packsAvailable,
+    upgradeRequired: billableEmails > 0 && !packsAvailable,
+    packPriceIqd,
     highlights: [
       ...mailPlanHighlights(plan),
       `${includedOutbound.toLocaleString("en-IQ")} outbound emails included / mo`,
-      `${MAIL_ESTIMATE_PACK_PRICE_IQD.toLocaleString("en-IQ")} IQD / ${MAIL_ESTIMATE_PACK_EMAILS.toLocaleString("en-IQ")} extra emails`,
+      packsAvailable
+        ? `${packPriceIqd.toLocaleString("en-IQ")} IQD / ${MAIL_ESTIMATE_PACK_EMAILS.toLocaleString("en-IQ")} extra emails`
+        : "Outbound packs available on paid plans",
     ],
   };
 }
@@ -149,9 +152,36 @@ export function estimateAllPlans(input: Omit<MailEstimateInput, "planId">) {
   );
 }
 
-/**
- * Recommend the cheapest plan that satisfies feature gates and quota ladder.
- */
+function minimumPlanForFeatures(
+  features: MailEstimateFeatureNeeds,
+): MailPlanId {
+  if (
+    features.openTracking ||
+    features.linkAndFileTracking ||
+    features.premiumDelivery
+  ) {
+    return "professional";
+  }
+  return "free";
+}
+
+function minimumPlanForVolume(input: {
+  mailboxes: number;
+  monthlyOutbound: number;
+}): MailPlanId {
+  if (
+    input.mailboxes > getMailPlan("free").limits.mailboxesIncluded ||
+    input.monthlyOutbound > MAIL_ESTIMATE_INCLUDED_OUTBOUND.free
+  ) {
+    if (input.monthlyOutbound > MAIL_ESTIMATE_INCLUDED_OUTBOUND.starter) {
+      return "professional";
+    }
+    return "starter";
+  }
+  return "free";
+}
+
+/** Cheapest plan that satisfies seats, outbound, and feature gates. */
 export function recommendMailPlan(input: {
   mailboxes: number;
   monthlyOutbound: number;
@@ -163,24 +193,14 @@ export function recommendMailPlan(input: {
     premiumDelivery: Boolean(input.features?.premiumDelivery),
   };
 
-  let minPlan: MailPlanId = "starter";
-  if (
-    features.openTracking ||
-    input.monthlyOutbound > MAIL_ESTIMATE_INCLUDED_OUTBOUND.starter
-  ) {
-    minPlan = "standard";
-  }
-  if (
-    features.linkAndFileTracking ||
-    features.premiumDelivery ||
-    input.monthlyOutbound > MAIL_ESTIMATE_INCLUDED_OUTBOUND.standard
-  ) {
-    minPlan = "premium";
-  }
-
-  const order: MailPlanId[] = ["starter", "standard", "premium"];
-  const startIdx = order.indexOf(minPlan);
-  const candidates = order.slice(startIdx);
+  const featureFloor = minimumPlanForFeatures(features);
+  const volumeFloor = minimumPlanForVolume(input);
+  const order: MailPlanId[] = ["free", "starter", "professional"];
+  const floorIdx = Math.max(
+    order.indexOf(featureFloor),
+    order.indexOf(volumeFloor),
+  );
+  const candidates = order.slice(floorIdx);
 
   let best = candidates[0];
   let bestTotal = Number.POSITIVE_INFINITY;

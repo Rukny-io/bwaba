@@ -14,9 +14,10 @@ import { FilterDropdown } from '@/components/shared/filter-dropdown';
 import { detailPanelClassName } from '@/components/ui/pill-tab';
 
 const PLAN_OPTIONS: { value: MailPlanCode; label: string }[] = [
-  { value: 'STARTER', label: 'Starter · 1 mailbox · 5 GB · 3,000 IQD' },
-  { value: 'STANDARD', label: 'Standard · 3 mailboxes · 20 GB · 6,000 IQD' },
-  { value: 'PREMIUM', label: 'Premium · 5 mailboxes · 30 GB · 10,000 IQD' },
+  { value: 'FREE', label: 'Free · 1 mailbox · 0 IQD' },
+  { value: 'STARTER', label: 'Starter · 3 mailboxes · 3,000 IQD' },
+  { value: 'PROFESSIONAL', label: 'Professional · 5 mailboxes · 8,000 IQD' },
+  { value: 'CUSTOM', label: 'Custom · negotiated' },
 ];
 
 const OPEN_STATUSES = new Set(['OPEN', 'IN_PROGRESS', 'WAITING_ON_USER']);
@@ -76,8 +77,7 @@ export function SupportTicketMailPlanPanel({
         Mail plan request
       </h2>
       <p className="text-xs text-[var(--muted-foreground)]">
-        Legacy Mail-only activation for this ticket. New customers use unified
-        Email API billing — activate the linked developer app instead.
+        Activate standalone Mail billing for this workspace (separate from Email API).
       </p>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
@@ -117,7 +117,7 @@ export function SupportTicketMailPlanPanel({
                 const next = value as MailPlanCode;
                 setPlan(next);
                 const included =
-                  next === 'PREMIUM' ? 5 : next === 'STANDARD' ? 3 : 1;
+                  next === 'PROFESSIONAL' ? 5 : next === 'STARTER' ? 3 : 1;
                 setSeats((current) => Math.max(included, current));
               }}
               disabled={busy || saving}

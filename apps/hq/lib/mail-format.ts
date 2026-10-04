@@ -16,9 +16,10 @@ export const MAIL_STATUS_OPTIONS: { value: MailAppStatus | ''; label: string }[]
 export const MAIL_PLAN_OPTIONS: { value: MailPlanCode | 'none' | ''; label: string }[] =
   [
     { value: '', label: 'All plans' },
+    { value: 'FREE', label: 'Free' },
     { value: 'STARTER', label: 'Starter' },
-    { value: 'STANDARD', label: 'Standard' },
-    { value: 'PREMIUM', label: 'Premium' },
+    { value: 'PROFESSIONAL', label: 'Professional' },
+    { value: 'CUSTOM', label: 'Custom' },
     { value: 'none', label: 'No subscription' },
   ];
 
@@ -48,9 +49,10 @@ const APP_STATUS_LABELS: Record<MailAppStatus, string> = {
 };
 
 const PLAN_LABELS: Record<MailPlanCode, string> = {
+  FREE: 'Free',
   STARTER: 'Starter',
-  STANDARD: 'Standard',
-  PREMIUM: 'Premium',
+  PROFESSIONAL: 'Professional',
+  CUSTOM: 'Custom',
 };
 
 export function formatMailDomainStatus(status: MailDomainStatus | string): string {

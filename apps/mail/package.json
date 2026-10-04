@@ -24,6 +24,7 @@
     "@rukny/auth": "file:../../packages/auth",
     "@rukny/email-api-pricing": "file:../../packages/email-api-pricing",
     "@rukny/forms-shared": "file:../../packages/forms-shared",
+    "@rukny/mail-pricing": "file:../../packages/mail-pricing",
     "@rukny/thmanyah-font": "file:../../packages/Thmanyah-Font-Family",
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-link": "^3.31.3",

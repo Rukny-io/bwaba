@@ -62,7 +62,7 @@ export interface AdminSupportTicketDetail extends SupportTicketSummary {
   attachments?: SupportTicketAttachment[];
 }
 
-export type MailPlanCode = 'STARTER' | 'STANDARD' | 'PREMIUM';
+export type MailPlanCode = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'CUSTOM';
 
 export type MailPlanRequestContext = {
   kind: 'mail_subscription';
@@ -81,7 +81,10 @@ export function parseMailPlanRequestContext(
   if (!mailAppId) return null;
   const rawPlan = String(context.mailPlan || '').toUpperCase();
   const mailPlan: MailPlanCode =
-    rawPlan === 'STANDARD' || rawPlan === 'PREMIUM' || rawPlan === 'STARTER'
+    rawPlan === 'FREE' ||
+    rawPlan === 'STARTER' ||
+    rawPlan === 'PROFESSIONAL' ||
+    rawPlan === 'CUSTOM'
       ? rawPlan
       : 'STARTER';
   const mailboxCount =

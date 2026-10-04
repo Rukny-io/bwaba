@@ -47,7 +47,7 @@ describe('MailMembersService', () => {
       mailSubscription: {
         findUnique: jest.fn().mockResolvedValue({
           status: 'ACTIVE',
-          plan: 'STANDARD',
+          plan: 'PROFESSIONAL',
         }),
       },
       user: {
@@ -86,9 +86,17 @@ describe('MailMembersService', () => {
       }),
     };
 
+    const subscriptions = {
+      getActiveLimitsForApp: jest.fn().mockResolvedValue({
+        plan: 'PROFESSIONAL',
+        limits: { consoleMembersIncluded: 5 },
+      }),
+    };
+
     const service = new MailMembersService(
       prisma as any,
       access as any,
+      subscriptions as any,
       notifications as any,
       email as any,
       config as any,
@@ -303,7 +311,7 @@ describe('MailMembersService', () => {
     const { service, prisma } = createService();
     prisma.mailSubscription.findUnique.mockResolvedValue({
       status: 'ACTIVE',
-      plan: 'STANDARD',
+      plan: 'PROFESSIONAL',
     });
     prisma.mailAppMember.count.mockResolvedValue(5);
     prisma.mailAppEmailInvite.count.mockResolvedValue(0);

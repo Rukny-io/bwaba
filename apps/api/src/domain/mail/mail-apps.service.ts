@@ -33,6 +33,7 @@ import { MAIL_APP_ID_PATTERN } from './mail-app-id.util';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
+import { MailPlanQuotaService } from './mail-plan-quota.service';
 import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 const OTP_EXPIRY_MINUTES = 5;
@@ -51,7 +52,13 @@ export class MailAppsService {
     private readonly subscriptions: MailSubscriptionsService,
     private readonly access: MailAppAccessService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
+    private readonly planQuota: MailPlanQuotaService,
   ) {}
+
+  private isUnifiedBillingOnly(): boolean {
+    const raw = this.configService.get<string>('MAIL_UNIFIED_BILLING_ONLY');
+    return raw === 'true' || raw === '1';
+  }
 
   private isDevOtpBypass(): boolean {
     // Honored whenever set — keep false in real production env files.
@@ -433,19 +440,27 @@ export class MailAppsService {
 
   async getDomainQuota(userId: string, appId: string, domain?: string) {
     const access = await this.access.requireOwner(userId, appId);
-    const quota = await this.unifiedEntitlement.getDomainQuotaForMailApp(
-      access.app.id,
-      userId,
-    );
+    const quota = this.isUnifiedBillingOnly()
+      ? await this.unifiedEntitlement.getDomainQuotaForMailApp(
+          access.app.id,
+          userId,
+        )
+      : await this.planQuota.getDomainQuotaForMailApp(access.app.id, userId);
     if (!quota) {
       throw new NotFoundException('Billing account not linked.');
     }
     if (domain?.trim()) {
-      const canAttach = await this.unifiedEntitlement.canAttachDomain(
-        access.app.id,
-        userId,
-        domain,
-      );
+      const canAttach = this.isUnifiedBillingOnly()
+        ? await this.unifiedEntitlement.canAttachDomain(
+            access.app.id,
+            userId,
+            domain,
+          )
+        : await this.planQuota.canAttachDomain(
+            access.app.id,
+            userId,
+            domain,
+          );
       return { ...quota, canAttach };
     }
     return quota;
@@ -481,11 +496,19 @@ export class MailAppsService {
       primaryDomain !== undefined && primaryDomain !== previous.primaryDomain;
 
     if (domainChanged && primaryDomain) {
-      await this.unifiedEntitlement.assertCanAttachDomain(
-        access.app.id,
-        userId,
-        primaryDomain,
-      );
+      if (this.isUnifiedBillingOnly()) {
+        await this.unifiedEntitlement.assertCanAttachDomain(
+          access.app.id,
+          userId,
+          primaryDomain,
+        );
+      } else {
+        await this.planQuota.assertCanAttachDomain(
+          access.app.id,
+          userId,
+          primaryDomain,
+        );
+      }
     }
 
     const update = this.prisma.mailApp.update({
@@ -530,46 +553,48 @@ export class MailAppsService {
         )[0]
       : await update;
 
-    const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
-      access.app.id,
-      userId,
-    );
-
     const statusChanged =
       domainStatus !== undefined && domainStatus !== previous.domainStatus;
 
-    if (domainChanged && developerAppId) {
-      if (primaryDomain) {
+    if (this.isUnifiedBillingOnly()) {
+      const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
+        access.app.id,
+        userId,
+      );
+
+      if (domainChanged && developerAppId) {
+        if (primaryDomain) {
+          await this.unifiedEntitlement.syncMailDomainToEntitlement(
+            userId,
+            developerAppId,
+            primaryDomain,
+            {
+              dkimTokens: dto.dkimTokens,
+              domainStatus: app.domainStatus,
+            },
+          );
+        } else if (previous.primaryDomain) {
+          await this.unifiedEntitlement.releaseMailDomainFromEntitlement(
+            userId,
+            developerAppId,
+            previous.primaryDomain,
+          );
+        }
+      } else if (
+        developerAppId &&
+        app.primaryDomain &&
+        (statusChanged || dto.dkimTokens?.length)
+      ) {
         await this.unifiedEntitlement.syncMailDomainToEntitlement(
           userId,
           developerAppId,
-          primaryDomain,
+          app.primaryDomain,
           {
             dkimTokens: dto.dkimTokens,
             domainStatus: app.domainStatus,
           },
         );
-      } else if (previous.primaryDomain) {
-        await this.unifiedEntitlement.releaseMailDomainFromEntitlement(
-          userId,
-          developerAppId,
-          previous.primaryDomain,
-        );
       }
-    } else if (
-      developerAppId &&
-      app.primaryDomain &&
-      (statusChanged || dto.dkimTokens?.length)
-    ) {
-      await this.unifiedEntitlement.syncMailDomainToEntitlement(
-        userId,
-        developerAppId,
-        app.primaryDomain,
-        {
-          dkimTokens: dto.dkimTokens,
-          domainStatus: app.domainStatus,
-        },
-      );
     }
 
     if (

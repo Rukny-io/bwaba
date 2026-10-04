@@ -11,18 +11,13 @@ import { FilterDropdown } from '@/components/shared/filter-dropdown';
 import { detailPanelClassName } from '@/components/ui/pill-tab';
 
 const PLAN_OPTIONS: { value: MailPlanCode; label: string }[] = [
+  { value: 'FREE', label: 'Free · 1 mailbox · 3 GB · 0 IQD' },
+  { value: 'STARTER', label: 'Starter · 3 mailboxes · 3 domains · 3,000 IQD' },
   {
-    value: 'STARTER',
-    label: '[Legacy] Starter · 1 mailbox · 5 GB · 3,000 IQD',
+    value: 'PROFESSIONAL',
+    label: 'Professional · 5 mailboxes · 5 domains · 8,000 IQD',
   },
-  {
-    value: 'STANDARD',
-    label: '[Legacy] Standard · 3 mailboxes · 20 GB · 6,000 IQD',
-  },
-  {
-    value: 'PREMIUM',
-    label: '[Legacy] Premium · 5 mailboxes · 30 GB · 10,000 IQD',
-  },
+  { value: 'CUSTOM', label: 'Custom · negotiated limits' },
 ];
 
 export function MailAppSubscriptionPanel({
@@ -64,8 +59,7 @@ export function MailAppSubscriptionPanel({
     <section className={detailPanelClassName}>
       <h2 className="mb-1 text-sm font-semibold">Subscription</h2>
       <p className="text-xs text-[var(--muted-foreground)]">
-        Legacy Mail-only plans for existing customers. New workspaces use unified Free · Growth ·
-        Enterprise via Email API admin activation on the linked developer app.
+        Standalone Mail plans (separate from Email API). Free activates after DNS verification.
       </p>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
@@ -126,7 +120,7 @@ export function MailAppSubscriptionPanel({
               const next = value as MailPlanCode;
               setPlan(next);
               const included =
-                next === 'PREMIUM' ? 5 : next === 'STANDARD' ? 3 : 1;
+                next === 'PROFESSIONAL' ? 5 : next === 'STARTER' ? 3 : 1;
               setSeats((current) => Math.max(included, current));
             }}
             disabled={saving}

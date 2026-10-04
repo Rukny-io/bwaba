@@ -166,13 +166,17 @@ export class AdminMailService {
     ]);
 
     const plans = {
+      FREE: 0,
       STARTER: 0,
-      STANDARD: 0,
-      PREMIUM: 0,
+      PROFESSIONAL: 0,
+      CUSTOM: 0,
       none: Math.max(0, appsActive - planGroups.reduce((sum, row) => sum + row._count._all, 0)),
     };
     for (const row of planGroups) {
-      plans[row.plan] = row._count._all;
+      const key = row.plan as keyof typeof plans;
+      if (key in plans && key !== 'none') {
+        plans[key] = row._count._all;
+      }
     }
 
     const domains: Record<MailDomainStatus, number> = {

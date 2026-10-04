@@ -47,6 +47,7 @@ import {
 } from './mail-plan-limits.config';
 import { MailOutboundUsageService } from './mail-outbound-usage.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
+import { MailPlanQuotaService } from './mail-plan-quota.service';
 import { isMailAppPublicId } from './mail-app-id.util';
 import { storageQuotaBytesForPlan } from './mail-storage.util';
 import { EMAIL_API_TRANSACTIONAL_PLANS } from '@rukny/email-api-pricing';
@@ -148,24 +149,48 @@ export class MailSubscriptionsService {
     private readonly whatsappBusiness: WhatsAppBusinessService,
     private readonly outboundUsage: MailOutboundUsageService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
+    private readonly planQuota: MailPlanQuotaService,
   ) {}
 
   getPlansOverview() {
     const cardReady = this.qaseh.isConfigured();
     const unifiedOnly = this.isUnifiedBillingOnly();
-    const unifiedPlans = EMAIL_API_TRANSACTIONAL_PLANS.filter(
-      (plan) => plan.selfServe || plan.id === 'FREE',
-    ).map((plan) => ({
-      id: plan.id,
-      slug: plan.slug,
-      name: plan.marketingNameEn,
-      priceMonthly: plan.priceMonthlyIqd,
-      monthlyQuota: plan.monthlyQuota,
-      overagePer1kIqd: plan.overagePer1kIqd,
-      domainsIncluded: plan.domainsIncluded,
-    }));
+
+    const mailPlans = MAIL_PLAN_ORDER.map((id) => {
+      const plan = MAIL_PLAN_DEFINITIONS[id];
+      return {
+        id: plan.id,
+        planId: plan.id.toLowerCase(),
+        name: plan.name,
+        bestFor: plan.bestFor,
+        priceMonthly: plan.priceMonthly,
+        priceExtraMailbox: plan.priceExtraMailbox,
+        priceLabel: `${plan.priceMonthly.toLocaleString('en-IQ')} IQD/mo`,
+        priceNote:
+          plan.id === MailPlan.FREE
+            ? 'Activated after domain DNS verification.'
+            : 'Monthly plan price for included mailboxes. 1-month term.',
+        popular: plan.popular,
+        domainsIncluded: plan.domainsIncluded,
+        monthlyOutbound: MAIL_INCLUDED_OUTBOUND[id],
+        limits: plan.limits,
+        benefits: plan.benefits,
+        highlights: mailPlanHighlights(plan),
+      };
+    });
 
     if (unifiedOnly) {
+      const unifiedPlans = EMAIL_API_TRANSACTIONAL_PLANS.filter(
+        (plan) => plan.selfServe || plan.id === 'FREE',
+      ).map((plan) => ({
+        id: plan.id,
+        slug: plan.slug,
+        name: plan.marketingNameEn,
+        priceMonthly: plan.priceMonthlyIqd,
+        monthlyQuota: plan.monthlyQuota,
+        overagePer1kIqd: plan.overagePer1kIqd,
+        domainsIncluded: plan.domainsIncluded,
+      }));
       return {
         currency: 'IQD',
         unifiedBillingOnly: true,
@@ -188,41 +213,9 @@ export class MailSubscriptionsService {
         status: cardReady ? ('available' as const) : ('unavailable' as const),
         provider: 'al_qaseh' as const,
       },
-      unifiedPlans,
-      legacyPlans: MAIL_PLAN_ORDER.map((id) => {
-        const plan = MAIL_PLAN_DEFINITIONS[id];
-        return {
-          id: plan.id,
-          planId: plan.id.toLowerCase(),
-          name: plan.name,
-          bestFor: plan.bestFor,
-          priceMonthly: plan.priceMonthly,
-          priceExtraMailbox: plan.priceExtraMailbox,
-          priceLabel: `${plan.priceMonthly.toLocaleString('en-IQ')} IQD/mo`,
-          priceNote: 'Legacy admin-only plan.',
-          popular: plan.popular,
-          limits: plan.limits,
-          benefits: plan.benefits,
-          highlights: mailPlanHighlights(plan),
-        };
-      }),
-      plans: MAIL_PLAN_ORDER.map((id) => {
-        const plan = MAIL_PLAN_DEFINITIONS[id];
-        return {
-          id: plan.id,
-          planId: plan.id.toLowerCase(),
-          name: plan.name,
-          bestFor: plan.bestFor,
-          priceMonthly: plan.priceMonthly,
-          priceExtraMailbox: plan.priceExtraMailbox,
-          priceLabel: `${plan.priceMonthly.toLocaleString('en-IQ')} IQD/mo`,
-          priceNote: 'Monthly plan price for included mailboxes. 1-month term.',
-          popular: plan.popular,
-          limits: plan.limits,
-          benefits: plan.benefits,
-          highlights: mailPlanHighlights(plan),
-        };
-      }),
+      unifiedPlans: [],
+      legacyPlans: mailPlans,
+      plans: mailPlans,
     };
   }
 
@@ -235,16 +228,17 @@ export class MailSubscriptionsService {
       name: access.app.name,
       primaryDomain: access.app.primaryDomain,
     } satisfies MailAppRow;
-    await this.unifiedEntitlement.ensureLinkedDeveloperApp(app.id, userId);
-    const unified = await this.unifiedEntitlement.getLimitsForMailApp(app.id);
-    const domainQuota =
-      await this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId);
     const { subscription } = await this.getSubscriptionForApp(app.id);
     const pendingRequest = await this.findPendingRequest(app.appId);
+    const unified = this.isUnifiedBillingOnly()
+      ? await this.unifiedEntitlement.getLimitsForMailApp(app.id)
+      : null;
+    const domainQuota = this.isUnifiedBillingOnly()
+      ? await this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId)
+      : await this.planQuota.getDomainQuotaForMailApp(app.id, userId);
     const hasWorkspaceAccess =
       Boolean(unified) ||
-      (!this.isUnifiedBillingOnly() &&
-        subscription?.status === SubscriptionStatus.ACTIVE);
+      subscription?.status === SubscriptionStatus.ACTIVE;
 
     return {
       app: this.toAppView(app),
@@ -283,30 +277,29 @@ export class MailSubscriptionsService {
       }
     }
 
-    const unified = await this.unifiedEntitlement.getLimitsForMailApp(
-      mailAppUuid,
-    );
-    if (unified) {
-      const payload = {
-        planId: unified.planId,
-        plan: unified.plan,
-        mailboxCount: unified.mailboxCount,
-        limits: unified.limits,
-        storageQuotaBytesPerMailbox: unified.storageQuotaBytesPerMailbox,
-        unified: true as const,
-        emailPlan: unified.emailPlan,
-      };
-      await this.redis
-        .set(
-          `${this.CACHE_PREFIX}${mailAppUuid}`,
-          JSON.stringify(payload),
-          this.CACHE_TTL,
-        )
-        .catch(() => {});
-      return payload;
-    }
-
     if (this.isUnifiedBillingOnly()) {
+      const unified = await this.unifiedEntitlement.getLimitsForMailApp(
+        mailAppUuid,
+      );
+      if (unified) {
+        const payload = {
+          planId: unified.planId,
+          plan: unified.plan,
+          mailboxCount: unified.mailboxCount,
+          limits: unified.limits,
+          storageQuotaBytesPerMailbox: unified.storageQuotaBytesPerMailbox,
+          unified: true as const,
+          emailPlan: unified.emailPlan,
+        };
+        await this.redis
+          .set(
+            `${this.CACHE_PREFIX}${mailAppUuid}`,
+            JSON.stringify(payload),
+            this.CACHE_TTL,
+          )
+          .catch(() => {});
+        return payload;
+      }
       return null;
     }
 
@@ -421,8 +414,8 @@ export class MailSubscriptionsService {
   }
 
   /**
-   * After DNS is verified: link Email API entitlement (FREE by default) and
-   * activate hosted mail limits — no legacy Starter checkout.
+   * After DNS is verified: activate Mail FREE subscription (standalone)
+   * or link Email API entitlement when unified billing is enabled.
    */
   async provisionFreeAfterDomainVerified(userId: string, publicAppId: string) {
     const app = await this.prisma.mailApp.findFirst({
@@ -442,21 +435,25 @@ export class MailSubscriptionsService {
       );
     }
 
-    const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
-      app.id,
-      userId,
-    );
-    if (!developerAppId) {
-      throw new BadRequestException('Could not link billing account.');
-    }
-
-    if (app.primaryDomain) {
-      await this.unifiedEntitlement.syncMailDomainToEntitlement(
+    if (this.isUnifiedBillingOnly()) {
+      const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
+        app.id,
         userId,
-        developerAppId,
-        app.primaryDomain,
-        { domainStatus: app.domainStatus },
       );
+      if (!developerAppId) {
+        throw new BadRequestException('Could not link billing account.');
+      }
+
+      if (app.primaryDomain) {
+        await this.unifiedEntitlement.syncMailDomainToEntitlement(
+          userId,
+          developerAppId,
+          app.primaryDomain,
+          { domainStatus: app.domainStatus },
+        );
+      }
+    } else {
+      await this.ensureFreeMailSubscription(userId, app.id);
     }
 
     await this.redis
@@ -467,6 +464,40 @@ export class MailSubscriptionsService {
       activated: true as const,
       needsCheckout: false as const,
     };
+  }
+
+  private async ensureFreeMailSubscription(userId: string, mailAppUuid: string) {
+    const existing = await this.prisma.mailSubscription.findUnique({
+      where: { mailAppId: mailAppUuid },
+    });
+    if (existing?.status === SubscriptionStatus.ACTIVE) {
+      return existing;
+    }
+
+    const now = new Date();
+    const included = MAIL_PLAN_LIMITS[MailPlan.FREE].mailboxesIncluded;
+    return this.prisma.mailSubscription.upsert({
+      where: { mailAppId: mailAppUuid },
+      create: {
+        mailAppId: mailAppUuid,
+        userId,
+        plan: MailPlan.FREE,
+        status: SubscriptionStatus.ACTIVE,
+        mailboxCount: included,
+        outboundUsed: 0,
+        outboundPackCredits: 0,
+        currentPeriodStart: now,
+        currentPeriodEnd: addOneMonth(now),
+      },
+      update: {
+        plan: MailPlan.FREE,
+        status: SubscriptionStatus.ACTIVE,
+        mailboxCount: included,
+        currentPeriodStart: now,
+        currentPeriodEnd: addOneMonth(now),
+        cancelledAt: null,
+      },
+    });
   }
 
   /** @deprecated Use provisionFreeAfterDomainVerified */
@@ -521,6 +552,11 @@ export class MailSubscriptionsService {
       );
     }
     const { app } = await this.requireBillingApp(userId, publicAppId);
+    if (plan === MailPlan.FREE || plan === MailPlan.CUSTOM) {
+      throw new BadRequestException(
+        'This plan cannot be purchased via checkout.',
+      );
+    }
     const seats = this.normalizeSeats(mailboxCount);
     const amount = mailMonthlyTotal(plan, seats);
     if (!Number.isInteger(amount) || amount <= 0) {
@@ -2796,9 +2832,10 @@ export class MailSubscriptionsService {
         : null,
       plan: subscription.plan,
       planId: subscription.plan.toLowerCase() as
+        | 'free'
         | 'starter'
-        | 'standard'
-        | 'premium',
+        | 'professional'
+        | 'custom',
       planName: def.name,
       status: subscription.status,
       billingCycle: subscription.billingCycle,

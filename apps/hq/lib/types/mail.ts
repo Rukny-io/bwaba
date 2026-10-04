@@ -6,7 +6,7 @@ export type MailDomainStatus =
   | 'VERIFYING'
   | 'ACTIVE'
   | 'FAILED';
-export type MailPlanCode = 'STARTER' | 'STANDARD' | 'PREMIUM';
+export type MailPlanCode = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'CUSTOM';
 export type MailMailboxStatus = 'ACTIVE' | 'DISABLED';
 export type MailMessageDirection = 'INBOUND' | 'OUTBOUND';
 export type MailMessageStatus = 'QUEUED' | 'SENT' | 'FAILED' | 'RECEIVED';
@@ -91,9 +91,10 @@ export interface MailStats {
     queued: number;
   };
   plans: {
+    FREE: number;
     STARTER: number;
-    STANDARD: number;
-    PREMIUM: number;
+    PROFESSIONAL: number;
+    CUSTOM: number;
     none: number;
   };
   domains: Record<MailDomainStatus, number>;

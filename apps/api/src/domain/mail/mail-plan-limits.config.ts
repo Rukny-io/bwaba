@@ -1,46 +1,56 @@
 import { MailPlan } from '@prisma/client';
+import {
+  getMailPlan,
+  isMailUnlimited,
+  MAIL_CURRENCY,
+  MAIL_OUTBOUND_PACK_EMAILS,
+  MAIL_PLANS,
+  MailPlanId,
+  mailDomainsLimit,
+  mailIncludedOutbound,
+  mailMonthlyTotal,
+  mailOutboundPackPrice,
+  type MailPlanLimits,
+} from '@rukny/mail-pricing';
+
+export {
+  MAIL_CURRENCY,
+  MAIL_OUTBOUND_PACK_EMAILS,
+  isMailUnlimited,
+  mailMonthlyTotal,
+  type MailPlanLimits,
+};
 
 export const MAIL_UNLIMITED = Number.MAX_SAFE_INTEGER;
-
-export type MailPlanLimits = {
-  mailboxesIncluded: number;
-  /** Invited console members (excludes workspace owner). Starter = 0. */
-  consoleMembersIncluded: number;
-  storageGbPerMailbox: number;
-  forwardingRules: number;
-  filterRules: number;
-  emailAliases: number;
-  agenticMail: boolean;
-  aiToolsUnlimited: boolean;
-  openTracking: boolean;
-  smartAiReplies: boolean;
-  automaticReplies: boolean;
-  linkAndFileTracking: boolean;
-  premiumDelivery: boolean;
-};
 
 export type MailPlanDefinition = {
   id: MailPlan;
   name: string;
   bestFor: string;
-  /** Monthly price for the included mailboxes (IQD) */
   priceMonthly: number;
-  /** Monthly price for each mailbox above the included amount (IQD) */
   priceExtraMailbox: number;
   popular: boolean;
+  domainsIncluded: number;
   limits: MailPlanLimits;
   benefits: string[];
 };
 
-const SHARED_BENEFITS = [
+const SHARED_BENEFITS: string[] = [
   'AI email assistant',
   'Webmail & Calendar',
   'Anti-Spam protection',
   '2FA protection',
-] as const;
+];
 
-export function isMailUnlimited(value: number): boolean {
-  return !Number.isFinite(value) || value < 0 || value >= MAIL_UNLIMITED;
+const PRISMA_TO_CATALOG: Record<MailPlan, MailPlanId> = {
+  [MailPlan.FREE]: MailPlanId.FREE,
+  [MailPlan.STARTER]: MailPlanId.STARTER,
+  [MailPlan.PROFESSIONAL]: MailPlanId.PROFESSIONAL,
+  [MailPlan.CUSTOM]: MailPlanId.CUSTOM,
+};
+
+function catalogId(plan: MailPlan): MailPlanId {
+  return PRISMA_TO_CATALOG[plan];
 }
 
 export function formatMailAliasLimit(value: number, locale: 'en' | 'ar' = 'en'): string {
@@ -65,134 +75,79 @@ export function mailPlanHighlights(plan: MailPlanDefinition): string[] {
     mailboxLine,
     consoleLine,
     `${plan.limits.storageGbPerMailbox} GB for emails`,
+    `${plan.domainsIncluded} domains`,
     aliasLine,
     ...plan.benefits,
   ];
 }
 
+function toDefinition(plan: MailPlan): MailPlanDefinition {
+  const catalog = getMailPlan(catalogId(plan));
+  const benefits = [...SHARED_BENEFITS];
+  if (catalog.limits.premiumDelivery) {
+    benefits.push('Premium email delivery');
+  }
+  return {
+    id: plan,
+    name: catalog.nameEn,
+    bestFor: catalog.bestForEn,
+    priceMonthly: catalog.priceMonthlyIqd,
+    priceExtraMailbox: catalog.priceExtraMailboxIqd,
+    popular: catalog.popular ?? false,
+    domainsIncluded: catalog.domainsIncluded,
+    limits: catalog.limits,
+    benefits,
+  };
+}
+
 export const MAIL_PLAN_LIMITS: Record<MailPlan, MailPlanLimits> = {
-  STARTER: {
-    mailboxesIncluded: 1,
-    consoleMembersIncluded: 0,
-    storageGbPerMailbox: 5,
-    forwardingRules: 5,
-    filterRules: 10,
-    emailAliases: 10,
-    agenticMail: true,
-    aiToolsUnlimited: true,
-    openTracking: false,
-    smartAiReplies: true,
-    automaticReplies: true,
-    linkAndFileTracking: false,
-    premiumDelivery: false,
-  },
-  STANDARD: {
-    mailboxesIncluded: 3,
-    consoleMembersIncluded: 4,
-    storageGbPerMailbox: 20,
-    forwardingRules: 20,
-    filterRules: 50,
-    emailAliases: 50,
-    agenticMail: true,
-    aiToolsUnlimited: true,
-    openTracking: true,
-    smartAiReplies: true,
-    automaticReplies: true,
-    linkAndFileTracking: false,
-    premiumDelivery: false,
-  },
-  PREMIUM: {
-    mailboxesIncluded: 5,
-    consoleMembersIncluded: 10,
-    storageGbPerMailbox: 30,
-    forwardingRules: 50,
-    filterRules: MAIL_UNLIMITED,
-    emailAliases: MAIL_UNLIMITED,
-    agenticMail: true,
-    aiToolsUnlimited: true,
-    openTracking: true,
-    smartAiReplies: true,
-    automaticReplies: true,
-    linkAndFileTracking: true,
-    premiumDelivery: true,
-  },
+  [MailPlan.FREE]: getMailPlan(MailPlanId.FREE).limits,
+  [MailPlan.STARTER]: getMailPlan(MailPlanId.STARTER).limits,
+  [MailPlan.PROFESSIONAL]: getMailPlan(MailPlanId.PROFESSIONAL).limits,
+  [MailPlan.CUSTOM]: getMailPlan(MailPlanId.CUSTOM).limits,
 };
 
 export const MAIL_PLAN_DEFINITIONS: Record<MailPlan, MailPlanDefinition> = {
-  STARTER: {
-    id: MailPlan.STARTER,
-    name: 'Starter',
-    bestFor: 'one mailbox to get started',
-    priceMonthly: 3_000,
-    priceExtraMailbox: 2_000,
-    popular: false,
-    limits: MAIL_PLAN_LIMITS.STARTER,
-    benefits: [...SHARED_BENEFITS],
-  },
-  STANDARD: {
-    id: MailPlan.STANDARD,
-    name: 'Standard',
-    bestFor: 'small teams sharing one domain',
-    priceMonthly: 6_000,
-    priceExtraMailbox: 3_000,
-    popular: true,
-    limits: MAIL_PLAN_LIMITS.STANDARD,
-    benefits: [...SHARED_BENEFITS],
-  },
-  PREMIUM: {
-    id: MailPlan.PREMIUM,
-    name: 'Premium',
-    bestFor: 'teams that need more seats and delivery',
-    priceMonthly: 10_000,
-    priceExtraMailbox: 4_000,
-    popular: false,
-    limits: MAIL_PLAN_LIMITS.PREMIUM,
-    benefits: [...SHARED_BENEFITS, 'Premium email delivery'],
-  },
+  [MailPlan.FREE]: toDefinition(MailPlan.FREE),
+  [MailPlan.STARTER]: toDefinition(MailPlan.STARTER),
+  [MailPlan.PROFESSIONAL]: toDefinition(MailPlan.PROFESSIONAL),
+  [MailPlan.CUSTOM]: toDefinition(MailPlan.CUSTOM),
 };
 
 export const MAIL_PLAN_ORDER: MailPlan[] = [
+  MailPlan.FREE,
   MailPlan.STARTER,
-  MailPlan.STANDARD,
-  MailPlan.PREMIUM,
+  MailPlan.PROFESSIONAL,
 ];
 
-export function mailMonthlyTotal(plan: MailPlan, mailboxCount: number): number {
-  const seats = Math.max(1, Math.floor(mailboxCount));
-  const def = MAIL_PLAN_DEFINITIONS[plan];
-  const extra = Math.max(0, seats - def.limits.mailboxesIncluded);
-  return def.priceMonthly + extra * def.priceExtraMailbox;
-}
-
-/** Included outbound emails / billing month by plan. */
 export const MAIL_INCLUDED_OUTBOUND: Record<MailPlan, number> = {
-  [MailPlan.STARTER]: 4_000,
-  [MailPlan.STANDARD]: 10_000,
-  [MailPlan.PREMIUM]: 30_000,
+  [MailPlan.FREE]: mailIncludedOutbound(MailPlanId.FREE),
+  [MailPlan.STARTER]: mailIncludedOutbound(MailPlanId.STARTER),
+  [MailPlan.PROFESSIONAL]: mailIncludedOutbound(MailPlanId.PROFESSIONAL),
+  [MailPlan.CUSTOM]: mailIncludedOutbound(MailPlanId.CUSTOM),
 };
 
-/** Flat tax applied on every issued Mail invoice PDF (IQD). */
+export const MAIL_DOMAINS_INCLUDED: Record<MailPlan, number> = {
+  [MailPlan.FREE]: mailDomainsLimit(MailPlanId.FREE),
+  [MailPlan.STARTER]: mailDomainsLimit(MailPlanId.STARTER),
+  [MailPlan.PROFESSIONAL]: mailDomainsLimit(MailPlanId.PROFESSIONAL),
+  [MailPlan.CUSTOM]: mailDomainsLimit(MailPlanId.CUSTOM),
+};
+
 export const MAIL_INVOICE_TAX_IQD = 400;
 
-/** Prepaid pack unit (Starter packs billed this phase). */
-export const MAIL_OUTBOUND_PACK_EMAILS = 1_000;
-
-/** IQD per pack of MAIL_OUTBOUND_PACK_EMAILS — flat across all plans. */
 export const MAIL_OUTBOUND_PACK_PRICE_IQD: Partial<Record<MailPlan, number>> = {
-  [MailPlan.STARTER]: 800,
-  [MailPlan.STANDARD]: 800,
-  [MailPlan.PREMIUM]: 800,
+  [MailPlan.STARTER]: mailOutboundPackPrice(MailPlanId.STARTER) ?? undefined,
+  [MailPlan.PROFESSIONAL]:
+    mailOutboundPackPrice(MailPlanId.PROFESSIONAL) ?? undefined,
 };
 
 export function mailOutboundPackPriceIqd(plan: MailPlan): number | null {
-  const price = MAIL_OUTBOUND_PACK_PRICE_IQD[plan];
+  const price = mailOutboundPackPrice(catalogId(plan));
   return typeof price === 'number' && price > 0 ? price : null;
 }
 
-export function mailOutboundPackTotalIqd(
-  plan: MailPlan,
-  thousands: number,
-): number {
+export function mailOutboundPackTotalIqd(plan: MailPlan, thousands: number): number {
   const unit = mailOutboundPackPriceIqd(plan);
   if (unit == null) {
     throw new Error(`Outbound packs are not available for plan ${plan}`);
@@ -205,4 +160,12 @@ export function addOneMonth(from = new Date()): Date {
   const next = new Date(from);
   next.setMonth(next.getMonth() + 1);
   return next;
+}
+
+export function mailPlanFromCatalogId(id: string): MailPlan | null {
+  const normalized = id.trim().toUpperCase();
+  if (normalized in PRISMA_TO_CATALOG) {
+    return normalized as MailPlan;
+  }
+  return null;
 }

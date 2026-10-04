@@ -4227,9 +4227,10 @@ model MailMessage {
 }
 
 enum MailPlan {
+  FREE
   STARTER
-  STANDARD
-  PREMIUM
+  PROFESSIONAL
+  CUSTOM
 }
 
 model MailSubscription {

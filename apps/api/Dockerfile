@@ -10,6 +10,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY packages/email-api-pricing ./packages/email-api-pricing
+COPY packages/mail-pricing ./packages/mail-pricing
 COPY apps/api/package.json apps/api/package-lock.json* ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma/
 
@@ -21,6 +22,8 @@ RUN --mount=type=cache,id=npm-api,target=/root/.npm \
   && npm install --ignore-scripts --no-audit --no-fund \
   && npm --prefix /app/packages/email-api-pricing install --no-audit --no-fund \
   && npm --prefix /app/packages/email-api-pricing run build \
+  && npm --prefix /app/packages/mail-pricing install --no-audit --no-fund \
+  && npm --prefix /app/packages/mail-pricing run build \
   && for attempt in 1 2 3 4 5; do \
        npx prisma generate --config prisma/prisma.config.ts && break; \
        if [ "$attempt" -eq 5 ]; then exit 1; fi; \
@@ -37,11 +40,15 @@ COPY apps/api .
 RUN rm -rf node_modules
 COPY --from=deps /app/apps/api/node_modules ./node_modules
 COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
+COPY --from=deps /app/packages/mail-pricing /app/packages/mail-pricing
 
 RUN rm -rf node_modules/@rukny/email-api-pricing \
   && mkdir -p node_modules/@rukny \
   && cp -a /app/packages/email-api-pricing node_modules/@rukny/email-api-pricing \
-  && test -f node_modules/@rukny/email-api-pricing/dist/index.js
+  && test -f node_modules/@rukny/email-api-pricing/dist/index.js \
+  && rm -rf node_modules/@rukny/mail-pricing \
+  && cp -a /app/packages/mail-pricing node_modules/@rukny/mail-pricing \
+  && test -f node_modules/@rukny/mail-pricing/dist/index.js
 
 RUN NODE_OPTIONS="--max-old-space-size=4096" npx nest build
 

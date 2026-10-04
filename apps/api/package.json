@@ -65,6 +65,7 @@
     "@prisma/client-runtime-utils": "7.4.0",
     "@pwa-manifest/potrace": "^1.0.1",
     "@rukny/email-api-pricing": "file:../../packages/email-api-pricing",
+    "@rukny/mail-pricing": "file:../../packages/mail-pricing",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/bull": "^3.15.9",
     "@types/cheerio": "^0.22.35",

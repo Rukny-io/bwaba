@@ -17,7 +17,14 @@ describe('MailOutboundUsageService', () => {
       getOutboundUsageForMailApp: jest.fn().mockResolvedValue(null),
       reserveOutbound: jest.fn().mockResolvedValue(null),
     };
-    return new MailOutboundUsageService(prisma as never, unifiedEntitlement as never);
+    const config = {
+      get: jest.fn().mockReturnValue('false'),
+    };
+    return new MailOutboundUsageService(
+      prisma as never,
+      unifiedEntitlement as never,
+      config as never,
+    );
   }
 
   it('getUsageForMailApp returns allowance from included + packs', async () => {

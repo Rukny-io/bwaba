@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { resolveDeveloperUrl } from "@rukny/auth/client/env-urls";
 import { Camera, Check, ChevronDown, Inbox, MoreVertical, Plus } from "lucide-react";
+import { MailMailboxesPlanPanel } from "@/components/apps/mail-mailboxes-plan-panel";
 import { Checkbox, cn, Dropdown, Input, Label, TextField } from "@heroui/react";
 import type { MailDomainSetup } from "@/lib/mail-domain";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
@@ -23,7 +25,7 @@ import {
 } from "@/lib/mail-mailboxes-client";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import { MailMailbox2faSetupModal } from "@/components/app/mail-mailbox-2fa-setup-modal";
-import { formatMailAliasLimit, formatMailStorageAmount } from "@/lib/mail-plans";
+import { formatMailStorageAmount } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
   type MailPendingPlanRequest,
@@ -34,21 +36,6 @@ import {
   listMailTeam,
   type MailTeamRoster,
 } from "@/lib/mail-team-client";
-
-function formatDate(iso: string | null | undefined) {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-CA");
-}
-
-function planDisplayName(subscription: MailSubscriptionView | null) {
-  if (!subscription) return "No active plan";
-  const base = (subscription.planName || subscription.planId || "").trim();
-  if (!base) return "No active plan";
-  if (/business email/i.test(base)) return base;
-  return `${base} Business Email`;
-}
 
 function MailboxUsageMeter({
   usedBytes,
@@ -661,9 +648,9 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         setCreateOpen(true);
       }}
       className={cn(
-        "inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1 self-start rounded-lg px-2.5 text-[12px] font-semibold",
+        "inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1.5 self-start rounded-full px-4 text-[13px] font-medium",
         canCreate
-          ? "bg-[var(--foreground)] text-[var(--background)]"
+          ? "bg-[var(--foreground)] text-[var(--background)] transition-opacity hover:opacity-90"
           : "cursor-not-allowed bg-[var(--surface-secondary)] text-[var(--muted-foreground)] opacity-70",
       )}
     >
@@ -704,130 +691,69 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         </div>
       </div>
 
-      <div
-        role="region"
-        aria-label="Email plan"
-        className="min-w-0 rounded-2xl bg-[var(--surface)] p-4 sm:p-6"
+      <MailMailboxesPlanPanel
+        domain={setup.domain}
+        loading={loadingSub}
+        hasActivePlan={hasActivePlan}
+        subscription={subscription}
+        unifiedPlan={unifiedPlan}
+        limits={limits}
+        limitsOpen={limitsOpen}
+        onToggleLimits={() => setLimitsOpen((open) => !open)}
+        activeMailboxCount={activeCount}
+        seatLimit={seatLimit}
+        billingHref={unifiedPlan ? `${resolveDeveloperUrl()}/apps` : href("/billing")}
+        billingLabel={unifiedPlan ? "Manage plan" : "Billing"}
+        externalBilling={Boolean(unifiedPlan)}
+        domainSettingsHref={href("/domain")}
+      />
+
+      <section
+        className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] md:bg-[var(--surface)]"
+        aria-label="Manage mailboxes"
       >
-        {!loadingSub && !hasActivePlan ? (
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
-                {setup.domain}
+        <div className="flex min-w-0 flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:px-6 md:py-5">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
+                {hasActivePlan ? "Manage mailboxes" : "Set up your email"}
               </h2>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Domain is ready. Finish DNS verification to activate your free plan and
-                unlock mailboxes.
+              <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">
+                {hasActivePlan
+                  ? "Create addresses, assign SSO owners, and monitor usage."
+                  : "Complete DNS verification to create your first address."}
               </p>
             </div>
-            <Link
-              href="/billing"
-              className="inline-flex h-10 w-fit items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground)]"
-            >
-              View plans
-            </Link>
-          </div>
-        ) : (
-          <>
-            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[17px] font-semibold leading-snug text-[var(--foreground)]">
-                  {setup.domain}
-                </h2>
-                <div className="mt-2 space-y-0.5 text-[14px] leading-relaxed">
-                  <p className="text-[var(--muted-foreground)]">
-                    Expires at:{" "}
-                    <span className="text-[var(--foreground)]">
-                      {loadingSub ? "…" : formatDate(subscription?.renewsAt)}
-                    </span>
-                  </p>
-                  <p className="break-words text-[var(--muted-foreground)]">
-                    Email plan:{" "}
-                    <span className="text-[var(--foreground)]">
-                      {loadingSub ? "…" : planDisplayName(subscription)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLimitsOpen((open) => !open)}
-                className="inline-flex w-full items-center justify-center gap-1 text-[14px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline sm:w-auto"
-                aria-expanded={limitsOpen}
-              >
-                View limits
-                <ChevronDown
-                  className={cn("size-4 transition-transform", limitsOpen && "rotate-180")}
-                  aria-hidden
-                />
-              </button>
-            </div>
-
-            {limitsOpen && limits ? (
-              <div className="mt-4 pt-4">
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-[var(--muted-foreground)]">Mailboxes</dt>
-                    <dd className="font-medium text-[var(--foreground)]">
-                      {activeCount} / {seatLimit || limits.mailboxesIncluded}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--muted-foreground)]">Storage</dt>
-                    <dd className="font-medium text-[var(--foreground)]">
-                      {limits.storageGbPerMailbox} GB for emails
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--muted-foreground)]">Forwarding rules</dt>
-                    <dd className="font-medium text-[var(--foreground)]">
-                      {limits.forwardingRules}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--muted-foreground)]">Aliases / mailbox</dt>
-                    <dd className="font-medium text-[var(--foreground)]">
-                      {formatMailAliasLimit(limits.emailAliases)}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="mt-3 text-xs text-[var(--muted-foreground)]">
-                  Domain DNS settings live on{" "}
-                  <Link
-                    href={href("/domain")}
-                    className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-                  >
-                    Domain settings
-                  </Link>
-                  .
-                </p>
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      {/* Hostinger-style manage mailboxes card on desktop; stacked cards on phone */}
-      <section className="min-w-0 md:overflow-hidden md:rounded-2xl md:bg-[var(--surface)]" aria-label="Manage mailboxes">
-        <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4 md:flex-row md:items-center md:justify-between md:rounded-none md:bg-transparent md:p-0 md:px-6 md:py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-[var(--foreground)]">
-              {hasActivePlan ? "Manage mailboxes" : "Set up your email"}
-            </h2>
-            <p className="mt-0.5 break-words text-sm text-[var(--muted-foreground)]">
-              {hasActivePlan ? (
-                <>
-                  Mailboxes left:{" "}
-                  <span className="font-medium text-[var(--foreground)]">
+            {hasActivePlan && seatLimit > 0 ? (
+              <div className="max-w-md">
+                <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
+                  <span>Slots available</span>
+                  <span className="tabular-nums font-medium text-[var(--foreground)]">
                     {loadingSub || loadingBoxes
                       ? "…"
-                      : `${Math.max(0, seatsLeft)}/${seatLimit || "—"}`}
+                      : `${seatsLeft} of ${seatLimit} left`}
                   </span>
-                </>
-              ) : (
-                "Complete these steps to create your first address."
-              )}
-            </p>
+                </div>
+                <div
+                  className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)]"
+                  role="progressbar"
+                  aria-valuenow={activeCount}
+                  aria-valuemin={0}
+                  aria-valuemax={seatLimit}
+                  aria-label="Mailbox slots used"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full bg-[var(--foreground)] transition-[width] duration-300",
+                      activeCount >= seatLimit && "bg-[var(--warning)]",
+                    )}
+                    style={{
+                      width: `${Math.min(100, Math.round((activeCount / seatLimit) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
           {hasActivePlan ? createButton : null}
         </div>

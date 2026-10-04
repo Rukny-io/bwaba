@@ -13,6 +13,7 @@ const repoRoot = path.resolve(appDir, "../..");
 const workspaceDeps = [
   { name: "@rukny/auth", src: "packages/auth" },
   { name: "@rukny/email-api-pricing", src: "packages/email-api-pricing" },
+  { name: "@rukny/mail-pricing", src: "packages/mail-pricing" },
   { name: "@rukny/forms-shared", src: "packages/forms-shared" },
   { name: "@rukny/thmanyah-font", src: "packages/Thmanyah-Font-Family" },
 ];
@@ -70,7 +71,10 @@ function materializePackage({ name, src }) {
     return false;
   }
 
-  if (src === "packages/email-api-pricing" && !ensurePackageBuilt(source)) {
+  if (
+    (src === "packages/email-api-pricing" || src === "packages/mail-pricing") &&
+    !ensurePackageBuilt(source)
+  ) {
     console.warn(`[materialize-workspace-deps] skip ${name}: dist build failed`);
     return false;
   }

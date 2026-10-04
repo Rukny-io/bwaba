@@ -24,6 +24,7 @@ export const agSpectrum = [
 
 export const agLayout = {
   container: "mx-auto w-full max-w-[1200px] px-5 sm:px-8",
+  eyebrow: "text-[12px] font-medium tracking-[0.16em] text-[#9CA3AF]",
   section: "py-20 sm:py-24 md:py-28",
   heroTitle:
     "text-balance text-[clamp(2rem,5vw,4rem)] font-medium leading-[1.1] tracking-[0em] text-[#1D1D1D]",

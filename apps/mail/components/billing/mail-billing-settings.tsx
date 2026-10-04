@@ -83,7 +83,7 @@ export function MailPlanSettingsSection() {
     status: "unavailable",
   });
   const [unifiedBillingOnly, setUnifiedBillingOnly] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState<MailPlanId>("standard");
+  const [selectedPlanId, setSelectedPlanId] = useState<MailPlanId>("starter");
   const [seats, setSeats] = useState(3);
 
   const refresh = useCallback(async () => {
@@ -112,10 +112,11 @@ export function MailPlanSettingsSection() {
     setPendingRequest(current.pendingRequest);
     setCanManageBilling(Boolean(current.canManageBilling));
 
+    const paidPlans = nextPlans.filter((plan) => plan.id !== "free");
     const preferred =
-      nextPlans.find((plan) => plan.id === "standard") ??
-      nextPlans.find((plan) => plan.id === "premium") ??
-      nextPlans[0];
+      paidPlans.find((plan) => plan.id === "professional") ??
+      paidPlans.find((plan) => plan.id === "starter") ??
+      paidPlans[0];
     if (preferred) {
       const existingCount =
         current.subscription?.mailboxCount || current.pendingRequest?.mailboxCount;
@@ -417,7 +418,7 @@ export function MailPlanSettingsSection() {
                   }}
                 >
                   <Dropdown.Section>
-                    {plans.map((plan) => (
+                    {plans.filter((plan) => plan.id !== "free").map((plan) => (
                       <Dropdown.Item
                         key={plan.id}
                         id={plan.id}

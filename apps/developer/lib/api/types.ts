@@ -229,11 +229,27 @@ export interface WhatsappPhoneSummary {
   qualityRating?: string | null;
   messagingLimit?: string | null;
   status: string;
+  aboutText?: string | null;
+  address?: string | null;
+  description?: string | null;
+  email?: string | null;
+  websites?: string[] | null;
+  profilePictureUrl?: string | null;
+  category?: string | null;
   account?: {
     id: string;
     businessName?: string | null;
     wabaId: string;
   };
+}
+
+export interface UpdateWhatsappPhoneProfileInput {
+  about?: string;
+  address?: string;
+  description?: string;
+  email?: string;
+  websites?: string[];
+  profilePictureUrl?: string;
 }
 
 export interface WhatsappTemplate {

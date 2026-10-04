@@ -15,6 +15,7 @@ import { PhoneNumbersService } from './phone-numbers.service';
 import {
   RegisterPhoneDto,
   UpdatePhoneProfileDto,
+  UploadPhoneProfilePictureDto,
 } from './dto/phone-number.dto';
 import { SendTestMessageDto } from './dto/send-test-message.dto';
 
@@ -50,6 +51,22 @@ export class PhoneNumbersController {
     @Body() dto: RegisterPhoneDto,
   ) {
     return this.phoneNumbersService.register(userId, appId, id, dto);
+  }
+
+  @Post(':id/profile-picture')
+  @ApiOperation({ summary: 'رفع صورة بروفايل WhatsApp إلى Meta' })
+  uploadProfilePicture(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Query('appId') appId: string,
+    @Body() dto: UploadPhoneProfilePictureDto,
+  ) {
+    return this.phoneNumbersService.uploadProfilePicture(
+      userId,
+      appId,
+      id,
+      dto.image,
+    );
   }
 
   @Patch(':id/profile')

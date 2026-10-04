@@ -8,16 +8,12 @@ import { useWhatsappPhone } from '@/components/whatsapp/whatsapp-phone-context';
 
 export function WhatsappPhoneDetailPanel() {
   const { phone, appId } = useWhatsappPhone();
-  const { registerMutation, profileMutation, testMessageMutation } =
-    useWhatsappMutations(appId);
+  const { registerMutation, testMessageMutation } = useWhatsappMutations(appId);
 
   const [registerId, setRegisterId] = useState<string | null>(null);
   const [pin, setPin] = useState('');
   const [testId, setTestId] = useState<string | null>(null);
   const [testTo, setTestTo] = useState('');
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [about, setAbout] = useState('');
-  const [email, setEmail] = useState('');
 
   if (!phone) {
     return (
@@ -29,6 +25,7 @@ export function WhatsappPhoneDetailPanel() {
 
   return (
     <PhoneCard
+      appId={appId}
       phone={phone}
       registerId={registerId}
       pin={pin}
@@ -38,15 +35,8 @@ export function WhatsappPhoneDetailPanel() {
       testTo={testTo}
       setTestId={setTestId}
       setTestTo={setTestTo}
-      profileId={profileId}
-      about={about}
-      email={email}
-      setProfileId={setProfileId}
-      setAbout={setAbout}
-      setEmail={setEmail}
       registerMutation={registerMutation}
       testMessageMutation={testMessageMutation}
-      profileMutation={profileMutation}
     />
   );
 }

@@ -8,6 +8,7 @@ import {
   BookOpen,
   LayoutGrid,
   MessageSquare,
+  UserRound,
 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { PhoneStatusBadge } from '@/components/whatsapp/whatsapp-ui';
@@ -23,6 +24,7 @@ import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<WhatsappPhoneTabSegment, typeof LayoutGrid> = {
   overview: LayoutGrid,
+  profile: UserRound,
   templates: BookOpen,
   logs: MessageSquare,
   errors: AlertTriangle,
@@ -35,6 +37,7 @@ export function WhatsappPhoneTabsNav() {
 
   const labels: Record<WhatsappPhoneTabSegment, string> = {
     overview: w.navPhoneOverview,
+    profile: w.navProfile,
     templates: w.navTemplates,
     logs: w.navLogs,
     errors: w.navErrors,

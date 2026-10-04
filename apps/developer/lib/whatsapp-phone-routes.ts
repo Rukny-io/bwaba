@@ -1,5 +1,6 @@
 export const WHATSAPP_PHONE_TABS = [
   { segment: 'overview', slug: '' },
+  { segment: 'profile', slug: 'profile' },
   { segment: 'templates', slug: 'templates' },
   { segment: 'logs', slug: 'logs' },
   { segment: 'errors', slug: 'errors' },

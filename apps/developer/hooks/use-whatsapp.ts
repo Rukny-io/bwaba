@@ -16,6 +16,7 @@ import {
   sendTestMessage,
   syncWhatsappTemplates,
   updatePhoneProfile,
+  uploadPhoneProfilePicture,
 } from '@/lib/api/whatsapp';
 
 export const whatsappKeys = {
@@ -113,8 +114,19 @@ export function useWhatsappMutations(appId: string) {
       body,
     }: {
       phoneId: string;
-      body: { about?: string; email?: string };
+      body: Parameters<typeof updatePhoneProfile>[2];
     }) => updatePhoneProfile(appId, phoneId, body),
+    onSuccess: invalidate,
+  });
+
+  const profilePictureMutation = useMutation({
+    mutationFn: ({
+      phoneId,
+      image,
+    }: {
+      phoneId: string;
+      image: string;
+    }) => uploadPhoneProfilePicture(appId, phoneId, image),
     onSuccess: invalidate,
   });
 
@@ -145,6 +157,7 @@ export function useWhatsappMutations(appId: string) {
     refreshMutation,
     registerMutation,
     profileMutation,
+    profilePictureMutation,
     testMessageMutation,
     syncTemplatesMutation,
     createTemplateMutation,

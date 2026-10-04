@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CircleCheck, Clock, Loader2, Phone, RefreshCw, Send } from 'lucide-react';
+import { CircleCheck, Clock, Loader2, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
@@ -66,6 +66,7 @@ function PhonePickerCard({ appId, phone }: { appId: string; phone: WhatsappPhone
 }
 
 export function PhoneCard({
+  appId,
   phone,
   registerId,
   pin,
@@ -75,16 +76,10 @@ export function PhoneCard({
   testTo,
   setTestId,
   setTestTo,
-  profileId,
-  about,
-  email,
-  setProfileId,
-  setAbout,
-  setEmail,
   registerMutation,
   testMessageMutation,
-  profileMutation,
 }: {
+  appId: string;
   phone: WhatsappPhoneSummary;
   registerId: string | null;
   pin: string;
@@ -94,15 +89,8 @@ export function PhoneCard({
   testTo: string;
   setTestId: (id: string | null) => void;
   setTestTo: (to: string) => void;
-  profileId: string | null;
-  about: string;
-  email: string;
-  setProfileId: (id: string | null) => void;
-  setAbout: (about: string) => void;
-  setEmail: (email: string) => void;
   registerMutation: ReturnType<typeof useWhatsappMutations>['registerMutation'];
   testMessageMutation: ReturnType<typeof useWhatsappMutations>['testMessageMutation'];
-  profileMutation: ReturnType<typeof useWhatsappMutations>['profileMutation'];
 }) {
   const w = useTranslations().whatsapp;
   const isPending = phone.status === 'PENDING';
@@ -206,59 +194,14 @@ export function PhoneCard({
           </div>
         </PhoneActionSection>
 
-        <PhoneActionSection title={w.editProfile} description={w.editProfileDesc}>
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                {w.profileAbout}
-              </label>
-              <input
-                type="text"
-                value={profileId === phone.id ? about : ''}
-                onChange={(e) => {
-                  setProfileId(phone.id);
-                  setAbout(e.target.value);
-                }}
-                placeholder={w.profileAbout}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                {w.profileEmail}
-              </label>
-              <input
-                type="email"
-                value={profileId === phone.id ? email : ''}
-                onChange={(e) => {
-                  setProfileId(phone.id);
-                  setEmail(e.target.value);
-                }}
-                placeholder="hello@example.com"
-                className={inputClass}
-                dir="ltr"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={profileMutation.isPending}
-              onClick={() =>
-                profileMutation.mutate(
-                  { phoneId: phone.id, body: { about, email } },
-                  {
-                    onSuccess: () => appToast.success(w.profileSaved),
-                    onError: (e) => appToast.error(getApiErrorMessage(e)),
-                  },
-                )
-              }
-              className={whatsappBtnPrimary}
-            >
-              {profileMutation.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : null}
-              {w.editProfile}
-            </button>
-          </div>
+        <PhoneActionSection title={w.profileManageCta} description={w.profileManageDesc}>
+          <Link
+            href={appWhatsappPhoneHref(appId, phone.phoneId, 'profile')}
+            className={cn(whatsappBtnSecondary, 'w-full justify-center sm:w-auto')}
+          >
+            <UserRound className="size-3.5" />
+            {w.profileManageCta}
+          </Link>
         </PhoneActionSection>
       </div>
     </article>

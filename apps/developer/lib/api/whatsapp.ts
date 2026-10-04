@@ -102,6 +102,19 @@ export async function registerPhoneNumber(
   return data;
 }
 
+export async function uploadPhoneProfilePicture(
+  appId: string,
+  phoneId: string,
+  image: string,
+): Promise<{ success: boolean; profilePictureUrl: string }> {
+  const { data } = await api.post<{ success: boolean; profilePictureUrl: string }>(
+    `/developer/whatsapp/phone-numbers/${phoneId}/profile-picture`,
+    { image },
+    appParams(appId),
+  );
+  return data;
+}
+
 export async function updatePhoneProfile(
   appId: string,
   phoneId: string,

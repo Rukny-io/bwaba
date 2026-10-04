@@ -194,7 +194,7 @@ export class MetaApiService {
       description?: string;
       email?: string;
       websites?: string[];
-      profile_picture_url?: string;
+      profile_picture_handle?: string;
     },
   ) {
     const client = this.createClient(accessToken);
@@ -206,6 +206,59 @@ export class MetaApiService {
       },
     );
     return response.data;
+  }
+
+  /**
+   * رفع صورة عبر Resumable Upload API للحصول على handle لبروفايل WhatsApp
+   */
+  async uploadResumableFile(
+    accessToken: string,
+    file: Buffer,
+    mimeType: string,
+  ): Promise<string> {
+    if (!this.appId) {
+      throw new Error('WHATSAPP_APP_ID is not configured');
+    }
+
+    const sessionResponse = await axios.post(
+      `${this.graphUrl}/${this.apiVersion}/${this.appId}/uploads`,
+      null,
+      {
+        params: {
+          file_length: file.length,
+          file_type: mimeType,
+          access_token: accessToken,
+        },
+        timeout: 30000,
+      },
+    );
+
+    const sessionId = sessionResponse.data?.id;
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new Error('Meta did not return an upload session id');
+    }
+
+    const uploadResponse = await axios.post(
+      `${this.graphUrl}/${this.apiVersion}/${sessionId}`,
+      file,
+      {
+        headers: {
+          Authorization: `OAuth ${accessToken}`,
+          file_offset: '0',
+          'Content-Type': mimeType,
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: 60000,
+      },
+    );
+
+    const handle = uploadResponse.data?.h;
+    if (!handle || typeof handle !== 'string') {
+      throw new Error('Meta did not return a profile picture handle');
+    }
+
+    return handle;
   }
 
   // ==================

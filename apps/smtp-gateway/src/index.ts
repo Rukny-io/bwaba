@@ -9,7 +9,20 @@ async function main() {
     internalSecret: config.internalSecret,
   });
 
-  startServers(config, api);
+  const { submission, smtps } = startServers(config, api);
+
+  if (!config.tlsCertPath || !config.tlsKeyPath) {
+    console.warn(
+      '[smtp-gateway] SMTP_GATEWAY_TLS_CERT/KEY not set — using built-in TLS cert (not for production).',
+    );
+  }
+
+  const shutdown = () => {
+    submission.close(() => smtps.close(() => process.exit(0)));
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+
   console.log(
     `[smtp-gateway] Developer host ${config.hostname} (username: ${config.developerUsername})`,
   );

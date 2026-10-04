@@ -36,3 +36,8 @@ export class UpdatePhoneProfileDto {
   @IsString()
   profilePictureUrl?: string;
 }
+
+export class UploadPhoneProfilePictureDto {
+  @IsString()
+  image: string;
+}

@@ -132,6 +132,7 @@ import { EmailApiModule } from '../email-api/email-api.module';
   ],
   exports: [
     AppsService,
+    AppsUploadService,
     AppAnalyticsService,
     ApiKeysService,
     ApiKeyAuthGuard,

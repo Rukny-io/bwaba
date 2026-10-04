@@ -168,9 +168,19 @@ function createServerOptions(
   };
 }
 
+function attachErrorHandler(server: SMTPServer, label: string) {
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    // Bots and broken TLS clients must not take down the gateway process.
+    console.error(`[smtp-gateway] ${label} connection error:`, error.message);
+  });
+}
+
 export function startServers(config: GatewayConfig, api: InternalApiClient) {
   const submission = new SMTPServer(createServerOptions(config, api, false));
   const smtps = new SMTPServer(createServerOptions(config, api, true));
+
+  attachErrorHandler(submission, 'submission');
+  attachErrorHandler(smtps, 'smtps');
 
   submission.listen(config.port, config.host, () => {
     console.log(

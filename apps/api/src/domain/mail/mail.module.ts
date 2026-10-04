@@ -55,6 +55,8 @@ import { MailAppPasswordsService } from './mail-app-passwords.service';
 import { EmailApiModule } from '../email-api/email-api.module';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 import { MailPlanQuotaService } from './mail-plan-quota.service';
+import { MailAttachmentsService } from './mail-attachments.service';
+import { MailScheduledSendService } from './mail-scheduled-send.service';
 
 @Module({
   imports: [
@@ -124,6 +126,8 @@ import { MailPlanQuotaService } from './mail-plan-quota.service';
     MailAppPasswordsService,
     MailUnifiedEntitlementService,
     MailPlanQuotaService,
+    MailAttachmentsService,
+    MailScheduledSendService,
   ],
   exports: [
     MailSesModule,
@@ -153,6 +157,8 @@ import { MailPlanQuotaService } from './mail-plan-quota.service';
     MailAppPasswordsService,
     MailUnifiedEntitlementService,
     MailPlanQuotaService,
+    MailAttachmentsService,
+    MailScheduledSendService,
   ],
 })
 export class MailModule {}

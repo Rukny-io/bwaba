@@ -107,6 +107,7 @@ model User {
   mailSubscriptions              MailSubscription[]
   mailApps                       MailApp[]
   mailMessages                   MailMessage[]
+  mailAttachments                MailAttachment[]
   mailDomainVerificationRequests MailDomainVerificationRequest[] @relation("mail_domain_verification_request_owner")
   mailDomainReviews              MailDomainVerificationRequest[] @relation("mail_domain_verification_request_reviewer")
   mailAppsDomainReviewed         MailApp[]                       @relation("mail_app_domain_reviewer")
@@ -2362,6 +2363,7 @@ enum FileCategory {
   LOGO
   SUPPORT_ATTACHMENT
   MAIL_MAILBOX_AVATAR
+  MAIL_MESSAGE_ATTACHMENT
 }
 
 enum WaitlistStatus {
@@ -3905,6 +3907,7 @@ model MailMailbox {
   mailApp      MailApp         @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
   assignedUser User?           @relation("mail_mailbox_assignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
   messages     MailMessage[]
+  attachments  MailAttachment[]
   catchAlls    MailCatchAll[]
   autoReply    MailAutoReply?
   aliases      MailAlias[]
@@ -4209,13 +4212,17 @@ model MailMessage {
 
   sentAt     DateTime?
   receivedAt DateTime?
+  /// When set in the future, message stays in DRAFTS until sent by scheduler.
+  scheduledAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  mailbox MailMailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailbox     MailMailbox      @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments MailAttachment[]
 
   @@index([mailboxId, folder, createdAt])
+  @@index([scheduledAt])
   @@index([mailboxId, folder, isRead])
   @@index([folder, quarantineExpiresAt])
   @@index([threadId])
@@ -4224,6 +4231,28 @@ model MailMessage {
   @@index([senderDomain])
   @@index([bodyCryptoStatus])
   @@map("mail_messages")
+}
+
+/// File attachment on a mail message (outbound upload or inbound MIME part).
+model MailAttachment {
+  id          String   @id @default(uuid())
+  messageId   String?
+  mailboxId   String
+  userId      String
+  filename    String
+  contentType String
+  sizeBytes   Int
+  s3Key       String
+  contentId   String?
+  createdAt   DateTime @default(now())
+
+  message MailMessage? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([mailboxId])
+  @@map("mail_attachments")
 }
 
 enum MailPlan {

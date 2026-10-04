@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   AlertTriangle,
   Archive,
+  Clock,
   FileText,
   Inbox,
   Megaphone,
@@ -39,6 +40,7 @@ const FOLDER_GROUPS: { label: string; items: FolderItem[] }[] = [
     items: [
       { id: "inbox", label: "Inbox", icon: Inbox },
       { id: "starred", label: "Favorites", icon: Star },
+      { id: "scheduled", label: "Scheduled", icon: Clock },
       { id: "sent", label: "Sent", icon: Send },
       { id: "drafts", label: "Drafts", icon: FileText },
     ],
@@ -75,7 +77,7 @@ export function MailInboxSidebar({
       <button
         type="button"
         onClick={onCompose}
-        className="inline-flex h-11 w-full items-center justify-start gap-2.5 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition-[transform,opacity] duration-200 hover:opacity-95 active:scale-[0.98]"
+        className="inline-flex h-11 w-full items-center justify-start gap-2.5 rounded-full bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-90"
       >
         <PenSquare className="size-4" aria-hidden />
         Compose

@@ -3,20 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Bold,
+  Code,
   Image as ImageIcon,
   Italic,
   Link as LinkIcon,
   List,
   ListOrdered,
   Minus,
+  Paperclip,
   Quote,
   Redo2,
   RemoveFormatting,
   Send,
   Signature,
+  Strikethrough,
   Underline as UnderlineIcon,
   Undo2,
   X,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  SquareCode,
 } from "lucide-react";
 import {
   Button,
@@ -34,8 +41,15 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
+import TextAlign from "@tiptap/extension-text-align";
 import { MailPersonAvatar } from "@/components/inbox/mail-person-avatar";
 import { fetchMailOutboundUsage } from "@/lib/mail-usage-client";
+import {
+  saveMailDraft,
+  updateMailDraft,
+  uploadMailAttachment,
+  type MailAttachmentView,
+} from "@/lib/mail-messages-client";
 
 export type ComposeDraft = {
   to: string;
@@ -45,10 +59,16 @@ export type ComposeDraft = {
   body: string;
   bodyHtml?: string;
   replyToMessageId?: string;
+  draftId?: string;
+  attachmentIds?: string[];
+  attachments?: MailAttachmentView[];
+  scheduledAt?: string;
 };
 
 type Props = {
   open: boolean;
+  appId?: string | null;
+  mailboxId?: string | null;
   fromAddress: string | null;
   fromAvatarUrl?: string | null;
   fromDisplayName?: string | null;
@@ -121,6 +141,8 @@ async function imageFileToDataUrl(file: File): Promise<string> {
 
 export function MailComposeModal({
   open,
+  appId = null,
+  mailboxId = null,
   fromAddress,
   fromAvatarUrl = null,
   fromDisplayName = null,
@@ -141,8 +163,15 @@ export function MailComposeModal({
   const [showSignatureEditor, setShowSignatureEditor] = useState(false);
   const [processingImage, setProcessingImage] = useState(false);
   const [usageHint, setUsageHint] = useState<string | null>(null);
-  const [, setEditorRevision] = useState(0);
+  const [attachments, setAttachments] = useState<MailAttachmentView[]>([]);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [editorRevision, setEditorRevision] = useState(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -162,11 +191,14 @@ export function MailComposeModal({
       Placeholder.configure({
         placeholder: "Write your message…",
       }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
     ],
     editorProps: {
       attributes: {
         class:
-          "min-h-[260px] px-4 py-3 text-sm leading-7 text-[var(--foreground)] outline-none sm:min-h-[300px] [&_a]:text-[var(--primary)] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border)] [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-[var(--muted-foreground)] [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_ul]:list-disc [&_ul]:pl-6",
+          "min-h-[220px] px-4 py-4 text-[15px] leading-relaxed text-[var(--foreground)] outline-none sm:min-h-[280px] sm:px-5 [&_a]:text-[var(--primary)] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--muted-foreground)] [&_code]:rounded [&_code]:bg-[var(--surface-secondary)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_ol]:list-decimal [&_ol]:pl-6 [&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-[var(--muted-foreground)] [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--surface-secondary)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_ul]:list-disc [&_ul]:pl-6",
       },
     },
     onTransaction: () => setEditorRevision((value) => value + 1),
@@ -187,6 +219,11 @@ export function MailComposeModal({
         ) ?? "",
       );
       setShowSignatureEditor(false);
+      setDraftId(initial?.draftId ?? null);
+      setScheduledAt(initial?.scheduledAt?.slice(0, 16) ?? "");
+      setAttachments(initial?.attachments ?? []);
+      setLinkOpen(false);
+      setLinkUrl("");
       editor.commands.setContent(
         initial?.bodyHtml ?? plainTextToHtml(initial?.body ?? ""),
       );
@@ -250,24 +287,103 @@ export function MailComposeModal({
       body,
       bodyHtml: editor.getHTML(),
       replyToMessageId: initial?.replyToMessageId,
+      draftId: draftId ?? undefined,
+      attachmentIds: attachments.map((item) => item.id),
+      scheduledAt: scheduledAt
+        ? new Date(scheduledAt).toISOString()
+        : undefined,
     });
   }
 
-  function setLink() {
-    if (!editor) return;
-    const current = editor.getAttributes("link").href as string | undefined;
-    const href = window.prompt("Link URL", current ?? "https://");
-    if (href === null) return;
-    if (!href.trim()) {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+  async function persistDraft() {
+    const resolvedMailboxId = mailboxId;
+    if (!appId || !resolvedMailboxId || !isValidMailboxId(resolvedMailboxId) || !editor) {
       return;
     }
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: href.trim() })
-      .run();
+    setSavingDraft(true);
+    try {
+      const payload = {
+        mailboxId: resolvedMailboxId,
+        to: parseRecipients(to),
+        cc: parseRecipients(cc),
+        bcc: parseRecipients(bcc),
+        subject: subject.trim(),
+        bodyText: editor.getText({ blockSeparator: "\n" }).trim(),
+        bodyHtml: editor.getHTML(),
+        replyToMessageId: initial?.replyToMessageId,
+        attachmentIds: attachments.map((item) => item.id),
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      };
+      const saved = draftId
+        ? await updateMailDraft(appId, draftId, payload)
+        : await saveMailDraft(appId, payload);
+      setDraftId(saved.id);
+    } catch (draftError) {
+      setLocalError(
+        draftError instanceof Error
+          ? draftError.message
+          : "Could not save draft.",
+      );
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!open || !appId || !isValidMailboxId(mailboxId)) return;
+    const handle = window.setTimeout(() => {
+      void persistDraft();
+    }, 2000);
+    return () => window.clearTimeout(handle);
+  }, [
+    open,
+    appId,
+    mailboxId,
+    to,
+    cc,
+    bcc,
+    subject,
+    attachments,
+    scheduledAt,
+    editorRevision,
+  ]);
+
+  function applyLink() {
+    if (!editor) return;
+    const href = linkUrl.trim();
+    if (!href) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href })
+        .run();
+    }
+    setLinkOpen(false);
+  }
+
+  async function onAttachmentSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !appId || !mailboxId) return;
+    setLocalError("");
+    try {
+      const uploaded = await uploadMailAttachment(
+        appId,
+        mailboxId,
+        file,
+        draftId ?? undefined,
+      );
+      setAttachments((prev) => [...prev, uploaded]);
+    } catch (uploadError) {
+      setLocalError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload attachment.",
+      );
+    }
   }
 
   async function onImageSelected(event: React.ChangeEvent<HTMLInputElement>) {
@@ -309,7 +425,27 @@ export function MailComposeModal({
     setLocalError("");
   }
 
-  const toolButton = "size-8 min-w-8";
+  const composeTitle = initial?.replyToMessageId ? "Reply" : "New message";
+
+  const toolButton =
+    "size-7 min-w-7 shrink-0 rounded-md transition-colors";
+  const toolActive = "bg-[var(--foreground)]/8 text-[var(--foreground)]";
+
+  function isValidMailboxId(value: string | null | undefined) {
+    if (!value) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
+  function ToolbarDivider() {
+    return (
+      <span
+        className="mx-1 h-4 w-px shrink-0 bg-[var(--border)]"
+        aria-hidden
+      />
+    );
+  }
 
   const composeForm = (
     <form
@@ -317,145 +453,181 @@ export function MailComposeModal({
       className={
         isMobile
           ? "flex h-full min-h-0 w-full flex-col"
-          : "flex max-h-[min(94dvh,780px)] min-h-[620px] w-full flex-col"
+          : "flex max-h-[min(94dvh,720px)] min-h-0 w-full flex-col"
       }
     >
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(event) => void onImageSelected(event)}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(event) => void onImageSelected(event)}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(event) => void onAttachmentSelected(event)}
+      />
+
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 sm:gap-3.5 sm:p-5 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-5"
+      >
+        <div className="flex shrink-0 items-center gap-3">
+          {fromAddress ? (
+            <MailPersonAvatar
+              name={fromDisplayName || fromAddress}
+              email={fromAddress}
+              avatarUrl={fromAvatarUrl}
+              className="size-11 shrink-0"
             />
-            <div className="flex w-full flex-row items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                {fromAddress ? (
-                  <MailPersonAvatar
-                    name={fromDisplayName || fromAddress}
-                    email={fromAddress}
-                    avatarUrl={fromAvatarUrl}
-                    className="size-9"
-                  />
-                ) : null}
-                <div className="min-w-0">
-                  <h2 className="text-base font-medium text-[var(--foreground)]">
-                    {initial?.replyToMessageId ? "Reply" : "New message"}
-                  </h2>
-                  {fromAddress ? (
-                    <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
-                      From {fromAddress}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              <Button
-                type="button"
-                isIconOnly
-                size="sm"
-                variant="tertiary"
-                aria-label="Close"
-                isDisabled={sending}
-                onPress={onClose}
-              >
-                <X className="size-4" />
-              </Button>
+          ) : (
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+              <Send className="size-5" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[17px] font-semibold leading-snug tracking-tight text-[var(--foreground)]">
+              {composeTitle}
+            </h2>
+            {fromAddress ? (
+              <p dir="ltr" className="truncate text-[12px] text-[var(--muted-foreground)]">
+                {fromAddress}
+              </p>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            isIconOnly
+            size="sm"
+            variant="tertiary"
+            aria-label="Close"
+            isDisabled={sending}
+            onPress={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        {(scheduledAt || draftId || attachments.length > 0 || usageHint) ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {draftId ? (
+              <span className="rounded-full bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+                Draft saved
+              </span>
+            ) : null}
+            {scheduledAt ? (
+              <span className="rounded-full bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+                Scheduled
+              </span>
+            ) : null}
+            {attachments.length > 0 ? (
+              <span className="rounded-full bg-[var(--surface-secondary)] px-2 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+                {attachments.length} attachment{attachments.length === 1 ? "" : "s"}
+              </span>
+            ) : null}
+            {usageHint ? (
+              <span className="text-[10px] leading-snug text-amber-700 dark:text-amber-400">
+                {usageHint}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+          <div className="flex flex-col gap-2">
+            <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--surface-secondary)]/60 px-3">
+              <Label className="w-10 shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
+                To
+              </Label>
+              <TextField className="min-w-0 flex-1">
+                <Input
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                  className="h-9 border-0 bg-transparent px-0 text-[13px] shadow-none focus:ring-0"
+                />
+              </TextField>
+              {!showCopies ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="tertiary"
+                  onPress={() => setShowCopies(true)}
+                >
+                  Cc/Bcc
+                </Button>
+              ) : null}
             </div>
 
-            <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-              <div className="shrink-0 divide-y divide-[var(--separator)] border-b border-[var(--separator)] px-4 sm:px-5">
-                <div className="flex min-h-12 items-center gap-3">
-                  <Label className="w-14 shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
-                    To
+            {showCopies ? (
+              <>
+                <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--surface-secondary)]/60 px-3">
+                  <Label className="w-10 shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
+                    Cc
                   </Label>
                   <TextField className="min-w-0 flex-1">
                     <Input
-                      value={to}
-                      onChange={(event) => setTo(event.target.value)}
-                      placeholder="name@example.com"
-                      autoComplete="email"
-                      className="h-11 border-0 bg-transparent px-0 shadow-none focus:ring-0"
+                      value={cc}
+                      onChange={(event) => setCc(event.target.value)}
+                      placeholder="Optional"
+                      className="h-9 border-0 bg-transparent px-0 text-[13px] shadow-none focus:ring-0"
                     />
                   </TextField>
-                  {!showCopies ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="tertiary"
-                      onPress={() => setShowCopies(true)}
-                    >
-                      Cc/Bcc
-                    </Button>
-                  ) : null}
                 </div>
-
-                {showCopies ? (
-                  <>
-                    <div className="flex min-h-11 items-center gap-3">
-                      <Label className="w-14 shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
-                        Cc
-                      </Label>
-                      <TextField className="min-w-0 flex-1">
-                        <Input
-                          value={cc}
-                          onChange={(event) => setCc(event.target.value)}
-                          placeholder="Optional"
-                          className="h-10 border-0 bg-transparent px-0 shadow-none focus:ring-0"
-                        />
-                      </TextField>
-                    </div>
-                    <div className="flex min-h-11 items-center gap-3">
-                      <Label className="w-14 shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
-                        Bcc
-                      </Label>
-                      <TextField className="min-w-0 flex-1">
-                        <Input
-                          value={bcc}
-                          onChange={(event) => setBcc(event.target.value)}
-                          placeholder="Optional"
-                          className="h-10 border-0 bg-transparent px-0 shadow-none focus:ring-0"
-                        />
-                      </TextField>
-                    </div>
-                  </>
-                ) : null}
-
-                <div className="flex min-h-12 items-center gap-3">
-                  <Label className="w-14 shrink-0 text-xs font-medium text-[var(--muted-foreground)]">
-                    Subject
+                <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--surface-secondary)]/60 px-3">
+                  <Label className="w-10 shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
+                    Bcc
                   </Label>
                   <TextField className="min-w-0 flex-1">
                     <Input
-                      value={subject}
-                      onChange={(event) => setSubject(event.target.value)}
-                      placeholder="Subject"
-                      className="h-11 border-0 bg-transparent px-0 shadow-none focus:ring-0"
+                      value={bcc}
+                      onChange={(event) => setBcc(event.target.value)}
+                      placeholder="Optional"
+                      className="h-9 border-0 bg-transparent px-0 text-[13px] shadow-none focus:ring-0"
                     />
                   </TextField>
                 </div>
-              </div>
+              </>
+            ) : null}
 
-              <div className="mx-4 my-3 flex min-h-0 w-[calc(100%-2rem)] flex-1 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] sm:mx-5 sm:w-[calc(100%-2.5rem)]">
-                <Toolbar
-                  aria-label="Message formatting"
-                  className="flex min-h-11 w-full shrink-0 flex-nowrap gap-0.5 overflow-x-auto border-b border-[var(--separator)] bg-[var(--surface-secondary)]/60 px-2 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
+            <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--surface-secondary)]/60 px-3">
+              <Label className="w-10 shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
+                Subject
+              </Label>
+              <TextField className="min-w-0 flex-1">
+                <Input
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  placeholder="Subject"
+                  className="h-9 border-0 bg-transparent px-0 text-[13px] shadow-none focus:ring-0"
+                />
+              </TextField>
+            </div>
+          </div>
+
+          <div className="flex min-h-[200px] min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-[var(--surface-secondary)]/35 sm:min-h-[240px]">
+            <Toolbar
+              aria-label="Message formatting"
+              className="flex w-full flex-wrap items-center gap-0.5 px-2.5 py-2 sm:px-3"
+            >
                   <Button
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("bold") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("bold") ? toolActive : ""}`}
                     aria-label="Bold"
                     onPress={() => editor?.chain().focus().toggleBold().run()}
                   >
-                    <Bold className="size-4" />
+                    <Bold className="size-3.5" />
                   </Button>
                   <Button
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("italic") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("italic") ? toolActive : ""}`}
                     aria-label="Italic"
                     onPress={() => editor?.chain().focus().toggleItalic().run()}
                   >
@@ -465,8 +637,8 @@ export function MailComposeModal({
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("underline") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("underline") ? toolActive : ""}`}
                     aria-label="Underline"
                     onPress={() => editor?.chain().focus().toggleUnderline().run()}
                   >
@@ -476,8 +648,80 @@ export function MailComposeModal({
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("bulletList") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("strike") ? toolActive : ""}`}
+                    aria-label="Strikethrough"
+                    onPress={() => editor?.chain().focus().toggleStrike().run()}
+                  >
+                    <Strikethrough className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("code") ? toolActive : ""}`}
+                    aria-label="Inline code"
+                    onPress={() => editor?.chain().focus().toggleCode().run()}
+                  >
+                    <Code className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("codeBlock") ? toolActive : ""}`}
+                    aria-label="Code block"
+                    onPress={() => editor?.chain().focus().toggleCodeBlock().run()}
+                  >
+                    <SquareCode className="size-4" />
+                  </Button>
+                  <ToolbarDivider />
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive({ textAlign: "left" }) ? toolActive : ""}`}
+                    aria-label="Align left"
+                    onPress={() => editor?.chain().focus().setTextAlign("left").run()}
+                  >
+                    <AlignLeft className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive({ textAlign: "center" }) ? toolActive : ""}`}
+                    aria-label="Align center"
+                    onPress={() =>
+                      editor?.chain().focus().setTextAlign("center").run()
+                    }
+                  >
+                    <AlignCenter className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive({ textAlign: "right" }) ? toolActive : ""}`}
+                    aria-label="Align right"
+                    onPress={() =>
+                      editor?.chain().focus().setTextAlign("right").run()
+                    }
+                  >
+                    <AlignRight className="size-4" />
+                  </Button>
+                  <ToolbarDivider />
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("bulletList") ? toolActive : ""}`}
                     aria-label="Bullet list"
                     onPress={() => editor?.chain().focus().toggleBulletList().run()}
                   >
@@ -487,8 +731,8 @@ export function MailComposeModal({
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("orderedList") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("orderedList") ? toolActive : ""}`}
                     aria-label="Numbered list"
                     onPress={() => editor?.chain().focus().toggleOrderedList().run()}
                   >
@@ -498,23 +742,41 @@ export function MailComposeModal({
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("blockquote") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("blockquote") ? toolActive : ""}`}
                     aria-label="Quote"
                     onPress={() => editor?.chain().focus().toggleBlockquote().run()}
                   >
                     <Quote className="size-4" />
                   </Button>
+                  <ToolbarDivider />
                   <Button
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={editor?.isActive("link") ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${editor?.isActive("link") || linkOpen ? toolActive : ""}`}
                     aria-label="Add link"
-                    onPress={setLink}
+                    onPress={() => {
+                      const current = editor?.getAttributes("link").href as
+                        | string
+                        | undefined;
+                      setLinkUrl(current ?? "https://");
+                      setLinkOpen((open) => !open);
+                    }}
                   >
                     <LinkIcon className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    className={toolButton}
+                    aria-label="Attach file"
+                    onPress={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="size-4" />
                   </Button>
                   <Button
                     type="button"
@@ -543,14 +805,14 @@ export function MailComposeModal({
                     type="button"
                     isIconOnly
                     size="sm"
-                    variant={showSignatureEditor ? "secondary" : "tertiary"}
-                    className={toolButton}
+                    variant="tertiary"
+                    className={`${toolButton} ${showSignatureEditor ? toolActive : ""}`}
                     aria-label="Add signature"
                     onPress={() => setShowSignatureEditor((visible) => !visible)}
                   >
                     <Signature className="size-4" />
                   </Button>
-                  <span className="mx-1 h-5 w-px bg-[var(--separator)]" aria-hidden />
+                  <ToolbarDivider />
                   <Button
                     type="button"
                     isIconOnly
@@ -588,63 +850,114 @@ export function MailComposeModal({
                   >
                     <Redo2 className="size-4" />
                   </Button>
-                </Toolbar>
-                <EditorContent
-                  editor={editor}
-                  className="min-h-0 flex-1 overflow-y-auto"
-                />
+            </Toolbar>
+            {linkOpen ? (
+              <div className="flex items-center gap-2 border-t border-[var(--separator)] px-3 py-2">
+                      <LinkIcon className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+                      <Input
+                        value={linkUrl}
+                        onChange={(event) => setLinkUrl(event.target.value)}
+                        placeholder="https://example.com"
+                        className="h-9 min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none"
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            applyLink();
+                          }
+                        }}
+                      />
+                      <Button type="button" size="sm" variant="secondary" onPress={applyLink}>
+                        Apply
+                      </Button>
               </div>
-
-              {showSignatureEditor ? (
-                <div className="mx-4 mb-3 shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/50 p-3 sm:mx-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        Email signature
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                        Saved on this device for {fromAddress}.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onPress={saveAndInsertSignature}
-                    >
-                      Save & insert
-                    </Button>
-                  </div>
-                  <TextField className="mt-3">
-                    <Label className="sr-only">Email signature</Label>
-                    <TextArea
-                      value={signature}
-                      onChange={(event) => setSignature(event.target.value)}
-                      rows={3}
-                      placeholder={"Sara Al-Ahmad\nRukny\nsara@rukny.io"}
-                    />
-                  </TextField>
-                </div>
-              ) : null}
-
-              {usageHint ? (
-                <p className="px-4 pb-2 text-sm text-amber-700 dark:text-amber-400 sm:px-5">
-                  {usageHint}
-                </p>
-              ) : null}
-
-              {localError || error ? (
-                <p className="px-4 pb-3 text-sm text-[var(--danger)] sm:px-5" role="alert">
-                  {localError || error}
-                </p>
-              ) : null}
+            ) : null}
+            {attachments.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 border-t border-[var(--separator)] px-3 py-2">
+                      {attachments.map((item) => (
+                        <span
+                          key={item.id}
+                          className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[12px] text-[var(--foreground)]"
+                        >
+                          <Paperclip className="size-3 shrink-0 text-[var(--muted-foreground)]" />
+                          <span className="truncate">{item.filename}</span>
+                          <button
+                            type="button"
+                            className="rounded-md p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--foreground)]/6 hover:text-[var(--foreground)]"
+                            onClick={() =>
+                              setAttachments((prev) =>
+                                prev.filter((entry) => entry.id !== item.id),
+                              )
+                            }
+                            aria-label={`Remove ${item.filename}`}
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      ))}
+              </div>
+            ) : null}
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface)]">
+              <EditorContent editor={editor} className="h-full" />
             </div>
+          </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)]/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:py-3">
+          {showSignatureEditor ? (
+            <div className="shrink-0 rounded-xl bg-[var(--surface-secondary)]/60 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[13px] font-semibold text-[var(--foreground)]">
+                    Email signature
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
+                    Saved on this device for {fromAddress}.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onPress={saveAndInsertSignature}
+                >
+                  Save & insert
+                </Button>
+              </div>
+              <TextField className="mt-3">
+                <Label className="sr-only">Email signature</Label>
+                <TextArea
+                  value={signature}
+                  onChange={(event) => setSignature(event.target.value)}
+                  rows={3}
+                  placeholder={"Sara Al-Ahmad\nRukny\nsara@rukny.io"}
+                />
+              </TextField>
+            </div>
+          ) : null}
+
+          {localError || error ? (
+            <p className="text-[12px] text-[var(--danger)]" role="alert">
+              {localError || error}
+            </p>
+          ) : null}
+
+          <div className="flex flex-col gap-2.5 pt-1">
+            <div className="flex items-stretch gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                isDisabled={
+                  sending || savingDraft || !appId || !isValidMailboxId(mailboxId)
+                }
+                onPress={() => void persistDraft()}
+                className="h-10 min-w-0 flex-1 rounded-xl text-[13px] font-medium !shadow-none"
+              >
+                {savingDraft ? "Saving…" : "Save draft"}
+              </Button>
               <Button
                 type="button"
                 variant="tertiary"
                 isDisabled={sending}
                 onPress={onClose}
+                className="h-10 rounded-xl text-[13px] !shadow-none"
               >
                 Cancel
               </Button>
@@ -652,11 +965,14 @@ export function MailComposeModal({
                 type="submit"
                 isPending={sending}
                 isDisabled={!fromAddress}
+                className="h-10 min-w-0 flex-1 gap-1.5 rounded-xl text-[13px] font-medium !shadow-none"
               >
                 {sending ? "Sending…" : "Send"}
-                <Send className="size-4" />
+                <Send className="size-3.5" />
               </Button>
             </div>
+          </div>
+      </div>
     </form>
   );
 
@@ -686,10 +1002,13 @@ export function MailComposeModal({
       isOpen={open}
       isDismissable={!sending}
       onOpenChange={handleOpenChange}
+      variant="blur"
       className="z-50"
     >
-      <Modal.Container placement="center" scroll="inside" size="lg">
-        <Modal.Dialog className="w-full overflow-hidden p-0 sm:max-w-2xl">
+      <Modal.Container placement="center" scroll="inside" className="px-2 sm:px-3">
+        <Modal.Dialog
+          className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] p-0 !shadow-none ring-0 outline-none"
+        >
           {composeForm}
         </Modal.Dialog>
       </Modal.Container>

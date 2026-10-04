@@ -339,7 +339,7 @@ export function MailBillingPage() {
             <BillingPanel>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface)] text-[var(--foreground)]">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)]">
                     <CreditCard className="size-4.5" strokeWidth={1.75} aria-hidden />
                   </span>
                   <div className="min-w-0">
@@ -351,7 +351,7 @@ export function MailBillingPage() {
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[var(--surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--muted-foreground)] sm:self-center">
+                <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[var(--surface-secondary)] px-2.5 py-1 text-[12px] font-medium text-[var(--muted-foreground)] sm:self-center">
                   <ShieldCheck className="size-3.5" aria-hidden />
                   Secure
                 </span>
@@ -379,7 +379,7 @@ export function MailBillingPage() {
             {payments.length === 0 ? (
               <BillingPanel>
                 <div className="flex items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface)] text-[var(--muted-foreground)]">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
                     <ReceiptText className="size-4.5" strokeWidth={1.75} aria-hidden />
                   </span>
                   <p className="text-[13px] leading-5 text-[var(--muted-foreground)]">

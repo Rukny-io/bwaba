@@ -2,15 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Minus, Plus } from "lucide-react";
-import {
-  Button,
-  Chip,
-  Description,
-  Dropdown,
-  Label,
-  Skeleton,
-} from "@heroui/react";
+import { Minus, Plus } from "lucide-react";
+import { Button, Chip, Skeleton, cn } from "@heroui/react";
 import { BillingNotice, BillingPanel, BillingSection } from "@/components/billing/billing-ui";
 import {
   formatMailAliasLimit,
@@ -154,6 +147,10 @@ export function MailPlanSettingsSection() {
         : [],
     [active],
   );
+  const paidPlans = useMemo(
+    () => plans.filter((plan) => plan.id !== "free"),
+    [plans],
+  );
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
     [plans, selectedPlanId],
@@ -271,29 +268,27 @@ export function MailPlanSettingsSection() {
           Open a workspace to see its subscription.
         </p>
       ) : active ? (
-        <div className="flex min-w-0 flex-col gap-4">
-          <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[13px] text-[var(--muted-foreground)]">
-                {active.planName} plan
-              </p>
-              <p className="mt-0.5 text-[1.75rem] font-medium tracking-[-0.03em] tabular-nums text-[var(--foreground)]">
-                {formatMailIqD(active.monthlyTotal)}
-                <span className="ms-1 text-sm font-medium text-[var(--muted-foreground)]">
-                  /mo
-                </span>
-              </p>
-            </div>
-            <p className="text-sm text-[var(--muted-foreground)]">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-medium text-[var(--foreground)]">
+              {active.planName}
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
               {active.mailboxCount} seat
               {active.mailboxCount === 1 ? "" : "s"}
               {active.renewsAt
-                ? ` · renews ${new Date(active.renewsAt).toLocaleDateString("en-GB", {
+                ? ` · Renews ${new Date(active.renewsAt).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}`
                 : ""}
+            </p>
+            <p className="mt-2 text-lg font-medium tabular-nums tracking-tight text-[var(--foreground)]">
+              {formatMailIqD(active.monthlyTotal)}
+              <span className="ms-1 text-sm font-medium text-[var(--muted-foreground)]">
+                /mo
+              </span>
             </p>
           </div>
 
@@ -349,13 +344,13 @@ export function MailPlanSettingsSection() {
 
       {unifiedBillingOnly && !needsApp ? (
         <BillingPanel className="flex min-w-0 flex-col gap-3">
-          <p className="text-sm text-[var(--muted-foreground)]">
+          <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
             Upgrade your account plan in the developer portal. The same subscription
             covers hosted mailboxes and Email API sends.
           </p>
           <a
             href={`${resolveDeveloperUrl()}/apps`}
-            className="inline-flex h-10 w-fit items-center justify-center rounded-xl bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)]"
+            className="inline-flex h-9 w-fit items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-[13px] font-medium text-[var(--background)]"
           >
             Open developer portal
           </a>
@@ -377,114 +372,113 @@ export function MailPlanSettingsSection() {
       {!needsApp && canManageBilling && plans.length > 0 && !unifiedBillingOnly ? (
         <BillingPanel className="flex min-w-0 flex-col gap-4">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[var(--foreground)]">
+            <h3 className="text-base font-medium text-[var(--foreground)]">
               Change subscription
             </h3>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Choose a plan and mailbox seats for this workspace. Pay by card or open a
-              ticket for admin activation.
+              Choose a plan and mailbox seats. Pay by card or open a ticket.
             </p>
           </div>
 
-          <div className="min-w-0">
-            <Label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
-              Plan
-            </Label>
-            <Dropdown>
-              <Dropdown.Trigger
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="min-w-0">
+              <p className="mb-2 text-sm font-medium text-[var(--foreground)]">Plan</p>
+              <div
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
                 aria-label="Select plan"
-                isDisabled={busy || paying}
-                className="inline-flex h-10 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl bg-[var(--field-background)] px-3 text-start text-sm font-medium text-[var(--foreground)] outline-none"
               >
-                <span className="min-w-0 truncate">
-                  {selectedPlan
-                    ? `${selectedPlan.name} · from ${formatMailIqD(selectedPlan.priceMonthly)}/mo`
-                    : "Select a plan"}
-                </span>
-                <ChevronDown className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
-              </Dropdown.Trigger>
-              <Dropdown.Popover
-                placement="bottom start"
-                className="min-w-[16rem] overflow-hidden rounded-2xl"
-              >
-                <Dropdown.Menu
-                  selectedKeys={new Set([selectedPlanId])}
-                  selectionMode="single"
-                  onSelectionChange={(keys) => {
-                    if (keys === "all") return;
-                    const next = [...keys][0];
-                    if (next == null) return;
-                    onSelectPlan(String(next) as MailPlanId);
-                  }}
-                >
-                  <Dropdown.Section>
-                    {plans.filter((plan) => plan.id !== "free").map((plan) => (
-                      <Dropdown.Item
-                        key={plan.id}
-                        id={plan.id}
-                        textValue={plan.name}
+                {paidPlans.map((plan) => {
+                  const selected = selectedPlanId === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={busy || paying}
+                      onClick={() => onSelectPlan(plan.id)}
+                      className={cn(
+                        "min-w-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition-opacity disabled:opacity-50",
+                        selected
+                          ? "bg-[var(--foreground)] text-[var(--background)]"
+                          : "bg-[var(--surface-secondary)] text-[var(--foreground)] hover:opacity-90",
+                      )}
+                    >
+                      {plan.name}
+                      <span
+                        className={cn(
+                          "ms-1 tabular-nums",
+                          selected
+                            ? "text-[color-mix(in_srgb,var(--background)_72%,transparent)]"
+                            : "text-[var(--muted-foreground)]",
+                        )}
                       >
-                        <Dropdown.ItemIndicator />
-                        <div className="min-w-0">
-                          <Label>
-                            {plan.name}
-                            {plan.popular ? " · Popular" : ""}
-                          </Label>
-                          <Description>
-                            {plan.bestFor} · {formatMailIqD(plan.priceMonthly)}/mo
-                          </Description>
-                        </div>
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Section>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
+                        · {formatMailIqD(plan.priceMonthly)}/mo
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--foreground)]">Mailbox seats</p>
+                <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">
+                  {included} included
+                  {clampedSeats > included
+                    ? ` · +${clampedSeats - included} extra`
+                    : ""}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="secondary"
+                  aria-label="Fewer mailbox seats"
+                  isDisabled={busy || paying || clampedSeats <= included}
+                  onPress={() => setSeats(clampedSeats - 1)}
+                >
+                  <Minus className="size-3.5" aria-hidden />
+                </Button>
+                <span className="min-w-8 text-center text-sm font-medium tabular-nums text-[var(--foreground)]">
+                  {clampedSeats}
+                </span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="secondary"
+                  aria-label="More mailbox seats"
+                  isDisabled={busy || paying || clampedSeats >= 500}
+                  onPress={() => setSeats(clampedSeats + 1)}
+                >
+                  <Plus className="size-3.5" aria-hidden />
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-[var(--foreground)]">Mailbox seats</p>
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {included} included
-                {clampedSeats > included
-                  ? ` · +${clampedSeats - included} extra`
-                  : ""}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                isIconOnly
-                size="sm"
-                variant="secondary"
-                aria-label="Fewer mailbox seats"
-                isDisabled={busy || paying || clampedSeats <= included}
-                onPress={() => setSeats(clampedSeats - 1)}
-              >
-                <Minus className="size-3.5" aria-hidden />
-              </Button>
-              <span className="min-w-8 text-center text-sm font-semibold tabular-nums text-[var(--foreground)]">
-                {clampedSeats}
+          {selectedPlan ? (
+            <div className="flex flex-wrap gap-2 text-[13px] text-[var(--muted-foreground)]">
+              <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1">
+                {formatMailIqD(selectedPlan.priceMonthly)}/mo base
               </span>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="secondary"
-                aria-label="More mailbox seats"
-                isDisabled={busy || paying || clampedSeats >= 500}
-                onPress={() => setSeats(clampedSeats + 1)}
-              >
-                <Plus className="size-3.5" aria-hidden />
-              </Button>
+              {clampedSeats > included && selectedPlan.priceExtraMailbox > 0 ? (
+                <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1">
+                  +{formatMailIqD(selectedPlan.priceExtraMailbox)} / extra seat
+                </span>
+              ) : null}
             </div>
-          </div>
+          ) : null}
 
-          <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-xs text-[var(--muted-foreground)]">Estimated monthly</p>
-              <p className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
+              <p className="text-sm text-[var(--muted-foreground)]">Estimated monthly</p>
+              <p className="mt-0.5 text-lg font-medium tabular-nums tracking-tight text-[var(--foreground)]">
                 {formatMailIqD(monthlyTotal)}
-                <span className="text-sm font-medium text-[var(--muted-foreground)]">
+                <span className="ms-1 text-sm font-medium text-[var(--muted-foreground)]">
                   /mo
                 </span>
               </p>
@@ -492,7 +486,8 @@ export function MailPlanSettingsSection() {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
-                variant="secondary"
+                variant="ghost"
+                className="rounded-full shadow-none"
                 isDisabled={ticketLocked}
                 onPress={() => void onRequestPlan()}
               >

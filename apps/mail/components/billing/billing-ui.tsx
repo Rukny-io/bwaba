@@ -19,7 +19,7 @@ export function BillingSection({
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] px-4 py-5 md:px-6 md:py-6",
+        "flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] p-4 sm:p-5",
         className,
       )}
     >
@@ -49,12 +49,7 @@ export function BillingPanel({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl bg-[var(--surface-secondary)] px-4 py-3.5",
-        className,
-      )}
-    >
+    <div className={cn("border-t border-[var(--border)] pt-4", className)}>
       {children}
     </div>
   );

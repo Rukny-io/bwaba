@@ -12,6 +12,7 @@ import { cn } from "@heroui/react";
 import type { InboxFolderId } from "@/components/inbox/mail-inbox-sidebar";
 import { MailSenderBrandAvatar } from "@/components/inbox/mail-sender-brand-avatar";
 import type {
+  MailAttachmentView,
   MailMessageAuthentication,
   MailMessageFolderApi,
   MailMessageVerificationType,
@@ -37,6 +38,9 @@ export type InboxMessageRow = {
   unread: boolean;
   starred: boolean;
   folder?: MailMessageFolderApi;
+  attachments?: MailAttachmentView[];
+  draftId?: string;
+  scheduledAt?: string | null;
 };
 
 const FOLDER_TITLE: Record<InboxFolderId, string> = {
@@ -138,7 +142,7 @@ export function MailInboxListCard({
   const unreadInView = messages.filter((m) => m.unread).length;
 
   return (
-    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-r border-[var(--separator)] bg-white dark:bg-[var(--surface)]">
+    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-r border-[var(--separator)] bg-[var(--surface)]">
       <div className="flex shrink-0 items-end justify-between gap-3 px-4 pb-2 pt-3 sm:px-4 sm:pt-3.5">
         <div className="min-w-0">
           <h2 className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
@@ -220,8 +224,6 @@ export function MailInboxListCard({
               </div>
             ))}
           </div>
-        ) : folder === "scheduled" ? (
-          <EmptyState>Snoozed messages are not available yet.</EmptyState>
         ) : messages.length === 0 ? (
           <EmptyState>No messages in this folder.</EmptyState>
         ) : (

@@ -763,6 +763,74 @@ export class StorageService {
     );
   }
 
+  async uploadMailMessageAttachment(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    attachmentId: string,
+    file: Express.Multer.File,
+    key: string,
+  ): Promise<void> {
+    const buffer = await this.normalizeFileToBuffer(file);
+    const incomingSize =
+      (file && (file.size ?? buffer.length)) || buffer.length;
+    if (incomingSize > 10 * 1024 * 1024) {
+      throw new BadRequestException('Attachment exceeds 10MB limit.');
+    }
+    const hasSpace = await this.checkStorageLimit(userId, incomingSize);
+    if (!hasSpace) {
+      throw new BadRequestException('Not enough storage space.');
+    }
+    await this.s3Service.uploadBuffer(
+      this.bucket,
+      key,
+      buffer,
+      file.mimetype || 'application/octet-stream',
+    );
+    await this.trackFile(userId, {
+      key,
+      fileName: file.originalname || 'attachment',
+      fileType: file.mimetype || 'application/octet-stream',
+      fileSize: BigInt(incomingSize),
+      category: FileCategory.MAIL_MESSAGE_ATTACHMENT,
+      entityId: attachmentId,
+    });
+  }
+
+  async readMailAttachmentBuffer(key: string): Promise<Buffer> {
+    const buffer = await this.s3Service.getObject(this.bucket, key);
+    if (!buffer) {
+      throw new BadRequestException('Attachment file is missing.');
+    }
+    return buffer;
+  }
+
+  async getSignedUrlForKey(key: string, expiresInSeconds = 3600): Promise<string> {
+    return this.s3Service.getPresignedGetUrl(
+      this.bucket,
+      key,
+      expiresInSeconds,
+    );
+  }
+
+  async uploadBufferForMailAttachment(
+    userId: string,
+    attachmentId: string,
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    await this.s3Service.uploadBuffer(this.bucket, key, buffer, contentType);
+    await this.trackFile(userId, {
+      key,
+      fileName: key.split('/').pop() || 'attachment',
+      fileType: contentType,
+      fileSize: BigInt(buffer.length),
+      category: FileCategory.MAIL_MESSAGE_ATTACHMENT,
+      entityId: attachmentId,
+    });
+  }
+
   /**
    * Upload cover image to S3 with processing
    */

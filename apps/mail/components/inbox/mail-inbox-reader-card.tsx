@@ -17,9 +17,14 @@ import { cn } from "@heroui/react";
 import type { InboxMessageRow } from "@/components/inbox/mail-inbox-list-card";
 import { MailSenderBrandAvatar } from "@/components/inbox/mail-sender-brand-avatar";
 import { MailHtmlBody } from "@/components/inbox/mail-html-body";
+import {
+  getMailAttachmentDownloadUrl,
+  type MailAttachmentView,
+} from "@/lib/mail-messages-client";
 
 type Props = {
   message: InboxMessageRow | null;
+  appId?: string | null;
   mailboxAddress: string | null;
   mailboxAvatarUrl?: string | null;
   index: number;
@@ -64,8 +69,15 @@ function formatFull(iso: string) {
 const glassBtn =
   "inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.06] hover:text-[var(--foreground)] dark:hover:bg-white/10";
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function MailInboxReaderCard({
   message,
+  appId = null,
   mailboxAddress,
   mailboxAvatarUrl = null,
   index,
@@ -107,7 +119,7 @@ export function MailInboxReaderCard({
 
   if (!message) {
     return (
-      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white lg:flex dark:bg-[var(--surface)]">
+      <section className="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--surface)] lg:flex">
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-blue-soft)] text-[var(--secondary-foreground)]">
             <MailOpen className="size-6" strokeWidth={1.75} />
@@ -158,7 +170,7 @@ export function MailInboxReaderCard({
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-[inbox-fade_220ms_ease-out]",
         "max-md:rounded-none max-md:bg-transparent max-md:shadow-none",
-        "md:bg-white dark:md:bg-[var(--surface)]",
+        "md:bg-[var(--surface)]",
       )}
     >
       {/* Mobile: liquid-glass toolbar */}
@@ -303,6 +315,38 @@ export function MailInboxReaderCard({
             text={message.body || message.preview}
           />
         </div>
+        {message.attachments && message.attachments.length > 0 ? (
+          <div className="mt-6 border-t border-[var(--separator)] pt-4">
+            <p className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
+              Attachments
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {message.attachments.map((attachment: MailAttachmentView) => (
+                <li key={attachment.id}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]"
+                    onClick={() => {
+                      if (!appId) return;
+                      void getMailAttachmentDownloadUrl(
+                        appId,
+                        message.id,
+                        attachment.id,
+                      ).then(({ url }) => {
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      });
+                    }}
+                  >
+                    <span>{attachment.filename}</span>
+                    <span className="text-[var(--muted-foreground)]">
+                      {formatBytes(attachment.sizeBytes)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <div

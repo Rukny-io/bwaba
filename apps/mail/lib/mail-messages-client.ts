@@ -73,8 +73,19 @@ export type MailMessageView = {
   errorMessage: string | null;
   sentAt: string | null;
   receivedAt: string | null;
+  scheduledAt: string | null;
+  attachments?: MailAttachmentView[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type MailAttachmentView = {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  contentId: string | null;
+  createdAt: string;
 };
 
 export type MailFolderCounts = {
@@ -88,6 +99,7 @@ export type MailFolderCounts = {
   promotions: number;
   social: number;
   starred: number;
+  scheduled?: number;
 };
 
 export class MailboxLockedError extends Error {
@@ -138,6 +150,8 @@ export async function listMailMessages(
     mailboxId?: string;
     folder?: MailMessageFolderApi;
     starred?: boolean;
+    scheduled?: boolean;
+    q?: string;
     take?: number;
     cursor?: string;
   } = {},
@@ -146,6 +160,8 @@ export async function listMailMessages(
   if (opts.mailboxId) params.set("mailboxId", opts.mailboxId);
   if (opts.folder) params.set("folder", opts.folder);
   if (opts.starred) params.set("starred", "true");
+  if (opts.scheduled) params.set("scheduled", "true");
+  if (opts.q?.trim()) params.set("q", opts.q.trim());
   if (opts.take) params.set("take", String(opts.take));
   if (opts.cursor) params.set("cursor", opts.cursor);
   const qs = params.toString();
@@ -192,7 +208,125 @@ export async function getMailMessageCounts(
     promotions: data.promotions ?? 0,
     social: data.social ?? 0,
     starred: data.starred ?? 0,
+    scheduled: data.scheduled ?? 0,
   };
+}
+
+export async function uploadMailAttachment(
+  appId: string,
+  mailboxId: string,
+  file: File,
+  messageId?: string,
+): Promise<MailAttachmentView> {
+  const params = new URLSearchParams({ mailboxId });
+  if (messageId) params.set("messageId", messageId);
+  const form = new FormData();
+  form.append("file", file);
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/attachments?${params.toString()}`,
+    { method: "POST", body: form },
+  );
+  const data = await readJson<{ attachment?: MailAttachmentView }>(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok || !data.attachment?.id) {
+    throw new Error(errorMessage(data, "Could not upload attachment."));
+  }
+  return data.attachment;
+}
+
+export async function getMailAttachmentDownloadUrl(
+  appId: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<{ attachment: MailAttachmentView; url: string }> {
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
+  );
+  const data = await readJson<{
+    attachment?: MailAttachmentView;
+    url?: string;
+  }>(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok || !data.url || !data.attachment) {
+    throw new Error(errorMessage(data, "Could not download attachment."));
+  }
+  return { attachment: data.attachment, url: data.url };
+}
+
+export async function saveMailDraft(
+  appId: string,
+  input: {
+    mailboxId: string;
+    to?: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject?: string;
+    bodyText?: string;
+    bodyHtml?: string;
+    replyToMessageId?: string;
+    attachmentIds?: string[];
+    scheduledAt?: string | null;
+  },
+): Promise<MailMessageView> {
+  const response = await sessionFetch(`${messagesBase(appId)}/drafts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok || !data.id) {
+    throw new Error(errorMessage(data, "Could not save draft."));
+  }
+  return data;
+}
+
+export async function updateMailDraft(
+  appId: string,
+  draftId: string,
+  input: {
+    mailboxId: string;
+    to?: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject?: string;
+    bodyText?: string;
+    bodyHtml?: string;
+    replyToMessageId?: string;
+    attachmentIds?: string[];
+    scheduledAt?: string | null;
+  },
+): Promise<MailMessageView> {
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/${encodeURIComponent(draftId)}/draft`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok || !data.id) {
+    throw new Error(errorMessage(data, "Could not update draft."));
+  }
+  return data;
+}
+
+export async function sendMailDraft(
+  appId: string,
+  draftId: string,
+): Promise<MailMessageView> {
+  const response = await sessionFetch(
+    `${messagesBase(appId)}/${encodeURIComponent(draftId)}/send`,
+    { method: "POST" },
+  );
+  const data = await readJson<MailMessageView>(response);
+  throwIfMailboxLocked(response, data);
+  if (!response.ok || !data.id) {
+    throw new Error(errorMessage(data, "Could not send draft."));
+  }
+  return data;
 }
 
 export async function getMailMessage(
@@ -221,6 +355,9 @@ export async function sendMailMessage(
     bodyText?: string;
     bodyHtml?: string;
     replyToMessageId?: string;
+    attachmentIds?: string[];
+    draftId?: string;
+    scheduledAt?: string;
   },
 ): Promise<MailMessageView> {
   const response = await sessionFetch(`${messagesBase(appId)}/send`, {

@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsOptional,
@@ -68,6 +69,89 @@ export class SendMailMessageDto {
   @IsOptional()
   @IsUUID()
   replyToMessageId?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Uploaded attachment ids' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsUUID(undefined, { each: true })
+  attachmentIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Promote an existing draft instead of creating a new row',
+  })
+  @IsOptional()
+  @IsUUID()
+  draftId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Schedule send for a future time (ISO 8601). Creates a scheduled draft.',
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledAt?: string;
+}
+
+export class SaveMailDraftDto {
+  @ApiProperty()
+  @IsUUID()
+  mailboxId: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsEmail({}, { each: true })
+  to?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsEmail({}, { each: true })
+  cc?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsEmail({}, { each: true })
+  bcc?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(998)
+  subject?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500_000)
+  bodyText?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500_000)
+  bodyHtml?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  replyToMessageId?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsUUID(undefined, { each: true })
+  attachmentIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  scheduledAt?: string | null;
 }
 
 export class UpdateMailMessageDto {

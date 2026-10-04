@@ -169,6 +169,9 @@ function toRow(msg: MailMessageView): InboxMessageRow {
     unread: msg.unread,
     starred: msg.starred,
     folder: msg.folder,
+    attachments: msg.attachments ?? [],
+    draftId: msg.folder === "DRAFTS" ? msg.id : undefined,
+    scheduledAt: msg.scheduledAt,
   };
 }
 
@@ -198,7 +201,7 @@ function mapCounts(c: MailFolderCounts): Record<InboxFolderId, number> {
   return {
     inbox: c.inbox,
     starred: c.starred,
-    scheduled: 0,
+    scheduled: c.scheduled ?? 0,
     sent: c.sent,
     drafts: c.drafts,
     promotions: c.promotions,
@@ -263,6 +266,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
   const [replySending, setReplySending] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [listPage, setListPage] = useState(1);
+  const [serverSearch, setServerSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selected = mailboxes.find((m) => m.id === selectedMailboxId) ?? null;
@@ -299,10 +303,6 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
         setMessages([]);
         return;
       }
-      if (folderId === "scheduled") {
-        setMessages([]);
-        return;
-      }
       if (demo) {
         setMessages(demoRows(folderId));
         setError("");
@@ -316,12 +316,21 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
                 mailboxId,
                 starred: true,
                 take: 100,
+                q: serverSearch || undefined,
               })
-            : await listMailMessages(id, {
-                mailboxId,
-                folder: FOLDER_TO_API[folderId] ?? "INBOX",
-                take: 100,
-              });
+            : folderId === "scheduled"
+              ? await listMailMessages(id, {
+                  mailboxId,
+                  scheduled: true,
+                  take: 100,
+                  q: serverSearch || undefined,
+                })
+              : await listMailMessages(id, {
+                  mailboxId,
+                  folder: FOLDER_TO_API[folderId] ?? "INBOX",
+                  take: 100,
+                  q: serverSearch || undefined,
+                });
         setMessages(result.messages.map(toRow));
         setError("");
       } catch (err) {
@@ -340,8 +349,15 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
         if (!opts?.quiet) setMessagesLoading(false);
       }
     },
-    [demo],
+    [demo, serverSearch],
   );
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setServerSearch(search.trim());
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [search]);
 
   useEffect(() => {
     if (demo) return;
@@ -440,7 +456,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
     }
     void loadMessages(appId, selectedMailboxId, folder);
     void loadCounts(appId, selectedMailboxId);
-  }, [appId, selectedMailboxId, folder, loadMessages, loadCounts]);
+  }, [appId, selectedMailboxId, folder, serverSearch, loadMessages, loadCounts]);
 
   // Instant updates via SSE (no polling interval).
   useEffect(() => {
@@ -527,16 +543,19 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
   ]);
 
   const visibleMessages = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return messages;
-    return messages.filter(
-      (m) =>
-        m.from.toLowerCase().includes(q) ||
-        m.fromEmail.toLowerCase().includes(q) ||
-        m.subject.toLowerCase().includes(q) ||
-        m.preview.toLowerCase().includes(q),
-    );
-  }, [messages, search]);
+    if (demo) {
+      const q = search.trim().toLowerCase();
+      if (!q) return messages;
+      return messages.filter(
+        (m) =>
+          m.from.toLowerCase().includes(q) ||
+          m.fromEmail.toLowerCase().includes(q) ||
+          m.subject.toLowerCase().includes(q) ||
+          m.preview.toLowerCase().includes(q),
+      );
+    }
+    return messages;
+  }, [messages, search, demo]);
 
   const listPageCount = Math.max(
     1,
@@ -619,13 +638,19 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
         bodyText: draft.body,
         bodyHtml: draft.bodyHtml,
         replyToMessageId: draft.replyToMessageId,
+        attachmentIds: draft.attachmentIds,
+        draftId: draft.draftId,
+        scheduledAt: draft.scheduledAt,
       });
       setComposeOpen(false);
-      showToast("Message sent");
+      showToast(
+        draft.scheduledAt ? "Message scheduled" : "Message sent",
+      );
       await loadMessages(appId, selectedMailboxId, folder, { quiet: true });
       await loadCounts(appId, selectedMailboxId);
-      if (folder !== "sent") {
-        setFolder("sent");
+      const targetFolder = draft.scheduledAt ? "scheduled" : "sent";
+      if (folder !== targetFolder) {
+        setFolder(targetFolder);
         setSelectedMessageId(null);
       }
     } catch (err) {
@@ -702,6 +727,24 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
       const full = await getMailMessage(appId, id);
       const row = toRow(full);
       setMessages((prev) => prev.map((m) => (m.id === id ? row : m)));
+      if (
+        folder === "drafts" ||
+        row.folder === "DRAFTS" ||
+        folder === "scheduled" ||
+        row.scheduledAt
+      ) {
+        openCompose({
+          to: row.toList?.join(", ") ?? row.to,
+          subject: row.subject === "(no subject)" ? "" : row.subject,
+          body: row.body,
+          bodyHtml: row.bodyHtml ?? undefined,
+          draftId: row.id,
+          attachmentIds: row.attachments?.map((item) => item.id),
+          attachments: row.attachments,
+          scheduledAt: row.scheduledAt ?? undefined,
+        });
+        return;
+      }
       void loadCounts(appId, selectedMailboxId);
     } catch {
       /* list preview is enough */
@@ -961,8 +1004,8 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
       className={cn(
         "relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden dark:bg-[var(--background)]",
         mobileShowReader && selectedMessage
-          ? "max-md:bg-[#f5f5f5] bg-white"
-          : "bg-white",
+          ? "max-md:bg-[var(--background)] bg-[var(--surface)]"
+          : "bg-[var(--surface)]",
       )}
     >
       <header
@@ -1124,6 +1167,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
                   "starred",
                   "sent",
                   "drafts",
+                  "scheduled",
                   "promotions",
                   "social",
                   "spam",
@@ -1176,7 +1220,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
 
           <div
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 overflow-hidden bg-white dark:bg-[var(--background)]",
+              "flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[var(--background)]",
               mobileShowReader && selectedMessage
                 ? "max-md:mx-0 max-md:mb-0 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:pt-[max(0.75rem,env(safe-area-inset-top))]"
                 : "",
@@ -1220,6 +1264,7 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
             >
               <MailInboxReaderCard
                 message={selectedMessage}
+                appId={appId}
                 mailboxAddress={selected?.address ?? null}
                 mailboxAvatarUrl={selected?.avatarUrl ?? null}
                 index={selectedIndex}
@@ -1274,6 +1319,8 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
 
       <MailComposeModal
         open={composeOpen}
+        appId={appId}
+        mailboxId={selectedMailboxId}
         fromAddress={selected?.address ?? null}
         fromAvatarUrl={selected?.avatarUrl ?? null}
         fromDisplayName={selected?.displayName ?? selected?.localPart ?? null}

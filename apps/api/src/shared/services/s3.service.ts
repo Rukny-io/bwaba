@@ -548,6 +548,22 @@ export class S3Service implements OnModuleInit {
   }
 
   /**
+   * Path: users/{userId}/mail/{appId}/mailboxes/{mailboxId}/attachments/{attachmentId}/{filename}
+   */
+  getMailMessageAttachmentKey(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+    attachmentId: string,
+    filename: string,
+  ): string {
+    const safe = (value: string) =>
+      value.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 80) || 'x';
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'file';
+    return `users/${safe(userId)}/mail/${safe(appId)}/mailboxes/${safe(mailboxId)}/attachments/${safe(attachmentId)}/${safeName}`;
+  }
+
+  /**
    * Generate S3 key for user profile cover
    * Path: users/{userId}/profile/cover/{filename}
    */

@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Headers,
   HttpCode,
@@ -23,24 +22,32 @@ export class MailSesWebhookController {
   @ApiOperation({ summary: 'Amazon SNS/SES inbound webhook' })
   async handle(
     @Req() req: { body?: unknown; rawBody?: Buffer },
-    @Body() body: unknown,
     @Query('token') tokenQuery?: string,
     @Headers('x-mail-webhook-token') tokenHeader?: string,
   ) {
     this.inbound.assertWebhookToken(tokenQuery || tokenHeader);
 
-    // SNS may send text/plain JSON — Nest may already parse it.
-    const payload =
-      body && typeof body === 'object'
-        ? body
-        : typeof body === 'string'
-          ? safeJson(body)
-          : req.rawBody
-            ? safeJson(req.rawBody.toString('utf8'))
-            : body;
+    // Parse from rawBody first so global SanitizePipe never mutates the signed SNS envelope.
+    const payload = parseSnsPayload(req);
 
     return this.inbound.handleSnsPayload(payload);
   }
+}
+
+function parseSnsPayload(req: {
+  body?: unknown;
+  rawBody?: Buffer;
+}): unknown {
+  if (req.rawBody?.length) {
+    return safeJson(req.rawBody.toString('utf8'));
+  }
+  if (typeof req.body === 'string') {
+    return safeJson(req.body);
+  }
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  return req.body;
 }
 
 function safeJson(raw: string): unknown {

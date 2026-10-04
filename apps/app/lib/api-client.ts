@@ -46,6 +46,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+async function isAccessSessionAlive(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/me', {
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function postRefresh(maxAttempts = 3): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const csrf = getCsrfToken();
@@ -94,7 +106,10 @@ export async function refreshOnce(): Promise<RefreshResult> {
       const response = await postRefresh();
       if (!response.ok) {
         if (response.status === 401) {
-          handleAuthFailure();
+          const alive = await isAccessSessionAlive();
+          if (!alive) {
+            handleAuthFailure();
+          }
         }
         return { success: false };
       }

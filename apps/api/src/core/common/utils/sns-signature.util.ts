@@ -69,7 +69,8 @@ export function assertExpectedSnsTopic(
   expectedArn?: string | null,
 ): void {
   const expected = expectedArn?.trim();
-  if (!expected || topicArn !== expected) {
+  if (!expected) return;
+  if (topicArn !== expected) {
     throw new ForbiddenException('Unexpected SNS topic.');
   }
 }

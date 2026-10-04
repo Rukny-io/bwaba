@@ -2,8 +2,20 @@
 
 import { useEffect } from 'react';
 
-/** Proactive refresh before the 30-minute access token expires. */
-const REFRESH_INTERVAL_MS = 25 * 60 * 1000;
+/** Re-check session health on this interval (access token TTL is ~30 min). */
+const SESSION_PROBE_INTERVAL_MS = 5 * 60 * 1000;
+
+async function accessSessionExpired(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/me', {
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    return response.status === 401;
+  } catch {
+    return false;
+  }
+}
 
 export function SessionKeepAlive({
   pathPrefix,
@@ -17,11 +29,15 @@ export function SessionKeepAlive({
     if (typeof window === 'undefined') return;
     if (!window.location.pathname.startsWith(pathPrefix)) return;
 
-    void refresh();
+    const probe = async () => {
+      if (await accessSessionExpired()) {
+        await refresh();
+      }
+    };
 
     const timer = window.setInterval(() => {
-      void refresh();
-    }, REFRESH_INTERVAL_MS);
+      void probe();
+    }, SESSION_PROBE_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
   }, [pathPrefix, refresh]);

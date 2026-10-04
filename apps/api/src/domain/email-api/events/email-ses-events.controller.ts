@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, Req } from '@nestjs/common';
+import { Controller, HttpCode, Post, Req } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { EmailSesEventsService } from './email-ses-events.service';
@@ -11,16 +11,32 @@ export class EmailSesEventsController {
 
   @Post()
   @HttpCode(200)
-  handle(
-    @Req() request: { body?: unknown; rawBody?: Buffer },
-    @Body() body: unknown,
-  ) {
-    let payload: unknown = body;
-    if (typeof body === 'string') {
-      payload = JSON.parse(body) as unknown;
-    } else if ((!body || typeof body !== 'object') && request.rawBody) {
-      payload = JSON.parse(request.rawBody.toString('utf8')) as unknown;
-    }
+  handle(@Req() request: { body?: unknown; rawBody?: Buffer }) {
+    const payload = parseSnsPayload(request);
     return this.events.handle(payload);
+  }
+}
+
+function parseSnsPayload(req: {
+  body?: unknown;
+  rawBody?: Buffer;
+}): unknown {
+  if (req.rawBody?.length) {
+    return safeJson(req.rawBody.toString('utf8'));
+  }
+  if (typeof req.body === 'string') {
+    return safeJson(req.body);
+  }
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  return req.body;
+}
+
+function safeJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { raw };
   }
 }

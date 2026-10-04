@@ -1,4 +1,4 @@
-import { asSnsEnvelope, isSnsEnvelope } from './sns-signature.util';
+import { asSnsEnvelope, assertExpectedSnsTopic, isSnsEnvelope } from './sns-signature.util';
 
 describe('sns-signature.util', () => {
   it('detects SNS envelopes', () => {
@@ -21,5 +21,23 @@ describe('sns-signature.util', () => {
     expect(() => asSnsEnvelope({ Type: 'Notification' })).toThrow(
       /missing required fields/i,
     );
+  });
+
+  it('skips topic validation when expected ARN is not configured', () => {
+    expect(() =>
+      assertExpectedSnsTopic(
+        'arn:aws:sns:eu-north-1:123:topic',
+        undefined,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects mismatched topic when expected ARN is configured', () => {
+    expect(() =>
+      assertExpectedSnsTopic(
+        'arn:aws:sns:eu-north-1:123:other',
+        'arn:aws:sns:eu-north-1:123:topic',
+      ),
+    ).toThrow(/unexpected sns topic/i);
   });
 });

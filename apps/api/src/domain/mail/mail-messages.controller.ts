@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,9 +13,18 @@ import {
   Sse,
   HttpException,
   HttpStatus,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { MailMessageFolder } from '@prisma/client';
 import type { Request } from 'express';
 import { Observable } from 'rxjs';
@@ -25,9 +35,11 @@ import {
 } from '../../core/common/decorators/auth/current-user.decorator';
 import { extractMailboxSessionToken } from '../auth/cookie.config';
 import {
+  SaveMailDraftDto,
   SendMailMessageDto,
   UpdateMailMessageDto,
 } from './dto/mail-message.dto';
+import { MailAttachmentsService } from './mail-attachments.service';
 import { MailInboundService } from './mail-inbound.service';
 import { MailMessagesService } from './mail-messages.service';
 import { MailRealtimeService } from './mail-realtime.service';
@@ -41,6 +53,7 @@ export class MailMessagesController {
     private readonly messages: MailMessagesService,
     private readonly inbound: MailInboundService,
     private readonly realtime: MailRealtimeService,
+    private readonly attachments: MailAttachmentsService,
   ) {}
 
   @Get()
@@ -58,6 +71,8 @@ export class MailMessagesController {
   @ApiQuery({ name: 'starred', required: false })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'take', required: false })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'scheduled', required: false })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -67,13 +82,17 @@ export class MailMessagesController {
     @Query('starred') starred?: string,
     @Query('cursor') cursor?: string,
     @Query('take') take?: string,
+    @Query('q') q?: string,
+    @Query('scheduled') scheduled?: string,
   ) {
     return this.messages.list(user.id, appId, {
       mailboxId,
       folder,
       starred: starred === '1' || starred === 'true',
+      scheduled: scheduled === '1' || scheduled === 'true',
       cursor,
       take: take ? Number(take) : undefined,
+      q,
       sessionToken: extractMailboxSessionToken(req),
     });
   }
@@ -157,6 +176,50 @@ export class MailMessagesController {
     return this.inbound.importRecentRaw(take ? Number(take) : 30);
   }
 
+  @Post('attachments')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload a message attachment' })
+  @ApiQuery({ name: 'mailboxId', required: true })
+  @ApiQuery({ name: 'messageId', required: false })
+  uploadAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Req() req: Request,
+    @UploadedFile() file: Express.Multer.File,
+    @Query('mailboxId') mailboxId?: string,
+    @Query('messageId') messageId?: string,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded.');
+    if (!mailboxId) throw new BadRequestException('mailboxId is required.');
+    return this.attachments.upload(
+      user.id,
+      appId,
+      mailboxId,
+      file,
+      extractMailboxSessionToken(req),
+      messageId,
+    );
+  }
+
+  @Post('drafts')
+  @ApiOperation({ summary: 'Create a draft message' })
+  createDraft(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Req() req: Request,
+    @Body() dto: SaveMailDraftDto,
+  ) {
+    return this.messages.createDraft(
+      user.id,
+      appId,
+      dto,
+      extractMailboxSessionToken(req),
+    );
+  }
+
   @Post('send')
   @ApiOperation({ summary: 'Send email via Amazon SES from a mailbox' })
   send(
@@ -169,6 +232,58 @@ export class MailMessagesController {
       user.id,
       appId,
       dto,
+      extractMailboxSessionToken(req),
+    );
+  }
+
+  @Patch(':messageId/draft')
+  @ApiOperation({ summary: 'Update a draft message' })
+  updateDraft(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('messageId') messageId: string,
+    @Req() req: Request,
+    @Body() dto: SaveMailDraftDto,
+  ) {
+    return this.messages.updateDraft(
+      user.id,
+      appId,
+      messageId,
+      dto,
+      extractMailboxSessionToken(req),
+    );
+  }
+
+  @Post(':messageId/send')
+  @ApiOperation({ summary: 'Send an existing draft' })
+  sendDraft(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('messageId') messageId: string,
+    @Req() req: Request,
+  ) {
+    return this.messages.sendDraft(
+      user.id,
+      appId,
+      messageId,
+      extractMailboxSessionToken(req),
+    );
+  }
+
+  @Get(':messageId/attachments/:attachmentId')
+  @ApiOperation({ summary: 'Get a signed download URL for an attachment' })
+  downloadAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('messageId') messageId: string,
+    @Param('attachmentId') attachmentId: string,
+    @Req() req: Request,
+  ) {
+    return this.attachments.getDownloadUrl(
+      user.id,
+      appId,
+      messageId,
+      attachmentId,
       extractMailboxSessionToken(req),
     );
   }

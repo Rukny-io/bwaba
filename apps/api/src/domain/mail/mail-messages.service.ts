@@ -17,7 +17,12 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
-import { SendMailMessageDto } from './dto/mail-message.dto';
+import {
+  SaveMailDraftDto,
+  SendMailMessageDto,
+} from './dto/mail-message.dto';
+import { sanitizeMailHtml } from './mail-html-sanitize.util';
+import { MailAttachmentsService } from './mail-attachments.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailRealtimeService } from './mail-realtime.service';
@@ -60,6 +65,7 @@ export class MailMessagesService {
     private readonly access: MailAppAccessService,
     private readonly bodyCrypto: MailBodyCryptoService,
     private readonly bodyEncryption: MailBodyEncryptionPolicy,
+    private readonly attachments: MailAttachmentsService,
   ) {}
 
   private asBodyRow(row: {
@@ -148,6 +154,7 @@ export class MailMessagesService {
       errorMessage: string | null;
       sentAt: Date | null;
       receivedAt: Date | null;
+      scheduledAt?: Date | null;
       createdAt: Date;
       updatedAt: Date;
       mailbox?: { avatarKey: string | null } | null;
@@ -157,6 +164,14 @@ export class MailMessagesService {
       bodyText?: string | null;
       bodyHtml?: string | null;
       omitBodies?: boolean;
+      attachments?: Array<{
+        id: string;
+        filename: string;
+        contentType: string;
+        sizeBytes: number;
+        contentId: string | null;
+        createdAt: string;
+      }>;
     },
   ) {
     const authenticationPassed =
@@ -237,6 +252,8 @@ export class MailMessagesService {
       errorMessage: row.errorMessage,
       sentAt: row.sentAt,
       receivedAt: row.receivedAt,
+      scheduledAt: row.scheduledAt ?? null,
+      attachments: options?.attachments ?? [],
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -290,6 +307,8 @@ export class MailMessagesService {
       take?: number;
       cursor?: string;
       sessionToken?: string;
+      q?: string;
+      scheduled?: boolean;
     } = {},
   ) {
     const { app } = await this.requireUnlockedMailbox(
@@ -300,6 +319,7 @@ export class MailMessagesService {
     );
 
     const take = Math.min(Math.max(opts.take ?? 50, 1), 100);
+    const needle = opts.q?.trim().slice(0, 200) || '';
 
     const where: Prisma.MailMessageWhereInput = {
       // Messages are stored under the workspace owner; access is via unlocked session.
@@ -309,21 +329,42 @@ export class MailMessagesService {
         status: { not: MailMailboxStatus.DELETED },
         ...(opts.mailboxId ? { id: opts.mailboxId } : {}),
       },
-      ...(opts.starred
-        ? { isStarred: true }
-        : opts.folder === MailMessageFolder.INBOX || opts.folder === undefined
-          ? {
-              // Inbox = all arriving mail except Spam (and non-incoming folders).
-              folder: {
-                in: [
-                  MailMessageFolder.INBOX,
-                  MailMessageFolder.SOCIAL,
-                  MailMessageFolder.PROMOTIONS,
-                ],
-              },
-            }
-          : { folder: opts.folder }),
+      ...(opts.scheduled
+        ? {
+            folder: MailMessageFolder.DRAFTS,
+            scheduledAt: { gt: new Date() },
+          }
+        : opts.starred
+          ? { isStarred: true }
+          : opts.folder === MailMessageFolder.DRAFTS
+            ? {
+                folder: MailMessageFolder.DRAFTS,
+                OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+              }
+            : opts.folder === MailMessageFolder.INBOX || opts.folder === undefined
+              ? {
+                  folder: {
+                    in: [
+                      MailMessageFolder.INBOX,
+                      MailMessageFolder.SOCIAL,
+                      MailMessageFolder.PROMOTIONS,
+                    ],
+                  },
+                }
+              : { folder: opts.folder }),
     };
+
+    if (needle) {
+      where.AND = [
+        {
+          OR: [
+            { subject: { contains: needle, mode: 'insensitive' } },
+            { fromAddress: { contains: needle, mode: 'insensitive' } },
+            { snippet: { contains: needle, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
 
     const rows = await this.prisma.mailMessage.findMany({
       where,
@@ -543,12 +584,14 @@ export class MailMessagesService {
 
     const identities = await this.loadSenderIdentities([row.senderDomain]);
     const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(row));
+    const attachmentRows = await this.attachments.listForMessage(row.id);
     return this.toView(
       row,
       row.senderDomain ? identities.get(row.senderDomain) : undefined,
       {
         bodyText: bodies.bodyText,
         bodyHtml: bodies.bodyHtml,
+        attachments: attachmentRows,
       },
     );
   }
@@ -572,7 +615,7 @@ export class MailMessagesService {
       ...(mailboxId ? { id: mailboxId } : {}),
     };
 
-    const [byFolder, starred] = await Promise.all([
+    const [byFolder, starred, scheduled] = await Promise.all([
       this.prisma.mailMessage.groupBy({
         by: ['folder'],
         where: { userId: app.userId, mailbox: mailboxFilter },
@@ -583,6 +626,14 @@ export class MailMessagesService {
           userId: app.userId,
           isStarred: true,
           mailbox: mailboxFilter,
+        },
+      }),
+      this.prisma.mailMessage.count({
+        where: {
+          userId: app.userId,
+          mailbox: mailboxFilter,
+          folder: MailMessageFolder.DRAFTS,
+          scheduledAt: { gt: new Date() },
         },
       }),
     ]);
@@ -617,6 +668,7 @@ export class MailMessagesService {
       promotions: folderCounts.PROMOTIONS,
       social: folderCounts.SOCIAL,
       starred,
+      scheduled,
     };
   }
 
@@ -896,6 +948,39 @@ export class MailMessagesService {
     dto: SendMailMessageDto,
     sessionToken?: string,
   ) {
+    const scheduledAt = dto.scheduledAt ? new Date(dto.scheduledAt) : null;
+    if (scheduledAt && scheduledAt.getTime() > Date.now()) {
+      const draft = await this.createDraft(userId, appId, {
+        mailboxId: dto.mailboxId,
+        to: dto.to,
+        cc: dto.cc,
+        bcc: dto.bcc,
+        subject: dto.subject,
+        bodyText: dto.bodyText,
+        bodyHtml: dto.bodyHtml,
+        replyToMessageId: dto.replyToMessageId,
+        attachmentIds: dto.attachmentIds,
+        scheduledAt: dto.scheduledAt,
+      }, sessionToken);
+      return draft;
+    }
+
+    if (dto.draftId) {
+      await this.updateDraft(userId, appId, dto.draftId, {
+        mailboxId: dto.mailboxId,
+        to: dto.to,
+        cc: dto.cc,
+        bcc: dto.bcc,
+        subject: dto.subject,
+        bodyText: dto.bodyText,
+        bodyHtml: dto.bodyHtml,
+        replyToMessageId: dto.replyToMessageId,
+        attachmentIds: dto.attachmentIds,
+        scheduledAt: null,
+      }, sessionToken);
+      return this.sendDraft(userId, appId, dto.draftId, sessionToken);
+    }
+
     const to = this.normalizeEmails(dto.to);
     const cc = this.normalizeEmails(dto.cc);
     const bcc = this.normalizeEmails(dto.bcc);
@@ -904,7 +989,7 @@ export class MailMessagesService {
     }
 
     const bodyText = dto.bodyText?.trim() || undefined;
-    const bodyHtml = dto.bodyHtml?.trim() || undefined;
+    const bodyHtml = sanitizeMailHtml(dto.bodyHtml);
     if (!bodyText && !bodyHtml) {
       throw new BadRequestException('Message body is required.');
     }
@@ -915,6 +1000,15 @@ export class MailMessagesService {
       dto.mailboxId,
       sessionToken,
     );
+
+    const attachmentIds = dto.attachmentIds ?? [];
+    await this.attachments.assertOwned(
+      userId,
+      appId,
+      attachmentIds,
+      mailbox.id,
+    );
+    const mimeAttachments = await this.attachments.loadBuffers(attachmentIds);
 
     const limits = await this.subscriptions.getActiveLimitsForApp(
       mailbox.mailAppId,
@@ -1014,6 +1108,10 @@ export class MailMessagesService {
       utf8StorageBytes(plainText, outboundHtml),
     );
 
+    if (attachmentIds.length) {
+      await this.attachments.linkToMessage(queued.id, attachmentIds);
+    }
+
     try {
       const { sesMessageId } = await this.ses.sendEmail({
         from: fromAddress,
@@ -1027,6 +1125,7 @@ export class MailMessagesService {
         replyTo: [fromAddress],
         messageIdHeader,
         inReplyTo,
+        attachments: mimeAttachments,
       });
 
       const sent = await this.prisma.mailMessage.update({
@@ -1036,6 +1135,7 @@ export class MailMessagesService {
           sesMessageId,
           sentAt: new Date(),
           errorMessage: null,
+          scheduledAt: null,
         },
       });
 
@@ -1048,13 +1148,18 @@ export class MailMessagesService {
         direction: 'OUTBOUND',
       });
 
+      const attachmentRows = await this.attachments.listForMessage(sent.id);
       return this.toView(
         {
           ...sent,
           mailbox: { avatarKey: mailbox.avatarKey },
         },
         undefined,
-        { bodyText: plainText || null, bodyHtml: outboundHtml ?? null },
+        {
+          bodyText: plainText || null,
+          bodyHtml: outboundHtml ?? null,
+          attachments: attachmentRows,
+        },
       );
     } catch (error) {
       const errorMessage =
@@ -1068,6 +1173,324 @@ export class MailMessagesService {
       });
       throw error;
     }
+  }
+
+  async createDraft(
+    userId: string,
+    appId: string,
+    dto: SaveMailDraftDto,
+    sessionToken?: string,
+  ) {
+    const { app, mailbox } = await this.requireUnlockedMailbox(
+      userId,
+      appId,
+      dto.mailboxId,
+      sessionToken,
+    );
+    const to = this.normalizeEmails(dto.to);
+    const cc = this.normalizeEmails(dto.cc);
+    const bcc = this.normalizeEmails(dto.bcc);
+    const bodyText = dto.bodyText?.trim() || null;
+    const bodyHtml = sanitizeMailHtml(dto.bodyHtml) ?? null;
+    const scheduledAt = dto.scheduledAt ? new Date(dto.scheduledAt) : null;
+    const fromAddress = `${mailbox.localPart}@${mailbox.domain}`;
+    const messageIdHeader = this.rfcMessageId(mailbox.domain);
+    const snippet = this.snippetFrom(bodyText || undefined, bodyHtml || undefined);
+
+    const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
+      mailbox.mailAppId,
+    );
+    const bodyFields = await this.bodyCrypto.buildCreateFields({
+      encryptionEnabled,
+      mailboxId: mailbox.id,
+      messageId: messageIdHeader,
+      bodyText,
+      bodyHtml,
+      dualWritePlaintext: this.bodyEncryption.dualWritePlaintext(),
+    });
+
+    const draft = await this.prisma.mailMessage.create({
+      data: {
+        mailboxId: mailbox.id,
+        userId: app.userId,
+        threadId: randomUUID(),
+        messageId: messageIdHeader,
+        direction: MailMessageDirection.OUTBOUND,
+        folder: MailMessageFolder.DRAFTS,
+        status: MailMessageStatus.QUEUED,
+        fromAddress,
+        fromName: mailbox.displayName,
+        senderDomain: mailbox.domain.toLowerCase(),
+        toAddresses: to,
+        ccAddresses: cc,
+        bccAddresses: bcc,
+        replyTo: fromAddress,
+        subject: dto.subject?.trim() || '',
+        bodyText: bodyFields.bodyText,
+        bodyHtml: bodyFields.bodyHtml,
+        bodyCryptoStatus: bodyFields.bodyCryptoStatus,
+        bodyCryptoVersion: bodyFields.bodyCryptoVersion,
+        bodyKmsKeyId: bodyFields.bodyKmsKeyId,
+        bodyEncryptedDek: toPrismaBytes(bodyFields.bodyEncryptedDek),
+        bodyTextCiphertext: toPrismaBytes(bodyFields.bodyTextCiphertext),
+        bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
+        snippet,
+        isRead: true,
+        clientSource: 'webmail',
+        scheduledAt,
+      },
+    });
+
+    const attachmentIds = dto.attachmentIds ?? [];
+    if (attachmentIds.length) {
+      await this.attachments.assertOwned(
+        userId,
+        appId,
+        attachmentIds,
+        mailbox.id,
+      );
+      await this.attachments.linkToMessage(draft.id, attachmentIds);
+    }
+
+    const attachmentRows = await this.attachments.listForMessage(draft.id);
+    return this.toView(
+      { ...draft, mailbox: { avatarKey: mailbox.avatarKey } },
+      undefined,
+      {
+        bodyText,
+        bodyHtml,
+        attachments: attachmentRows,
+      },
+    );
+  }
+
+  async updateDraft(
+    userId: string,
+    appId: string,
+    draftId: string,
+    dto: SaveMailDraftDto,
+    sessionToken?: string,
+  ) {
+    const app = await this.assertOwnedApp(userId, appId);
+    const existing = await this.prisma.mailMessage.findFirst({
+      where: {
+        id: draftId,
+        userId: app.userId,
+        folder: MailMessageFolder.DRAFTS,
+        mailbox: { mailAppId: app.id },
+      },
+      include: { mailbox: true },
+    });
+    if (!existing) throw new NotFoundException('Draft not found.');
+
+    await this.mailboxSessions.assertAsync(sessionToken, {
+      userId,
+      appId,
+      mailboxId: existing.mailboxId,
+    });
+
+    const to = this.normalizeEmails(dto.to);
+    const cc = this.normalizeEmails(dto.cc);
+    const bcc = this.normalizeEmails(dto.bcc);
+    const bodyText = dto.bodyText?.trim() || null;
+    const bodyHtml = sanitizeMailHtml(dto.bodyHtml) ?? null;
+    const scheduledAt =
+      dto.scheduledAt === null
+        ? null
+        : dto.scheduledAt
+          ? new Date(dto.scheduledAt)
+          : existing.scheduledAt;
+
+    const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
+      existing.mailbox.mailAppId,
+    );
+    const bodyFields = await this.bodyCrypto.buildCreateFields({
+      encryptionEnabled,
+      mailboxId: existing.mailboxId,
+      messageId: existing.messageId ?? this.rfcMessageId(existing.mailbox.domain),
+      bodyText,
+      bodyHtml,
+      dualWritePlaintext: this.bodyEncryption.dualWritePlaintext(),
+    });
+
+    const updated = await this.prisma.mailMessage.update({
+      where: { id: existing.id },
+      data: {
+        toAddresses: to,
+        ccAddresses: cc,
+        bccAddresses: bcc,
+        subject: dto.subject?.trim() ?? existing.subject,
+        bodyText: bodyFields.bodyText,
+        bodyHtml: bodyFields.bodyHtml,
+        bodyCryptoStatus: bodyFields.bodyCryptoStatus,
+        bodyCryptoVersion: bodyFields.bodyCryptoVersion,
+        bodyKmsKeyId: bodyFields.bodyKmsKeyId,
+        bodyEncryptedDek: toPrismaBytes(bodyFields.bodyEncryptedDek),
+        bodyTextCiphertext: toPrismaBytes(bodyFields.bodyTextCiphertext),
+        bodyHtmlCiphertext: toPrismaBytes(bodyFields.bodyHtmlCiphertext),
+        snippet: this.snippetFrom(bodyText || undefined, bodyHtml || undefined),
+        scheduledAt,
+      },
+    });
+
+    if (dto.attachmentIds) {
+      await this.attachments.assertOwned(
+        userId,
+        appId,
+        dto.attachmentIds,
+        existing.mailboxId,
+      );
+      await this.attachments.linkToMessage(updated.id, dto.attachmentIds);
+    }
+
+    const attachmentRows = await this.attachments.listForMessage(updated.id);
+    return this.toView(
+      {
+        ...updated,
+        mailbox: { avatarKey: existing.mailbox.avatarKey },
+      },
+      undefined,
+      { bodyText, bodyHtml, attachments: attachmentRows },
+    );
+  }
+
+  async sendDraft(
+    userId: string,
+    appId: string,
+    draftId: string,
+    sessionToken?: string,
+  ) {
+    const app = await this.assertOwnedApp(userId, appId);
+    const draft = await this.prisma.mailMessage.findFirst({
+      where: {
+        id: draftId,
+        userId: app.userId,
+        folder: MailMessageFolder.DRAFTS,
+        mailbox: { mailAppId: app.id },
+      },
+      include: { mailbox: true, attachments: true },
+    });
+    if (!draft) throw new NotFoundException('Draft not found.');
+
+    if (sessionToken) {
+      await this.mailboxSessions.assertAsync(sessionToken, {
+        userId,
+        appId,
+        mailboxId: draft.mailboxId,
+      });
+    }
+
+    if (draft.scheduledAt && draft.scheduledAt.getTime() > Date.now()) {
+      throw new BadRequestException('This message is scheduled for later.');
+    }
+
+    const to = draft.toAddresses;
+    if (!to.length) {
+      throw new BadRequestException('Add at least one recipient before sending.');
+    }
+    if (!draft.subject.trim()) {
+      throw new BadRequestException('Subject is required.');
+    }
+
+    const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(draft));
+    const bodyText = bodies.bodyText?.trim() || undefined;
+    const bodyHtml = sanitizeMailHtml(bodies.bodyHtml);
+    if (!bodyText && !bodyHtml) {
+      throw new BadRequestException('Message body is required.');
+    }
+
+    const mailbox = draft.mailbox;
+    const limits = await this.subscriptions.getActiveLimitsForApp(
+      mailbox.mailAppId,
+    );
+    if (!limits) {
+      throw new BadRequestException(
+        'This Mail app needs an active plan before you can send mail.',
+      );
+    }
+
+    const recipientCount =
+      draft.toAddresses.length +
+      draft.ccAddresses.length +
+      draft.bccAddresses.length;
+    await this.outboundUsage.reserveOutbound(mailbox.mailAppId, recipientCount);
+
+    const plainText =
+      bodyText ||
+      (bodyHtml
+        ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        : '');
+    const outboundHtml = bodyHtml?.trim() || undefined;
+    const fromAddress = `${mailbox.localPart}@${mailbox.domain}`;
+    const messageIdHeader =
+      draft.messageId ?? this.rfcMessageId(mailbox.domain);
+    const mimeAttachments = await this.attachments.loadBuffers(
+      draft.attachments.map((row) => row.id),
+    );
+
+    try {
+      const { sesMessageId } = await this.ses.sendEmail({
+        from: fromAddress,
+        fromName: mailbox.displayName,
+        to: draft.toAddresses,
+        cc: draft.ccAddresses,
+        bcc: draft.bccAddresses,
+        subject: draft.subject.trim(),
+        bodyText: plainText || undefined,
+        bodyHtml: outboundHtml,
+        replyTo: [fromAddress],
+        messageIdHeader,
+        inReplyTo: draft.inReplyTo,
+        attachments: mimeAttachments,
+      });
+
+      const sent = await this.prisma.mailMessage.update({
+        where: { id: draft.id },
+        data: {
+          folder: MailMessageFolder.SENT,
+          status: MailMessageStatus.SENT,
+          sesMessageId,
+          sentAt: new Date(),
+          errorMessage: null,
+          scheduledAt: null,
+        },
+      });
+
+      this.realtime.publish({
+        type: 'mail.changed',
+        appId,
+        mailboxId: mailbox.id,
+        folder: MailMessageFolder.SENT,
+        messageId: sent.id,
+        direction: 'OUTBOUND',
+      });
+
+      const attachmentRows = await this.attachments.listForMessage(sent.id);
+      return this.toView(
+        { ...sent, mailbox: { avatarKey: mailbox.avatarKey } },
+        undefined,
+        {
+          bodyText: plainText || null,
+          bodyHtml: outboundHtml ?? null,
+          attachments: attachmentRows,
+        },
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Send failed.';
+      await this.prisma.mailMessage.update({
+        where: { id: draft.id },
+        data: {
+          status: MailMessageStatus.FAILED,
+          errorMessage: errorMessage.slice(0, 500),
+        },
+      });
+      throw error;
+    }
+  }
+
+  async sendScheduledDraft(userId: string, appId: string, draftId: string) {
+    return this.sendDraft(userId, appId, draftId);
   }
 
   private sentCountCache: { at: number; value: number } | null = null;

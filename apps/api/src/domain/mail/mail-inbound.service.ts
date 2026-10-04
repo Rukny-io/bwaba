@@ -34,6 +34,7 @@ import {
   type SesVerdict,
 } from './mail-message-classifier';
 import { MailFilterRulesService } from './mail-filter-rules.service';
+import { MailAttachmentsService } from './mail-attachments.service';
 import {
   MailBimiService,
   normalizeSenderDomain,
@@ -98,6 +99,7 @@ export class MailInboundService {
     private readonly bodyCrypto: MailBodyCryptoService,
     private readonly bodyEncryption: MailBodyEncryptionPolicy,
     private readonly filterRules: MailFilterRulesService,
+    private readonly attachments: MailAttachmentsService,
   ) {}
 
   assertWebhookToken(token: string | undefined) {
@@ -653,6 +655,25 @@ export class MailInboundService {
           mailbox.id,
           utf8StorageBytes(bodyText, bodyHtml),
         );
+        const attachmentParts =
+          input.parsed.attachments
+            ?.filter((part) => part.content && part.filename)
+            .map((part) => ({
+              filename: part.filename || 'attachment',
+              contentType: part.contentType || 'application/octet-stream',
+              content: Buffer.isBuffer(part.content)
+                ? part.content
+                : Buffer.from(part.content),
+            })) ?? [];
+        if (attachmentParts.length) {
+          await this.attachments.storeInboundParts({
+            userId: mailbox.mailApp.userId,
+            appId: mailbox.mailApp.appId,
+            mailboxId: mailbox.id,
+            messageId: created.id,
+            parts: attachmentParts,
+          });
+        }
         this.realtime.publish({
           type: 'mail.changed',
           appId: mailbox.mailApp.appId,

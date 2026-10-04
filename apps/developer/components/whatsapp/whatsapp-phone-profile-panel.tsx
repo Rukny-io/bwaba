@@ -93,6 +93,8 @@ export function WhatsappPhoneProfilePanel() {
     );
   }
 
+  const phoneId = phone.id;
+
   const displayName =
     phone.verifiedName || phone.account?.businessName || w.businessName;
 
@@ -120,7 +122,7 @@ export function WhatsappPhoneProfilePanel() {
     try {
       const image = await readFileAsDataUrl(file);
       const result = await profilePictureMutation.mutateAsync({
-        phoneId: phone.id,
+        phoneId,
         image,
       });
       setProfilePictureUrl(result.profilePictureUrl);
@@ -153,7 +155,7 @@ export function WhatsappPhoneProfilePanel() {
 
     try {
       await profileMutation.mutateAsync({
-        phoneId: phone.id,
+        phoneId,
         body: {
           about: about.trim() || undefined,
           description: description.trim() || undefined,

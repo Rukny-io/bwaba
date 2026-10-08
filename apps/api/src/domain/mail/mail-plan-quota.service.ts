@@ -67,17 +67,19 @@ export class MailPlanQuotaService {
     mailAppUuid: string,
     userId: string,
   ): Promise<MailDomainQuotaPayload> {
+    // Lookup by workspace id only — team members can read quota of the owner's plan.
     const mailApp = await this.prisma.mailApp.findFirst({
-      where: { id: mailAppUuid, userId },
-      select: { id: true, primaryDomain: true },
+      where: { id: mailAppUuid },
+      select: { id: true, userId: true, primaryDomain: true },
     });
     if (!mailApp) {
       throw new NotFoundException('Mail workspace not found.');
     }
 
+    const ownerId = mailApp.userId;
     const plan = await this.resolvePlanForApp(mailAppUuid);
     const limit = this.domainLimitForPlan(plan);
-    const domainSet = await this.collectUserDomains(userId);
+    const domainSet = await this.collectUserDomains(ownerId);
     const used = domainSet.size;
     const def = MAIL_PLAN_DEFINITIONS[plan];
 

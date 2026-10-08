@@ -26,11 +26,10 @@ export type MailNavItem = {
   exact?: boolean;
 };
 
+/** Daily console destinations on the sidebar rail. */
 export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/inbox", icon: Inbox, label: "Inbox", exact: true },
   { href: "/app", icon: LayoutGrid, label: "Mailboxes", exact: true },
-  { href: "/team", icon: Users, label: "Team", exact: true },
-  { href: "/sso", icon: KeyRound, label: "SSO", exact: true },
   { href: "/forwarders", icon: Forward, label: "Forwarders", exact: true },
   { href: "/aliases", icon: AtSign, label: "Email Alias", exact: true },
   { href: "/catch-all", icon: Mails, label: "Catch-all email", exact: true },
@@ -38,7 +37,10 @@ export const MAIL_PRIMARY_NAV: MailNavItem[] = [
   { href: "/security", icon: Shield, label: "Security", exact: true },
 ];
 
-/** Domain + Quarantine live in the top Main nav; keep Logs + Developers in the sidebar. */
+/**
+ * Least-used tools live in the avatar menu (desktop) and the mobile "+" menu.
+ * Domain + Quarantine stay in the header Main pill.
+ */
 export const MAIL_SECONDARY_NAV: MailNavItem[] = [
   { href: "/devices", icon: Smartphone, label: "Connect apps & devices", exact: true },
   { href: "/logs", icon: ScrollText, label: "Email Logs", exact: true },
@@ -62,8 +64,11 @@ export const MAIL_HEADER_NAV: MailNavItem[] = [
   ...MAIL_HEADER_TOOL_NAV,
 ];
 
-/** Pricing lives on the marketing site (/pricing), not in the console. */
-export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [];
+/** Team + SSO sit above the avatar in the bottom sidebar cluster. */
+export const MAIL_SIDEBAR_FOOTER_NAV: MailNavItem[] = [
+  { href: "/team", icon: Users, label: "Team", exact: true },
+  { href: "/sso", icon: KeyRound, label: "SSO", exact: true },
+];
 
 export function isNavItemActive(
   pathname: string,

@@ -89,7 +89,7 @@ export function MailMobileDock() {
   const pathname = usePathname();
   const router = useRouter();
   const nav = mailNavForPathname(pathname);
-  const { secondary, headerTools, slot } = nav;
+  const { headerTools, slot } = nav;
   const { pendingHref, setPendingHref } = useMailNavPending();
   const [open, setOpen] = useState(false);
   const [teamSupported, setTeamSupported] = useState(true);
@@ -117,6 +117,17 @@ export function MailMobileDock() {
   const primary = useMemo(
     () => (teamSupported ? nav.primary : filterMailNavWithoutTeam(nav.primary)),
     [nav.primary, teamSupported],
+  );
+
+  const secondary = useMemo(
+    () =>
+      teamSupported ? nav.secondary : filterMailNavWithoutTeam(nav.secondary),
+    [nav.secondary, teamSupported],
+  );
+
+  const footer = useMemo(
+    () => (teamSupported ? nav.footer : filterMailNavWithoutTeam(nav.footer)),
+    [nav.footer, teamSupported],
   );
 
   const billingItem = useMemo<MailNavItem>(
@@ -159,8 +170,8 @@ export function MailMobileDock() {
   );
 
   const moreTools = useMemo(
-    () => [...headerTools, ...secondary],
-    [headerTools, secondary],
+    () => [...footer, ...headerTools, ...secondary],
+    [footer, headerTools, secondary],
   );
 
   const moreItems = useMemo(

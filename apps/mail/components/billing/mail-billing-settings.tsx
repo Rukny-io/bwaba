@@ -106,13 +106,24 @@ export function MailPlanSettingsSection() {
     setCanManageBilling(Boolean(current.canManageBilling));
 
     const paidPlans = nextPlans.filter((plan) => plan.id !== "free");
+    const activeSub =
+      current.subscription?.status === "ACTIVE" ? current.subscription : null;
     const preferred =
+      (activeSub
+        ? paidPlans.find(
+            (plan) =>
+              plan.id === activeSub.planId ||
+              plan.id === String(activeSub.plan).toLowerCase(),
+          )
+        : null) ??
       paidPlans.find((plan) => plan.id === "professional") ??
       paidPlans.find((plan) => plan.id === "starter") ??
       paidPlans[0];
     if (preferred) {
       const existingCount =
-        current.subscription?.mailboxCount || current.pendingRequest?.mailboxCount;
+        activeSub?.mailboxCount ||
+        current.pendingRequest?.mailboxCount ||
+        preferred.mailboxesIncluded;
       const included = includedFor(preferred);
       setSelectedPlanId(preferred.id);
       setSeats(Math.max(included, existingCount || included));
@@ -160,10 +171,41 @@ export function MailPlanSettingsSection() {
   const monthlyTotal = selectedPlan
     ? mailPlanMonthlyTotal(selectedPlan.id, clampedSeats)
     : 0;
+  const activePlanId = (active?.planId ||
+    String(active?.plan || "").toLowerCase()) as MailPlanId | "";
+  const currentMonthly =
+    active && activePlanId
+      ? mailPlanMonthlyTotal(activePlanId, active.mailboxCount)
+      : 0;
+  const dueToday = active
+    ? Math.max(0, monthlyTotal - currentMonthly)
+    : monthlyTotal;
+  const sameAsCurrent = Boolean(
+    active &&
+      selectedPlan &&
+      activePlanId === selectedPlan.id &&
+      active.mailboxCount === clampedSeats,
+  );
+  const isSeatAddOnly = Boolean(
+    active &&
+      selectedPlan &&
+      activePlanId === selectedPlan.id &&
+      clampedSeats > active.mailboxCount,
+  );
+  const checkoutLabel = paying
+    ? "Opening Checkout…"
+    : sameAsCurrent
+      ? "Already on this plan"
+      : !active
+        ? `Subscribe · ${formatMailIqD(dueToday)}`
+        : isSeatAddOnly
+          ? `Add seats · ${formatMailIqD(dueToday)} today`
+          : `Upgrade · ${formatMailIqD(dueToday)} today`;
   const formLocked =
     needsApp || !canManageBilling || busy || paying || !selectedPlan;
   const ticketLocked = formLocked || Boolean(pendingRequest);
-  const checkoutLocked = formLocked || !cardPayments.available;
+  const checkoutLocked =
+    formLocked || !cardPayments.available || sameAsCurrent || dueToday <= 0;
 
   function onSelectPlan(planId: MailPlanId) {
     const plan = plans.find((entry) => entry.id === planId);
@@ -376,7 +418,9 @@ export function MailPlanSettingsSection() {
               Change subscription
             </h3>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Choose a plan and mailbox seats. Pay by card or open a ticket.
+              {active
+                ? "Changing plan or adding seats charges only the difference for this cycle — not the full plan again."
+                : "Choose a plan and mailbox seats. Pay by card or open a ticket."}
             </p>
           </div>
 
@@ -475,20 +519,30 @@ export function MailPlanSettingsSection() {
 
           <div className="flex min-w-0 flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm text-[var(--muted-foreground)]">Estimated monthly</p>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                {active ? "New monthly total" : "Estimated monthly"}
+              </p>
               <p className="mt-0.5 text-lg font-medium tabular-nums tracking-tight text-[var(--foreground)]">
                 {formatMailIqD(monthlyTotal)}
                 <span className="ms-1 text-sm font-medium text-[var(--muted-foreground)]">
                   /mo
                 </span>
               </p>
+              {active && dueToday > 0 ? (
+                <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
+                  Due today (difference):{" "}
+                  <span className="font-medium text-[var(--foreground)]">
+                    {formatMailIqD(dueToday)}
+                  </span>
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="ghost"
                 className="rounded-full shadow-none"
-                isDisabled={ticketLocked}
+                isDisabled={ticketLocked || sameAsCurrent}
                 onPress={() => void onRequestPlan()}
               >
                 {busy
@@ -505,7 +559,7 @@ export function MailPlanSettingsSection() {
                 isDisabled={checkoutLocked}
                 onPress={() => void onPayPlan()}
               >
-                {paying ? "Opening Checkout…" : `Checkout · ${formatMailIqD(monthlyTotal)}`}
+                {checkoutLabel}
               </Button>
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   MAIL_HEADER_TOOL_NAV,
   MAIL_PRIMARY_NAV,
   MAIL_SECONDARY_NAV,
+  MAIL_SIDEBAR_FOOTER_NAV,
   MAIL_UNPUBLISHED_NAV,
 } from "@/lib/mail-nav";
 import { stripMailSlotPrefix } from "@/lib/mail-slot";
@@ -16,6 +17,7 @@ export default function EmptyPage() {
   const label =
     [
       ...MAIL_PRIMARY_NAV,
+      ...MAIL_SIDEBAR_FOOTER_NAV,
       ...MAIL_SECONDARY_NAV,
       ...MAIL_HEADER_TOOL_NAV,
       ...MAIL_UNPUBLISHED_NAV,

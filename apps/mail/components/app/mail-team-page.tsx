@@ -27,6 +27,7 @@ import {
   Skeleton,
   TextField,
 } from "@heroui/react";
+import { resolveDeveloperUrl } from "@rukny/auth/client/env-urls";
 import { MailNotice } from "@/components/app/mail-notice";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
@@ -1144,10 +1145,12 @@ export function MailTeamPage() {
                 <MailNotice
                   status="warning"
                   title="Invites locked"
-                  description="Upgrade to PRO_25K or higher in the developer portal to invite teammates."
+                  description="Team seats need Growth (PRO_25K) or higher. Upgrade in the developer portal — you only pay the difference from your current plan."
                   action={{
-                    label: "View plans",
-                    onPress: () => router.push("/pricing"),
+                    label: "Upgrade plan",
+                    onPress: () => {
+                      window.location.href = `${resolveDeveloperUrl()}/apps`;
+                    },
                   }}
                 />
               </div>
@@ -1158,10 +1161,12 @@ export function MailTeamPage() {
                 <MailNotice
                   status="warning"
                   title="All seats in use"
-                  description={`This plan includes ${roster.consoleMembersIncluded} console seats. Remove someone or upgrade for more.`}
+                  description={`This plan includes ${roster.consoleMembersIncluded} console seats. Remove someone, or upgrade to a higher plan for more seats (charged as the price difference only).`}
                   action={{
-                    label: "Upgrade",
-                    onPress: () => router.push("/pricing"),
+                    label: "Get more seats",
+                    onPress: () => {
+                      window.location.href = `${resolveDeveloperUrl()}/apps`;
+                    },
                   }}
                 />
               </div>

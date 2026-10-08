@@ -558,7 +558,11 @@ export class MailSubscriptionsService {
       );
     }
     const seats = this.normalizeSeats(mailboxCount);
-    const amount = mailMonthlyTotal(plan, seats);
+    const current = await this.prisma.mailSubscription.findUnique({
+      where: { mailAppId: app.id },
+      select: { plan: true, status: true, mailboxCount: true },
+    });
+    const amount = this.amountDueForPlanChange(current, plan, seats);
     if (!Number.isInteger(amount) || amount <= 0) {
       throw new BadRequestException('Invalid plan amount.');
     }
@@ -1111,11 +1115,6 @@ export class MailSubscriptionsService {
       );
     }
 
-    const amount = mailMonthlyTotal(plan, seats);
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new BadRequestException('Invalid plan amount.');
-    }
-
     const planName = MAIL_PLAN_DEFINITIONS[plan].name;
     const billingCycle = BillingCycle.MONTHLY;
 
@@ -1134,6 +1133,19 @@ export class MailSubscriptionsService {
           mailboxCount: seats,
         },
       });
+    }
+
+    const amount = this.amountDueForPlanChange(
+      {
+        plan: subscription.plan,
+        status: subscription.status,
+        mailboxCount: subscription.mailboxCount,
+      },
+      plan,
+      seats,
+    );
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new BadRequestException('Invalid plan amount.');
     }
 
     // Expire stale pending card attempts for this subscription.
@@ -2779,6 +2791,44 @@ export class MailSubscriptionsService {
       throw new BadRequestException('Mailbox count must be between 1 and 500.');
     }
     return seats;
+  }
+
+  /**
+   * New subscriptions pay the full monthly total. Active upgrades/seat adds pay
+   * only the positive delta so customers are not charged the base plan again.
+   */
+  private amountDueForPlanChange(
+    current:
+      | {
+          plan: MailPlan;
+          status: SubscriptionStatus;
+          mailboxCount: number;
+        }
+      | null
+      | undefined,
+    nextPlan: MailPlan,
+    nextSeats: number,
+  ): number {
+    const nextTotal = mailMonthlyTotal(nextPlan, nextSeats);
+    const isActive = current?.status === SubscriptionStatus.ACTIVE;
+    if (!isActive || !current) return nextTotal;
+
+    const currentTotal = mailMonthlyTotal(current.plan, current.mailboxCount);
+    if (
+      current.plan === nextPlan &&
+      this.normalizeSeats(current.mailboxCount) === nextSeats
+    ) {
+      throw new BadRequestException(
+        'You are already on this plan with these seats. Increase seats or pick a higher plan.',
+      );
+    }
+    const delta = nextTotal - currentTotal;
+    if (delta <= 0) {
+      throw new BadRequestException(
+        'Downgrades are not charged via Checkout. Keep your current plan or contact support.',
+      );
+    }
+    return delta;
   }
 
   private limitsPayload(subscription: {

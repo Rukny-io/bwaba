@@ -34,11 +34,11 @@ export function mailNavForPathname(pathname: string) {
   };
 }
 
-/** Hide Team when the account plan includes no console seats. */
+/** Hide Team / SSO when the account plan includes no console seats. */
 export function filterMailNavWithoutTeam(items: MailNavItem[]): MailNavItem[] {
   return items.filter((item) => {
     const path = stripMailSlotPrefix(item.href).split("?")[0];
-    return path !== "/team";
+    return path !== "/team" && path !== "/sso";
   });
 }
 

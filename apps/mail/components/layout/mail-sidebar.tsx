@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLinkStatus } from "next/link";
 import { LogOut, Settings, User } from "lucide-react";
-import { cn, Dropdown } from "@heroui/react";
+import { cn, Dropdown, Header } from "@heroui/react";
 import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import { fetchCurrentUser } from "@/lib/api/auth";
 import {
@@ -131,11 +131,17 @@ export function MailSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const nav = mailNavForPathname(pathname);
-  const { secondary, footer, slot } = nav;
+  const { slot } = nav;
   const [teamSupported, setTeamSupported] = useState(true);
   const primary = teamSupported
     ? nav.primary
     : filterMailNavWithoutTeam(nav.primary);
+  const secondary = teamSupported
+    ? nav.secondary
+    : filterMailNavWithoutTeam(nav.secondary);
+  const footer = teamSupported
+    ? nav.footer
+    : filterMailNavWithoutTeam(nav.footer);
   const profileHref = slot !== null ? `/u${slot}/profile` : "/profile";
   const settingsHref = slot !== null ? `/u${slot}/settings` : "/settings";
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -207,19 +213,14 @@ export function MailSidebar() {
       </div>
 
       <div className="mt-4 flex flex-col items-center gap-2 rounded-2xl bg-[var(--surface)] px-2 py-3">
-        {secondary.length > 0 ? (
-          <nav className="flex flex-col items-center gap-2" aria-label="Email tools">
-            {secondary.map((item) => (
+        {footer.length > 0 ? (
+          <nav className="flex flex-col items-center gap-2" aria-label="Team">
+            {footer.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
             ))}
           </nav>
         ) : null}
-        {footer.length > 0
-          ? footer.map((item) => (
-              <NavLink key={item.href} item={item} pathname={pathname} />
-            ))
-          : null}
-        {(secondary.length > 0 || footer.length > 0) ? (
+        {footer.length > 0 ? (
           <div
             className="h-px w-6 bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]"
             aria-hidden
@@ -227,7 +228,7 @@ export function MailSidebar() {
         ) : null}
         <Dropdown>
           <Dropdown.Trigger
-            aria-label="Profile"
+            aria-label="Account menu"
             className={cn(
               "group relative size-10 shrink-0 overflow-hidden rounded-full outline-none",
               "transition-opacity hover:opacity-90",
@@ -238,40 +239,64 @@ export function MailSidebar() {
           <Dropdown.Popover
             placement="right bottom"
             offset={14}
-            className="min-w-[13rem] overflow-hidden rounded-2xl"
+            className="min-w-[14.5rem] overflow-hidden rounded-2xl"
           >
             <Dropdown.Menu
               onAction={(key) => {
                 if (key === "logout") void logoutAndRedirect();
               }}
             >
-              <Dropdown.Item
-                id="profile"
-                textValue="Profile"
-                href={profileHref}
-                className="gap-2"
-              >
-                <User className="size-4 shrink-0" />
-                Profile
-              </Dropdown.Item>
-              <Dropdown.Item
-                id="settings"
-                textValue="Settings"
-                href={settingsHref}
-                className="gap-2"
-              >
-                <Settings className="size-4 shrink-0" />
-                Settings
-              </Dropdown.Item>
-              <Dropdown.Item
-                id="logout"
-                textValue="Log out"
-                variant="danger"
-                className="gap-2"
-              >
-                <LogOut className="size-4 shrink-0" />
-                Log out
-              </Dropdown.Item>
+              <Dropdown.Section>
+                <Dropdown.Item
+                  id="profile"
+                  textValue="Profile"
+                  href={profileHref}
+                  className="gap-2"
+                >
+                  <User className="size-4 shrink-0" />
+                  Profile
+                </Dropdown.Item>
+                <Dropdown.Item
+                  id="settings"
+                  textValue="Settings"
+                  href={settingsHref}
+                  className="gap-2"
+                >
+                  <Settings className="size-4 shrink-0" />
+                  Settings
+                </Dropdown.Item>
+              </Dropdown.Section>
+              {secondary.length > 0 ? (
+                <Dropdown.Section>
+                  <Header>Tools</Header>
+                  {secondary.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Dropdown.Item
+                        key={item.href}
+                        id={item.href}
+                        textValue={item.label}
+                        href={item.href}
+                        className="gap-2"
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {item.label}
+                      </Dropdown.Item>
+                    );
+                  })}
+                </Dropdown.Section>
+              ) : null}
+              <Dropdown.Section>
+                <Dropdown.Item
+                  id="logout"
+                  textValue="Log out"
+                  variant="danger"
+                  className="gap-2"
+                >
+                  <LogOut className="size-4 shrink-0" />
+                  Log out
+                </Dropdown.Item>
+              </Dropdown.Section>
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>

@@ -184,21 +184,29 @@ export class MailUnifiedEntitlementService {
     mailAppUuid: string,
     userId: string,
   ): Promise<MailDomainQuotaPayload | null> {
+    // Use the workspace owner's billing account — members only need read access.
+    const mailApp = await this.prisma.mailApp.findFirst({
+      where: { id: mailAppUuid },
+      select: { userId: true },
+    });
+    if (!mailApp) return null;
+    const ownerId = mailApp.userId;
+
     const developerAppId = await this.ensureLinkedDeveloperApp(
       mailAppUuid,
-      userId,
+      ownerId,
     );
     if (!developerAppId) return null;
 
     const entitlement = await this.emailEntitlements.ensureEntitlement(
-      userId,
+      ownerId,
       developerAppId,
     );
     const limit = emailApiDomainLimit(
       entitlement.plan,
       entitlement.addonDomainsExtra,
     );
-    const domainSet = await this.collectAccountDomains(developerAppId, userId);
+    const domainSet = await this.collectAccountDomains(developerAppId, ownerId);
     const planDef = getEmailApiPlan(entitlement.plan);
     const used = domainSet.size;
 

@@ -17,6 +17,8 @@ type UpgradePlan = {
   label: string;
   price: number;
   quota: number;
+  /** Mid-cycle upgrade charges only the price difference. */
+  dueToday: number;
 };
 
 export function EmailApiSubscriptionCard() {
@@ -41,11 +43,18 @@ export function EmailApiSubscriptionCard() {
   const planLabel = data?.plan?.name ?? "Starter";
   const planPrice = data?.plan?.priceIqd ?? 0;
   const planQuota = data?.subscription?.quota || data?.free?.quota || 3_000;
+  const currentPlanId = data?.plan?.id ?? "FREE";
+  const isPaidActive =
+    Boolean(data) &&
+    data!.subscription.status === "ACTIVE" &&
+    planPrice > 0;
 
   const upgradePlans: UpgradePlan[] = (data?.catalog?.transactional ?? [])
     .filter(
       (plan: { id: string; priceMonthlyIqd: number }) =>
-        plan.id !== "FREE" && plan.priceMonthlyIqd > 0,
+        plan.id !== "FREE" &&
+        plan.id !== currentPlanId &&
+        plan.priceMonthlyIqd > planPrice,
     )
     .slice(0, 3)
     .map(
@@ -59,6 +68,7 @@ export function EmailApiSubscriptionCard() {
         label: plan.marketingNameEn,
         price: plan.priceMonthlyIqd,
         quota: plan.monthlyQuota,
+        dueToday: Math.max(0, plan.priceMonthlyIqd - planPrice),
       }),
     );
 
@@ -82,6 +92,11 @@ export function EmailApiSubscriptionCard() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {isPaidActive ? (
+          <span className="inline-flex h-9 items-center rounded-full bg-[var(--surface-secondary)] px-3 text-[12px] font-medium text-[var(--muted-foreground)]">
+            Current · {planLabel}
+          </span>
+        ) : null}
         {upgradePlans.map((plan) => (
           <button
             key={plan.id}
@@ -97,9 +112,16 @@ export function EmailApiSubscriptionCard() {
             }
             className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] px-3 text-[12px] font-medium disabled:opacity-60"
           >
-            Upgrade to {plan.label}
+            {isPaidActive
+              ? `Upgrade to ${plan.label} · ${formatPrice(plan.dueToday)} IQD today`
+              : `Subscribe to ${plan.label}`}
           </button>
         ))}
+        {isPaidActive && upgradePlans.length === 0 ? (
+          <span className="inline-flex h-9 items-center text-[12px] text-[var(--muted-foreground)]">
+            Highest self-serve plan — contact sales for more seats.
+          </span>
+        ) : null}
         <button
           type="button"
           disabled={buyOverage.isPending}

@@ -129,8 +129,37 @@ export class DeveloperCheckoutService {
       if (planDef.priceMonthlyIqd <= 0) {
         throw new BadRequestException('This plan does not require checkout.');
       }
-      amount = planDef.priceMonthlyIqd;
-      title = planDef.invoiceLabelEn;
+
+      const entitlement = await this.prisma.developerEmailEntitlement.findUnique({
+        where: { developerAppId: ownedApp.id },
+        select: { plan: true, subscriptionStatus: true },
+      });
+      const currentPlanId = entitlement?.plan ?? 'FREE';
+      const currentDef = getEmailApiPlan(currentPlanId);
+      const isPaidActive =
+        entitlement?.subscriptionStatus === 'ACTIVE' &&
+        currentDef.priceMonthlyIqd > 0;
+
+      if (isPaidActive && String(currentPlanId) === String(input.planId)) {
+        throw new ForbiddenException(
+          `You are already on ${planDef.marketingNameEn}. Pick a higher plan for more quota or seats.`,
+        );
+      }
+
+      if (isPaidActive) {
+        const delta = planDef.priceMonthlyIqd - currentDef.priceMonthlyIqd;
+        if (delta <= 0) {
+          throw new BadRequestException(
+            'Downgrades are not available via Checkout. Keep your current plan or contact support.',
+          );
+        }
+        amount = delta;
+        title = `Upgrade to ${planDef.marketingNameEn} · difference`;
+      } else {
+        amount = planDef.priceMonthlyIqd;
+        title = planDef.invoiceLabelEn;
+      }
+
       returnUrl = this.developersReturnUrl(
         `/apps/${encodeURIComponent(ownedApp.appId)}/email-api`,
       );

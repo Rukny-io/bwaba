@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from 'react';
 import { ImagePlus, Loader2 } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
@@ -16,11 +17,13 @@ interface ProductImageUploadButtonProps {
 
 export function ProductImageUploadButton({
   disabled = false,
-  label = 'رفع صورة',
+  label,
   variant = 'pill',
   className,
   onPick,
 }: ProductImageUploadButtonProps) {
+  const { t } = useTranslations();
+  const resolvedLabel = label ?? t('products.uploadImage');
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +77,7 @@ export function ProductImageUploadButton({
             aria-hidden
           />
         )}
-        {label}
+        {resolvedLabel}
       </button>
     </>
   );

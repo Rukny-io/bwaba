@@ -1,7 +1,17 @@
+import {
+  DEFAULT_LOCALE,
+  toIntlLocale,
+  type AppLocale,
+} from '@/lib/i18n/config';
+import { getMessage } from '@/lib/i18n/get-message';
+import { getMessages } from '@/lib/i18n/messages';
+
 export const NUMBER_LOCALE = 'en-US';
 export const DATE_LOCALE = 'en-GB';
 
-const numberFormatter = new Intl.NumberFormat(NUMBER_LOCALE);
+function resolveLocale(locale?: AppLocale): AppLocale {
+  return locale ?? DEFAULT_LOCALE;
+}
 
 export function formatTrendPercent(
   current: number,
@@ -20,8 +30,10 @@ export function formatTrendPercent(
   };
 }
 
-export function formatNumber(value: number): string {
-  return numberFormatter.format(value);
+export function formatNumber(value: number, locale?: AppLocale): string {
+  return new Intl.NumberFormat(
+    locale ? toIntlLocale(locale) : NUMBER_LOCALE,
+  ).format(value);
 }
 
 export function formatPercent(value: number): string {
@@ -33,11 +45,17 @@ export function formatTrendBadge(value?: number | null): string | undefined {
   return `${value >= 0 ? '+' : ''}${value}%`;
 }
 
-export function formatCurrency(value: number, currency = 'IQD'): string {
+export function formatCurrency(
+  value: number,
+  currency = 'IQD',
+  locale?: AppLocale,
+): string {
+  const resolved = resolveLocale(locale);
   if (currency === 'IQD') {
-    return `${formatNumber(Math.round(value))} د.ع`;
+    const suffix = getMessages(resolved).common.currencyIqd;
+    return `${formatNumber(Math.round(value), resolved)} ${suffix}`;
   }
-  return new Intl.NumberFormat(NUMBER_LOCALE, {
+  return new Intl.NumberFormat(toIntlLocale(resolved), {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
@@ -47,13 +65,17 @@ export function formatCurrency(value: number, currency = 'IQD'): string {
 export function formatDate(
   value: Date | string,
   options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
+  locale?: AppLocale,
 ): string {
   const date = typeof value === 'string' ? new Date(value) : value;
-  return new Intl.DateTimeFormat(DATE_LOCALE, options).format(date);
+  return new Intl.DateTimeFormat(
+    locale ? toIntlLocale(locale) : DATE_LOCALE,
+    options,
+  ).format(date);
 }
 
-export function formatShortDate(dateStr: string): string {
-  return formatDate(dateStr, { month: 'short', day: 'numeric' });
+export function formatShortDate(dateStr: string, locale?: AppLocale): string {
+  return formatDate(dateStr, { month: 'short', day: 'numeric' }, locale);
 }
 
 export function formatIsoDate(value: Date | string): string {
@@ -67,15 +89,29 @@ export function formatIsoDate(value: Date | string): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatRelativeTime(dateStr: string): string {
+export function formatRelativeTime(dateStr: string, locale?: AppLocale): string {
+  const resolved = resolveLocale(locale);
+  const messages = getMessages(resolved);
   const date = new Date(dateStr);
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'الآن';
-  if (minutes < 60) return `منذ ${formatNumber(minutes)} د`;
+  if (minutes < 1) return messages.common.now;
+  if (minutes < 60) {
+    return getMessage(messages, 'common.minutesAgo', {
+      n: formatNumber(minutes, resolved),
+    });
+  }
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `منذ ${formatNumber(hours)} س`;
+  if (hours < 24) {
+    return getMessage(messages, 'common.hoursAgo', {
+      n: formatNumber(hours, resolved),
+    });
+  }
   const days = Math.floor(hours / 24);
-  if (days < 7) return `منذ ${formatNumber(days)} ي`;
-  return formatShortDate(dateStr);
+  if (days < 7) {
+    return getMessage(messages, 'common.daysAgo', {
+      n: formatNumber(days, resolved),
+    });
+  }
+  return formatShortDate(dateStr, resolved);
 }

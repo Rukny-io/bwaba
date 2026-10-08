@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FolderPlus, Loader2 } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
@@ -29,6 +30,7 @@ export function CreateLinkGroupDialog({
   onClose,
   onSubmit,
 }: CreateLinkGroupDialogProps) {
+  const { t } = useTranslations();
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function CreateLinkGroupDialog({
     event.preventDefault();
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError('أدخل اسماً للمجموعة (حرفان على الأقل)');
+      setError(t('linksPage.groupNameTooShort'));
       return;
     }
     setError(null);
@@ -49,7 +51,7 @@ export function CreateLinkGroupDialog({
       setColor(PRESET_COLORS[0]);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إنشاء المجموعة');
+      setError(err instanceof Error ? err.message : t('linksPage.createGroupFailed'));
     }
   }
 
@@ -64,25 +66,29 @@ export function CreateLinkGroupDialog({
             <FolderPlus className="size-4" aria-hidden />
           </span>
           <div>
-            <p className="text-sm font-semibold text-[var(--foreground)]">مجموعة روابط جديدة</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              {t('linksPage.groupDialogTitle')}
+            </p>
             <p className="text-xs text-[var(--muted-foreground)]">
-              تُعرض كزر قابل للطي في صفحتك العامة
+              {t('linksPage.groupDialogHint')}
             </p>
           </div>
         </div>
 
         <label className="mb-1 block text-xs font-medium text-[var(--muted-foreground)]">
-          اسم المجموعة
+          {t('linksPage.groupName')}
         </label>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoFocus
-          placeholder="مثال: تواصلي"
+          placeholder={t('linksPage.groupNamePlaceholder')}
           className="mb-3 h-10 w-full rounded-xl border border-[var(--border)] bg-transparent px-3 text-sm outline-none focus:border-[var(--foreground)]"
         />
 
-        <p className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">اللون</p>
+        <p className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
+          {t('linksPage.color')}
+        </p>
         <div className="mb-4 flex flex-wrap gap-2">
           {PRESET_COLORS.map((preset) => (
             <button
@@ -94,7 +100,7 @@ export function CreateLinkGroupDialog({
                 color === preset && 'ring-2 ring-[var(--foreground)]',
               )}
               style={{ backgroundColor: preset }}
-              aria-label={`لون ${preset}`}
+              aria-label={t('linksPage.colorSwatch', { color: preset })}
             />
           ))}
         </div>
@@ -107,7 +113,7 @@ export function CreateLinkGroupDialog({
             isDisabled={busy}
             className="h-10 flex-1 rounded-xl bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]"
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : 'إنشاء'}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : t('linksPage.create')}
           </Button>
           <Button
             type="button"
@@ -116,7 +122,7 @@ export function CreateLinkGroupDialog({
             onPress={onClose}
             className="h-10 rounded-xl px-4 text-sm"
           >
-            إلغاء
+            {t('linksPage.cancel')}
           </Button>
         </div>
       </form>

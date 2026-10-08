@@ -21,13 +21,17 @@ export interface OrderPaymentStatusStyle {
 const PAYMENT_STATUS_STYLES: Record<string, OrderPaymentStatusStyle> = {
   UNPAID: {
     label: 'غير مدفوع',
-    textClassName: 'text-[var(--warning)]',
-    dotClassName: 'bg-[var(--warning)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--warning)_40%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--warning)_55%,var(--muted-foreground))]',
   },
   PAID: {
     label: 'مدفوع',
-    textClassName: 'text-[var(--success)]',
-    dotClassName: 'bg-[var(--success)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--success)_40%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--success)_55%,var(--muted-foreground))]',
   },
   REFUNDED: {
     label: 'مسترد',

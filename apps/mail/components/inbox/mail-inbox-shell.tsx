@@ -1341,16 +1341,16 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--background)]/95 p-6 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
             <p className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
-              Create a mailbox first
+              No mailbox available
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
-              Your inbox needs at least one address on your domain.
+              Open Mailboxes to create an address, or wait until one is assigned to you.
             </p>
             <Link
               href={appHref}
               className="mt-6 inline-flex h-10 items-center rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)]"
             >
-              Create mailbox
+              Open mailboxes
             </Link>
           </div>
         </div>

@@ -15,6 +15,10 @@ export async function fetchStoreOrders(
 ): Promise<StoreOrder[]> {
   const response = await api.get<StoreOrder[]>('/orders/store/orders', {
     status: params.status,
+    paymentStatus: params.paymentStatus,
+    search: params.search?.trim() || undefined,
+    startDate: params.startDate,
+    endDate: params.endDate,
     page: params.page,
     limit: params.limit,
   });

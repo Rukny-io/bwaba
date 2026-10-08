@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ProductCard, ProductCardSkeleton } from '@/components/products/product-card';
 import { ProductDetailSheet } from '@/components/products/product-detail-sheet';
-import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { ProductsToolbar } from '@/components/products/products-toolbar';
 import type { ProductsSortOption } from '@/components/products/products-view-mode';
 import {
@@ -23,11 +23,11 @@ import type { StoreProduct } from '@/lib/products/types';
 import { ApiException } from '@/lib/api-client';
 import { exportProductsToCsv } from '@/lib/products/export';
 import { sortProducts } from '@/lib/products/sort';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-const config = PRODUCT_CATALOG_CONFIG.products;
-
 export function ProductsView() {
+  const { t } = useTranslations();
   const router = useRouter();
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export function ProductsView() {
       writeCachedStoreProducts(rows);
     } catch (err) {
       const message =
-        err instanceof ApiException ? err.message : 'تعذّر تحميل المنتجات';
+        err instanceof ApiException ? err.message : t('products.loadFailed');
       const cached = readCachedStoreProducts();
 
       setProducts((current) => {
@@ -69,14 +69,14 @@ export function ProductsView() {
         typeof navigator !== 'undefined' &&
         !navigator.onLine
       ) {
-        setError('أنت غير متصل — عرض آخر نسخة محفوظة');
+        setError(t('products.offlineCached'));
       } else {
         setError(message);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadProducts();
@@ -134,7 +134,7 @@ export function ProductsView() {
 
   const handleDelete = useCallback(async (product: StoreProduct) => {
     const label = getProductDisplayName(product);
-    if (!window.confirm(`حذف «${label}»؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+    if (!window.confirm(t('products.deleteConfirm', { name: label }))) {
       return;
     }
 
@@ -157,12 +157,12 @@ export function ProductsView() {
       setProducts(previous);
       writeCachedStoreProducts(previous);
       setActionError(
-        err instanceof ApiException ? err.message : 'تعذّر حذف المنتج',
+        err instanceof ApiException ? err.message : t('products.deleteFailed'),
       );
     } finally {
       setBusyId(null);
     }
-  }, [products, detailProduct?.id]);
+  }, [products, detailProduct?.id, t]);
 
   const handleToggleVisibility = useCallback(async (product: StoreProduct) => {
     const previous = product.status;
@@ -187,60 +187,66 @@ export function ProductsView() {
         current?.id === product.id ? { ...current, status: previous } : current,
       );
       setActionError(
-        err instanceof ApiException ? err.message : 'تعذّر تحديث حالة المنتج',
+        err instanceof ApiException ? err.message : t('products.statusFailed'),
       );
     } finally {
       setBusyId(null);
     }
-  }, []);
+  }, [t]);
 
   const emptyMessage = useMemo(() => {
     if (searchQuery.trim()) {
       return {
-        title: config.searchEmptyTitle,
-        description: `جرّب بحثاً مختلفاً عن «${searchQuery}».`,
+        title: t('products.searchEmptyTitle'),
+        description: t('products.searchEmptyDescription', { query: searchQuery }),
       };
     }
 
     return {
-      title: config.emptyTitle,
-      description: config.emptyDescription,
+      title: t('products.emptyTitle'),
+      description: t('products.emptyDescription'),
     };
-  }, [searchQuery]);
-
-  const EmptyIcon = config.emptyIcon;
+  }, [searchQuery, t]);
 
   return (
-    <section className="dashboard-page flex flex-col gap-4 pt-5 sm:gap-5 sm:pt-6">
-      <ProductsToolbar
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        sortBy={sortBy}
-        onSortByChange={handleSortByChange}
-        showHidden={showHidden}
-        onShowHiddenChange={setShowHidden}
-        searchPlaceholder={config.searchPlaceholder}
-        addButtonLabel={config.addButtonLabel}
-        showHiddenLabel={config.showHiddenLabel}
-        hiddenSwitchAriaLabel={config.hiddenSwitchAriaLabel}
-        exportDisabled={loading || visibleProducts.length === 0}
-        onExport={() => exportProductsToCsv(visibleProducts)}
-        onAdd={() => router.push(PRODUCTS_CREATE_PATH)}
-      />
+    <section className="dashboard-page flex flex-col gap-4 pt-5 sm:gap-4 sm:pt-6">
+      <div className="rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+        <div className="mb-4 min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
+            {t('products.title')}
+          </h1>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {t('products.description')}
+          </p>
+        </div>
+        <ProductsToolbar
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          sortBy={sortBy}
+          onSortByChange={handleSortByChange}
+          showHidden={showHidden}
+          onShowHiddenChange={setShowHidden}
+          exportDisabled={loading || visibleProducts.length === 0}
+          onExport={() => exportProductsToCsv(visibleProducts)}
+          onAdd={() => router.push(PRODUCTS_CREATE_PATH)}
+        />
+      </div>
 
       {actionError ? (
         <p className="text-[13px] text-[var(--danger)]">{actionError}</p>
       ) : null}
 
       {error ? (
-        <div className="rounded-2xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-8 text-center">
+        <div className="rounded-xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-8 text-center">
           <p className="text-[14px] font-medium text-[var(--foreground)]">{error}</p>
         </div>
       ) : loading ? (
-        <ProductsGridSkeleton />
+        <div className="rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+          <ProductsGridSkeleton />
+        </div>
       ) : visibleProducts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-16 text-center sm:py-20">
-          <EmptyIcon
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-16 text-center sm:py-20">
+          <Package
             className="mb-3 size-8 text-[var(--muted-foreground)]/70"
             strokeWidth={1.5}
             aria-hidden
@@ -253,15 +259,18 @@ export function ProductsView() {
           </p>
         </div>
       ) : (
-        <ProductsGrid
-          key={sortBy}
-          products={visibleProducts}
-          sortBy={sortBy}
-          busyId={busyId}
-          onOpenDetails={handleOpenDetails}
-          onToggleVisibility={handleToggleVisibility}
-          onDelete={handleDelete}
-        />
+        <div className="rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+          <ProductsGrid
+            key={sortBy}
+            products={visibleProducts}
+            sortBy={sortBy}
+            busyId={busyId}
+            gridLabel={t('products.gridAria')}
+            onOpenDetails={handleOpenDetails}
+            onToggleVisibility={handleToggleVisibility}
+            onDelete={handleDelete}
+          />
+        </div>
       )}
 
       <ProductDetailSheet
@@ -290,6 +299,7 @@ function ProductsGrid({
   products,
   sortBy,
   busyId,
+  gridLabel,
   onOpenDetails,
   onToggleVisibility,
   onDelete,
@@ -297,6 +307,7 @@ function ProductsGrid({
   products: StoreProduct[];
   sortBy: ProductsSortOption;
   busyId: string | null;
+  gridLabel: string;
   onOpenDetails: (product: StoreProduct) => void;
   onToggleVisibility: (product: StoreProduct) => void;
   onDelete: (product: StoreProduct) => void;
@@ -307,7 +318,7 @@ function ProductsGrid({
         'product-grid-dnd grid gap-x-3 gap-y-4 sm:gap-x-3.5 sm:gap-y-5',
         'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
       )}
-      aria-label="شبكة المنتجات"
+      aria-label={gridLabel}
       data-sort={sortBy}
     >
       {products.map((product, index) => (

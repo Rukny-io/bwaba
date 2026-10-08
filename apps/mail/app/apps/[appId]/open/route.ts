@@ -119,11 +119,14 @@ export async function GET(request: Request, ctx: RouteCtx) {
   const subResult = await apiFetchJson<{
     subscription?: { status?: string } | null;
     hasWorkspaceAccess?: boolean;
+    activeLimits?: { mailboxCount: number } | null;
     unifiedLimits?: { mailboxCount: number } | null;
   }>(`/mail/apps/${encodeURIComponent(appId)}/subscription`);
   const hasActivePlan =
     subResult.ok &&
     (Boolean(subResult.data.hasWorkspaceAccess) ||
+      Boolean(subResult.data.activeLimits) ||
+      Boolean(subResult.data.unifiedLimits) ||
       subResult.data.subscription?.status === "ACTIVE");
 
   // Land on mailboxes overview (/app); quick sign-in links ask for the inbox.

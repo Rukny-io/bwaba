@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LayoutGroup, motion } from "framer-motion";
 import { cn } from "@heroui/react";
 import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import {
+  filterMailNavWithoutBilling,
   isNavItemActive,
   mailNavForPathname,
   type MailNavItem,
 } from "@/lib/mail-nav-scoped";
+import { fetchMailSubscription } from "@/lib/mail-subscription-client";
 
 function HeaderNavVisual({
   item,
@@ -95,8 +97,30 @@ function HeaderNavItem({
 export function MailHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { header } = mailNavForPathname(pathname);
+  const { header: rawHeader } = mailNavForPathname(pathname);
   const { pendingHref, setPendingHref } = useMailNavPending();
+  const [canManageBilling, setCanManageBilling] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await fetchMailSubscription();
+        if (!cancelled) setCanManageBilling(Boolean(snap.canManageBilling));
+      } catch {
+        if (!cancelled) setCanManageBilling(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  const header = useMemo(
+    () =>
+      canManageBilling ? rawHeader : filterMailNavWithoutBilling(rawHeader),
+    [canManageBilling, rawHeader],
+  );
 
   useEffect(() => {
     for (const item of header) {

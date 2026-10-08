@@ -2,6 +2,7 @@
 
 import { Download, Plus } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CollectionsPageActionsProps {
@@ -14,16 +15,19 @@ interface CollectionsPageActionsProps {
 }
 
 const actionButtonBase =
-  'h-9 shrink-0 gap-1.5 rounded-lg px-3.5 text-sm font-medium';
+  'h-9 shrink-0 gap-1.5 rounded-lg px-3.5 text-sm font-medium !shadow-none';
 
 export function CollectionsPageActions({
   addLabel,
   onAdd,
   onExport,
   exportDisabled = false,
-  exportLabel = 'تصدير',
+  exportLabel,
   className,
 }: CollectionsPageActionsProps) {
+  const { t } = useTranslations();
+  const resolvedExportLabel = exportLabel ?? t('collections.export');
+
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       <Button
@@ -36,7 +40,7 @@ export function CollectionsPageActions({
         )}
       >
         <Download className="size-3.5" strokeWidth={2} aria-hidden />
-        <span>{exportLabel}</span>
+        <span>{resolvedExportLabel}</span>
       </Button>
 
       <Button

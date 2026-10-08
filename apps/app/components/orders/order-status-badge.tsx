@@ -1,4 +1,7 @@
+'use client';
+
 import { getOrderStatusStyle } from '@/lib/orders/order-display';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface OrderStatusBadgeProps {
@@ -7,7 +10,11 @@ interface OrderStatusBadgeProps {
 }
 
 export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
+  const { t } = useTranslations();
   const style = getOrderStatusStyle(status);
+  const translated = t(`orders.status.${status}`);
+  const label =
+    translated === `orders.status.${status}` ? style.label || status : translated;
 
   return (
     <span
@@ -21,7 +28,7 @@ export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
         className={cn('size-1.5 shrink-0 rounded-full', style.dotClassName)}
         aria-hidden
       />
-      <span className="truncate">{style.label}</span>
+      <span className="truncate">{label}</span>
     </span>
   );
 }

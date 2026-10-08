@@ -11,12 +11,16 @@ import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import { fetchCurrentUser } from "@/lib/api/auth";
 import {
   isNavItemActive,
+  filterMailNavWithoutBilling,
   filterMailNavWithoutTeam,
   mailNavForPathname,
   type MailNavItem,
 } from "@/lib/mail-nav-scoped";
 import { logoutAndRedirect } from "@/lib/logout";
-import { fetchMailSubscription } from "@/lib/mail-subscription-client";
+import {
+  fetchMailSubscription,
+  workspaceActiveLimits,
+} from "@/lib/mail-subscription-client";
 
 function Tooltip({ label }: { label: string }) {
   return (
@@ -133,15 +137,19 @@ export function MailSidebar() {
   const nav = mailNavForPathname(pathname);
   const { slot } = nav;
   const [teamSupported, setTeamSupported] = useState(true);
+  const [canManageBilling, setCanManageBilling] = useState(true);
   const primary = teamSupported
     ? nav.primary
     : filterMailNavWithoutTeam(nav.primary);
   const secondary = teamSupported
     ? nav.secondary
     : filterMailNavWithoutTeam(nav.secondary);
-  const footer = teamSupported
+  const footerRaw = teamSupported
     ? nav.footer
     : filterMailNavWithoutTeam(nav.footer);
+  const footer = canManageBilling
+    ? footerRaw
+    : filterMailNavWithoutBilling(footerRaw);
   const profileHref = slot !== null ? `/u${slot}/profile` : "/profile";
   const settingsHref = slot !== null ? `/u${slot}/settings` : "/settings";
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -171,9 +179,7 @@ export function MailSidebar() {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
         const consoleSeats =
-          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
-          snap.subscription?.limits?.consoleMembersIncluded ??
-          0;
+          workspaceActiveLimits(snap)?.limits?.consoleMembersIncluded ?? 0;
         setTeamSupported(consoleSeats > 0);
       } catch {
         if (!cancelled) setTeamSupported(true);

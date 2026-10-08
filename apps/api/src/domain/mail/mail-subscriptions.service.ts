@@ -228,35 +228,41 @@ export class MailSubscriptionsService {
       name: access.app.name,
       primaryDomain: access.app.primaryDomain,
     } satisfies MailAppRow;
-    const { subscription } = await this.getSubscriptionForApp(app.id);
-    const pendingRequest = await this.findPendingRequest(app.appId);
-    const unified = this.isUnifiedBillingOnly()
-      ? await this.unifiedEntitlement.getLimitsForMailApp(app.id)
-      : null;
-    const domainQuota = this.isUnifiedBillingOnly()
-      ? await this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId)
-      : await this.planQuota.getDomainQuotaForMailApp(app.id, userId);
-    const hasWorkspaceAccess =
-      Boolean(unified) ||
-      subscription?.status === SubscriptionStatus.ACTIVE;
+    // Single source of truth for plan ceilings shown in the Mail console.
+    const [subscriptionResult, activeLimits, pendingRequest, domainQuota] =
+      await Promise.all([
+        this.getSubscriptionForApp(app.id),
+        this.getActiveLimitsForApp(app.id),
+        this.findPendingRequest(app.appId),
+        this.isUnifiedBillingOnly()
+          ? this.unifiedEntitlement.getDomainQuotaForMailApp(app.id, userId)
+          : this.planQuota.getDomainQuotaForMailApp(app.id, userId),
+      ]);
+    const { subscription } = subscriptionResult;
+    const activeLimitsView = this.toActiveLimitsView(activeLimits);
 
     return {
       app: this.toAppView(app),
-      unifiedPlan: unified?.emailPlan ?? null,
-      unifiedLimits: unified
+      /** Workspace plan limits from getActiveLimitsForApp(mailAppId) only. */
+      activeLimits: activeLimitsView,
+      unifiedPlan: activeLimitsView?.emailPlan ?? null,
+      // Kept for older clients — same payload as activeLimits (minus flags).
+      unifiedLimits: activeLimitsView
         ? {
-            planId: unified.planId,
-            plan: unified.plan,
-            mailboxCount: unified.mailboxCount,
-            limits: unified.limits,
-            storageQuotaBytesPerMailbox: unified.storageQuotaBytesPerMailbox,
+            planId: activeLimitsView.planId,
+            plan: activeLimitsView.plan,
+            mailboxCount: activeLimitsView.mailboxCount,
+            limits: activeLimitsView.limits,
+            storageQuotaBytesPerMailbox:
+              activeLimitsView.storageQuotaBytesPerMailbox,
           }
         : null,
       domainQuota,
       subscription,
       pendingRequest,
-      hasWorkspaceAccess,
+      hasWorkspaceAccess: Boolean(activeLimitsView),
       canManageBilling: this.access.canManageBilling(access),
+      canManageMailboxes: this.access.canManageMailboxes(access),
       isOwner: access.isOwner,
       role: access.role,
       cardPayments: { available: false, status: 'coming_soon' as const },
@@ -760,15 +766,13 @@ export class MailSubscriptionsService {
 
   async getOutboundUsage(userId: string, publicAppId: string) {
     const access = await this.access.requireAccess(userId, publicAppId);
-    const usage = await this.outboundUsage.getUsageForMailApp(access.app.id);
-    if (!usage) {
-      return {
-        usage: null,
-        canManageBilling: this.access.canManageBilling(access),
-      };
-    }
+    const [usage, activeLimits] = await Promise.all([
+      this.outboundUsage.getUsageForMailApp(access.app.id),
+      this.getActiveLimitsForApp(access.app.id),
+    ]);
     return {
       usage,
+      activeLimits: this.toActiveLimitsView(activeLimits),
       canManageBilling: this.access.canManageBilling(access),
     };
   }
@@ -2844,6 +2848,38 @@ export class MailSubscriptionsService {
       mailboxCount: subscription.mailboxCount,
       limits: subscription.limits,
       storageQuotaBytesPerMailbox: subscription.storageQuotaBytesPerMailbox,
+    };
+  }
+
+  /** Normalize getActiveLimitsForApp() for subscription / usage API responses. */
+  private toActiveLimitsView(
+    activeLimits: Awaited<
+      ReturnType<MailSubscriptionsService['getActiveLimitsForApp']>
+    >,
+  ) {
+    if (!activeLimits) return null;
+    const row = activeLimits as {
+      planId: string;
+      plan: string | MailPlan;
+      mailboxCount: number;
+      limits: (typeof MAIL_PLAN_LIMITS)[MailPlan];
+      storageQuotaBytesPerMailbox: number;
+      unified?: boolean;
+      emailPlan?: {
+        id: string;
+        marketingNameEn: string;
+        priceMonthlyIqd: number;
+        monthlyQuota: number;
+      } | null;
+    };
+    return {
+      planId: row.planId,
+      plan: String(row.plan),
+      mailboxCount: row.mailboxCount,
+      limits: row.limits,
+      storageQuotaBytesPerMailbox: row.storageQuotaBytesPerMailbox,
+      unified: Boolean(row.unified),
+      emailPlan: row.emailPlan ?? null,
     };
   }
 

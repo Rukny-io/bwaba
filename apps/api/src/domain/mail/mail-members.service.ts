@@ -11,7 +11,6 @@ import {
   MailAppMemberRole,
   MailAppStatus,
   MailMailboxStatus,
-  MailPlan,
   type MailSubscription,
 } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -20,6 +19,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MAIL_PLAN_LIMITS } from './mail-plan-limits.config';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
+import { MailSecurityAuditService } from './mail-security-audit.service';
 import {
   InviteMailAppMemberDto,
   TransferMailAppOwnershipDto,
@@ -72,6 +72,7 @@ export class MailMembersService {
     private readonly notifications: NotificationsService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    private readonly audit?: MailSecurityAuditService,
   ) {}
 
   private mailAppUrl(path = '/apps'): string {
@@ -182,11 +183,13 @@ export class MailMembersService {
     };
   }
 
-  private consoleMemberLimitLegacy(subscription: MailSubscription | null): number {
+  private consoleMemberLimitLegacy(
+    subscription: MailSubscription | null,
+  ): number {
     if (!subscription || subscription.status !== 'ACTIVE') {
       return MAIL_PLAN_LIMITS.STARTER.consoleMembersIncluded;
     }
-    const plan = subscription.plan as MailPlan;
+    const plan = subscription.plan;
     return MAIL_PLAN_LIMITS[plan]?.consoleMembersIncluded ?? 0;
   }
 
@@ -437,6 +440,13 @@ export class MailMembersService {
 
     const email = dto.email.trim().toLowerCase();
     const role = dto.role as MailAppMemberRole;
+    if (!access.isOwner && role === MailAppMemberRole.ADMIN) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_OWNER_REQUIRED',
+        message: 'Only the workspace owner can grant the Admin role.',
+      });
+    }
     const inviter = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { profile: { select: { name: true, username: true } } },
@@ -466,7 +476,9 @@ export class MailMembersService {
     }
 
     if (invitee.id === access.app.userId) {
-      throw new BadRequestException('The workspace owner is already on the team.');
+      throw new BadRequestException(
+        'The workspace owner is already on the team.',
+      );
     }
     if (invitee.id === userId) {
       throw new BadRequestException('You cannot invite yourself.');
@@ -546,6 +558,15 @@ export class MailMembersService {
         inviterName,
         role,
         workspaceName: access.app.name,
+      });
+
+      void this.audit?.record({
+        mailAppId: access.app.id,
+        actorUserId: userId,
+        action: 'team.invite.created',
+        targetType: 'member',
+        targetId: member.id,
+        metadata: { emailDomain: email.split('@')[1] ?? '', role },
       });
     }
 
@@ -650,11 +671,7 @@ export class MailMembersService {
     };
   }
 
-  async resend(
-    userId: string,
-    publicAppId: string,
-    memberId: string,
-  ) {
+  async resend(userId: string, publicAppId: string, memberId: string) {
     const access = await this.access.requireAccess(userId, publicAppId);
     if (!this.access.canManageTeam(access)) {
       throw new ForbiddenException({
@@ -817,10 +834,34 @@ export class MailMembersService {
       return { member: this.toMemberView(member) };
     }
 
+    // An admin may manage the day-to-day team, but cannot grant, revoke, or
+    // alter another administrator's privileges. That boundary belongs to the
+    // workspace owner and prevents a compromised admin session escalating
+    // control of the entire workspace.
+    if (
+      !access.isOwner &&
+      (member.role === MailAppMemberRole.ADMIN ||
+        String(dto.role) === MailAppMemberRole.ADMIN)
+    ) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_OWNER_REQUIRED',
+        message: 'Only the workspace owner can change Admin roles.',
+      });
+    }
+
     const updated = await this.prisma.mailAppMember.update({
       where: { id: member.id },
-      data: { role: dto.role as MailAppMemberRole },
+      data: { role: dto.role },
       include: memberInclude,
+    });
+    void this.audit?.record({
+      mailAppId: access.app.id,
+      actorUserId: userId,
+      action: 'team.member.role_changed',
+      targetType: 'member',
+      targetId: member.id,
+      metadata: { fromRole: member.role, toRole: dto.role },
     });
     return { member: this.toMemberView(updated) };
   }
@@ -840,6 +881,13 @@ export class MailMembersService {
       include: { user: { select: { email: true } } },
     });
     if (member) {
+      if (!access.isOwner && member.role === MailAppMemberRole.ADMIN) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'MAIL_OWNER_REQUIRED',
+          message: 'Only the workspace owner can remove an Admin.',
+        });
+      }
       await this.prisma.mailMailbox.updateMany({
         where: {
           mailAppId: access.app.id,
@@ -856,6 +904,14 @@ export class MailMembersService {
           slotIndex: null,
           expiresAt: null,
         },
+      });
+
+      void this.audit?.record({
+        mailAppId: access.app.id,
+        actorUserId: userId,
+        action: 'team.member.removed',
+        targetType: 'member',
+        targetId: member.id,
       });
 
       return { ok: true as const, kind: 'member' as const };
@@ -929,7 +985,9 @@ export class MailMembersService {
           },
         },
         include: {
-          mailApp: { select: { id: true, appId: true, name: true, primaryDomain: true } },
+          mailApp: {
+            select: { id: true, appId: true, name: true, primaryDomain: true },
+          },
           inviter: {
             select: {
               id: true,
@@ -946,7 +1004,10 @@ export class MailMembersService {
     const freshEmailInvites = emailInvites.filter(
       (invite) => !memberAppIds.has(invite.mailAppId),
     );
-    const appIds = [...memberAppIds, ...freshEmailInvites.map((i) => i.mailAppId)];
+    const appIds = [
+      ...memberAppIds,
+      ...freshEmailInvites.map((i) => i.mailAppId),
+    ];
     const reserved = appIds.length
       ? await this.prisma.mailMailbox.findMany({
           where: {
@@ -990,7 +1051,10 @@ export class MailMembersService {
           inviter: {
             id: invite.inviter.id,
             email: invite.inviter.email,
-            name: invite.inviter.profile?.name || invite.inviter.profile?.username || null,
+            name:
+              invite.inviter.profile?.name ||
+              invite.inviter.profile?.username ||
+              null,
           },
           reservedMailboxes: reservedByApp.get(invite.mailAppId) ?? [],
           workspace: {
@@ -1046,7 +1110,10 @@ export class MailMembersService {
       where: {
         mailAppId,
         status: MailMailboxStatus.ACTIVE,
-        pendingAssigneeEmail: { equals: user.email.trim(), mode: 'insensitive' },
+        pendingAssigneeEmail: {
+          equals: user.email.trim(),
+          mode: 'insensitive',
+        },
       },
       data: { assignedUserId: userId, pendingAssigneeEmail: null },
     });
@@ -1115,7 +1182,8 @@ export class MailMembersService {
       select: { id: true, userId: true, slotIndex: true },
     });
     if (!app) throw new NotFoundException('Workspace not found.');
-    if (app.userId === opts.userId) return { slotIndex: app.slotIndex, joined: false };
+    if (app.userId === opts.userId)
+      return { slotIndex: app.slotIndex, joined: false };
 
     const email = opts.email.trim().toLowerCase();
     const [existing, emailInvite] = await Promise.all([
@@ -1141,13 +1209,15 @@ export class MailMembersService {
       return { slotIndex: existing.slotIndex ?? app.slotIndex, joined: false };
     }
 
-    const holdsSeat = existing?.status === InvitationStatus.PENDING || !!emailInvite;
+    const holdsSeat =
+      existing?.status === InvitationStatus.PENDING || !!emailInvite;
     if (!holdsSeat) {
       if (!opts.jitProvisioning) {
         throw new ForbiddenException({
           statusCode: 403,
           code: 'MAIL_SSO_NOT_PROVISIONED',
-          message: 'Your account has not been added to this workspace yet. Ask an admin to invite you.',
+          message:
+            'Your account has not been added to this workspace yet. Ask an admin to invite you.',
         });
       }
       const subscription = await this.prisma.mailSubscription.findUnique({
@@ -1379,7 +1449,8 @@ export class MailMembersService {
 
     // Claiming converts an email seat into a member seat — net zero if invite still pending.
     if (!existing || existing.status !== InvitationStatus.PENDING) {
-      const usedWithoutThisInvite = (await this.countSeatsUsed(invite.mailAppId)) - 1;
+      const usedWithoutThisInvite =
+        (await this.countSeatsUsed(invite.mailAppId)) - 1;
       if (usedWithoutThisInvite >= limit) {
         throw new ForbiddenException({
           statusCode: 403,

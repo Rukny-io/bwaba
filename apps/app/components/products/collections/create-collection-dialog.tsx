@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { CreateCollectionForm } from '@/components/products/collections/create-collection-form';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const DIALOG_SHELL_CLASS =
-  'flex max-h-[90vh] w-full max-w-[32rem] flex-col overflow-hidden rounded-2xl border border-[rgba(34,34,34,0.1)] bg-white shadow-[0px_8px_12px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-zinc-950 dark:shadow-[0px_8px_12px_rgba(0,0,0,0.35)]';
+  'flex max-h-[90vh] w-full max-w-[32rem] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] !shadow-none';
 
 interface CreateCollectionDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ export function CreateCollectionDialog({
   onClose,
   onCreated,
 }: CreateCollectionDialogProps) {
+  const { t } = useTranslations();
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
@@ -65,20 +67,20 @@ export function CreateCollectionDialog({
               role="dialog"
               aria-modal="true"
               aria-labelledby="create-collection-title"
-              dir="rtl"
+
             >
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[rgba(34,34,34,0.08)] px-4 py-3.5 dark:border-white/10">
                 <h2
                   id="create-collection-title"
                   className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]"
                 >
-                  إنشاء مجموعة جديدة
+                  {t('collections.createTitle')}
                 </h2>
                 <button
                   type="button"
                   onClick={onClose}
                   className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors hover:bg-black/[0.04] hover:text-[var(--foreground)] dark:hover:bg-white/10"
-                  aria-label="إغلاق"
+                  aria-label={t('collections.close')}
                 >
                   <X className="size-4" />
                 </button>

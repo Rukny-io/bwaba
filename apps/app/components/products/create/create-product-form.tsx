@@ -56,6 +56,7 @@ import {
   SERVICE_TYPE_OPTIONS,
   type ProductKind,
 } from '@/lib/products/types';
+import { pickLocaleValue, useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CreateProductFormProps {
@@ -87,6 +88,15 @@ export function CreateProductForm({
   onSubmittingChange,
   className,
 }: CreateProductFormProps) {
+  const { t, locale } = useTranslations();
+  const catalogLabel = pickLocaleValue(locale, {
+    ar: catalogItem.label,
+    en: catalogItem.labelEn,
+  });
+  const catalogDescription = pickLocaleValue(locale, {
+    ar: catalogItem.description,
+    en: catalogItem.descriptionEn,
+  });
   const isEditing = Boolean(productId);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -105,6 +115,7 @@ export function CreateProductForm({
   const [templateLoading, setTemplateLoading] = useState(true);
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null);
   const [storeCategoryName, setStoreCategoryName] = useState<string | null>(null);
+  const [storeCategoryNameAr, setStoreCategoryNameAr] = useState<string | null>(null);
   const [storeCategorySlug, setStoreCategorySlug] = useState<string | null>(null);
   const [baseTemplate, setBaseTemplate] = useState<CategoryTemplateFields | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, TemplateFieldValue>>(
@@ -118,14 +129,21 @@ export function CreateProductForm({
   );
 
   const categoryUi = useMemo(
-    () => getCategoryFormUi(storeCategorySlug),
-    [storeCategorySlug],
+    () => getCategoryFormUi(storeCategorySlug, locale),
+    [storeCategorySlug, locale],
   );
 
   const categoryKindHint = useMemo(
-    () => getCategoryKindHint(storeCategorySlug, kind),
-    [storeCategorySlug, kind],
+    () => getCategoryKindHint(storeCategorySlug, kind, locale),
+    [storeCategorySlug, kind, locale],
   );
+
+  const storeCategoryLabel = useMemo(() => {
+    const ar = storeCategoryNameAr?.trim() || storeCategoryName;
+    const en = storeCategoryName?.trim() || storeCategoryNameAr;
+    if (!ar && !en) return null;
+    return pickLocaleValue(locale, { ar: ar ?? '', en: en ?? '' }) || null;
+  }, [locale, storeCategoryName, storeCategoryNameAr]);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,7 +156,8 @@ export function CreateProductForm({
         if (cancelled) return;
 
         const nextTemplate = response.template;
-        setStoreCategoryName(response.categoryNameAr ?? response.categoryName);
+        setStoreCategoryName(response.categoryName);
+        setStoreCategoryNameAr(response.categoryNameAr);
         setStoreCategorySlug(response.categorySlug);
         setBaseTemplate(nextTemplate);
         setTemplateValues(
@@ -158,7 +177,7 @@ export function CreateProductForm({
           setTemplateLoadError(
             err instanceof ApiException
               ? err.message
-              : 'تعذّر تحميل حقول التصنيف',
+              : t('products.create.templateLoadFailed'),
           );
         }
       } finally {
@@ -170,7 +189,7 @@ export function CreateProductForm({
     return () => {
       cancelled = true;
     };
-  }, [kind]);
+  }, [kind, t]);
 
   useEffect(() => {
     if (!productId) return;
@@ -201,7 +220,7 @@ export function CreateProductForm({
           setError(
             err instanceof ApiException
               ? err.message
-              : 'تعذّر تحميل بيانات المنتج',
+              : t('products.create.productLoadFailed'),
           );
         }
       });
@@ -209,7 +228,7 @@ export function CreateProductForm({
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, t]);
 
   const imagesRef = useRef(images);
   imagesRef.current = images;
@@ -281,12 +300,12 @@ export function CreateProductForm({
     const parsedQuantity = Number(quantity);
 
     if (trimmedName.length < 2) {
-      setError('أدخل اسماً للمنتج (حرفان على الأقل)');
+      setError(t('products.create.nameRequired'));
       return;
     }
 
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
-      setError('أدخل سعراً صالحاً');
+      setError(t('products.create.priceInvalid'));
       return;
     }
 
@@ -295,24 +314,29 @@ export function CreateProductForm({
       !useVariants &&
       (!Number.isFinite(parsedQuantity) || parsedQuantity < 0)
     ) {
-      setError('أدخل كمية مخزون صالحة');
+      setError(t('products.create.quantityInvalid'));
       return;
     }
 
-    const templateError = validateTemplateValues(template, templateValues);
+    const templateError = validateTemplateValues(
+      template,
+      templateValues,
+      t,
+      locale,
+    );
     if (templateError) {
       setError(templateError);
       return;
     }
 
-    const variantError = validateVariantDrafts(template, variants);
+    const variantError = validateVariantDrafts(template, variants, t, locale);
     if (variantError) {
       setError(variantError);
       return;
     }
 
     if (kind === 'DIGITAL' && !digitalFile && !isEditing) {
-      setError('ارفع ملف المنتج الرقمي');
+      setError(t('products.create.digitalRequired'));
       return;
     }
 
@@ -361,8 +385,8 @@ export function CreateProductForm({
         err instanceof ApiException
           ? err.message
           : isEditing
-            ? 'تعذّر حفظ التعديلات'
-            : 'تعذّر إنشاء المنتج',
+            ? t('products.create.saveFailed')
+            : t('products.create.createFailed'),
       );
     } finally {
       setSaving(false);
@@ -375,7 +399,7 @@ export function CreateProductForm({
       id={formId}
       onSubmit={handleSubmit}
       className={cn('flex min-h-0 flex-1 flex-col', className)}
-      dir="rtl"
+
     >
       {!isPageLayout ? (
         <div className="flex shrink-0 items-center gap-3 border-b border-border/70 px-5 py-3.5">
@@ -384,7 +408,7 @@ export function CreateProductForm({
             isIconOnly
             variant="ghost"
             onPress={onBack}
-            aria-label="رجوع"
+            aria-label={t('products.create.back')}
             className="size-9 shrink-0 rounded-full"
           >
             <ArrowRight className="size-5" />
@@ -392,11 +416,11 @@ export function CreateProductForm({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <ProductKindIconBadge kind={kind} size="sm" />
             <div className="min-w-0">
-              <h3 className="truncate text-base font-bold">{catalogItem.label}</h3>
+              <h3 className="truncate text-base font-bold">{catalogLabel}</h3>
               <p className="truncate text-xs text-muted">
-                {storeCategoryName
-                  ? `متجر ${storeCategoryName}`
-                  : catalogItem.description}
+                {storeCategoryLabel
+                  ? t('products.create.storeCategory', { name: storeCategoryLabel })
+                  : catalogDescription}
               </p>
             </div>
           </div>
@@ -412,12 +436,16 @@ export function CreateProductForm({
         <div className={cn(isPageLayout ? 'space-y-5' : 'space-y-4')}>
           {isPageLayout ? (
             <header className="mb-1">
-              <ProductCreatePill label={catalogItem.label} />
+              <ProductCreatePill label={catalogLabel} />
               <h2 className="mt-3 text-lg font-bold tracking-tight sm:text-xl">
-                {isEditing ? 'تعديل المنتج' : 'تفاصيل المنتج'}
+                {isEditing
+                  ? t('products.create.editTitle')
+                  : t('products.create.detailsTitle')}
               </h2>
-              {storeCategoryName ? (
-                <p className="mt-1 text-xs text-muted">متجر {storeCategoryName}</p>
+              {storeCategoryLabel ? (
+                <p className="mt-1 text-xs text-muted">
+                  {t('products.create.storeCategory', { name: storeCategoryLabel })}
+                </p>
               ) : null}
             </header>
           ) : null}
@@ -431,15 +459,17 @@ export function CreateProductForm({
           />
 
           <ProductFormSection
-            title="المعلومات الأساسية"
-            description="الاسم والوصف كما يظهران في متجرك"
+            title={t('products.create.basicsTitle')}
+            description={t('products.create.basicsDescription')}
           >
             <TextField
               value={name}
               onChange={setName}
               className="flex flex-col gap-2"
             >
-              <Label className="text-xs font-medium text-muted">اسم المنتج</Label>
+              <Label className="text-xs font-medium text-muted">
+                {t('products.create.nameLabel')}
+              </Label>
               <Input placeholder={categoryUi.namePlaceholder} />
             </TextField>
 
@@ -448,7 +478,9 @@ export function CreateProductForm({
               onChange={setDescription}
               className="flex flex-col gap-2"
             >
-              <Label className="text-xs font-medium text-muted">الوصف</Label>
+              <Label className="text-xs font-medium text-muted">
+                {t('products.create.descriptionLabel')}
+              </Label>
               <TextArea
                 placeholder={categoryUi.descriptionPlaceholder}
                 rows={mobile ? 3 : 4}
@@ -457,7 +489,7 @@ export function CreateProductForm({
             </TextField>
           </ProductFormSection>
 
-          <ProductFormSection title="التسعير والمخزون">
+          <ProductFormSection title={t('products.create.pricingTitle')}>
             <div
               className={cn(
                 'grid gap-4',
@@ -472,7 +504,9 @@ export function CreateProductForm({
                   onChange={setQuantity}
                   className="flex flex-col gap-2"
                 >
-                  <Label className="text-xs font-medium text-muted">الكمية</Label>
+                  <Label className="text-xs font-medium text-muted">
+                    {t('products.create.quantityLabel')}
+                  </Label>
                   <Input type="number" min={0} />
                 </TextField>
               ) : null}
@@ -480,7 +514,9 @@ export function CreateProductForm({
 
             {kind === 'PHYSICAL' ? (
               <TextField value={sku} onChange={setSku} className="flex flex-col gap-2">
-                <Label className="text-xs font-medium text-muted">SKU (اختياري)</Label>
+                <Label className="text-xs font-medium text-muted">
+                  {t('products.create.skuOptional')}
+                </Label>
                 <Input />
               </TextField>
             ) : null}
@@ -497,18 +533,17 @@ export function CreateProductForm({
               <Alert.Indicator />
               <Alert.Content>
                 <Alert.Description>
-                  تعذّر تحميل حقول التصنيف: {templateLoadError}
+                  {t('products.create.templateFailed', { error: templateLoadError })}
                 </Alert.Description>
               </Alert.Content>
             </Alert>
           ) : !baseTemplate ? (
             <Card variant="secondary" className="border border-dashed border-border p-5 text-center shadow-none">
               <Card.Title className="text-sm font-bold">
-                لم يُحدَّد تصنيف لمتجرك بعد
+                {t('products.create.noCategoryTitle')}
               </Card.Title>
               <Card.Description className="mt-2 text-xs leading-relaxed">
-                من حسابات ركني → إعداد الملف الشخصي → اختر تصنيف نشاطك (مثل الأزياء).
-                إذا سبق واخترته، حدّث الصفحة بعد إعادة تسجيل الدخول.
+                {t('products.create.noCategoryBody')}
               </Card.Description>
             </Card>
           ) : templateFields.length > 0 ? (
@@ -536,14 +571,16 @@ export function CreateProductForm({
           ) : null}
 
           {showLegacyServiceFields ? (
-            <ProductFormSection title="تفاصيل الخدمة">
+            <ProductFormSection title={t('products.create.serviceDetails')}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Select
                   selectedKey={serviceType}
                   onSelectionChange={(key) => setServiceType(String(key ?? 'consultation'))}
                   className="flex flex-col gap-2"
                 >
-                  <Label className="text-xs font-medium text-muted">نوع الخدمة</Label>
+                  <Label className="text-xs font-medium text-muted">
+                    {t('products.create.serviceType')}
+                  </Label>
                   <Select.Trigger>
                     <Select.Value />
                     <Select.Indicator />
@@ -569,7 +606,9 @@ export function CreateProductForm({
                   onSelectionChange={(key) => setDeliveryMethod(String(key ?? 'online'))}
                   className="flex flex-col gap-2"
                 >
-                  <Label className="text-xs font-medium text-muted">طريقة التقديم</Label>
+                  <Label className="text-xs font-medium text-muted">
+                    {t('products.create.deliveryMethod')}
+                  </Label>
                   <Select.Trigger>
                     <Select.Value />
                     <Select.Indicator />
@@ -595,8 +634,10 @@ export function CreateProductForm({
                   onChange={setServiceDuration}
                   className="flex flex-col gap-2 sm:col-span-2"
                 >
-                  <Label className="text-xs font-medium text-muted">المدة (اختياري)</Label>
-                  <Input placeholder="مثال: 60 دقيقة" />
+                  <Label className="text-xs font-medium text-muted">
+                    {t('products.create.durationOptional')}
+                  </Label>
+                  <Input placeholder={t('products.create.durationPlaceholder')} />
                 </TextField>
               </div>
             </ProductFormSection>
@@ -632,7 +673,7 @@ export function CreateProductForm({
             {isBusy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
-              'إنشاء المنتج'
+              t('products.create.createProduct')
             )}
           </Button>
         </div>

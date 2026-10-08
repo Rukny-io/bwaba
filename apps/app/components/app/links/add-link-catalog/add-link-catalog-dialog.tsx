@@ -150,8 +150,7 @@ export function AddLinkCatalogDialog({
     >
       <Modal.Container placement="center" className="px-2 sm:px-3">
         <Modal.Dialog
-          dir="rtl"
-          lang="ar"
+
           aria-labelledby="add-link-catalog-title"
           className="flex h-[min(28rem,85vh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] p-0 !shadow-none ring-0 outline-none"
         >

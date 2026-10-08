@@ -126,6 +126,7 @@ export function MailSsoEnterpriseCard({
   appId,
   summary,
   canManage,
+  isOwner,
   primaryDomain,
   domainActive,
   onChanged,
@@ -133,6 +134,7 @@ export function MailSsoEnterpriseCard({
   appId: string;
   summary: MailIdentityProviderSummary | null;
   canManage: boolean;
+  isOwner: boolean;
   primaryDomain: string | null;
   domainActive: boolean;
   onChanged: () => void;
@@ -174,6 +176,16 @@ export function MailSsoEnterpriseCard({
   const disabled = !canManage || busy !== null || !domainActive;
 
   async function save(enabled?: boolean) {
+    const isEnablingEnforcement =
+      draft.enforceSso && !config?.enforceSso && enabled !== false;
+    if (
+      isEnablingEnforcement &&
+      !window.confirm(
+        "Require SSO will end password access for team members on this domain. Confirm that you have tested the identity provider and kept a recovery path for the workspace owner.",
+      )
+    ) {
+      return;
+    }
     setBusy(enabled === undefined ? "save" : "enable");
     setNotice(null);
     try {
@@ -283,6 +295,11 @@ export function MailSsoEnterpriseCard({
       {!canManage ? (
         <p className="text-[13px] text-[var(--muted-foreground)]">
           Only the owner or an admin can configure enterprise SSO.
+        </p>
+      ) : null}
+      {canManage && !isOwner ? (
+        <p className="rounded-xl bg-[var(--warning-soft,#fff7e6)] px-3 py-2.5 text-[13px] leading-5 text-[var(--muted-foreground)]">
+          Admins can configure the provider, but only the workspace owner can require SSO for everyone.
         </p>
       ) : null}
 
@@ -440,11 +457,16 @@ export function MailSsoEnterpriseCard({
             />
             <PolicySwitch
               label="Require SSO"
-              description="Members on your domain can no longer unlock mailboxes with a password. The owner is never locked out."
+              description="Members on your domain can no longer unlock mailboxes with a password. Test the provider first; the owner retains recovery access."
               value={draft.enforceSso}
-              disabled={disabled}
+              disabled={disabled || !isOwner}
               onChange={(enforceSso) => patch({ enforceSso })}
             />
+            {draft.enforceSso ? (
+              <p className="rounded-xl bg-[var(--warning-soft,#fff7e6)] px-3 py-2.5 text-[12px] leading-5 text-[var(--muted-foreground)]">
+                Recovery checklist: verify a successful test login, keep the workspace owner account protected with 2FA, and document an IdP administrator who can restore access.
+              </p>
+            ) : null}
           </div>
 
           {config?.lastTestedAt ? (

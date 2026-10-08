@@ -27,6 +27,7 @@ import { Public } from '../../../core/common/decorators/auth/public.decorator';
 import { setMailboxSessionCookie } from '../../auth/cookie.config';
 import { MailSsoOidcService } from './mail-sso-oidc.service';
 import { MailSsoService } from './mail-sso.service';
+import { MailSecurityAuditService } from '../mail-security-audit.service';
 import {
   ConsumeMailSsoLinkDto,
   ProvisionMailSsoBulkDto,
@@ -44,7 +45,18 @@ export class MailSsoController {
   constructor(
     private readonly sso: MailSsoService,
     private readonly oidc: MailSsoOidcService,
+    private readonly audit: MailSecurityAuditService,
   ) {}
+
+  @Get('apps/:appId/security-audit')
+  @ApiOperation({ summary: 'Security audit events for the Mail workspace' })
+  auditLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Query('take') take?: string,
+  ) {
+    return this.audit.list(user.id, appId, take ? Number(take) : 50);
+  }
 
   @Get('apps/:appId/sso')
   @ApiOperation({ summary: 'SSO overview: settings, people, mailboxes, links' })
@@ -77,7 +89,8 @@ export class MailSsoController {
   @Post('apps/:appId/sso/provision')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Invite a teammate, assign a mailbox and email a one-click sign-in link',
+    summary:
+      'Invite a teammate, assign a mailbox and email a one-click sign-in link',
   })
   provision(
     @CurrentUser() user: AuthenticatedUser,
@@ -101,7 +114,9 @@ export class MailSsoController {
   @Post('apps/:appId/sso/links/:linkId/resend')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @ApiOperation({ summary: 'Rotate a sign-in link and email it (or return it to copy)' })
+  @ApiOperation({
+    summary: 'Rotate a sign-in link and email it (or return it to copy)',
+  })
   resend(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -125,7 +140,8 @@ export class MailSsoController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Use a quick sign-in link: join the workspace and open the mailbox',
+    summary:
+      'Use a quick sign-in link: join the workspace and open the mailbox',
   })
   async consume(
     @CurrentUser() user: AuthenticatedUser,
@@ -155,7 +171,9 @@ export class MailSsoController {
 
   @Put('apps/:appId/sso/identity-provider')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
-  @ApiOperation({ summary: 'Create or update the OIDC identity provider (owner/admin)' })
+  @ApiOperation({
+    summary: 'Create or update the OIDC identity provider (owner/admin)',
+  })
   upsertIdentityProvider(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -167,7 +185,9 @@ export class MailSsoController {
   @Post('apps/:appId/sso/identity-provider/test')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Fetch the IdP discovery document to check the connection' })
+  @ApiOperation({
+    summary: 'Fetch the IdP discovery document to check the connection',
+  })
   testIdentityProvider(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
@@ -207,7 +227,9 @@ export class MailSsoPublicController {
 
   @Get('sso/oidc/discover')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @ApiOperation({ summary: 'Does this email domain sign in with enterprise SSO?' })
+  @ApiOperation({
+    summary: 'Does this email domain sign in with enterprise SSO?',
+  })
   discover(@Query('email') email: string) {
     return this.oidc.discover(email ?? '');
   }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   Injectable,
@@ -13,6 +14,7 @@ import {
   MailAppMemberRole,
   MailAppStatus,
   MailMailboxStatus,
+  type MailSsoAccessLink,
   type MailAppSsoSettings,
 } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
@@ -183,8 +185,10 @@ export class MailSsoService {
   ) {
     const access = await this.requireManager(userId, publicAppId);
     const data: Partial<SsoSettingsView> = {};
-    if (dto.quickLinkEnabled !== undefined) data.quickLinkEnabled = dto.quickLinkEnabled;
-    if (dto.autoAcceptOnLink !== undefined) data.autoAcceptOnLink = dto.autoAcceptOnLink;
+    if (dto.quickLinkEnabled !== undefined)
+      data.quickLinkEnabled = dto.quickLinkEnabled;
+    if (dto.autoAcceptOnLink !== undefined)
+      data.autoAcceptOnLink = dto.autoAcceptOnLink;
     if (dto.skipMailboxPasswordForAssigned !== undefined) {
       data.skipMailboxPasswordForAssigned = dto.skipMailboxPasswordForAssigned;
     }
@@ -228,7 +232,10 @@ export class MailSsoService {
       },
       select: { userId: true },
     });
-    const privileged = new Set([access.app.userId, ...admins.map((a) => a.userId)]);
+    const privileged = new Set([
+      access.app.userId,
+      ...admins.map((a) => a.userId),
+    ]);
     const boxes = await this.prisma.mailMailbox.findMany({
       where: { mailAppId: access.app.id, assignedUserId: { not: null } },
       select: { id: true, assignedUserId: true },
@@ -265,7 +272,7 @@ export class MailSsoService {
             orderBy: { createdAt: 'desc' },
             take: 500,
           })
-        : Promise.resolve([]),
+        : Promise.resolve([] as MailSsoAccessLink[]),
       this.prisma.mailAppIdentityProvider.findUnique({
         where: { mailAppId: access.app.id },
         select: {
@@ -282,7 +289,8 @@ export class MailSsoService {
 
     const latestLinkByEmail = new Map<string, (typeof links)[number]>();
     for (const link of links) {
-      if (!latestLinkByEmail.has(link.email)) latestLinkByEmail.set(link.email, link);
+      if (!latestLinkByEmail.has(link.email))
+        latestLinkByEmail.set(link.email, link);
     }
 
     const boxesFor = (userIdOrNull: string | null, email: string) =>
@@ -295,7 +303,9 @@ export class MailSsoService {
         .map((box) => ({
           id: box.id,
           address: `${box.localPart}@${box.domain}`,
-          pending: box.pendingAssigneeEmail === email && box.assignedUserId !== userIdOrNull,
+          pending:
+            box.pendingAssigneeEmail === email &&
+            box.assignedUserId !== userIdOrNull,
         }));
 
     const linkFor = (email: string) => {
@@ -316,7 +326,10 @@ export class MailSsoService {
               role: 'OWNER' as const,
               status: 'ACCEPTED' as const,
               joinedAt: null as string | null,
-              mailboxes: boxesFor(roster.owner.id, this.normalizeEmail(roster.owner.email)),
+              mailboxes: boxesFor(
+                roster.owner.id,
+                this.normalizeEmail(roster.owner.email),
+              ),
               link: null,
             },
           ]
@@ -388,7 +401,11 @@ export class MailSsoService {
   // Provisioning
   // ---------------------------------------------------------------------------
 
-  async provision(userId: string, publicAppId: string, dto: ProvisionMailSsoDto) {
+  async provision(
+    userId: string,
+    publicAppId: string,
+    dto: ProvisionMailSsoDto,
+  ) {
     const access = await this.requireManager(userId, publicAppId);
     const settings = await this.loadSettings(access.app.id);
     this.assertQuickLinksEnabled(settings);
@@ -416,7 +433,11 @@ export class MailSsoService {
     for (const row of dto.rows) {
       const email = this.normalizeEmail(row.email);
       if (seen.has(email)) {
-        results.push({ email, ok: false, error: 'Duplicate row for this email.' });
+        results.push({
+          email,
+          ok: false,
+          error: 'Duplicate row for this email.',
+        });
         continue;
       }
       seen.add(email);
@@ -457,7 +478,9 @@ export class MailSsoService {
     const email = this.normalizeEmail(dto.email);
     this.assertEmailDomainAllowed(email, settings);
     if (dto.mailboxId && dto.newLocalPart) {
-      throw new BadRequestException('Pick an existing mailbox or a new address, not both.');
+      throw new BadRequestException(
+        'Pick an existing mailbox or a new address, not both.',
+      );
     }
 
     const invitee = await this.prisma.user.findFirst({
@@ -532,7 +555,9 @@ export class MailSsoService {
     });
 
     const token = newMailSsoToken();
-    const expiresAt = new Date(Date.now() + settings.linkTtlHours * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + settings.linkTtlHours * 60 * 60 * 1000,
+    );
     const link = await this.prisma.mailSsoAccessLink.create({
       data: {
         mailAppId: access.app.id,
@@ -604,10 +629,16 @@ export class MailSsoService {
   }) {
     const inviter = await this.prisma.user.findUnique({
       where: { id: opts.inviterId },
-      select: { email: true, profile: { select: { name: true, username: true } } },
+      select: {
+        email: true,
+        profile: { select: { name: true, username: true } },
+      },
     });
     const inviterName =
-      inviter?.profile?.name || inviter?.profile?.username || inviter?.email || 'A teammate';
+      inviter?.profile?.name ||
+      inviter?.profile?.username ||
+      inviter?.email ||
+      'A teammate';
     await this.email.sendMailSsoAccessLink(opts.to, {
       inviterName,
       workspaceName: opts.workspaceName,
@@ -640,8 +671,13 @@ export class MailSsoService {
       throw new BadRequestException('This teammate already used their link.');
     }
     const deliver = dto.deliver !== false;
-    if (deliver && Date.now() - link.lastSentAt.getTime() < LINK_RESEND_COOLDOWN_MS) {
-      throw new BadRequestException('Please wait a minute before resending this link.');
+    if (
+      deliver &&
+      Date.now() - link.lastSentAt.getTime() < LINK_RESEND_COOLDOWN_MS
+    ) {
+      throw new BadRequestException(
+        'Please wait a minute before resending this link.',
+      );
     }
     if (!(await this.hasLiveSeat(access.app.id, link.email))) {
       throw new BadRequestException(
@@ -651,7 +687,9 @@ export class MailSsoService {
 
     // Raw tokens are never stored, so a resend always rotates the token.
     const token = newMailSsoToken();
-    const expiresAt = new Date(Date.now() + settings.linkTtlHours * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + settings.linkTtlHours * 60 * 60 * 1000,
+    );
     const updated = await this.prisma.mailSsoAccessLink.update({
       where: { id: link.id },
       data: {
@@ -667,7 +705,9 @@ export class MailSsoService {
         to: link.email,
         inviterId: userId,
         workspaceName: access.app.name,
-        mailboxAddress: link.mailbox ? `${link.mailbox.localPart}@${link.mailbox.domain}` : null,
+        mailboxAddress: link.mailbox
+          ? `${link.mailbox.localPart}@${link.mailbox.domain}`
+          : null,
         url,
         expiresAt,
       });
@@ -676,7 +716,10 @@ export class MailSsoService {
   }
 
   private async hasLiveSeat(mailAppId: string, email: string) {
-    const user = await this.prisma.user.findFirst({ where: { email }, select: { id: true } });
+    const user = await this.prisma.user.findFirst({
+      where: { email },
+      select: { id: true },
+    });
     if (user) {
       const member = await this.prisma.mailAppMember.findUnique({
         where: { mailAppId_userId: { mailAppId, userId: user.id } },
@@ -730,7 +773,14 @@ export class MailSsoService {
       include: {
         mailApp: true,
         mailbox: {
-          select: { id: true, localPart: true, domain: true, status: true },
+          select: {
+            id: true,
+            localPart: true,
+            domain: true,
+            status: true,
+            assignedUserId: true,
+            pendingAssigneeEmail: true,
+          },
         },
       },
     });
@@ -788,6 +838,22 @@ export class MailSsoService {
         statusCode: 403,
         code: 'MAIL_SSO_EMAIL_MISMATCH',
         message: `This link is for ${link.email}. Sign in with that email to continue.`,
+      });
+    }
+
+    // A mailbox can be reassigned after a link was sent. Refuse the stale link
+    // instead of consuming it and silently joining the user without the
+    // mailbox they were promised.
+    if (
+      link.mailbox &&
+      link.mailbox.assignedUserId &&
+      link.mailbox.assignedUserId !== userId
+    ) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'MAIL_SSO_MAILBOX_REASSIGNED',
+        message:
+          'This mailbox was reassigned. Ask an admin to send a new link.',
       });
     }
 
@@ -858,9 +924,19 @@ export class MailSsoService {
       });
       const box = await this.prisma.mailMailbox.findFirst({
         where: { id: link.mailboxId, mailAppId: app.id },
-        select: { id: true, localPart: true, domain: true, status: true, assignedUserId: true },
+        select: {
+          id: true,
+          localPart: true,
+          domain: true,
+          status: true,
+          assignedUserId: true,
+        },
       });
-      if (box && box.status === MailMailboxStatus.ACTIVE && box.assignedUserId === userId) {
+      if (
+        box &&
+        box.status === MailMailboxStatus.ACTIVE &&
+        box.assignedUserId === userId
+      ) {
         mailbox = { id: box.id, address: `${box.localPart}@${box.domain}` };
         if (settings.skipMailboxPasswordForAssigned || isOwner) {
           mailboxSessionToken = await this.mailboxSessions.create({
@@ -890,7 +966,11 @@ export class MailSsoService {
     userId: string,
     email: string,
     app: { id: string; userId: string; slotIndex: number },
-    member: { id: string; status: InvitationStatus; slotIndex: number | null } | null,
+    member: {
+      id: string;
+      status: InvitationStatus;
+      slotIndex: number | null;
+    } | null,
   ): Promise<number> {
     if (app.userId === userId) return app.slotIndex;
     if (member?.status === InvitationStatus.ACCEPTED) {
@@ -911,7 +991,8 @@ export class MailSsoService {
       throw new BadRequestException({
         statusCode: 400,
         code: 'MAIL_SSO_INVITE_GONE',
-        message: 'Your invitation was cancelled or expired. Ask your admin to add you again.',
+        message:
+          'Your invitation was cancelled or expired. Ask your admin to add you again.',
       });
     }
     const claimed = await this.members.claimEmailInvite(userId, invite.token);

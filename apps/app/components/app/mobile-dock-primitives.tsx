@@ -104,6 +104,7 @@ export function MobileDockItem({
   onClick,
   showLabel = true,
   forceLabel = false,
+  iconClassName,
 }: {
   icon: LucideIcon;
   label: string;
@@ -113,6 +114,7 @@ export function MobileDockItem({
   showLabel?: boolean;
   /** Always show label (e.g. Back) even when not active */
   forceLabel?: boolean;
+  iconClassName?: string;
 }) {
   const withLabel = (isActive && showLabel) || forceLabel;
 
@@ -130,7 +132,7 @@ export function MobileDockItem({
       <Icon
         size={withLabel ? 18 : 20}
         strokeWidth={isActive ? 2.2 : 1.7}
-        className="shrink-0"
+        className={cn('shrink-0', iconClassName)}
         aria-hidden
       />
       {withLabel ? (

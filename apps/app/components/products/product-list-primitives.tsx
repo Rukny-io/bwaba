@@ -4,6 +4,7 @@ import { Package } from 'lucide-react';
 import { useResilientImage } from '@/lib/use-resilient-image';
 import type { ProductKind } from '@/lib/products/types';
 import { formatProductPrice } from '@/lib/collections/product-utils';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductThumbnailProps {
@@ -101,10 +102,11 @@ interface ProductCategoryBadgeProps {
 }
 
 export function ProductCategoryBadge({ label, className }: ProductCategoryBadgeProps) {
+  const { t } = useTranslations();
   if (!label) {
     return (
       <span className={cn('text-[12px] text-[var(--muted-foreground)]/70', className)}>
-        بدون مجموعة
+        {t('products.noCategory')}
       </span>
     );
   }

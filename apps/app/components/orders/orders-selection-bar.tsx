@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 function ToolbarButton({
@@ -56,41 +57,41 @@ export function OrdersSelectionBar({
   onExportCsv,
   onDelete,
 }: OrdersSelectionBarProps) {
+  const { t, locale } = useTranslations();
   if (count <= 0) return null;
 
+  const countLabel = formatNumber(count, locale);
+
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
-      dir="rtl"
-    >
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
       <div
         role="toolbar"
-        aria-label={`تم تحديد ${formatNumber(count)}`}
+        aria-label={t('orders.selected', { n: countLabel })}
         className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-1 rounded-[10px] border border-[color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[var(--surface)] p-1 shadow-[0_3px_6px_rgba(0,0,0,0.06)]"
       >
         <span className="shrink-0 px-2 text-[12px] font-medium text-[var(--muted-foreground)]">
-          تم تحديد {formatNumber(count)}
+          {t('orders.selected', { n: countLabel })}
         </span>
 
         <span className="mx-0.5 h-5 w-px shrink-0 bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]" />
 
         <ToolbarButton onClick={onMarkPaid} disabled={busy}>
-          تعيين مدفوع
+          {t('orders.markPaid')}
         </ToolbarButton>
         <ToolbarButton onClick={onMarkUnpaid} disabled={busy}>
-          تعيين غير مدفوع
+          {t('orders.markUnpaid')}
         </ToolbarButton>
         <ToolbarButton onClick={onAccept} disabled={busy}>
-          قبول
+          {t('orders.accept')}
         </ToolbarButton>
         <ToolbarButton onClick={onReject} disabled={busy}>
-          رفض
+          {t('orders.reject')}
         </ToolbarButton>
         <ToolbarButton onClick={onExportCsv} disabled={busy}>
-          تصدير CSV
+          {t('orders.exportCsv')}
         </ToolbarButton>
         <ToolbarButton onClick={onDelete} disabled={busy} variant="danger">
-          حذف
+          {t('common.delete')}
         </ToolbarButton>
 
         <span className="mx-0.5 h-5 w-px shrink-0 bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]" />
@@ -99,7 +100,7 @@ export function OrdersSelectionBar({
           type="button"
           onClick={onClear}
           disabled={busy}
-          aria-label="إلغاء التحديد"
+          aria-label={t('orders.clearSelection')}
           className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:opacity-40"
         >
           <X className="size-4" strokeWidth={1.75} />

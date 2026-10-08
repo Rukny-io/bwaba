@@ -27,7 +27,7 @@ export function CreateProductChrome({
 
   return createPortal(
     <div
-      dir="rtl"
+
       className={cn(
         'product-create-brand fixed inset-0 z-[200] flex min-h-dvh flex-col bg-[var(--background)] font-sans text-[var(--foreground)]',
         className,

@@ -35,6 +35,7 @@ import type {
   UpdateSocialLinkInput,
 } from '@/lib/links/types';
 import { linksActionButtonClass } from '@/components/app/links/links-interaction';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 function sortLinks(a: SocialLink, b: SocialLink) {
@@ -44,6 +45,7 @@ function sortLinks(a: SocialLink, b: SocialLink) {
 }
 
 export function LinksView() {
+  const { t } = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [links, setLinks] = useState<SocialLink[]>([]);
@@ -89,18 +91,16 @@ export function LinksView() {
       setProfile(profileData);
     } catch (err) {
       if (err instanceof ApiException && err.statusCode === 404) {
-        setError(
-          'لم يُعثر على ملف شخصي. أكمل إعداد حسابك من الإعدادات أولاً.',
-        );
+        setError(t('linksPage.profileMissing'));
       } else {
-        setError(err instanceof Error ? err.message : 'تعذر تحميل الروابط');
+        setError(err instanceof Error ? err.message : t('linksPage.loadFailed'));
       }
       setLinks([]);
       setGroups([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadLinks();
@@ -135,13 +135,15 @@ export function LinksView() {
       const reason = searchParams.get('reason');
       setError(
         reason === 'server'
-          ? 'تعذر ربط إنستغرام. تأكد أن الحساب احترافي وأعد المحاولة.'
-          : `تعذر ربط إنستغرام${reason ? ` (${reason})` : ''}`,
+          ? t('linksPage.instagramFailedPro')
+          : t('linksPage.instagramFailed', {
+              reason: reason ? ` (${reason})` : '',
+            }),
       );
     }
 
     router.replace(cleanPath, { scroll: false });
-  }, [searchParams, router, loadLinks]);
+  }, [searchParams, router, loadLinks, t]);
 
   const sortedGroups = useMemo(
     () => [...groups].sort((a, b) => a.order - b.order),
@@ -216,7 +218,7 @@ export function LinksView() {
     } catch (err) {
       throw err instanceof Error
         ? err
-        : new Error('تعذر إنشاء المجموعة');
+        : new Error(t('linksPage.createGroupFailed'));
     } finally {
       setBusyId(null);
     }
@@ -234,7 +236,7 @@ export function LinksView() {
       );
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تعديل المجموعة');
+      setError(err instanceof Error ? err.message : t('linksPage.renameGroupFailed'));
     } finally {
       setBusyId(null);
     }
@@ -249,7 +251,7 @@ export function LinksView() {
       );
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تغيير اللون');
+      setError(err instanceof Error ? err.message : t('linksPage.colorFailed'));
     } finally {
       setBusyId(null);
     }
@@ -272,7 +274,7 @@ export function LinksView() {
         ...prev,
         [group.id]: !nextExpanded,
       }));
-      setError(err instanceof Error ? err.message : 'تعذر تحديث المجموعة');
+      setError(err instanceof Error ? err.message : t('linksPage.updateGroupFailed'));
     } finally {
       setBusyId(null);
     }
@@ -281,7 +283,9 @@ export function LinksView() {
   async function handleDeleteGroup(group: LinkGroup) {
     if (
       !window.confirm(
-        `حذف مجموعة "${group.nameAr || group.name}"؟ ستبقى الروابط بدون مجموعة.`,
+        t('linksPage.deleteGroupConfirm', {
+          name: group.nameAr || group.name,
+        }),
       )
     ) {
       return;
@@ -297,7 +301,7 @@ export function LinksView() {
       );
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر حذف المجموعة');
+      setError(err instanceof Error ? err.message : t('linksPage.deleteGroupFailed'));
     } finally {
       setBusyId(null);
     }
@@ -315,7 +319,7 @@ export function LinksView() {
       );
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر نقل الرابط');
+      setError(err instanceof Error ? err.message : t('linksPage.moveFailed'));
     } finally {
       setBusyId(null);
     }
@@ -329,7 +333,7 @@ export function LinksView() {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? updated : l)));
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحديث الحالة');
+      setError(err instanceof Error ? err.message : t('linksPage.statusFailed'));
     } finally {
       setBusyId(null);
     }
@@ -342,7 +346,7 @@ export function LinksView() {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? updated : l)));
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحديث التمييز');
+      setError(err instanceof Error ? err.message : t('linksPage.pinFailed'));
     } finally {
       setBusyId(null);
     }
@@ -356,7 +360,7 @@ export function LinksView() {
       });
       setLinks((prev) => prev.map((l) => (l.id === link.id ? updated : l)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تحديث الإشعارات');
+      setError(err instanceof Error ? err.message : t('linksPage.notifyFailed'));
     } finally {
       setBusyId(null);
     }
@@ -369,7 +373,7 @@ export function LinksView() {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? updated : l)));
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر حفظ التعديلات');
+      setError(err instanceof Error ? err.message : t('linksPage.saveFailed'));
       throw err;
     } finally {
       setBusyId(null);
@@ -377,14 +381,14 @@ export function LinksView() {
   }
 
   async function handleDelete(link: SocialLink) {
-    if (!window.confirm(`حذف "${getLinkDisplayLabel(link)}"؟`)) return;
+    if (!window.confirm(t('linksPage.deleteConfirm', { name: getLinkDisplayLabel(link) }))) return;
     setBusyId(link.id);
     try {
       await deleteLink(link.id);
       setLinks((prev) => prev.filter((l) => l.id !== link.id));
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر الحذف');
+      setError(err instanceof Error ? err.message : t('linksPage.deleteFailed'));
     } finally {
       setBusyId(null);
     }
@@ -428,7 +432,7 @@ export function LinksView() {
       await reorderLinks(currentIds);
       schedulePreviewRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إعادة الترتيب');
+      setError(err instanceof Error ? err.message : t('linksPage.reorderFailed'));
       await loadLinks();
     } finally {
       setBusyId(null);
@@ -471,33 +475,37 @@ export function LinksView() {
   const isEmpty = links.length === 0 && groups.length === 0;
 
   return (
-    <section className="dashboard-page flex w-full min-w-0 flex-col gap-5 sm:gap-6">
-      <DashboardPageHeader
-        className="mb-0"
-        title="روابطي"
-        description="أضف روابطك ورتّبها كما تظهر في صفحتك العامة"
-        actions={
-          <LinksPageActions
-            onAdd={() => setCatalogOpen(true)}
-            onAddGroup={() => setGroupDialogOpen(true)}
-          />
-        }
-      />
+    <section className="dashboard-page flex w-full min-w-0 flex-col gap-4 pt-5 sm:pt-6">
+      <div className="rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+        <DashboardPageHeader
+          className="mb-0"
+          title={t('linksPage.title')}
+          description={t('linksPage.description')}
+          actions={
+            <LinksPageActions
+              onAdd={() => setCatalogOpen(true)}
+              onAddGroup={() => setGroupDialogOpen(true)}
+            />
+          }
+        />
+      </div>
 
       {error ? (
-        <div className="rounded-2xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-3.5">
+        <div className="rounded-xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 px-4 py-3.5">
           <p className="text-sm text-[var(--danger)]">{error}</p>
         </div>
       ) : null}
 
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-16 text-center sm:py-20">
-          <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-16 text-center sm:py-20">
+          <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
             <Link2 className="size-5" strokeWidth={1.75} aria-hidden />
           </div>
-          <p className="text-sm font-semibold text-[var(--foreground)] sm:text-base">لا توجد روابط بعد</p>
+          <p className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
+            {t('linksPage.emptyTitle')}
+          </p>
           <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
-            أضف أول رابط لصفحتك الشخصية وابدأ بجمع النقرات.
+            {t('linksPage.emptyHint')}
           </p>
           <button
             type="button"
@@ -510,20 +518,25 @@ export function LinksView() {
             )}
           >
             <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-            إضافة رابط
+            {t('linksPage.addLink')}
           </button>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 text-xs leading-relaxed text-[var(--muted-foreground)] sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm">
-            اسحب من النقاط لإعادة الترتيب. انقل الرابط لمجموعة من أيقونة المجلد.
-          </p>
+          <div className="rounded-xl bg-[var(--surface)] px-4 py-3 sm:px-5">
+            <p className="text-xs leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
+              {t('linksPage.reorderHint')}
+            </p>
+          </div>
 
           {sortedGroups.map((group) => {
             const sectionLinks = linksByGroup.get(group.id) ?? [];
             const expanded = expandedByGroup[group.id] ?? group.isExpanded;
             return (
-              <div key={group.id} className="flex flex-col gap-2">
+              <div
+                key={group.id}
+                className="flex flex-col gap-3 rounded-xl bg-[var(--surface)] p-3 sm:p-4"
+              >
                 <LinkGroupHeader
                   group={group}
                   expanded={expanded}
@@ -544,7 +557,7 @@ export function LinksView() {
                       transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                       className="overflow-hidden"
                     >
-                      <div className="pt-2">
+                      <div className="pt-1">
                         {sectionLinks.length > 0 ? (
                           <Reorder.Group
                             axis="y"
@@ -558,7 +571,7 @@ export function LinksView() {
                           </Reorder.Group>
                         ) : (
                           <p className="rounded-xl border border-dashed border-[var(--border)] px-3 py-4 text-center text-xs text-[var(--muted-foreground)]">
-                            لا روابط في هذه المجموعة بعد — انقل رابطاً إليها من أيقونة المجلد
+                            {t('linksPage.groupEmpty')}
                           </p>
                         )}
                       </div>
@@ -569,10 +582,10 @@ export function LinksView() {
             );
           })}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3 rounded-xl bg-[var(--surface)] p-3 sm:p-4">
             {sortedGroups.length > 0 ? (
-              <p className="px-1 text-xs font-semibold text-[var(--muted-foreground)]">
-                بدون مجموعة
+              <p className="px-1 text-[13px] font-semibold text-[var(--muted-foreground)]">
+                {t('linksPage.ungrouped')}
               </p>
             ) : null}
             {ungroupedLinks.length > 0 ? (
@@ -588,7 +601,7 @@ export function LinksView() {
               </Reorder.Group>
             ) : sortedGroups.length > 0 ? (
               <p className="rounded-xl border border-dashed border-[var(--border)] px-3 py-4 text-center text-xs text-[var(--muted-foreground)]">
-                كل الروابط داخل مجموعات
+                {t('linksPage.allInGroups')}
               </p>
             ) : null}
           </div>

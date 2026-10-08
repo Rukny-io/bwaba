@@ -15,6 +15,7 @@ import {
   PRODUCTS_BASE_PATH,
 } from '@/lib/products/paths';
 import type { ProductKind } from '@/lib/products/types';
+import { pickLocaleValue, useTranslations } from '@/lib/i18n';
 
 const KIND_ICONS: Record<ProductKind, typeof Box> = {
   PHYSICAL: Box,
@@ -24,6 +25,7 @@ const KIND_ICONS: Record<ProductKind, typeof Box> = {
 
 export function ProductCreateKindView() {
   const router = useRouter();
+  const { t, locale } = useTranslations();
 
   function handlePick(item: ProductKindCatalogItem) {
     router.push(getProductCreateKindPath(item.id));
@@ -33,17 +35,17 @@ export function ProductCreateKindView() {
     <CreateProductChrome>
       <ProductCreateToolbar
         backHref={PRODUCTS_BASE_PATH}
-        backLabel="المنتجات"
+        backLabel={t('products.create.backToProducts')}
       />
 
       <ProductCreateWorkspace>
         <header className="mb-6 sm:mb-8">
-          <ProductCreatePill label="نوع المنتج" />
+          <ProductCreatePill label={t('products.create.typePill')} />
           <h1 className="mt-4 text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
-            ماذا تريد أن تبيع؟
+            {t('products.create.typeTitle')}
           </h1>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--muted-foreground)]">
-            اختر النوع الأقرب لما تقدّمه — يمكنك لاحقاً إضافة التفاصيل والصور والأسعار.
+            {t('products.create.typeDescription')}
           </p>
         </header>
 
@@ -53,8 +55,15 @@ export function ProductCreateKindView() {
             return (
               <ProductCreateTypeTile
                 key={item.id}
-                label={item.label}
-                hint={item.description}
+                label={pickLocaleValue(locale, { ar: item.label, en: item.labelEn })}
+                hint={pickLocaleValue(locale, {
+                  ar: item.description,
+                  en: item.descriptionEn,
+                })}
+                examples={pickLocaleValue(locale, {
+                  ar: item.examples,
+                  en: item.examplesEn,
+                })}
                 icon={Icon}
                 onClick={() => handlePick(item)}
               />

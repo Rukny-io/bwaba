@@ -8,7 +8,7 @@ const rowSelectedTd =
   'data-[state=selected]:[&_td]:bg-[color-mix(in_oklab,var(--surface-secondary)_76%,var(--surface))]';
 
 export const ordersTableChrome = {
-  shell: 'relative isolate min-w-0 overflow-hidden rounded-2xl bg-transparent',
+  shell: 'relative isolate min-w-0 overflow-hidden rounded-xl bg-transparent',
   scroll:
     'overflow-x-auto w-full overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
   table:
@@ -62,6 +62,19 @@ export interface OrdersTableColumn {
   widthClass: string;
 }
 
+export const ORDERS_TABLE_COLUMN_DEFS: Omit<OrdersTableColumn, 'label'>[] = [
+  { id: 'select', align: 'center', widthClass: 'w-[var(--table-checkbox-col)]' },
+  { id: 'order', align: 'center', widthClass: 'w-[7.25rem]' },
+  { id: 'customer', align: 'start', widthClass: 'w-[26%] min-w-[10rem]' },
+  { id: 'status', align: 'center', widthClass: 'w-[6.75rem]' },
+  { id: 'payment', align: 'center', widthClass: 'w-[6.75rem]' },
+  { id: 'items', align: 'center', widthClass: 'w-[5rem]' },
+  { id: 'total', align: 'center', widthClass: 'w-[6.5rem]' },
+  { id: 'date', align: 'center', widthClass: 'w-[7.25rem]' },
+  { id: 'actions', align: 'center', widthClass: 'w-[6.75rem]' },
+];
+
+/** @deprecated Prefer ORDERS_TABLE_COLUMN_DEFS + localized labels */
 export const ORDERS_TABLE_COLUMNS: OrdersTableColumn[] = [
   { id: 'select', label: '', align: 'center', widthClass: 'w-[var(--table-checkbox-col)]' },
   { id: 'order', label: 'رقم الطلب', align: 'center', widthClass: 'w-[7.25rem]' },

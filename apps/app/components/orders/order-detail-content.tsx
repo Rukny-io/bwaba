@@ -13,6 +13,8 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react';
+import { OrderPaymentBadge } from '@/components/orders/order-payment-badge';
+import { OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { ProductThumbnail } from '@/components/products/product-list-primitives';
 import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
 import { resolveAvatarUrl } from '@/lib/media-url';
@@ -25,15 +27,44 @@ import {
   getOrderDisplayNumber,
   getOrderStatusStyle,
 } from '@/lib/orders/order-display';
-import {
-  getOrderPaymentMethodLabel,
-  getOrderPaymentStatusStyle,
-} from '@/lib/orders/order-payment-display';
+import { getOrderPaymentMethodLabel } from '@/lib/orders/order-payment-display';
 import { downloadStoreOrderInvoice } from '@/lib/orders/download-invoice';
 import type { StoreOrder, StoreOrderAddress } from '@/lib/orders/types';
 import { formatVariantAttributes } from '@/lib/products/product-display';
 import { ApiException } from '@/lib/api-client';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+
+function DetailCard({
+  title,
+  action,
+  children,
+  className,
+}: {
+  title?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        'flex min-w-0 flex-col gap-4 rounded-xl bg-[var(--surface)] p-4 sm:p-5',
+        className,
+      )}
+    >
+      {title ? (
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <h3 className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
+            {title}
+          </h3>
+          {action}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
 
 function QuickActionButton({
   icon: Icon,
@@ -51,28 +82,11 @@ function QuickActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] disabled:pointer-events-none disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--foreground)_12%,transparent)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] disabled:pointer-events-none disabled:opacity-50"
     >
       <Icon className="size-3.5 shrink-0 text-[var(--muted-foreground)]" strokeWidth={1.75} />
       {label}
     </button>
-  );
-}
-
-function PaymentStatusPill({ order }: { order: StoreOrder }) {
-  const style = getOrderPaymentStatusStyle(order.paymentStatus);
-
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium',
-        style.textClassName,
-        'border-current',
-      )}
-    >
-      <span className="size-2 rounded-full border border-current bg-transparent" aria-hidden />
-      {style.label}
-    </span>
   );
 }
 
@@ -90,8 +104,13 @@ function SummaryRow({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2">
-      <dt className={cn('text-start text-[13px] font-medium text-[var(--foreground)]', labelClassName)}>
+    <div className="flex items-center justify-between gap-4 py-1.5">
+      <dt
+        className={cn(
+          'text-start text-[13px] font-medium text-[var(--foreground)]',
+          labelClassName,
+        )}
+      >
         {label}
       </dt>
       <dd
@@ -105,30 +124,6 @@ function SummaryRow({
         {value}
       </dd>
     </div>
-  );
-}
-
-function DetailBlock({
-  title,
-  children,
-  className,
-}: {
-  title: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={cn(
-        'border-t border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] pt-5 pb-5',
-        className,
-      )}
-    >
-      <h3 className="mb-3.5 text-start text-[13px] font-semibold text-[var(--foreground)]">
-        {title}
-      </h3>
-      {children}
-    </section>
   );
 }
 
@@ -175,12 +170,15 @@ function FooterIconButton({
   );
 }
 
-function formatAddressLines(address: StoreOrderAddress): string[] {
+function formatAddressLines(
+  address: StoreOrderAddress,
+  t: (path: string, vars?: Record<string, string | number>) => string,
+): string[] {
   const area = [address.city, address.district, address.street].filter(Boolean).join('، ');
   const building = [
-    address.buildingNo ? `بناية ${address.buildingNo}` : null,
-    address.floor ? `طابق ${address.floor}` : null,
-    address.apartmentNo ? `شقة ${address.apartmentNo}` : null,
+    address.buildingNo ? t('orders.detail.building', { n: address.buildingNo }) : null,
+    address.floor ? t('orders.detail.floor', { n: address.floor }) : null,
+    address.apartmentNo ? t('orders.detail.apartment', { n: address.apartmentNo }) : null,
   ]
     .filter(Boolean)
     .join('، ');
@@ -189,23 +187,30 @@ function formatAddressLines(address: StoreOrderAddress): string[] {
 }
 
 export function OrderDetailSummary({ order }: { order: StoreOrder }) {
+  const { t } = useTranslations();
+
   return (
-    <header className="pb-4">
-      <div className="flex items-start justify-between gap-3">
+    <DetailCard>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 text-start">
-          <h2 className="text-[22px] font-bold leading-tight tracking-tight text-[var(--foreground)]">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+            {t('orders.detailTitle')}
+          </p>
+          <h2 className="mt-1 text-[22px] font-bold leading-tight tracking-tight text-[var(--foreground)]">
             <bdi dir="ltr">{getOrderDisplayId(order)}</bdi>
           </h2>
           <p className="mt-1.5 text-start text-[12px] leading-relaxed text-[var(--muted-foreground)]">
-            تم الطلب في{' '}
-            <bdi dir="ltr" className="tabular-nums">
-              {formatOrderPlacedAtDateTime(order.createdAt)}
-            </bdi>
+            {t('orders.detail.placedAt', {
+              date: formatOrderPlacedAtDateTime(order.createdAt),
+            })}
           </p>
         </div>
-        <PaymentStatusPill order={order} />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrderStatusBadge status={order.status} />
+          <OrderPaymentBadge order={order} compact />
+        </div>
       </div>
-    </header>
+    </DetailCard>
   );
 }
 
@@ -215,6 +220,7 @@ export function OrderDetailHeader({ order }: { order: StoreOrder }) {
 }
 
 function OrderDetailQuickActions({ order }: { order: StoreOrder }) {
+  const { t } = useTranslations();
   const [copied, setCopied] = useState<'id' | 'number' | null>(null);
   const [invoiceState, setInvoiceState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
@@ -240,91 +246,99 @@ function OrderDetailQuickActions({ order }: { order: StoreOrder }) {
       setInvoiceError(
         error instanceof ApiException
           ? error.message
-          : 'تعذّر إنشاء الفاتورة',
+          : t('orders.detail.invoiceFailed'),
       );
     }
-  }, [order.id]);
+  }, [order.id, t]);
 
   return (
-    <section className="border-t border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] py-4">
-      <h3 className="mb-2.5 text-start text-[13px] font-semibold text-[var(--foreground)]">
-        إجراءات سريعة
-      </h3>
+    <DetailCard title={t('orders.detail.quickActions')}>
       <div className="flex flex-wrap gap-2">
         <QuickActionButton
           icon={Copy}
-          label={copied === 'id' ? 'تم النسخ' : 'نسخ المعرّف'}
+          label={copied === 'id' ? t('orders.detail.copied') : t('orders.detail.copyId')}
           onClick={() => void copyText(order.id, 'id')}
         />
         <QuickActionButton
           icon={Link2}
-          label={copied === 'number' ? 'تم النسخ' : 'نسخ رقم الطلب'}
+          label={
+            copied === 'number' ? t('orders.detail.copied') : t('orders.detail.copyNumber')
+          }
           onClick={() => void copyText(getOrderDisplayNumber(order), 'number')}
         />
         <QuickActionButton
           icon={FileText}
-          label={invoiceState === 'loading' ? 'جاري الإنشاء…' : 'تحميل الفاتورة PDF'}
+          label={
+            invoiceState === 'loading'
+              ? t('orders.detail.invoiceLoading')
+              : t('orders.detail.downloadInvoice')
+          }
           onClick={() => void downloadInvoice()}
           disabled={invoiceState === 'loading'}
         />
       </div>
       {invoiceError ? (
-        <p className="mt-2 text-start text-[12px] text-[var(--danger)]">{invoiceError}</p>
+        <p className="text-start text-[12px] text-[var(--danger)]">{invoiceError}</p>
       ) : null}
-    </section>
+    </DetailCard>
   );
 }
 
 function OrderDetailPricing({ order }: { order: StoreOrder }) {
+  const { t } = useTranslations();
   const currency = order.currency;
   const hasDiscount = Boolean(order.discount && order.discount > 0);
 
   return (
-    <section className="border-t border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] py-2">
-      <dl>
+    <DetailCard title={t('orders.columns.amount')}>
+      <dl className="space-y-0.5">
         {typeof order.subtotal === 'number' ? (
           <SummaryRow
-            label="المجموع الفرعي"
+            label={t('orders.detail.subtotal')}
             value={formatCurrency(order.subtotal, currency)}
             ltr
           />
         ) : null}
         <SummaryRow
-          label="الخصم"
-          value={hasDiscount ? `- ${formatCurrency(order.discount!, currency)}` : '—'}
+          label={t('orders.detail.discount')}
+          value={
+            hasDiscount
+              ? `- ${formatCurrency(order.discount!, currency)}`
+              : t('orders.detail.none')
+          }
           ltr={hasDiscount}
           labelClassName={hasDiscount ? 'text-[var(--danger)]' : undefined}
-          valueClassName={hasDiscount ? 'text-[var(--danger)]' : 'text-[var(--muted-foreground)]'}
+          valueClassName={
+            hasDiscount ? 'text-[var(--danger)]' : 'text-[var(--muted-foreground)]'
+          }
         />
         {typeof order.shippingFee === 'number' ? (
           <SummaryRow
-            label="تكلفة التوصيل"
-            value={
-              order.shippingFee > 0 ? formatCurrency(order.shippingFee, currency) : '0 د.ع'
-            }
+            label={t('orders.detail.shipping')}
+            value={formatCurrency(order.shippingFee, currency)}
             ltr
             labelClassName="text-[var(--muted-foreground)]"
             valueClassName="text-[var(--muted-foreground)]"
           />
         ) : null}
         <SummaryRow
-          label="العرض الترويجي"
-          value={order.coupon?.code ?? 'م/غ'}
+          label={t('orders.detail.promo')}
+          value={order.coupon?.code ?? t('orders.detail.na')}
           labelClassName="text-[var(--muted-foreground)]"
           valueClassName="text-[var(--muted-foreground)]"
         />
       </dl>
 
-      <div className="mt-3 border-t border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] pt-4">
+      <div className="border-t border-[var(--border)] pt-3">
         <SummaryRow
-          label="الإجمالي"
+          label={t('orders.detail.total')}
           value={formatCurrency(order.total, currency)}
           ltr
           labelClassName="text-[15px] font-bold"
           valueClassName="text-[15px] font-bold"
         />
       </div>
-    </section>
+    </DetailCard>
   );
 }
 
@@ -343,12 +357,17 @@ export function OrderDetailFooter({
   canGoPrevious?: boolean;
   canGoNext?: boolean;
 }) {
+  const { t } = useTranslations();
   const status = getOrderStatusStyle(order.status);
+  const statusPath = `orders.status.${order.status}`;
+  const translatedStatus = t(statusPath);
+  const statusLabel =
+    translatedStatus === statusPath
+      ? status.label || order.status
+      : translatedStatus;
 
   return (
-    <footer
-      className="flex shrink-0 items-center justify-between gap-3 border-t border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] px-5 py-3"
-    >
+    <DetailCard className="sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-2.5">
         <span
           className={cn(
@@ -357,89 +376,116 @@ export function OrderDetailFooter({
           )}
         >
           <Lock className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
-          {status.label}
+          {statusLabel}
         </span>
         <button
           type="button"
           className="text-[12px] font-medium text-[var(--danger)] transition-opacity hover:opacity-80"
         >
-          حذف
+          {t('orders.detail.delete')}
         </button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <FooterIconButton
-          label="الطلب السابق"
-          onClick={onPrevious}
-          disabled={!canGoPrevious}
-        >
-          <ChevronUp className="size-4" strokeWidth={1.75} />
-        </FooterIconButton>
-        <FooterIconButton label="الطلب التالي" onClick={onNext} disabled={!canGoNext}>
-          <ChevronDown className="size-4" strokeWidth={1.75} />
-        </FooterIconButton>
-        {onClose ? (
-          <FooterIconButton label="إغلاق" onClick={onClose}>
-            <X className="size-4" strokeWidth={1.75} />
+      {(onPrevious || onNext || onClose) && (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <FooterIconButton
+            label={t('orders.detail.previous')}
+            onClick={onPrevious}
+            disabled={!canGoPrevious}
+          >
+            <ChevronUp className="size-4" strokeWidth={1.75} />
           </FooterIconButton>
-        ) : null}
-      </div>
-    </footer>
+          <FooterIconButton
+            label={t('orders.detail.next')}
+            onClick={onNext}
+            disabled={!canGoNext}
+          >
+            <ChevronDown className="size-4" strokeWidth={1.75} />
+          </FooterIconButton>
+          {onClose ? (
+            <FooterIconButton label={t('orders.detail.close')} onClick={onClose}>
+              <X className="size-4" strokeWidth={1.75} />
+            </FooterIconButton>
+          ) : null}
+        </div>
+      )}
+    </DetailCard>
   );
 }
 
-export function OrderDetailContent({ order }: { order: StoreOrder }) {
+export function OrderDetailContent({
+  order,
+  showFooter = true,
+}: {
+  order: StoreOrder;
+  showFooter?: boolean;
+}) {
+  const { t, locale } = useTranslations();
   const customerName = getOrderCustomerName(order);
   const customerContact = getOrderCustomerContact(order);
   const avatarUrl = resolveAvatarUrl(order.customer?.avatar ?? null);
   const items = order.items ?? [];
   const address = order.address;
-  const addressLines = address ? formatAddressLines(address) : [];
+  const addressLines = address ? formatAddressLines(address, t) : [];
   const currency = order.currency;
+  const paymentMethod = order.paymentMethod || 'CASH';
+  const paymentMethodPath = `orders.paymentMethod.${paymentMethod}`;
+  const paymentMethodLabel = t(paymentMethodPath);
+  const resolvedPaymentMethodLabel =
+    paymentMethodLabel === paymentMethodPath
+      ? getOrderPaymentMethodLabel(order.paymentMethod)
+      : paymentMethodLabel;
+  const itemCount = items.length || order.itemsCount || 0;
 
   return (
-    <div className="flex flex-col text-start">
+    <div className="flex flex-col gap-4 text-start">
       <OrderDetailSummary order={order} />
       <OrderDetailQuickActions order={order} />
-      <OrderDetailPricing order={order} />
 
-      <DetailBlock title="العميل">
-        <div className="flex items-center gap-3">
-          <Avatar size="sm" className="shrink-0">
-            {avatarUrl ? <Avatar.Image alt={customerName} src={avatarUrl} /> : null}
-            <Avatar.Fallback>{getOrderCustomerInitials(customerName)}</Avatar.Fallback>
-          </Avatar>
-          <div className="min-w-0 flex-1 space-y-1 text-start">
-            <p className="truncate text-[14px] font-semibold leading-snug text-[var(--foreground)]">
-              {customerName}
-            </p>
-            {customerContact ? (
-              <p className="truncate text-[12px] leading-snug text-[var(--muted-foreground)]">
-                <bdi dir="ltr" className="block truncate text-end">
-                  {customerContact}
-                </bdi>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <OrderDetailPricing order={order} />
+
+        <DetailCard title={t('orders.detail.customer')}>
+          <div className="flex items-center gap-3">
+            <Avatar size="sm" className="shrink-0">
+              {avatarUrl ? <Avatar.Image alt={customerName} src={avatarUrl} /> : null}
+              <Avatar.Fallback>{getOrderCustomerInitials(customerName)}</Avatar.Fallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 space-y-1 text-start">
+              <p className="truncate text-[14px] font-semibold leading-snug text-[var(--foreground)]">
+                {customerName}
               </p>
-            ) : null}
+              {customerContact ? (
+                <p className="truncate text-[12px] leading-snug text-[var(--muted-foreground)]">
+                  <bdi dir="ltr" className="block truncate">
+                    {customerContact}
+                  </bdi>
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
-        <dl className="mt-3.5 space-y-1 border-t border-[color-mix(in_srgb,var(--foreground)_6%,transparent)] pt-3">
-          <MetaRow
-            label="طريقة الدفع"
-            value={getOrderPaymentMethodLabel(order.paymentMethod)}
-          />
-        </dl>
-      </DetailBlock>
+          <dl className="space-y-1 border-t border-[var(--border)] pt-3">
+            <MetaRow
+              label={t('orders.detail.paymentMethod')}
+              value={resolvedPaymentMethodLabel}
+            />
+          </dl>
+        </DetailCard>
+      </div>
 
-      <DetailBlock title={`المنتجات (${formatNumber(items.length || order.itemsCount || 0)})`}>
+      <DetailCard title={t('orders.detail.products', { n: formatNumber(itemCount) })}>
         {items.length > 0 ? (
-          <ul className="flex flex-col gap-2.5 pb-1">
+          <ul className="flex flex-col gap-2">
             {items.map((item) => {
               const variant = formatVariantAttributes(item.variantAttributes);
-              const name = item.productNameAr?.trim() || item.productName;
+              const name =
+                locale === 'ar'
+                  ? item.productNameAr?.trim() || item.productName
+                  : item.productName?.trim() || item.productNameAr || item.productName;
               return (
                 <li
                   key={item.id}
-                  className="flex items-center gap-3 rounded-xl bg-[var(--surface-secondary)]/40 px-2.5 py-2.5"
+                  className="flex items-center gap-3 rounded-xl bg-[var(--surface-secondary)]/50 px-3 py-2.5"
                 >
                   <ProductThumbnail
                     imageUrl={item.image ?? null}
@@ -469,13 +515,13 @@ export function OrderDetailContent({ order }: { order: StoreOrder }) {
           </ul>
         ) : (
           <p className="text-[12px] leading-relaxed text-[var(--muted-foreground)]">
-            لا توجد تفاصيل للمنتجات.
+            {t('orders.detail.noProducts')}
           </p>
         )}
-      </DetailBlock>
+      </DetailCard>
 
       {address ? (
-        <DetailBlock title="عنوان التوصيل">
+        <DetailCard title={t('orders.detail.deliveryAddress')}>
           <div className="flex gap-2.5">
             <MapPin
               className="mt-0.5 size-4 shrink-0 text-[var(--muted-foreground)]"
@@ -490,7 +536,7 @@ export function OrderDetailContent({ order }: { order: StoreOrder }) {
               ) : null}
               {address.phoneNumber ? (
                 <p className="text-[12px] leading-snug text-[var(--muted-foreground)]">
-                  <bdi dir="ltr" className="block text-end">{address.phoneNumber}</bdi>
+                  <bdi dir="ltr">{address.phoneNumber}</bdi>
                 </p>
               ) : null}
               {addressLines.map((line) => (
@@ -503,11 +549,11 @@ export function OrderDetailContent({ order }: { order: StoreOrder }) {
               ))}
             </div>
           </div>
-        </DetailBlock>
+        </DetailCard>
       ) : null}
 
       {order.customerNote || order.cancellationReason ? (
-        <DetailBlock title="ملاحظات">
+        <DetailCard title={t('orders.detail.notes')}>
           <div className="flex gap-2.5">
             <MessageSquareText
               className="mt-0.5 size-4 shrink-0 text-[var(--muted-foreground)]"
@@ -522,13 +568,17 @@ export function OrderDetailContent({ order }: { order: StoreOrder }) {
               ) : null}
               {order.cancellationReason ? (
                 <p className="text-start text-[12px] leading-relaxed text-[var(--danger)]">
-                  سبب الإلغاء: {order.cancellationReason}
+                  {t('orders.detail.cancelReason', {
+                    reason: order.cancellationReason,
+                  })}
                 </p>
               ) : null}
             </div>
           </div>
-        </DetailBlock>
+        </DetailCard>
       ) : null}
+
+      {showFooter ? <OrderDetailFooter order={order} /> : null}
     </div>
   );
 }

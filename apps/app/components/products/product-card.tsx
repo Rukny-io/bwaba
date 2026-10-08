@@ -12,6 +12,7 @@ import {
   ProductPriceDisplay,
   ProductThumbnail,
 } from '@/components/products/product-list-primitives';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -41,13 +42,19 @@ function ProductCardComponent({
   onToggleVisibility,
   onDelete,
 }: ProductCardProps) {
+  const { t } = useTranslations();
   const imageUrl = getProductImage(product as MyStoreProduct);
   const title = getProductDisplayName(product);
-  const stock = getProductStockDisplay(product);
+  const stock = getProductStockDisplay(product, t);
   const isHidden = product.status === 'INACTIVE';
   const canToggleVisibility =
     product.status === 'ACTIVE' || product.status === 'INACTIVE';
   const discount = salePercent(product.price, product.salePrice);
+  const showLabel = t('products.show');
+  const hideLabel = t('products.hide');
+  const detailsLabel = t('products.details');
+  const copySkuLabel = t('products.copySku');
+  const deleteLabel = t('products.deleteProduct');
 
   const openDetails = () => onOpenDetails?.(product);
 
@@ -61,7 +68,7 @@ function ProductCardComponent({
     >
       <div
         className={cn(
-          'relative aspect-square overflow-hidden rounded-xl bg-[var(--surface-secondary)] ring-1 ring-inset ring-black/[0.06]',
+          'relative aspect-square overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]',
           onOpenDetails && 'cursor-pointer',
         )}
         onClick={openDetails}
@@ -70,18 +77,18 @@ function ProductCardComponent({
           imageUrl={imageUrl}
           alt={title}
           className="size-full rounded-xl"
-          imageClassName="transition-[transform,opacity] duration-300 group-hover/card:scale-[1.03] group-hover/card:opacity-[0.96] group-focus-within/card:scale-[1.03]"
+          imageClassName="transition-opacity duration-200 group-hover/card:opacity-[0.96]"
         />
 
         <div className="absolute start-2 top-2 z-[1] flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-0.5">
           {isHidden ? (
-            <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-              مخفي
+            <span className="rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+              {t('products.hidden')}
             </span>
           ) : null}
           {discount ? (
             <span
-              className="rounded-full bg-[var(--primary)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--primary-foreground)]"
+              className="rounded-md bg-[var(--primary)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--primary-foreground)]"
               dir="ltr"
             >
               -{discount}%
@@ -90,7 +97,7 @@ function ProductCardComponent({
         </div>
 
         {stock.variant === 'low' ? (
-          <span className="absolute inset-x-2 bottom-2 z-[1] w-fit max-w-[calc(100%-1rem)] truncate rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+          <span className="absolute inset-x-2 bottom-2 z-[1] w-fit max-w-[calc(100%-1rem)] truncate rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[9px] font-medium text-[var(--foreground)]">
             {stock.label}
           </span>
         ) : null}
@@ -106,9 +113,9 @@ function ProductCardComponent({
               isIconOnly
               size="sm"
               variant="ghost"
-              aria-label="خيارات المنتج"
+              aria-label={t('products.options')}
               isDisabled={isBusy}
-              className="size-7 rounded-full !bg-black/45 !text-white backdrop-blur-sm hover:!bg-black/60"
+              className="size-7 rounded-full border border-[var(--border)] !bg-[var(--surface)] !text-[var(--foreground)] !shadow-none hover:!bg-[var(--surface-secondary)]"
             >
               <MoreVertical className="size-3.5" />
             </Button>
@@ -125,38 +132,38 @@ function ProductCardComponent({
                   if (key === 'delete') onDelete?.(product);
                 }}
               >
-                <Dropdown.Item id="details" textValue="تفاصيل المنتج">
+                <Dropdown.Item id="details" textValue={detailsLabel}>
                   <Info className="size-4 shrink-0 text-muted" aria-hidden />
-                  <Label>تفاصيل المنتج</Label>
+                  <Label>{detailsLabel}</Label>
                 </Dropdown.Item>
                 {canToggleVisibility ? (
                   <Dropdown.Item
                     id="toggle"
                     isDisabled={isBusy}
-                    textValue={isHidden ? 'إظهار' : 'إخفاء'}
+                    textValue={isHidden ? showLabel : hideLabel}
                   >
                     {isHidden ? (
                       <Eye className="size-4 shrink-0 text-muted" aria-hidden />
                     ) : (
                       <EyeOff className="size-4 shrink-0 text-muted" aria-hidden />
                     )}
-                    <Label>{isHidden ? 'إظهار' : 'إخفاء'}</Label>
+                    <Label>{isHidden ? showLabel : hideLabel}</Label>
                   </Dropdown.Item>
                 ) : null}
                 {product.sku ? (
-                  <Dropdown.Item id="copy-sku" textValue="نسخ الرمز">
+                  <Dropdown.Item id="copy-sku" textValue={copySkuLabel}>
                     <Copy className="size-4 shrink-0 text-muted" aria-hidden />
-                    <Label>نسخ الرمز</Label>
+                    <Label>{copySkuLabel}</Label>
                   </Dropdown.Item>
                 ) : null}
                 <Dropdown.Item
                   id="delete"
                   variant="danger"
                   isDisabled={isBusy}
-                  textValue="حذف المنتج"
+                  textValue={deleteLabel}
                 >
                   <Trash2 className="size-4 shrink-0" aria-hidden />
-                  <Label>حذف المنتج</Label>
+                  <Label>{deleteLabel}</Label>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -179,7 +186,7 @@ function ProductCardComponent({
           {title}
         </h3>
 
-        <div className="flex min-w-0 items-end justify-between gap-1.5" dir="rtl">
+        <div className="flex min-w-0 items-end justify-between gap-1.5">
           <ProductPriceDisplay
             price={product.price}
             salePrice={product.salePrice}
@@ -200,7 +207,7 @@ function ProductCardComponent({
 export function ProductCardSkeleton() {
   return (
     <div className="flex animate-pulse flex-col">
-      <div className="aspect-square rounded-xl bg-[var(--surface-secondary)]/70 ring-1 ring-inset ring-black/[0.04]" />
+      <div className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/70" />
       <div className="mt-2 space-y-1.5 px-0.5">
         <div className="h-3 w-[88%] rounded-md bg-[var(--surface-secondary)]/70" />
         <div className="h-3 w-[42%] rounded-md bg-[var(--surface-secondary)]/60" />

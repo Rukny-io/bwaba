@@ -3,6 +3,7 @@
 import { ChevronRight, SearchX } from 'lucide-react';
 import { ProductKindIconBadge } from '@/components/products/create/product-kind-icon-badge';
 import type { ProductKindCatalogItem } from '@/lib/products/product-kind-catalog';
+import { pickLocaleValue, useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductKindListProps {
@@ -12,6 +13,8 @@ interface ProductKindListProps {
 }
 
 export function ProductKindList({ items, onPick, compact }: ProductKindListProps) {
+  const { t, locale } = useTranslations();
+
   if (items.length === 0) {
     return (
       <div
@@ -25,10 +28,10 @@ export function ProductKindList({ items, onPick, compact }: ProductKindListProps
         <SearchX className="size-7 text-[var(--muted-foreground)]/70" />
         <div>
           <p className="text-[14px] font-semibold text-[var(--foreground)]">
-            لا توجد أنواع مطابقة
+            {t('products.create.noKinds')}
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
-            جرّب كلمة بحث أخرى.
+            {t('products.create.noKindsHint')}
           </p>
         </div>
       </div>
@@ -47,16 +50,19 @@ export function ProductKindList({ items, onPick, compact }: ProductKindListProps
               compact ? 'px-2.5 py-2.5' : 'px-2.5 py-2.5 sm:px-3 sm:py-3',
               'hover:bg-[var(--surface-secondary)]/50 active:bg-[var(--surface-secondary)] active:scale-[0.995]',
             )}
-            dir="rtl"
+
           >
             <ProductKindIconBadge kind={item.id} size={compact ? 'sm' : 'md'} />
 
             <div className="min-w-0 flex-1 text-right">
               <p className="truncate text-[14.5px] font-semibold text-[var(--foreground)] sm:text-[15px]">
-                {item.label}
+                {pickLocaleValue(locale, { ar: item.label, en: item.labelEn })}
               </p>
               <p className="truncate text-[12px] text-[var(--muted-foreground)] sm:text-xs">
-                {item.description}
+                {pickLocaleValue(locale, {
+                  ar: item.description,
+                  en: item.descriptionEn,
+                })}
               </p>
             </div>
 

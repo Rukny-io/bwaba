@@ -1,7 +1,7 @@
-import {
-  getOrderPaymentMethodLabel,
-  getOrderPaymentStatusStyle,
-} from '@/lib/orders/order-payment-display';
+'use client';
+
+import { getOrderPaymentStatusStyle } from '@/lib/orders/order-payment-display';
+import { useTranslations } from '@/lib/i18n';
 import type { StoreOrder } from '@/lib/orders/types';
 import { cn } from '@/lib/utils';
 
@@ -12,13 +12,31 @@ interface OrderPaymentBadgeProps {
   compact?: boolean;
 }
 
+function paymentStatusKey(status?: string | null): string {
+  if (!status || status === 'PENDING' || status === 'FAILED') return 'UNPAID';
+  return status;
+}
+
 export function OrderPaymentBadge({
   order,
   className,
   compact = false,
 }: OrderPaymentBadgeProps) {
+  const { t } = useTranslations();
   const statusStyle = getOrderPaymentStatusStyle(order.paymentStatus);
-  const methodLabel = getOrderPaymentMethodLabel(order.paymentMethod);
+  const statusKey = paymentStatusKey(order.paymentStatus);
+  const statusPath = `paymentStatus.${statusKey}`;
+  const translatedStatus = t(statusPath);
+  const statusLabel =
+    translatedStatus === statusPath
+      ? statusStyle.label || statusKey
+      : translatedStatus;
+
+  const method = order.paymentMethod || 'CASH';
+  const methodPath = `orders.paymentMethod.${method}`;
+  const translatedMethod = t(methodPath);
+  const methodLabel =
+    translatedMethod === methodPath ? method : translatedMethod;
 
   return (
     <div
@@ -38,7 +56,7 @@ export function OrderPaymentBadge({
           className={cn('size-1.5 shrink-0 rounded-full', statusStyle.dotClassName)}
           aria-hidden
         />
-        <span className="truncate">{statusStyle.label}</span>
+        <span className="truncate">{statusLabel}</span>
       </span>
       {compact ? null : (
         <span className="max-w-full truncate text-[10px] text-[var(--muted-foreground)]">

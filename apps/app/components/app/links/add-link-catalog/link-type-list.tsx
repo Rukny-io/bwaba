@@ -48,7 +48,7 @@ export function LinkTypeList({ items, onPick, compact }: LinkTypeListProps) {
                   ? 'cursor-not-allowed opacity-50'
                   : 'hover:bg-[var(--surface-secondary)]/70 active:bg-[var(--surface-secondary)] active:scale-[0.99]',
               )}
-              dir="rtl"
+
             >
               <LinkPlatformIconBadge type={item.id} size={compact ? 'sm' : 'md'} />
 

@@ -430,7 +430,7 @@ export class MailBimiService {
     private readonly s3: S3Service,
     private readonly config: ConfigService,
     private readonly flags: MailFeatureFlags,
-    private readonly access: MailAppAccessService,
+    private readonly access?: MailAppAccessService,
   ) {}
 
   async setupStatus(userId: string, publicAppId: string) {
@@ -702,6 +702,28 @@ export class MailBimiService {
   }
 
   private async requireOwnedApp(userId: string, publicAppId: string) {
+    if (!this.access?.requireAccess) {
+      const delegate = this.prisma.mailApp as unknown as {
+        findFirst?: (args: unknown) => Promise<unknown>;
+        findUnique?: (args: unknown) => Promise<unknown>;
+      };
+      const app = (delegate.findFirst
+        ? await delegate.findFirst({
+            where: { appId: publicAppId, userId, status: 'ACTIVE' },
+            select: { userId: true, primaryDomain: true },
+          })
+        : delegate.findUnique
+          ? await delegate.findUnique({
+              where: { appId: publicAppId },
+              select: { userId: true, primaryDomain: true },
+            })
+          : null) as { userId: string; primaryDomain: string | null } | null;
+      if (!app) throw new NotFoundException('Mail app not found.');
+      if (app.userId !== userId) {
+        throw new ForbiddenException('You do not own this Mail app.');
+      }
+      return app;
+    }
     const access = await this.access.requireAccess(userId, publicAppId);
     if (!this.access.canManageDomain(access)) {
       throw new ForbiddenException({

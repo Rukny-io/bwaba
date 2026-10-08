@@ -14,8 +14,8 @@ import { SettingsProfileSection } from '@/components/settings/settings-profile-s
 import { fetchMyProfile } from '@/lib/profile/api';
 import type { MyProfile } from '@/lib/profile/types';
 import { ApiException } from '@/lib/api-client';
+import { useTranslations } from '@/lib/i18n';
 import {
-  getSettingsSectionMeta,
   parseSettingsSection,
   type SettingsSectionId,
 } from '@/lib/settings/sections';
@@ -36,49 +36,61 @@ function SettingsBasicsContent({
   profile: MyProfile;
   onProfileChange: (profile: MyProfile) => void;
 }) {
+  const { t } = useTranslations();
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       <DashboardSection
-        title="الملف الشخصي"
-        description="الاسم، الرابط، والصورة الظاهرة للزوار."
+        title={t('settings.profile.title')}
+        description={t('settings.profile.description')}
       >
         <SettingsProfileSection profile={profile} onProfileChange={onProfileChange} />
       </DashboardSection>
-      <DashboardSection title="الخصوصية" description="ظهور الصفحة ومعلومات الاتصال.">
+      <DashboardSection
+        title={t('settings.privacy.title')}
+        description={t('settings.privacy.description')}
+      >
         <SettingsPrivacySection profile={profile} onProfileChange={onProfileChange} />
       </DashboardSection>
-      <DashboardSection title="الحساب والأمان" description="البريد والهاتف وإدارة تسجيل الدخول.">
+      <DashboardSection
+        title={t('settings.account.title')}
+        description={t('settings.account.description')}
+      >
         <SettingsAccountSection profile={profile} />
       </DashboardSection>
     </div>
   );
 }
 
-function SettingsAppearancePanel({
-  profile,
-  onProfileChange,
-}: {
-  profile: MyProfile;
-  onProfileChange: (profile: MyProfile) => void;
-}) {
-  return (
-    <DashboardSection title="المظهر واللغة" description="ثيم الصفحة العامة ولغة الواجهة.">
-      <SettingsAppearanceSection profile={profile} onProfileChange={onProfileChange} />
-    </DashboardSection>
-  );
-}
-
 function SettingsSectionPanel({ section }: { section: SettingsSectionId }) {
+  const { t } = useTranslations();
+
   switch (section) {
+    case 'appearance':
+      return (
+        <DashboardSection
+          title={t('settings.appearance.sectionTitle')}
+          description={t('settings.appearance.sectionDescription')}
+        >
+          <SettingsAppearanceSection />
+        </DashboardSection>
+      );
     case 'payments':
       return (
-        <DashboardSection title="الدفع الإلكتروني" description="بوابات الدفع وإعدادات التحصيل.">
+        <DashboardSection
+          title={t('settings.payments.sectionTitle')}
+          description={t('settings.payments.sectionDescription')}
+        >
           <SettingsPaymentsSection />
         </DashboardSection>
       );
     case 'delivery':
       return (
-        <DashboardSection title="شركات التوصيل" description="الشحن وخيارات التسليم.">
+        <DashboardSection
+          title={t('settings.delivery.sectionTitle')}
+          description={t('settings.delivery.sectionDescription')}
+          className="rounded-xl"
+        >
           <SettingsDeliverySection />
         </DashboardSection>
       );
@@ -87,54 +99,40 @@ function SettingsSectionPanel({ section }: { section: SettingsSectionId }) {
   }
 }
 
-function SettingsSectionContent({
-  section,
-  profile,
-  onProfileChange,
-}: {
-  section: SettingsSectionId;
-  profile: MyProfile;
-  onProfileChange: (profile: MyProfile) => void;
-}) {
-  if (section === 'basics') {
-    return <SettingsBasicsContent profile={profile} onProfileChange={onProfileChange} />;
-  }
-  if (section === 'appearance') {
-    return (
-      <SettingsAppearancePanel profile={profile} onProfileChange={onProfileChange} />
-    );
-  }
-  return <SettingsSectionPanel section={section} />;
-}
-
 export function SettingsView() {
   const searchParams = useSearchParams();
   const section = parseSettingsSection(searchParams.get('section'));
-  const sectionMeta = getSettingsSectionMeta(section);
+  const { t } = useTranslations();
 
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const needsProfile = section === 'basics' || section === 'appearance';
+  const needsProfile = section === 'basics';
 
   const load = useCallback(async () => {
+    if (!needsProfile) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const data = await fetchMyProfile();
       if (!data) {
-        setError('لم يتم العثور على ملف شخصي. أكمل إعداد حسابك من ركني.');
+        setError(t('settings.noProfile'));
         setProfile(null);
         return;
       }
       setProfile(data);
     } catch (err) {
-      setError(err instanceof ApiException ? err.message : 'تعذّر تحميل الإعدادات');
+      setError(
+        err instanceof ApiException ? err.message : t('settings.loadFailed'),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [needsProfile, t]);
 
   useEffect(() => {
     void load();
@@ -143,10 +141,10 @@ export function SettingsView() {
   const header = (
     <header className="min-w-0">
       <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-        {sectionMeta.pageTitle}
+        {t(`settings.${section}.pageTitle`)}
       </h1>
       <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-        {sectionMeta.pageDescription}
+        {t(`settings.${section}.pageDescription`)}
       </p>
     </header>
   );
@@ -168,7 +166,7 @@ export function SettingsView() {
         {header}
         <DashboardErrorState
           variant="inline"
-          message={error ?? 'لا توجد بيانات'}
+          message={error ?? t('settings.noData')}
           onRetry={() => void load()}
         />
       </div>
@@ -180,11 +178,7 @@ export function SettingsView() {
       <SettingsNavMobile />
       {header}
       {needsProfile && profile ? (
-        <SettingsSectionContent
-          section={section}
-          profile={profile}
-          onProfileChange={setProfile}
-        />
+        <SettingsBasicsContent profile={profile} onProfileChange={setProfile} />
       ) : (
         <SettingsSectionPanel section={section} />
       )}

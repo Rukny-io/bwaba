@@ -3,8 +3,12 @@ import {
   DELIVERY_METHOD_OPTIONS,
   SERVICE_TYPE_OPTIONS,
 } from '@/lib/products/types';
-import { getProductKindLabel } from '@/lib/products/api';
 import { formatDate, formatNumber } from '@/lib/dashboard-format';
+
+export type ProductTranslate = (
+  path: string,
+  vars?: Record<string, string | number>,
+) => string;
 
 export interface ProductCategoryRef {
   id: string;
@@ -29,7 +33,10 @@ export function getProductCategoryLabel(product: StoreProduct): string | null {
   return category.nameAr?.trim() || category.name;
 }
 
-export function getProductStockDisplay(product: StoreProduct): ProductStockDisplay {
+export function getProductStockDisplay(
+  product: StoreProduct,
+  t: ProductTranslate,
+): ProductStockDisplay {
   const kind = resolveProductKind(product);
 
   if (kind === 'DIGITAL') {
@@ -41,24 +48,27 @@ export function getProductStockDisplay(product: StoreProduct): ProductStockDispl
   }
 
   if (product.hasVariants) {
-    return { label: 'متغيرات', variant: 'default' };
+    return { label: t('products.stockLabel.variants'), variant: 'default' };
   }
 
   if (product.trackInventory === false) {
-    return { label: 'غير محدود', variant: 'unlimited' };
+    return { label: t('products.stockLabel.unlimited'), variant: 'unlimited' };
   }
 
   const quantity = product.quantity ?? 0;
 
   if (quantity <= 0) {
-    return { label: 'نفد المخزون', variant: 'low' };
+    return { label: t('products.stockLabel.outOfStock'), variant: 'low' };
   }
 
   if (quantity <= 10) {
-    return { label: `${formatNumber(quantity)} متبقي`, variant: 'low' };
+    return {
+      label: t('products.stockLabel.remaining', { n: formatNumber(quantity) }),
+      variant: 'low',
+    };
   }
 
-  return { label: 'غير محدود', variant: 'unlimited' };
+  return { label: t('products.stockLabel.unlimited'), variant: 'unlimited' };
 }
 
 export function getProductKindBadgeClass(kind: ProductKind): string {
@@ -73,8 +83,11 @@ export function getProductKindBadgeClass(kind: ProductKind): string {
   return classes[kind];
 }
 
-export function getProductKindLabelFor(product: StoreProduct): string {
-  return getProductKindLabel(resolveProductKind(product));
+export function getProductKindLabelFor(
+  product: StoreProduct,
+  t: ProductTranslate,
+): string {
+  return t(`products.kind.${resolveProductKind(product)}`);
 }
 
 export type ProductStatusVariant = 'success' | 'warning' | 'danger' | 'default';
@@ -84,16 +97,19 @@ export interface ProductStatusDisplay {
   color: ProductStatusVariant;
 }
 
-export function getProductStatusDisplay(product: StoreProduct): ProductStatusDisplay {
+export function getProductStatusDisplay(
+  product: StoreProduct,
+  t: ProductTranslate,
+): ProductStatusDisplay {
   switch (product.status) {
     case 'ACTIVE':
-      return { label: 'نشط', color: 'success' };
+      return { label: t('products.status.ACTIVE'), color: 'success' };
     case 'INACTIVE':
-      return { label: 'مخفي', color: 'default' };
+      return { label: t('products.status.INACTIVE'), color: 'default' };
     case 'OUT_OF_STOCK':
-      return { label: 'نفد المخزون', color: 'danger' };
+      return { label: t('products.status.OUT_OF_STOCK'), color: 'danger' };
     case 'DISCONTINUED':
-      return { label: 'متوقف', color: 'warning' };
+      return { label: t('products.status.DISCONTINUED'), color: 'warning' };
     default:
       return { label: product.status, color: 'default' };
   }
@@ -118,22 +134,22 @@ export function formatProductDate(iso?: string | null): string | null {
   return formatDate(date);
 }
 
-const ATTRIBUTE_LABELS: Record<string, string> = {
-  serviceType: 'نوع الخدمة',
-  duration: 'المدة',
-  deliveryMethod: 'طريقة التقديم',
-  brand: 'العلامة التجارية',
-  condition: 'الحالة',
-  warranty: 'الضمان',
-  model: 'الموديل',
-  material: 'الخامة',
-  gender: 'الفئة',
-  season: 'الموسم',
-  ingredients: 'المكونات',
-  weight: 'الوزن',
-  calories: 'السعرات',
-  allergens: 'مسببات الحساسية',
-};
+const ATTRIBUTE_KEYS = [
+  'serviceType',
+  'duration',
+  'deliveryMethod',
+  'brand',
+  'condition',
+  'warranty',
+  'model',
+  'material',
+  'gender',
+  'season',
+  'ingredients',
+  'weight',
+  'calories',
+  'allergens',
+] as const;
 
 function optionLabel(
   options: ReadonlyArray<{ value: string; label: string }>,
@@ -144,6 +160,7 @@ function optionLabel(
 
 export function getProductAttributeRows(
   product: StoreProduct,
+  t: ProductTranslate,
 ): Array<{ label: string; value: string }> {
   return (product.productAttributes ?? [])
     .map((attr) => {
@@ -157,8 +174,12 @@ export function getProductAttributeRows(
         value = optionLabel(DELIVERY_METHOD_OPTIONS, raw);
       }
 
+      const known = ATTRIBUTE_KEYS.includes(
+        attr.key as (typeof ATTRIBUTE_KEYS)[number],
+      );
+
       return {
-        label: ATTRIBUTE_LABELS[attr.key] ?? attr.key,
+        label: known ? t(`products.attr.${attr.key}`) : attr.key,
         value,
       };
     })

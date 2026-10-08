@@ -82,8 +82,16 @@ export type MailUnifiedLimitsSnapshot = {
   storageQuotaBytesPerMailbox: number;
 };
 
+/** Workspace ceilings from API getActiveLimitsForApp(mailAppId). */
+export type MailActiveLimitsSnapshot = MailUnifiedLimitsSnapshot & {
+  unified?: boolean;
+  emailPlan?: MailUnifiedPlanSnapshot | null;
+};
+
 export type MailAppSubscriptionSnapshot = {
   app: { appId: string; name: string; primaryDomain: string | null } | null;
+  /** Prefer this for seats / feature limits display. */
+  activeLimits?: MailActiveLimitsSnapshot | null;
   unifiedPlan?: MailUnifiedPlanSnapshot | null;
   unifiedLimits?: MailUnifiedLimitsSnapshot | null;
   domainQuota?: MailDomainQuotaSnapshot | null;
@@ -92,9 +100,35 @@ export type MailAppSubscriptionSnapshot = {
   needsApp: boolean;
   hasWorkspaceAccess?: boolean;
   canManageBilling?: boolean;
+  canManageMailboxes?: boolean;
   isOwner?: boolean;
   role?: string;
 };
+
+/** Single source for Mail console plan ceilings (workspace, not personal). */
+export function workspaceActiveLimits(
+  snap: Pick<
+    MailAppSubscriptionSnapshot,
+    "activeLimits" | "unifiedLimits" | "subscription" | "hasWorkspaceAccess"
+  >,
+): MailActiveLimitsSnapshot | null {
+  if (snap.activeLimits) return snap.activeLimits;
+  if (snap.unifiedLimits) {
+    return { ...snap.unifiedLimits, unified: true };
+  }
+  const sub = snap.subscription;
+  if (sub?.status === "ACTIVE") {
+    return {
+      planId: sub.planId,
+      plan: sub.plan,
+      mailboxCount: sub.mailboxCount,
+      limits: sub.limits,
+      storageQuotaBytesPerMailbox: sub.storageQuotaBytesPerMailbox,
+      unified: false,
+    };
+  }
+  return null;
+}
 
 type PlansResponse = {
   currency: string;
@@ -241,6 +275,7 @@ export async function fetchMailSubscription(
   );
   const data = await readJson<{
     app?: MailAppSubscriptionSnapshot["app"];
+    activeLimits?: MailActiveLimitsSnapshot | null;
     unifiedPlan?: MailUnifiedPlanSnapshot | null;
     unifiedLimits?: MailUnifiedLimitsSnapshot | null;
     domainQuota?: MailDomainQuotaSnapshot | null;
@@ -248,6 +283,7 @@ export async function fetchMailSubscription(
     hasWorkspaceAccess?: boolean;
     pendingRequest?: MailPendingPlanRequest | null;
     canManageBilling?: boolean;
+    canManageMailboxes?: boolean;
     isOwner?: boolean;
     role?: string;
   }>(response);
@@ -255,16 +291,42 @@ export async function fetchMailSubscription(
     throw new Error(errorMessage(data, "Could not load subscription."));
   }
   const sub = data.subscription ?? null;
+  const activeLimits = data.activeLimits
+    ? {
+        planId: String(data.activeLimits.planId || ""),
+        plan: String(data.activeLimits.plan || ""),
+        mailboxCount:
+          typeof data.activeLimits.mailboxCount === "number"
+            ? data.activeLimits.mailboxCount
+            : 0,
+        limits: data.activeLimits.limits,
+        storageQuotaBytesPerMailbox:
+          typeof data.activeLimits.storageQuotaBytesPerMailbox === "number"
+            ? data.activeLimits.storageQuotaBytesPerMailbox
+            : 0,
+        unified: Boolean(data.activeLimits.unified),
+        emailPlan: data.activeLimits.emailPlan ?? null,
+      }
+    : null;
   return {
     app: data.app ?? null,
-    unifiedPlan: data.unifiedPlan ?? null,
-    unifiedLimits: data.unifiedLimits ?? null,
+    activeLimits,
+    unifiedPlan: data.unifiedPlan ?? activeLimits?.emailPlan ?? null,
+    unifiedLimits: data.unifiedLimits ?? (activeLimits ?? null),
     domainQuota: data.domainQuota ?? null,
     subscription: sub ? normalizeSubscription(sub) : null,
-    hasWorkspaceAccess: Boolean(data.hasWorkspaceAccess),
+    hasWorkspaceAccess: Boolean(data.hasWorkspaceAccess ?? activeLimits),
     pendingRequest: data.pendingRequest ?? null,
     needsApp: false,
     canManageBilling: Boolean(data.canManageBilling),
+    canManageMailboxes:
+      data.canManageMailboxes !== undefined
+        ? Boolean(data.canManageMailboxes)
+        : Boolean(
+            data.isOwner ||
+              data.role === "OWNER" ||
+              data.role === "ADMIN",
+          ),
     isOwner: Boolean(data.isOwner),
     role: typeof data.role === "string" ? data.role : undefined,
   };

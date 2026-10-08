@@ -1,7 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import { ArrowLeft, Link2 } from 'lucide-react';
 import { dashboardPagePanelClass } from '@/components/app/dashboard-page-frame';
 import { formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import type { AnalyticsOverview } from '@/lib/analytics/types';
 import { cn } from '@/lib/utils';
 
@@ -16,23 +19,28 @@ export function DashboardHomeTopLinks({
   activeCount,
   totalCount,
 }: DashboardHomeTopLinksProps) {
+  const { t, locale } = useTranslations();
+
   return (
     <article className={cn(dashboardPagePanelClass, 'min-h-[280px] gap-4')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-[var(--foreground)]">
-            أفضل الروابط
+            {t('home.topLinks')}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            {formatNumber(activeCount)} رابط نشط من {formatNumber(totalCount)}
+            {t('home.activeLinksCount', {
+              active: formatNumber(activeCount, locale),
+              total: formatNumber(totalCount, locale),
+            })}
           </p>
         </div>
         <Link
           href="/app/links"
           className="inline-flex items-center gap-1 text-xs font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
         >
-          عرض الكل
-          <ArrowLeft className="size-3.5" />
+          {t('home.viewAll')}
+          <ArrowLeft className="size-3.5 rtl:rotate-180" />
         </Link>
       </div>
 
@@ -41,15 +49,17 @@ export function DashboardHomeTopLinks({
           <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
             <Link2 className="size-4" strokeWidth={1.75} aria-hidden />
           </div>
-          <p className="text-sm font-medium text-[var(--foreground)]">لا توجد نقرات بعد</p>
+          <p className="text-sm font-medium text-[var(--foreground)]">
+            {t('home.noClicksYet')}
+          </p>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            أضف روابطك وابدأ بجمع النقرات.
+            {t('home.addLinksHint')}
           </p>
           <Link
             href="/app/links?add=1"
             className="mt-4 inline-flex h-9 items-center rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-95"
           >
-            إضافة رابط
+            {t('home.addLink')}
           </Link>
         </div>
       ) : (
@@ -68,10 +78,12 @@ export function DashboardHomeTopLinks({
                     {link.title}
                   </p>
                   <p className="text-xs text-[var(--muted-foreground)]">
-                    <span className="tabular-nums">{formatNumber(link.clicks)}</span> نقرة
+                    {t('home.clicks', {
+                      n: formatNumber(link.clicks, locale),
+                    })}
                   </p>
                 </div>
-                <ArrowLeft className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+                <ArrowLeft className="size-4 shrink-0 text-[var(--muted-foreground)] rtl:rotate-180" />
               </Link>
             </li>
           ))}

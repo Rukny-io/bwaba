@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Eye,
   MousePointerClick,
@@ -11,6 +13,7 @@ import {
   formatNumber,
   formatTrendBadge,
 } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface DashboardHomeOverviewProps {
@@ -60,7 +63,6 @@ function OverviewMetricCell({
         <p
           className="text-[1.875rem] font-semibold leading-none tracking-tight text-[var(--foreground)] tabular-nums"
           dir="ltr"
-          lang="en"
         >
           {value}
         </p>
@@ -73,7 +75,6 @@ function OverviewMetricCell({
                 : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
             )}
             dir="ltr"
-            lang="en"
           >
             {trend}
           </span>
@@ -86,8 +87,6 @@ function OverviewMetricCell({
             <p
               key={line}
               className="text-[12px] leading-relaxed text-[var(--muted-foreground)]"
-              dir={line.includes('د.ع') ? 'ltr' : undefined}
-              lang={line.includes('د.ع') ? 'en' : undefined}
             >
               {line}
             </p>
@@ -109,46 +108,47 @@ export function DashboardHomeOverview({
   totalProducts,
   lowStock,
 }: DashboardHomeOverviewProps) {
+  const { t, locale } = useTranslations();
   const clicksTrend = formatTrendBadge(clicksChange);
 
   const metrics: OverviewMetric[] = [
     {
       key: 'clicks',
-      label: 'نقرات الروابط',
+      label: t('home.linkClicks'),
       icon: MousePointerClick,
-      value: formatNumber(totalClicks),
+      value: formatNumber(totalClicks, locale),
       trend: clicksTrend,
       trendPositive: clicksChange >= 0,
-      meta: ['مقابل الفترة السابقة'],
+      meta: [t('home.vsPrevious')],
     },
     {
       key: 'views',
-      label: 'زيارات الصفحة',
+      label: t('home.pageViews'),
       icon: Eye,
-      value: formatNumber(totalLinkViews),
-      meta: ['على جميع الروابط'],
+      value: formatNumber(totalLinkViews, locale),
+      meta: [t('home.onAllLinks')],
     },
     {
       key: 'orders',
-      label: 'الطلبات',
+      label: t('home.orders'),
       icon: ShoppingBag,
-      value: formatNumber(totalOrders),
+      value: formatNumber(totalOrders, locale),
       meta: [
-        `إيرادات · ${formatCurrency(totalRevenue)}`,
+        t('home.revenueLine', { amount: formatCurrency(totalRevenue, 'IQD', locale) }),
         pendingOrders > 0
-          ? `${formatNumber(pendingOrders)} معلّقة`
-          : 'لا طلبات معلّقة',
+          ? t('home.pendingOrders', { n: formatNumber(pendingOrders, locale) })
+          : t('home.noPendingOrders'),
       ],
     },
     {
       key: 'products',
-      label: 'المنتجات النشطة',
+      label: t('home.activeProducts'),
       icon: Package,
-      value: formatNumber(activeProducts),
+      value: formatNumber(activeProducts, locale),
       meta: [
         lowStock > 0
-          ? `${formatNumber(lowStock)} مخزون منخفض`
-          : `${formatNumber(totalProducts)} إجمالي في المتجر`,
+          ? t('home.lowStockCount', { n: formatNumber(lowStock, locale) })
+          : t('home.totalInStore', { n: formatNumber(totalProducts, locale) }),
       ],
     },
   ];
@@ -156,9 +156,11 @@ export function DashboardHomeOverview({
   return (
     <div className={cn(dashboardPagePanelClass, 'gap-5')}>
       <div className="min-w-0">
-        <h2 className="text-base font-semibold text-[var(--foreground)]">نظرة عامة</h2>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">
+          {t('home.overview')}
+        </h2>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          أهم المؤشرات لهذا الشهر
+          {t('home.overviewHint')}
         </p>
       </div>
 

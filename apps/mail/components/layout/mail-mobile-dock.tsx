@@ -7,13 +7,17 @@ import { CreditCard, Plus, Settings, X } from "lucide-react";
 import { cn, Dropdown, Header, Label } from "@heroui/react";
 import { useMailNavPending } from "@/components/layout/mail-nav-pending";
 import {
+  filterMailNavWithoutBilling,
   filterMailNavWithoutTeam,
   isNavItemActive,
   mailNavForPathname,
   type MailNavItem,
 } from "@/lib/mail-nav-scoped";
 import { stripMailSlotPrefix, withMailSlot } from "@/lib/mail-slot";
-import { fetchMailSubscription } from "@/lib/mail-subscription-client";
+import {
+  fetchMailSubscription,
+  workspaceActiveLimits,
+} from "@/lib/mail-subscription-client";
 
 function navPath(href: string) {
   return stripMailSlotPrefix(href).split("?")[0];
@@ -93,6 +97,7 @@ export function MailMobileDock() {
   const { pendingHref, setPendingHref } = useMailNavPending();
   const [open, setOpen] = useState(false);
   const [teamSupported, setTeamSupported] = useState(true);
+  const [canManageBilling, setCanManageBilling] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,12 +106,14 @@ export function MailMobileDock() {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
         const consoleSeats =
-          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
-          snap.subscription?.limits?.consoleMembersIncluded ??
-          0;
+          workspaceActiveLimits(snap)?.limits?.consoleMembersIncluded ?? 0;
         setTeamSupported(consoleSeats > 0);
+        setCanManageBilling(Boolean(snap.canManageBilling));
       } catch {
-        if (!cancelled) setTeamSupported(true);
+        if (!cancelled) {
+          setTeamSupported(true);
+          setCanManageBilling(true);
+        }
       }
     })();
     return () => {
@@ -154,10 +161,13 @@ export function MailMobileDock() {
   const dockItems = useMemo(() => {
     const find = (path: string) =>
       primary.find((item) => navPath(item.href) === path);
-    return [find("/inbox"), find("/app"), billingItem, settingsItem].filter(
-      (item): item is MailNavItem => Boolean(item),
-    );
-  }, [primary, billingItem, settingsItem]);
+    return [
+      find("/inbox"),
+      find("/app"),
+      canManageBilling ? billingItem : null,
+      settingsItem,
+    ].filter((item): item is MailNavItem => Boolean(item));
+  }, [primary, billingItem, settingsItem, canManageBilling]);
 
   const dockPaths = useMemo(
     () => new Set(dockItems.map((item) => navPath(item.href))),
@@ -169,10 +179,10 @@ export function MailMobileDock() {
     [primary, dockPaths],
   );
 
-  const moreTools = useMemo(
-    () => [...footer, ...headerTools, ...secondary],
-    [footer, headerTools, secondary],
-  );
+  const moreTools = useMemo(() => {
+    const tools = [...footer, ...headerTools, ...secondary];
+    return canManageBilling ? tools : filterMailNavWithoutBilling(tools);
+  }, [footer, headerTools, secondary, canManageBilling]);
 
   const moreItems = useMemo(
     () => [...moreMail, ...moreTools],

@@ -101,7 +101,7 @@ export function LinkCatalogSearch({
             'w-full bg-transparent text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]',
             isPanel ? 'text-[12px]' : 'text-[14px]',
           )}
-          dir={isUrlMode ? 'ltr' : 'rtl'}
+          dir={isUrlMode ? 'ltr' : undefined}
           inputMode={isUrlMode ? 'url' : 'search'}
           autoComplete="off"
           autoCorrect="off"

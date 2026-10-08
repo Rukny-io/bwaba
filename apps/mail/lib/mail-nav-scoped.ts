@@ -42,6 +42,16 @@ export function filterMailNavWithoutTeam(items: MailNavItem[]): MailNavItem[] {
   });
 }
 
+/** Hide Billing for invitees without billing/admin rights. */
+export function filterMailNavWithoutBilling(
+  items: MailNavItem[],
+): MailNavItem[] {
+  return items.filter((item) => {
+    const path = stripMailSlotPrefix(item.href).split("?")[0];
+    return path !== "/billing";
+  });
+}
+
 export function isNavItemActive(
   pathname: string,
   href: string,

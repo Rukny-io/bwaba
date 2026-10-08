@@ -226,7 +226,7 @@ export function AddLinkMobileDialog({
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleSheetDragEnd}
-            dir="rtl"
+
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-link-mobile-title"

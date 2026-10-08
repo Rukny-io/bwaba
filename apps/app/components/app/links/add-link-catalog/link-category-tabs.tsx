@@ -28,7 +28,7 @@ export function LinkCategoryTabs({
           ? 'gap-1.5 overflow-x-auto py-0.5 px-0.5 [scroll-padding-inline:8px]'
           : 'flex-col gap-1 snap-none',
       )}
-      dir="rtl"
+
     >
       {categories.map((item) => {
         const isActive = active === item.id;

@@ -3,6 +3,8 @@
 import { useId, useRef } from 'react';
 import { FileAudio, FileText, FileVideo, Loader2, Upload, X } from 'lucide-react';
 import { ProductFormSection } from '@/components/products/create/product-form-section';
+import { useTranslations } from '@/lib/i18n';
+import type { AppLocale } from '@/lib/i18n/config';
 import { cn } from '@/lib/utils';
 
 const ACCEPT =
@@ -16,7 +18,12 @@ interface ProductDigitalFileUploadProps {
   className?: string;
 }
 
-function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number, locale: AppLocale): string {
+  if (locale === 'en') {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   if (bytes < 1024) return `${bytes} ب`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ك.ب`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} م.ب`;
@@ -35,6 +42,7 @@ export function ProductDigitalFileUpload({
   onRemove,
   className,
 }: ProductDigitalFileUploadProps) {
+  const { t, locale } = useTranslations();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,8 +60,8 @@ export function ProductDigitalFileUpload({
 
   return (
     <ProductFormSection
-      title="ملف المنتج الرقمي"
-      description="يُسلّم للعميل تلقائياً بعد إتمام الشراء · PDF، ZIP، MP4، MP3"
+      title={t('products.create.digitalTitle')}
+      description={t('products.create.digitalDescription')}
       className={className}
       contentClassName="gap-3"
     >
@@ -83,7 +91,7 @@ export function ProductDigitalFileUpload({
               {file.name}
             </p>
             <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
-              {formatFileSize(file.size)}
+              {formatFileSize(file.size, locale)}
             </p>
           </div>
 
@@ -94,14 +102,14 @@ export function ProductDigitalFileUpload({
               disabled={uploading}
               className="inline-flex h-8 items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              استبدال
+              {t('products.create.replace')}
             </button>
             <button
               type="button"
               onClick={onRemove}
               disabled={uploading}
               className="flex size-8 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="إزالة الملف"
+              aria-label={t('products.create.removeFile')}
             >
               <X className="size-4" />
             </button>
@@ -127,10 +135,10 @@ export function ProductDigitalFileUpload({
               </div>
               <div>
                 <p className="text-[13px] font-medium text-[var(--foreground)]">
-                  اختر ملف المنتج
+                  {t('products.create.chooseFile')}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted-foreground)]">
-                  PDF، ZIP، فيديو MP4، أو صوت MP3
+                  {t('products.create.chooseFileHint')}
                 </p>
               </div>
             </>

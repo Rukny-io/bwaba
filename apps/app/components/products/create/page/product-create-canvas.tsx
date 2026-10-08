@@ -12,6 +12,7 @@ import {
   PRODUCTS_CREATE_PATH,
 } from '@/lib/products/paths';
 import type { ProductKind } from '@/lib/products/types';
+import { useTranslations } from '@/lib/i18n';
 
 const PRODUCT_CREATE_FORM_ID = 'product-create-form';
 
@@ -20,6 +21,7 @@ interface ProductCreateCanvasProps {
 }
 
 export function ProductCreateCanvas({ kind }: ProductCreateCanvasProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editProductId = searchParams.get('edit');
@@ -35,15 +37,15 @@ export function ProductCreateCanvas({ kind }: ProductCreateCanvasProps) {
     <CreateProductChrome>
       <ProductCreateToolbar
         backHref={PRODUCTS_CREATE_PATH}
-        backLabel="نوع المنتج"
+        backLabel={t('products.create.backToKind')}
         submitLabel={
           submitting
             ? isEditing
-              ? 'جاري الحفظ…'
-              : 'جاري الإنشاء…'
+              ? t('products.create.saving')
+              : t('products.create.creating')
             : isEditing
-              ? 'حفظ التعديلات'
-              : 'إنشاء المنتج'
+              ? t('products.create.saveEdits')
+              : t('products.create.createProduct')
         }
         submitFormId={PRODUCT_CREATE_FORM_ID}
         submitting={submitting}

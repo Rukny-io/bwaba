@@ -21,6 +21,8 @@ export type MailApp = {
   /** OWNER for owned workspaces; otherwise the console role. */
   membershipRole?: string;
   isOwner?: boolean;
+  canManageMailboxes?: boolean;
+  canManageBilling?: boolean;
   subscription: {
     plan: string;
     status: string;

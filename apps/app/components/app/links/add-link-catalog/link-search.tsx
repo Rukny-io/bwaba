@@ -36,7 +36,7 @@ export function LinkSearch({ value, onChange, variant = 'default' }: LinkSearchP
           'w-full bg-transparent text-right text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]',
           isPanel ? 'text-[12px]' : 'text-[14px]',
         )}
-        dir="rtl"
+
         inputMode="search"
         autoComplete="off"
         autoCorrect="off"

@@ -12,6 +12,10 @@ import {
   CreateOrderFromCartDto,
   CreateDirectOrderDto,
   UpdateOrderStatusDto,
+  UpdateOrderPaymentStatusDto,
+  BulkUpdateOrderStatusDto,
+  BulkUpdatePaymentStatusDto,
+  BulkOrderIdsDto,
   CancelOrderDto,
   OrderStatus,
   OrderFiltersDto,
@@ -846,17 +850,54 @@ export class OrdersService {
 
     const where: any = { storeId: store.id };
     const page = filters?.page || 1;
-    const limit = filters?.limit || 10;
+    const limit = Math.min(filters?.limit || 10, 100);
     const skip = (page - 1) * limit;
 
     if (filters?.status) {
       where.status = filters.status;
     }
 
+    if (filters?.paymentStatus === 'UNPAID') {
+      where.paymentStatus = { in: ['UNPAID', 'PENDING', 'FAILED'] };
+    } else if (filters?.paymentStatus) {
+      where.paymentStatus = filters.paymentStatus;
+    }
+
     if (filters?.startDate || filters?.endDate) {
       where.createdAt = {};
       if (filters.startDate) where.createdAt.gte = filters.startDate;
-      if (filters.endDate) where.createdAt.lte = filters.endDate;
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
+    const search = filters?.search?.trim();
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { phoneNumber: { contains: search } },
+        {
+          users: {
+            is: {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' } },
+                {
+                  profile: {
+                    is: { name: { contains: search, mode: 'insensitive' } },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          addresses: {
+            is: { fullName: { contains: search, mode: 'insensitive' } },
+          },
+        },
+      ];
     }
 
     const orders = await this.prisma.orders.findMany({
@@ -894,6 +935,59 @@ export class OrdersService {
     });
 
     return Promise.all(orders.map((order) => this.formatOrder(order, true)));
+  }
+
+  private async assertStoreOrderOwnership(orderId: string, userId: string) {
+    const order = await this.prisma.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        stores: true,
+        order_items: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('الطلب غير موجود');
+    }
+
+    if (order.stores.userId !== userId) {
+      throw new ForbiddenException('غير مصرح لك بتحديث هذا الطلب');
+    }
+
+    return order;
+  }
+
+  private async restoreOrderStock(
+    items: Array<{
+      productId: string;
+      variantId: string | null;
+      quantity: number;
+    }>,
+  ) {
+    for (const item of items) {
+      if (item.variantId) {
+        await this.prisma.product_variants.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+        const allVariants = await this.prisma.product_variants.findMany({
+          where: { productId: item.productId, isActive: true },
+          select: { stock: true },
+        });
+        const totalStock = allVariants.reduce((sum, v) => sum + v.stock, 0);
+        await this.prisma.products.update({
+          where: { id: item.productId },
+          data: { quantity: totalStock },
+        });
+      } else {
+        await this.prisma.products.update({
+          where: { id: item.productId },
+          data: {
+            quantity: { increment: item.quantity },
+          },
+        });
+      }
+    }
   }
 
   /**
@@ -1147,43 +1241,28 @@ export class OrdersService {
     return labels[status] ?? status;
   }
 
+  private readonly validStatusTransitions: Record<string, string[]> = {
+    PENDING: ['CONFIRMED', 'CANCELLED'],
+    CONFIRMED: ['PROCESSING', 'CANCELLED'],
+    PROCESSING: ['SHIPPED', 'CANCELLED'],
+    SHIPPED: ['OUT_FOR_DELIVERY', 'DELIVERED'],
+    OUT_FOR_DELIVERY: ['DELIVERED'],
+    DELIVERED: ['REFUNDED'],
+    CANCELLED: [],
+    REFUNDED: [],
+  };
+
   /**
    * Update order status (store owner only)
    */
-
   async updateOrderStatus(
     orderId: string,
     userId: string,
     updateDto: UpdateOrderStatusDto,
   ) {
-    const order = await this.prisma.orders.findUnique({
-      where: { id: orderId },
-      include: {
-        stores: true,
-      },
-    });
+    const order = await this.assertStoreOrderOwnership(orderId, userId);
 
-    if (!order) {
-      throw new NotFoundException('الطلب غير موجود');
-    }
-
-    if (order.stores.userId !== userId) {
-      throw new ForbiddenException('غير مصرح لك بتحديث هذا الطلب');
-    }
-
-    // Validate status transition
-    const validTransitions: Record<string, string[]> = {
-      PENDING: ['CONFIRMED', 'CANCELLED'],
-      CONFIRMED: ['PROCESSING', 'CANCELLED'],
-      PROCESSING: ['SHIPPED', 'CANCELLED'],
-      SHIPPED: ['OUT_FOR_DELIVERY', 'DELIVERED'],
-      OUT_FOR_DELIVERY: ['DELIVERED'],
-      DELIVERED: ['REFUNDED'],
-      CANCELLED: [],
-      REFUNDED: [],
-    };
-
-    if (!validTransitions[order.status]?.includes(updateDto.status)) {
+    if (!this.validStatusTransitions[order.status]?.includes(updateDto.status)) {
       throw new BadRequestException(
         `لا يمكن تغيير الحالة من ${order.status} إلى ${updateDto.status}`,
       );
@@ -1206,12 +1285,123 @@ export class OrdersService {
       updateData.deliveredAt = new Date();
     }
 
-    const updatedOrder = await this.prisma.orders.update({
+    if (updateDto.status === 'CANCELLED') {
+      updateData.cancelledAt = new Date();
+      if (!['CANCELLED', 'REFUNDED'].includes(order.status)) {
+        await this.restoreOrderStock(order.order_items);
+      }
+    }
+
+    await this.prisma.orders.update({
       where: { id: orderId },
       data: updateData,
     });
 
     return this.getOrder(orderId, userId);
+  }
+
+  /**
+   * Update payment status (store owner only)
+   */
+  async updateOrderPaymentStatus(
+    orderId: string,
+    userId: string,
+    updateDto: UpdateOrderPaymentStatusDto,
+  ) {
+    await this.assertStoreOrderOwnership(orderId, userId);
+
+    await this.prisma.orders.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: updateDto.paymentStatus,
+        updatedAt: new Date(),
+      },
+    });
+
+    return this.getOrder(orderId, userId);
+  }
+
+  async bulkUpdateOrderStatus(
+    userId: string,
+    dto: BulkUpdateOrderStatusDto,
+  ): Promise<{ updated: string[]; failed: Array<{ id: string; reason: string }> }> {
+    const updated: string[] = [];
+    const failed: Array<{ id: string; reason: string }> = [];
+
+    for (const orderId of dto.orderIds) {
+      try {
+        await this.updateOrderStatus(orderId, userId, { status: dto.status });
+        updated.push(orderId);
+      } catch (error) {
+        failed.push({
+          id: orderId,
+          reason:
+            error instanceof Error ? error.message : 'تعذّر تحديث الطلب',
+        });
+      }
+    }
+
+    return { updated, failed };
+  }
+
+  async bulkUpdatePaymentStatus(
+    userId: string,
+    dto: BulkUpdatePaymentStatusDto,
+  ): Promise<{ updated: string[]; failed: Array<{ id: string; reason: string }> }> {
+    const updated: string[] = [];
+    const failed: Array<{ id: string; reason: string }> = [];
+
+    for (const orderId of dto.orderIds) {
+      try {
+        await this.updateOrderPaymentStatus(orderId, userId, {
+          paymentStatus: dto.paymentStatus,
+        });
+        updated.push(orderId);
+      } catch (error) {
+        failed.push({
+          id: orderId,
+          reason:
+            error instanceof Error ? error.message : 'تعذّر تحديث حالة الدفع',
+        });
+      }
+    }
+
+    return { updated, failed };
+  }
+
+  async bulkDeleteOrders(
+    userId: string,
+    dto: BulkOrderIdsDto,
+  ): Promise<{ deleted: string[]; failed: Array<{ id: string; reason: string }> }> {
+    const deleted: string[] = [];
+    const failed: Array<{ id: string; reason: string }> = [];
+
+    for (const orderId of dto.orderIds) {
+      try {
+        const order = await this.assertStoreOrderOwnership(orderId, userId);
+
+        if (!['CANCELLED', 'REFUNDED'].includes(order.status)) {
+          await this.restoreOrderStock(order.order_items);
+        }
+
+        await this.prisma.coupon_usages.deleteMany({
+          where: { orderId },
+        });
+
+        await this.prisma.orders.delete({
+          where: { id: orderId },
+        });
+
+        deleted.push(orderId);
+      } catch (error) {
+        failed.push({
+          id: orderId,
+          reason: error instanceof Error ? error.message : 'تعذّر حذف الطلب',
+        });
+      }
+    }
+
+    return { deleted, failed };
   }
 
   /**

@@ -1,6 +1,11 @@
 import { getProductDisplayName } from '@/lib/products/api';
+import { getMessage } from '@/lib/i18n/get-message';
+import { getMessages } from '@/lib/i18n/messages';
 import { getProductKindLabelFor, getProductStatusDisplay } from '@/lib/products/product-display';
 import type { StoreProduct } from '@/lib/products/types';
+
+const exportT = (path: string, vars?: Record<string, string | number>) =>
+  getMessage(getMessages('ar'), path, vars);
 
 function escapeCsvCell(value: string): string {
   if (/[",\n\r]/.test(value)) {
@@ -41,8 +46,8 @@ export function exportProductsToCsv(products: StoreProduct[]): void {
       ? String(product.salePrice)
       : '',
     String(product.quantity),
-    getProductKindLabelFor(product),
-    getProductStatusDisplay(product).label,
+    getProductKindLabelFor(product, exportT),
+    getProductStatusDisplay(product, exportT).label,
     product.product_categories?.nameAr?.trim() ||
       product.product_categories?.name?.trim() ||
       '',

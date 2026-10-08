@@ -653,7 +653,7 @@ export function MailPricingEstimate({ signedIn }: { signedIn: boolean }) {
                         {customPlan.bestFor}
                       </span>
                     </Link>
-                    <span className="shrink-0 text-[#9CA3AF]">Let's talk</span>
+                    <span className="shrink-0 text-[#9CA3AF]">Let&apos;s talk</span>
                   </li>
                 </ul>
               </div>

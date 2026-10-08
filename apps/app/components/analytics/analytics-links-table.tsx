@@ -16,6 +16,7 @@ import {
 } from '@/components/analytics/analytics-table-config';
 import type { SocialLink } from '@/lib/links/types';
 import { formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsLinksTableProps {
@@ -40,6 +41,8 @@ function TableSkeleton() {
 }
 
 export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTableProps) {
+  const { t } = useTranslations();
+
   return (
     <div className={analyticsTableChrome.shell}>
       <div className={analyticsTableChrome.scroll}>
@@ -52,7 +55,6 @@ export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTablePro
             '[&_[data-slot=table-cell]]:p-0 [&_[data-slot=table-head]]:p-0',
             '[&_[data-slot=table-body]:before]:hidden',
           )}
-          dir="rtl"
         >
           <TableHeader>
             <TableRow
@@ -61,11 +63,21 @@ export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTablePro
                 'hover:bg-transparent dark:hover:bg-transparent',
               )}
             >
-              <TableHead className={analyticsHeadClass('start', 'min-w-[10rem]')}>الرابط</TableHead>
-              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>الحالة</TableHead>
-              <TableHead className={analyticsHeadClass('center', 'w-[6.5rem]')}>المنصة</TableHead>
-              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>مشاهدات</TableHead>
-              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>نقرات</TableHead>
+              <TableHead className={analyticsHeadClass('start', 'min-w-[10rem]')}>
+                {t('analytics.link')}
+              </TableHead>
+              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>
+                {t('analytics.status')}
+              </TableHead>
+              <TableHead className={analyticsHeadClass('center', 'w-[6.5rem]')}>
+                {t('analytics.platform')}
+              </TableHead>
+              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>
+                {t('analytics.views')}
+              </TableHead>
+              <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>
+                {t('analytics.clicks')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -73,8 +85,11 @@ export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTablePro
               <TableSkeleton />
             ) : links.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="h-28 bg-transparent text-center text-sm text-[var(--muted-foreground)]">
-                  لا توجد روابط بعد
+                <TableCell
+                  colSpan={5}
+                  className="h-28 bg-transparent text-center text-sm text-[var(--muted-foreground)]"
+                >
+                  {t('analytics.noLinksYet')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -97,7 +112,9 @@ export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTablePro
                           : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
                       )}
                     >
-                      {link.status === 'active' ? 'نشط' : 'مخفي'}
+                      {link.status === 'active'
+                        ? t('analytics.active')
+                        : t('analytics.hidden')}
                     </span>
                   </TableCell>
                   <TableCell
@@ -109,7 +126,10 @@ export function AnalyticsLinksTable({ links, isLoading }: AnalyticsLinksTablePro
                     {link.platform}
                   </TableCell>
                   <TableCell
-                    className={cn(analyticsCellClass('center', 'w-[5.5rem]'), analyticsTableChrome.numeric)}
+                    className={cn(
+                      analyticsCellClass('center', 'w-[5.5rem]'),
+                      analyticsTableChrome.numeric,
+                    )}
                     dir="ltr"
                   >
                     {formatNumber(link.views)}

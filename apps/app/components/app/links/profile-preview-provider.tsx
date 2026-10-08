@@ -137,7 +137,7 @@ export function useProfilePreviewRefresh() {
 }
 
 /** Minimum preview column width — column grows with flex-1 like Linktree */
-export const PREVIEW_COLUMN_MIN_WIDTH_PX = 440;
+export const PREVIEW_COLUMN_MIN_WIDTH_PX = 400;
 const PHONE_WIDTH_PX = 360;
 const PHONE_RADIUS = '2.35rem';
 const HEADER_HEIGHT_PX = 40;

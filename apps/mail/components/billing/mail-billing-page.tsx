@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, ReceiptText, ShieldCheck } from "lucide-react";
 import {
   Button,
@@ -22,6 +23,7 @@ import {
 } from "@/components/billing/billing-ui";
 import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { getMailApp, updateMailApp } from "@/lib/mail-apps-client";
+import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import { formatMailIqD } from "@/lib/mail-plans";
 import {
   readMailBillingPreferences,
@@ -85,12 +87,17 @@ type NoticeState = {
 } | null;
 
 export function MailBillingPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [savingContact, setSavingContact] = useState(false);
   const [issuingPaymentId, setIssuingPaymentId] = useState<string | null>(null);
   const [sendingPaymentId, setSendingPaymentId] = useState<string | null>(null);
   const [issuingCurrent, setIssuingCurrent] = useState(false);
   const [canManageBilling, setCanManageBilling] = useState(false);
+  const [billingGate, setBillingGate] = useState<"loading" | "allowed" | "denied">(
+    "loading",
+  );
   const [isOwner, setIsOwner] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [contactEmail, setContactEmail] = useState("");
@@ -105,6 +112,7 @@ export function MailBillingPage() {
     const appId = readMailAppIdFromDocument();
     if (!appId) {
       setLoading(false);
+      setBillingGate("denied");
       return;
     }
     const [app, snapshot] = await Promise.all([
@@ -113,7 +121,9 @@ export function MailBillingPage() {
     ]);
     setContactEmail(app.contactEmail || "");
     setSavedContact(app.contactEmail || "");
-    setCanManageBilling(Boolean(snapshot.canManageBilling));
+    const manage = Boolean(snapshot.canManageBilling);
+    setCanManageBilling(manage);
+    setBillingGate(manage ? "allowed" : "denied");
     setIsOwner(Boolean(snapshot.isOwner || app.isOwner));
     setHasActiveSubscription(snapshot.subscription?.status === "ACTIVE");
     setPayments(snapshot.subscription?.payments ?? []);
@@ -128,6 +138,7 @@ export function MailBillingPage() {
         if (!cancelled) setNotice(null);
       } catch (err) {
         if (!cancelled) {
+          setBillingGate("allowed");
           setNotice({
             tone: "danger",
             title: "Something went wrong",
@@ -143,6 +154,28 @@ export function MailBillingPage() {
       cancelled = true;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (billingGate !== "denied") return;
+    router.replace(withMailSlot("/app", parseMailSlot(pathname)));
+  }, [billingGate, pathname, router]);
+
+  if (billingGate === "loading" || billingGate === "denied") {
+    return (
+      <section className="dashboard-page mx-auto flex w-full min-w-0 max-w-[890px] flex-col gap-5 sm:gap-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            Billing & payments
+          </h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {billingGate === "denied"
+              ? "Billing is managed by the workspace owner. Redirecting…"
+              : "Checking access…"}
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const canEditContact = isOwner || canManageBilling;
   const contactDirty =

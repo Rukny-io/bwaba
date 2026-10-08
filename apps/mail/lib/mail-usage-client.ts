@@ -20,6 +20,13 @@ export type MailOutboundUsageView = {
   packPriceIqd: number | null;
 };
 
+export type MailUsageActiveLimits = {
+  planId: string;
+  plan: string;
+  mailboxCount: number;
+  unified?: boolean;
+};
+
 async function readJson<T>(
   response: Response,
 ): Promise<T & { message?: string | string[]; error?: string }> {
@@ -42,10 +49,11 @@ export async function fetchMailOutboundUsage(
   appId = readMailAppIdFromDocument(),
 ): Promise<{
   usage: MailOutboundUsageView | null;
+  activeLimits: MailUsageActiveLimits | null;
   canManageBilling: boolean;
 }> {
   if (!isValidMailAppId(appId)) {
-    return { usage: null, canManageBilling: false };
+    return { usage: null, activeLimits: null, canManageBilling: false };
   }
 
   const response = await sessionFetch(
@@ -53,13 +61,29 @@ export async function fetchMailOutboundUsage(
   );
   const data = await readJson<{
     usage?: MailOutboundUsageView | null;
+    activeLimits?: {
+      planId?: string;
+      plan?: string;
+      mailboxCount?: number;
+      unified?: boolean;
+    } | null;
     canManageBilling?: boolean;
   }>(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not load usage."));
   }
+  const limits = data.activeLimits;
   return {
     usage: data.usage ?? null,
+    activeLimits: limits
+      ? {
+          planId: String(limits.planId || ""),
+          plan: String(limits.plan || ""),
+          mailboxCount:
+            typeof limits.mailboxCount === "number" ? limits.mailboxCount : 0,
+          unified: Boolean(limits.unified),
+        }
+      : null,
     canManageBilling: Boolean(data.canManageBilling),
   };
 }

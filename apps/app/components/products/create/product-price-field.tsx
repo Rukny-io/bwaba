@@ -10,12 +10,9 @@ import {
   cn,
 } from '@heroui/react';
 import { AnimatedNumber } from '@/components/ui/animated-number';
+import { useTranslations } from '@/lib/i18n';
 
 export const PRODUCT_PRICE_STEP = 250;
-
-function formatPricePreview(value: number): string {
-  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)} د.ع`;
-}
 
 interface ProductPriceFieldProps {
   value: string;
@@ -41,6 +38,15 @@ export function ProductPriceField({
   onChange,
   className,
 }: ProductPriceFieldProps) {
+  const { t } = useTranslations();
+  const currency = t('products.create.currency');
+
+  const formatPricePreview = useCallback(
+    (value: number) =>
+      `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)} ${currency}`,
+    [currency],
+  );
+
   const [display, setDisplay] = useState(() => {
     const parsed = parsePriceDigits(value);
     return parsed === null ? '' : formatPriceDigits(parsed);
@@ -103,7 +109,9 @@ export function ProductPriceField({
       onChange={handleDisplayChange}
       className={cn('product-price-field flex flex-col gap-2', className)}
     >
-      <Label className="text-xs font-medium text-muted">السعر</Label>
+      <Label className="text-xs font-medium text-muted">
+        {t('products.create.priceLabel')}
+      </Label>
 
       <InputGroup
         variant="secondary"
@@ -115,7 +123,7 @@ export function ProductPriceField({
           variant="ghost"
           size="sm"
           isIconOnly
-          aria-label="إنقاص ٢٥٠ دينار"
+          aria-label={t('products.create.decreasePrice')}
           className="product-price-field__step size-7 min-w-7 shrink-0 rounded-lg text-muted"
           onPointerDown={stopGroupFocus}
           onPress={() => stepPrice(-PRODUCT_PRICE_STEP)}
@@ -149,7 +157,7 @@ export function ProductPriceField({
           variant="ghost"
           size="sm"
           isIconOnly
-          aria-label="زيادة ٢٥٠ دينار"
+          aria-label={t('products.create.increasePrice')}
           className="product-price-field__step size-7 min-w-7 shrink-0 rounded-lg text-muted"
           onPointerDown={stopGroupFocus}
           onPress={() => stepPrice(PRODUCT_PRICE_STEP)}
@@ -157,7 +165,7 @@ export function ProductPriceField({
           <Plus className="size-3.5" strokeWidth={2.25} aria-hidden />
         </Button>
 
-        <span className="shrink-0 px-2 text-xs font-medium text-muted">د.ع</span>
+        <span className="shrink-0 px-2 text-xs font-medium text-muted">{currency}</span>
       </InputGroup>
 
       {hasPrice ? (

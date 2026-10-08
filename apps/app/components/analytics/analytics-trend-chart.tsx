@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import type { AnalyticsTrendPoint } from '@/lib/analytics/types';
 import { formatNumber, formatShortDate } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsTrendChartProps {
@@ -101,6 +102,7 @@ export function AnalyticsTrendChart({
   className,
   height = 300,
 }: AnalyticsTrendChartProps) {
+  const { t } = useTranslations();
   const uid = useId().replace(/:/g, '');
   const palette = useChartPalette();
 
@@ -135,7 +137,7 @@ export function AnalyticsTrendChart({
   if (data.length === 0) {
     return (
       <p className="text-sm italic text-[var(--muted-foreground)]">
-        لا توجد بيانات في هذه الفترة
+        {t('analytics.noClicksInPeriod')}
       </p>
     );
   }
@@ -160,10 +162,16 @@ export function AnalyticsTrendChart({
       }
     >
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        <StatChip label="إجمالي النقرات" value={formatNumber(stats.totalClicks)} />
-        <StatChip label="متوسط يومي" value={formatNumber(stats.avgClicks)} />
         <StatChip
-          label="أعلى يوم"
+          label={t('analytics.totalClicksStat')}
+          value={formatNumber(stats.totalClicks)}
+        />
+        <StatChip
+          label={t('analytics.dailyAverage')}
+          value={formatNumber(stats.avgClicks)}
+        />
+        <StatChip
+          label={t('analytics.peakDay')}
           value={stats.peakDay ? formatShortDate(stats.peakDay.date) : '—'}
         />
       </div>

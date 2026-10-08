@@ -66,6 +66,7 @@ import {
 } from './sso/mail-sso.controller';
 import { MailSsoService } from './sso/mail-sso.service';
 import { MailSsoOidcService } from './sso/mail-sso-oidc.service';
+import { MailSecurityAuditService } from './mail-security-audit.service';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -144,6 +145,7 @@ import { AuthModule } from '../auth/auth.module';
     MailScheduledSendService,
     MailSsoService,
     MailSsoOidcService,
+    MailSecurityAuditService,
   ],
   exports: [
     MailSesModule,

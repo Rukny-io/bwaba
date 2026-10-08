@@ -146,6 +146,7 @@ describe('MailOutboundUsageService', () => {
     const service = new MailOutboundUsageService(
       prisma as never,
       unifiedEntitlement as never,
+      { get: jest.fn().mockReturnValue('true') } as never,
     );
     const usage = await service.getUsageForMailApp(mailAppUuid);
     expect(usage).toMatchObject({

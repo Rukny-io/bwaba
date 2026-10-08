@@ -4,18 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Skeleton } from '@heroui/react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { DashboardNotice } from '@/components/app/dashboard-section';
-import {
-  OrderDetailContent,
-  OrderDetailFooter,
-} from '@/components/orders/order-detail-content';
+import { OrderDetailContent } from '@/components/orders/order-detail-content';
 import { ApiException } from '@/lib/api-client';
+import { useTranslations } from '@/lib/i18n';
 import { fetchStoreOrder } from '@/lib/orders/api';
 import { findMockOrder } from '@/lib/orders/mock-orders';
 import type { StoreOrder } from '@/lib/orders/types';
 
 export function OrderDetailView() {
+  const { t } = useTranslations();
   const params = useParams<{ id: string }>();
   const orderId = params?.id ? decodeURIComponent(params.id) : '';
   const [order, setOrder] = useState<StoreOrder | null>(null);
@@ -44,10 +43,10 @@ export function OrderDetailView() {
         if (cancelled) return;
         setError(
           err instanceof ApiException && err.statusCode === 404
-            ? 'الطلب غير موجود.'
+            ? t('orders.detail.notFound')
             : err instanceof ApiException
               ? err.message
-              : 'تعذّر تحميل الطلب',
+              : t('orders.detail.loadFailed'),
         );
       })
       .finally(() => {
@@ -57,7 +56,7 @@ export function OrderDetailView() {
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [orderId, t]);
 
   return (
     <section className="dashboard-page flex w-full min-w-0 flex-col gap-4 pt-5 sm:pt-6">
@@ -65,26 +64,28 @@ export function OrderDetailView() {
         href="/app/orders"
         className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
       >
-        <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
-        الطلبات
+        <ArrowLeft className="size-4 rtl:rotate-180" strokeWidth={1.75} aria-hidden />
+        {t('orders.detail.back')}
       </Link>
 
       {loading ? (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-7 w-40 rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-xl" />
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-28 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-xl" />
         </div>
       ) : error ? (
-        <DashboardNotice tone="danger" title="تعذّر التحميل" description={error} />
+        <DashboardNotice
+          tone="danger"
+          title={t('orders.detail.loadFailedTitle')}
+          description={error}
+        />
       ) : order ? (
-        <div className="overflow-hidden rounded-xl bg-[var(--surface)]">
-          <div className="px-4 pt-4">
-            <OrderDetailContent order={order} />
-          </div>
-          <OrderDetailFooter order={order} />
-        </div>
+        <OrderDetailContent order={order} />
       ) : null}
     </section>
   );

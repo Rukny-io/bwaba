@@ -35,6 +35,7 @@ import {
 } from '@/components/products/product-list-primitives';
 import { ApiException } from '@/lib/api-client';
 import { formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductDetailSheetProps {
@@ -67,6 +68,7 @@ export function ProductDetailSheet({
   onEdit,
   onDelete,
 }: ProductDetailSheetProps) {
+  const { t } = useTranslations();
   const [detail, setDetail] = useState<StoreProduct | null>(product);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -98,14 +100,14 @@ export function ProductDetailSheet({
 
   const title = view ? getProductDisplayName(view) : '';
   const kind = view ? resolveProductKind(view) : 'PHYSICAL';
-  const status = view ? getProductStatusDisplay(view) : null;
-  const stock = view ? getProductStockDisplay(view) : null;
+  const status = view ? getProductStatusDisplay(view, t) : null;
+  const stock = view ? getProductStockDisplay(view, t) : null;
   const category = view ? getProductCategoryLabel(view) : null;
   const description = view ? getProductDescription(view) : null;
   const createdAt = view ? formatProductDate(view.createdAt) : null;
   const attributes = useMemo(
-    () => (view ? getProductAttributeRows(view) : []),
-    [view],
+    () => (view ? getProductAttributeRows(view, t) : []),
+    [view, t],
   );
   const variants = view?.variants ?? [];
   const salesCount = view?._count?.order_items;
@@ -137,7 +139,7 @@ export function ProductDetailSheet({
       onProductUpdated?.(full);
     } catch (err) {
       setUploadError(
-        err instanceof ApiException ? err.message : 'تعذّر رفع الصورة',
+        err instanceof ApiException ? err.message : t('products.uploadFailed'),
       );
     }
   }
@@ -145,8 +147,8 @@ export function ProductDetailSheet({
   if (!view) return null;
 
   const infoRows = [
-    ...(category ? [{ label: 'التصنيف', value: category }] : []),
-    ...(view.sku ? [{ label: 'رمز المنتج', value: view.sku, ltr: true }] : []),
+    ...(category ? [{ label: t('products.category'), value: category }] : []),
+    ...(view.sku ? [{ label: t('products.sku'), value: view.sku, ltr: true }] : []),
     ...attributes.map((row) => ({ label: row.label, value: row.value })),
   ];
 
@@ -161,13 +163,12 @@ export function ProductDetailSheet({
     >
       <Modal.Container placement="center" className="px-2 sm:px-3">
         <Modal.Dialog
-          dir="rtl"
-          lang="ar"
-          className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] p-0 !shadow-none ring-0 outline-none"
+
+          className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-0 !shadow-none ring-0 outline-none"
         >
           <div className="grid min-w-0 gap-4 p-4 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-5 sm:p-5">
             <div className="flex min-w-0 flex-col gap-2">
-              <div className="relative overflow-hidden rounded-xl bg-[var(--surface-secondary)]">
+              <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]">
                 <ProductThumbnail
                   imageUrl={heroImageUrl}
                   alt={title}
@@ -177,11 +178,10 @@ export function ProductDetailSheet({
                 {status ? (
                   <span
                     className={cn(
-                      'absolute start-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm',
-                      status.color === 'success' && 'bg-black/50 text-white',
-                      status.color === 'danger' && 'bg-[var(--danger)]/90 text-white',
-                      status.color === 'warning' && 'bg-black/50 text-white',
-                      status.color === 'default' && 'bg-black/50 text-white',
+                      'absolute start-2 top-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
+                      status.color === 'danger'
+                        ? 'bg-[var(--danger)]/15 text-[var(--danger)]'
+                        : 'bg-[var(--surface)]/90 text-[var(--foreground)]',
                     )}
                   >
                     {status.label}
@@ -201,7 +201,7 @@ export function ProductDetailSheet({
                         ? 'opacity-100'
                         : 'opacity-55 hover:opacity-75',
                     )}
-                    aria-label={`صورة ${index + 1}`}
+                    aria-label={t('products.imageAria', { n: index + 1 })}
                   >
                     <ProductThumbnail
                       imageUrl={getProductImageUrl(image)}
@@ -213,7 +213,7 @@ export function ProductDetailSheet({
                 {imageCount < 5 ? (
                   <ProductImageUploadButton
                     variant="tile"
-                    label={imageCount === 0 ? 'رفع' : '+'}
+                    label={imageCount === 0 ? t('products.upload') : '+'}
                     onPick={handleUploadImages}
                     className="!border-0 !bg-[var(--surface-secondary)] !shadow-none hover:!bg-[var(--surface-secondary)]/80 active:scale-[0.98]"
                   />
@@ -228,7 +228,7 @@ export function ProductDetailSheet({
             <div className="flex min-w-0 flex-col gap-3.5">
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-                  <ProductKindBadge kind={kind} label={getProductKindLabelFor(view)} />
+                  <ProductKindBadge kind={kind} label={getProductKindLabelFor(view, t)} />
                   {stock && stock.variant !== 'muted' ? (
                     <>
                       <span className="text-[var(--border)]" aria-hidden>·</span>
@@ -253,16 +253,16 @@ export function ProductDetailSheet({
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-0.5">
                 <MetaItem
-                  label="المخزون"
+                  label={t('products.stock')}
                   value={stock && stock.variant !== 'muted' ? stock.label : '—'}
                 />
                 <MetaItem
-                  label="المبيعات"
+                  label={t('products.sales')}
                   value={
                     typeof salesCount === 'number' ? formatNumber(salesCount) : '—'
                   }
                 />
-                <MetaItem label="تاريخ الإضافة" value={createdAt ?? '—'} />
+                <MetaItem label={t('products.addedOn')} value={createdAt ?? '—'} />
               </div>
 
               {description ? (
@@ -293,7 +293,7 @@ export function ProductDetailSheet({
               {variants.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
-                    المتغيرات
+                    {t('products.variants')}
                   </p>
                   <ul className="flex flex-col gap-1">
                     {variants.map((variant) => {
@@ -304,7 +304,7 @@ export function ProductDetailSheet({
                           className="flex items-center justify-between gap-2 rounded-lg px-0.5 py-1"
                         >
                           <span className="min-w-0 truncate text-[12px] text-[var(--foreground)]">
-                            {attrs || variant.sku || 'متغير'}
+                            {attrs || variant.sku || t('products.variantFallback')}
                           </span>
                           <span
                             dir="ltr"
@@ -330,7 +330,7 @@ export function ProductDetailSheet({
                       className="h-10 min-w-0 flex-1 gap-1.5 rounded-xl text-[13px] font-medium !shadow-none"
                     >
                       <Pencil className="size-3.5" strokeWidth={2} aria-hidden />
-                      تعديل
+                      {t('products.edit')}
                     </Button>
                   ) : null}
                   {onDelete ? (
@@ -342,7 +342,7 @@ export function ProductDetailSheet({
                       className="h-10 min-w-0 flex-1 gap-1.5 rounded-xl text-[13px] font-medium !shadow-none"
                     >
                       <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
-                      حذف
+                      {t('products.delete')}
                     </Button>
                   ) : null}
                 </div>

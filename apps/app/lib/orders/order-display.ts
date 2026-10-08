@@ -28,38 +28,52 @@ export interface OrderStatusStyle {
 const ORDER_STATUS_STYLES: Record<string, OrderStatusStyle> = {
   PENDING: {
     label: 'معلّق',
-    textClassName: 'text-[var(--warning)]',
-    dotClassName: 'bg-[var(--warning)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--warning)_40%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--warning)_55%,var(--muted-foreground))]',
   },
   CONFIRMED: {
     label: 'مؤكد',
-    textClassName: 'text-[var(--accent)]',
-    dotClassName: 'bg-[var(--accent)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--accent)_35%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--accent)_50%,var(--muted-foreground))]',
   },
   PROCESSING: {
     label: 'قيد التجهيز',
-    textClassName: 'text-[#2563eb]',
-    dotClassName: 'bg-[#2563eb]',
+    textClassName:
+      'text-[color-mix(in_oklab,#3b82f6_35%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,#3b82f6_50%,var(--muted-foreground))]',
   },
   SHIPPED: {
     label: 'تم الشحن',
-    textClassName: 'text-[#7c3aed]',
-    dotClassName: 'bg-[#7c3aed]',
+    textClassName:
+      'text-[color-mix(in_oklab,#8b5cf6_35%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,#8b5cf6_50%,var(--muted-foreground))]',
   },
   OUT_FOR_DELIVERY: {
     label: 'في الطريق',
-    textClassName: 'text-[#0891b2]',
-    dotClassName: 'bg-[#0891b2]',
+    textClassName:
+      'text-[color-mix(in_oklab,#06b6d4_35%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,#06b6d4_50%,var(--muted-foreground))]',
   },
   DELIVERED: {
     label: 'مكتمل',
-    textClassName: 'text-[var(--success)]',
-    dotClassName: 'bg-[var(--success)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--success)_40%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--success)_55%,var(--muted-foreground))]',
   },
   CANCELLED: {
     label: 'ملغي',
-    textClassName: 'text-[var(--danger)]',
-    dotClassName: 'bg-[var(--danger)]',
+    textClassName:
+      'text-[color-mix(in_oklab,var(--danger)_40%,var(--muted-foreground))]',
+    dotClassName:
+      'bg-[color-mix(in_oklab,var(--danger)_55%,var(--muted-foreground))]',
   },
   REFUNDED: {
     label: 'مسترد',
@@ -175,6 +189,16 @@ export function getOrderCustomerInitials(name: string): string {
 
 export type OrderStatusFilter = 'all' | OrderStatus;
 
+export const ORDER_STATUS_FILTER_IDS: OrderStatusFilter[] = [
+  'all',
+  'PENDING',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+];
+
+/** @deprecated Prefer ORDER_STATUS_FILTER_IDS + t('orders.status.*') */
 export const ORDER_STATUS_FILTERS: {
   id: OrderStatusFilter;
   label: string;

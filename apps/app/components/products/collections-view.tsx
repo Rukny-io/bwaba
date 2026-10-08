@@ -5,10 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Layers, Package, Pencil, Plus } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import {
-  dashboardPagePanelClass,
-  dashboardPageSectionClass,
-} from '@/components/app/dashboard-page-frame';
 import { CollectionsPageActions } from '@/components/products/collections/collections-page-actions';
 import { CreateCollectionDialog } from '@/components/products/collections/create-collection-dialog';
 import { EditCollectionDialog } from '@/components/products/collections/edit-collection-dialog';
@@ -28,13 +24,12 @@ import {
   exportAllCollectionsToCsv,
   exportCollectionProductsToCsv,
 } from '@/lib/collections/export';
-import { PRODUCT_CATALOG_CONFIG } from '@/components/products/product-catalog-config';
 import { formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-const config = PRODUCT_CATALOG_CONFIG.collections;
-
 export function CollectionsView() {
+  const { t } = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [collections, setCollections] = useState<ProductCollection[]>([]);
@@ -57,14 +52,14 @@ export function CollectionsView() {
       });
     } catch (err) {
       setError(
-        err instanceof ApiException ? err.message : 'تعذّر تحميل المجموعات',
+        err instanceof ApiException ? err.message : t('collections.loadFailed'),
       );
       setCollections([]);
       setSelectedCollectionId(null);
     } finally {
       setLoadingCollections(false);
     }
-  }, []);
+  }, [t]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -142,7 +137,7 @@ export function CollectionsView() {
   }
 
   return (
-    <section className={dashboardPageSectionClass}>
+    <section className="dashboard-page flex w-full min-w-0 flex-col gap-4 pt-5 sm:gap-4 sm:pt-6">
       <CreateCollectionDialog
         open={createOpen}
         onClose={handleCreateClose}
@@ -164,28 +159,31 @@ export function CollectionsView() {
         }}
       />
 
-      <DashboardPageHeader
-        title="المجموعات"
-        description="نظّم منتجاتك في مجموعات واعرضها في متجرك"
-        actions={
-          <CollectionsPageActions
-            addLabel={config.addButtonLabel}
-            onAdd={() => setCreateOpen(true)}
-            onExport={handleExport}
-            exportDisabled={loadingCollections || !hasExportableData}
-            exportLabel={
-              selectedCollection && collectionProducts.length > 0
-                ? 'تصدير المجموعة'
-                : 'تصدير الكل'
-            }
-          />
-        }
-      />
+      <div className="rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+        <DashboardPageHeader
+          className="mb-0"
+          title={t('collections.title')}
+          description={t('collections.description')}
+          actions={
+            <CollectionsPageActions
+              addLabel={t('collections.add')}
+              onAdd={() => setCreateOpen(true)}
+              onExport={handleExport}
+              exportDisabled={loadingCollections || !hasExportableData}
+              exportLabel={
+                selectedCollection && collectionProducts.length > 0
+                  ? t('collections.exportOne')
+                  : t('collections.exportAll')
+              }
+            />
+          }
+        />
+      </div>
 
       {error ? (
         <div
           className={cn(
-            dashboardPagePanelClass,
+            'rounded-xl bg-[var(--surface)] p-4 sm:p-5',
             'border border-[var(--danger)]/20 bg-[var(--danger)]/5 text-center',
           )}
         >
@@ -196,40 +194,40 @@ export function CollectionsView() {
       {!error && !loadingCollections && sortedCollections.length === 0 ? (
         <div
           className={cn(
-            dashboardPagePanelClass,
+            'rounded-xl bg-[var(--surface)] p-4 sm:p-5',
             'items-center border border-dashed border-[var(--border)] py-16 text-center sm:py-20',
           )}
         >
-          <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
+          <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--muted-foreground)]">
             <Layers className="size-5" strokeWidth={1.75} aria-hidden />
           </div>
           <p className="text-sm font-semibold text-[var(--foreground)] sm:text-base">
-            {config.emptyTitle}
+            {t('collections.emptyTitle')}
           </p>
           <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
-            {config.emptyDescription}
+            {t('collections.emptyDescription')}
           </p>
           <Button
             onPress={() => setCreateOpen(true)}
             className="mt-5 h-9 gap-1.5 rounded-lg bg-[var(--primary)] px-3.5 text-sm font-medium text-[var(--primary-foreground)] hover:opacity-90"
           >
             <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-            {config.addButtonLabel}
+            {t('collections.add')}
           </Button>
         </div>
       ) : null}
 
       {!error && (loadingCollections || sortedCollections.length > 0) ? (
-        <div className={cn(dashboardPagePanelClass, 'gap-4')}>
+        <div className={cn('rounded-xl bg-[var(--surface)] p-4 sm:p-5', 'gap-4')}>
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-[var(--foreground)]">
-                مجموعاتك
+                {t('collections.yourCollections')}
               </h2>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                 {loadingCollections
-                  ? 'جاري التحميل…'
-                  : `${formatNumber(sortedCollections.length)} مجموعة`}
+                  ? t('collections.loading')
+                  : t('collections.count', { n: formatNumber(sortedCollections.length) })}
               </p>
             </div>
           </div>
@@ -245,7 +243,7 @@ export function CollectionsView() {
       ) : null}
 
       {!error && selectedCollection ? (
-        <div className={cn(dashboardPagePanelClass, 'gap-5')}>
+        <div className={cn('rounded-xl bg-[var(--surface)] p-4 sm:p-5', 'gap-5')}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -256,11 +254,11 @@ export function CollectionsView() {
                   {getCollectionDisplayName(selectedCollection)}
                 </h2>
                 <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-0.5 text-xs font-medium text-[var(--muted-foreground)]">
-                  {formatNumber(collectionProducts.length)} منتج
+                  {t('collections.productCount', { n: formatNumber(collectionProducts.length) })}
                 </span>
                 {!selectedCollection.isActive ? (
                   <span className="rounded-full bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] px-2.5 py-0.5 text-xs font-medium text-[var(--warning)]">
-                    مخفية
+                    {t('collections.hidden')}
                   </span>
                 ) : null}
               </div>
@@ -277,10 +275,10 @@ export function CollectionsView() {
             <Button
               variant="ghost"
               onPress={() => setEditingCollection(selectedCollection)}
-              className="h-9 shrink-0 gap-1.5 rounded-lg px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"
+              className="h-9 shrink-0 gap-1.5 rounded-lg px-3 text-sm font-medium text-[var(--foreground)] !shadow-none hover:bg-[var(--surface-secondary)]"
             >
               <Pencil className="size-3.5" aria-hidden />
-              تعديل
+              {t('collections.edit')}
             </Button>
           </div>
 
@@ -298,23 +296,23 @@ export function CollectionsView() {
                 aria-hidden
               />
               <p className="text-sm font-semibold text-[var(--foreground)]">
-                لا توجد منتجات في هذه المجموعة
+                {t('collections.emptyProductsTitle')}
               </p>
               <p className="mt-1 max-w-sm text-xs text-[var(--muted-foreground)] sm:text-sm">
-                أضف منتجات عند إنشاء المجموعة أو عدّلها لاحقاً.
+                {t('collections.emptyProductsDescription')}
               </p>
               <Button
                 variant="ghost"
                 onPress={() => setEditingCollection(selectedCollection)}
                 className="mt-4 h-9 rounded-lg px-3 text-sm font-medium text-[var(--primary)] hover:bg-[var(--surface-secondary)]"
               >
-                تعديل المجموعة
+                {t('collections.editCollection')}
               </Button>
             </div>
           ) : (
             <div
               className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-              aria-label="منتجات هذه المجموعة"
+              aria-label={t('collections.productsAria')}
             >
               {collectionProducts.map((product) => (
                 <CollectionProductCard key={product.id} product={product} />

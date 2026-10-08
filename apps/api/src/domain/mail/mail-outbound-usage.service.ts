@@ -1,9 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MailPlan, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
@@ -40,7 +35,9 @@ export class MailOutboundUsageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
-    private readonly config: ConfigService,
+    private readonly config: ConfigService = {
+      get: () => undefined,
+    } as unknown as ConfigService,
   ) {}
 
   private isUnifiedBillingOnly(): boolean {
@@ -48,29 +45,31 @@ export class MailOutboundUsageService {
     return raw === 'true' || raw === '1';
   }
 
-  async getUsageForMailApp(mailAppUuid: string): Promise<MailOutboundUsageView | null> {
+  async getUsageForMailApp(
+    mailAppUuid: string,
+  ): Promise<MailOutboundUsageView | null> {
     if (this.isUnifiedBillingOnly()) {
       const unified =
         await this.unifiedEntitlement.getOutboundUsageForMailApp(mailAppUuid);
       if (unified) {
-      return {
-        plan: MailPlan.STARTER,
-        planId: unified.planId,
-        planName: unified.planName,
-        status: unified.status,
-        included: unified.included,
-        used: unified.used,
-        packCredits: unified.packCredits,
-        allowance: unified.allowance,
-        remaining: unified.remaining,
-        percentUsed: unified.percentUsed,
-        periodStart: unified.periodStart,
-        periodEnd: unified.periodEnd,
-        packsAvailable: false,
-        packEmails: 0,
-        packPriceIqd: null,
-        unified: true,
-      };
+        return {
+          plan: MailPlan.STARTER,
+          planId: unified.planId,
+          planName: unified.planName,
+          status: unified.status,
+          included: unified.included,
+          used: unified.used,
+          packCredits: unified.packCredits,
+          allowance: unified.allowance,
+          remaining: unified.remaining,
+          percentUsed: unified.percentUsed,
+          periodStart: unified.periodStart,
+          periodEnd: unified.periodEnd,
+          packsAvailable: false,
+          packEmails: 0,
+          packPriceIqd: null,
+          unified: true,
+        };
       }
     }
 
@@ -133,7 +132,8 @@ export class MailOutboundUsageService {
       throw new HttpException(
         {
           code: 'mail_plan_inactive',
-          message: 'This Mail app needs an active plan before you can send mail.',
+          message:
+            'This Mail app needs an active plan before you can send mail.',
         },
         HttpStatus.PAYMENT_REQUIRED,
       );

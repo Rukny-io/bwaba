@@ -7,6 +7,7 @@ import { MailPlanUsageBar } from "@/components/apps/mail-plan-stat-tile";
 import { formatMailAliasLimit, MAIL_INCLUDED_OUTBOUND } from "@/lib/mail-plans";
 import type { MailPlanLimits } from "@/lib/mail-plans";
 import type {
+  MailActiveLimitsSnapshot,
   MailSubscriptionView,
   MailUnifiedPlanSnapshot,
 } from "@/lib/mail-subscription-client";
@@ -22,10 +23,17 @@ function formatRenewalDate(iso: string | null | undefined): string {
   });
 }
 
-function planLabel(subscription: MailSubscriptionView | null): string {
-  if (!subscription) return "No active plan";
-  const base = (subscription.planName || subscription.planId || "").trim();
-  return base || "No active plan";
+function planLabel(
+  activeLimits: MailActiveLimitsSnapshot | null,
+  subscription: MailSubscriptionView | null,
+  unifiedPlan: MailUnifiedPlanSnapshot | null,
+): string {
+  if (unifiedPlan?.marketingNameEn) return unifiedPlan.marketingNameEn;
+  if (subscription?.planName || subscription?.planId) {
+    return (subscription.planName || subscription.planId).trim();
+  }
+  if (activeLimits?.planId) return String(activeLimits.planId);
+  return "No active plan";
 }
 
 export function MailMailboxesPlanPanel({
@@ -33,6 +41,7 @@ export function MailMailboxesPlanPanel({
   loading,
   hasActivePlan,
   subscription,
+  activeLimits = null,
   unifiedPlan,
   limits,
   limitsOpen,
@@ -43,11 +52,14 @@ export function MailMailboxesPlanPanel({
   billingLabel,
   externalBilling,
   domainSettingsHref,
+  showBilling = true,
+  showSeatUsage = true,
 }: {
   domain: string;
   loading: boolean;
   hasActivePlan: boolean;
   subscription: MailSubscriptionView | null;
+  activeLimits?: MailActiveLimitsSnapshot | null;
   unifiedPlan: MailUnifiedPlanSnapshot | null;
   limits?: MailPlanLimits;
   limitsOpen: boolean;
@@ -58,10 +70,19 @@ export function MailMailboxesPlanPanel({
   billingLabel: string;
   externalBilling?: boolean;
   domainSettingsHref: string;
+  showBilling?: boolean;
+  showSeatUsage?: boolean;
 }) {
+  const planKey = (
+    activeLimits?.planId ||
+    subscription?.planId ||
+    ""
+  ).toLowerCase() as keyof typeof MAIL_INCLUDED_OUTBOUND;
   const outboundMonthly =
     unifiedPlan?.monthlyQuota ??
-    (subscription?.planId ? MAIL_INCLUDED_OUTBOUND[subscription.planId] : null);
+    (planKey in MAIL_INCLUDED_OUTBOUND
+      ? MAIL_INCLUDED_OUTBOUND[planKey]
+      : null);
   const mailboxLimit = seatLimit || limits?.mailboxesIncluded || 0;
   const panelClass = "rounded-2xl bg-[var(--surface)] p-4 sm:p-5";
 
@@ -118,7 +139,7 @@ export function MailMailboxesPlanPanel({
         <div className="min-w-0 space-y-2">
           <p className="text-base font-medium text-[var(--foreground)]">{domain}</p>
           <p className="text-sm text-[var(--muted-foreground)]">
-            {loading ? "…" : planLabel(subscription)}
+            {loading ? "…" : planLabel(activeLimits, subscription, unifiedPlan)}
             {!loading && subscription?.renewsAt ? (
               <>
                 {" · Renews "}
@@ -141,24 +162,31 @@ export function MailMailboxesPlanPanel({
             </div>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-sm text-[var(--muted-foreground)]">
-          <button
-            type="button"
-            onClick={onToggleLimits}
-            className="inline-flex items-center gap-0.5 font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
-            aria-expanded={limitsOpen}
-          >
-            Limits
-            <ChevronDown
-              className={cn("size-3.5 transition-transform", limitsOpen && "rotate-180")}
-              aria-hidden
-            />
-          </button>
-          {BillingLink}
-        </div>
+        {showBilling || showSeatUsage ? (
+          <div className="flex shrink-0 items-center gap-3 text-sm text-[var(--muted-foreground)]">
+            {showSeatUsage ? (
+              <button
+                type="button"
+                onClick={onToggleLimits}
+                className="inline-flex items-center gap-0.5 font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
+                aria-expanded={limitsOpen}
+              >
+                Limits
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 transition-transform",
+                    limitsOpen && "rotate-180",
+                  )}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+            {showBilling ? BillingLink : null}
+          </div>
+        ) : null}
       </div>
 
-      {mailboxLimit > 0 ? (
+      {showSeatUsage && mailboxLimit > 0 ? (
         <MailPlanUsageBar
           label="Mailboxes"
           used={activeMailboxCount}
@@ -167,7 +195,7 @@ export function MailMailboxesPlanPanel({
         />
       ) : null}
 
-      {limitsOpen && limits ? (
+      {showSeatUsage && limitsOpen && limits ? (
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div className="flex justify-between gap-3">
             <dt className="text-[var(--muted-foreground)]">Forwarding</dt>

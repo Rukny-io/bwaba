@@ -134,11 +134,14 @@ export class MailAppsService {
     opts?: {
       membershipRole?: string;
       isOwner?: boolean;
+      canManageMailboxes?: boolean;
+      canManageBilling?: boolean;
       slotIndexOverride?: number;
     },
   ) {
     const active =
       subscription && subscription.status === 'ACTIVE' ? subscription : null;
+    const isOwner = opts?.isOwner ?? true;
     return {
       id: app.id,
       appId: app.appId,
@@ -160,7 +163,9 @@ export class MailAppsService {
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
       membershipRole: opts?.membershipRole ?? 'OWNER',
-      isOwner: opts?.isOwner ?? true,
+      isOwner,
+      canManageMailboxes: opts?.canManageMailboxes ?? isOwner,
+      canManageBilling: opts?.canManageBilling ?? isOwner,
       subscription: active
         ? {
             plan: active.plan,
@@ -318,9 +323,17 @@ export class MailAppsService {
         const slotIndex =
           m.slotIndex ??
           (await this.members.ensureAcceptedMemberSlot(m.mailAppId, userId));
+        const memberAccess = {
+          app: m.mailApp,
+          isOwner: false as const,
+          role: m.role,
+          member: m,
+        };
         return this.toView(m.mailApp, m.mailApp.subscription, {
           membershipRole: m.role,
           isOwner: false,
+          canManageMailboxes: this.access.canManageMailboxes(memberAccess),
+          canManageBilling: this.access.canManageBilling(memberAccess),
           slotIndexOverride: slotIndex ?? undefined,
         });
       }),
@@ -331,6 +344,8 @@ export class MailAppsService {
         this.toView(app, app.subscription, {
           membershipRole: 'OWNER',
           isOwner: true,
+          canManageMailboxes: true,
+          canManageBilling: true,
         }),
       ),
       ...memberViews,
@@ -371,6 +386,8 @@ export class MailAppsService {
       app: this.toView(app, app.subscription, {
         membershipRole,
         isOwner: access.isOwner,
+        canManageMailboxes: this.access.canManageMailboxes(access),
+        canManageBilling: this.access.canManageBilling(access),
         slotIndexOverride,
       }),
     };

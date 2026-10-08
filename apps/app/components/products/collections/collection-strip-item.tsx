@@ -6,6 +6,7 @@ import { getCollectionDisplayName } from '@/lib/collections/api';
 import type { ProductCollection } from '@/lib/collections/types';
 import { formatNumber } from '@/lib/dashboard-format';
 import { resolveMediaUrl } from '@/lib/media-url';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CollectionStripItemProps {
@@ -21,6 +22,7 @@ function CollectionStripItemComponent({
   onSelect,
   onEdit,
 }: CollectionStripItemProps) {
+  const { t } = useTranslations();
   const [imageFailed, setImageFailed] = useState(false);
   const title = getCollectionDisplayName(collection);
   const imageUrl = resolveMediaUrl(collection.imagePath);
@@ -29,8 +31,8 @@ function CollectionStripItemComponent({
   const showImage = Boolean(thumbUrl) && !imageFailed;
   const productLabel =
     collection.productsCount === 1
-      ? 'منتج واحد'
-      : `${formatNumber(collection.productsCount)} منتجات`;
+      ? t('collections.productOne')
+      : t('collections.productMany', { n: formatNumber(collection.productsCount) });
 
   return (
     <div className="group flex w-[5.25rem] shrink-0 flex-col items-center gap-2.5 sm:w-[5.75rem]">
@@ -43,10 +45,10 @@ function CollectionStripItemComponent({
         >
           <div
             className={cn(
-              'relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--surface-secondary)] ring-1 transition-all duration-150',
+              'relative aspect-square w-full overflow-hidden rounded-xl bg-[var(--surface-secondary)] border transition-colors duration-150',
               selected
-                ? 'ring-2 ring-[var(--foreground)]'
-                : 'ring-[var(--border)] group-hover:ring-[color-mix(in_srgb,var(--border)_55%,var(--foreground)_25%)]',
+                ? 'border-[var(--foreground)]'
+                : 'border-[var(--border)] group-hover:border-[color-mix(in_srgb,var(--border)_55%,var(--foreground)_25%)]',
             )}
           >
             {showImage ? (
@@ -58,9 +60,9 @@ function CollectionStripItemComponent({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--primary)]/8 via-[var(--surface-secondary)] to-[var(--surface-secondary)]">
+              <div className="flex h-full w-full items-center justify-center bg-[var(--surface-secondary)]">
                 <Layers
-                  className="size-7 text-[var(--muted-foreground)]/30 sm:size-8"
+                  className="size-7 text-[var(--muted-foreground)]/35 sm:size-8"
                   strokeWidth={1.5}
                   aria-hidden
                 />
@@ -73,9 +75,9 @@ function CollectionStripItemComponent({
           <button
             type="button"
             onClick={onEdit}
-            aria-label={`تعديل ${title}`}
+            aria-label={t('collections.editAria', { name: title })}
             className={cn(
-              'absolute end-0 top-0 z-10 flex size-6 translate-x-1 -translate-y-1 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] shadow-sm transition-all duration-150 hover:border-[var(--foreground)]/20 hover:text-[var(--foreground)] sm:size-7',
+              'absolute end-1 top-1 z-10 flex size-6 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] transition-colors duration-150 hover:border-[var(--foreground)]/20 hover:text-[var(--foreground)] sm:size-7',
               selected ? 'opacity-100' : 'max-sm:hidden',
               'sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100',
             )}
@@ -116,7 +118,7 @@ function CollectionStripItemComponent({
 export function CollectionStripItemSkeleton() {
   return (
     <div className="flex w-[5.25rem] shrink-0 animate-pulse flex-col items-center gap-2.5 sm:w-[5.75rem]">
-      <div className="aspect-square w-full rounded-2xl bg-[var(--surface-secondary)]/80" />
+      <div className="aspect-square w-full rounded-xl bg-[var(--surface-secondary)]/80" />
       <div className="h-2.5 w-[72%] rounded bg-[var(--surface-secondary)]/60" />
       <div className="h-2 w-[55%] rounded bg-[var(--surface-secondary)]/40" />
     </div>

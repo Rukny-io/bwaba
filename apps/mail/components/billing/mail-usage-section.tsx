@@ -18,6 +18,7 @@ import {
 export function MailUsageSection() {
   const [loading, setLoading] = useState(true);
   const [usage, setUsage] = useState<MailOutboundUsageView | null>(null);
+  const [workspacePlanId, setWorkspacePlanId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [thousands, setThousands] = useState("1");
   const [buying, setBuying] = useState(false);
@@ -29,10 +30,12 @@ export function MailUsageSection() {
     try {
       const next = await fetchMailOutboundUsage();
       setUsage(next.usage);
+      setWorkspacePlanId(next.activeLimits?.planId ?? null);
       setCanManage(next.canManageBilling);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load usage.");
       setUsage(null);
+      setWorkspacePlanId(null);
     } finally {
       setLoading(false);
     }
@@ -97,8 +100,8 @@ export function MailUsageSection() {
       title="Usage"
       description={
         usage.unified
-          ? "Email sends from mailboxes and API share one account quota."
-          : "Outbound emails sent this billing period (per recipient)."
+          ? "Outbound sends share this workspace plan quota."
+          : "Outbound emails sent this billing period for this workspace (per recipient)."
       }
     >
       {error ? (
@@ -165,7 +168,9 @@ export function MailUsageSection() {
           <p className="text-sm text-[var(--muted-foreground)]">
             {usage.planName
               ? `${usage.planName} plan`
-              : "Unified Email API plan"}
+              : workspacePlanId
+                ? `${workspacePlanId} plan`
+                : "Unified Email API plan"}
             . Buy overage packs or upgrade in the developer portal when you need
             more volume.
           </p>

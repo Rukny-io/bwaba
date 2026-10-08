@@ -4,6 +4,7 @@ import { useId, useRef } from 'react';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { Chip, cn } from '@heroui/react';
 import { ProductFormSection } from '@/components/products/create/product-form-section';
+import { useTranslations } from '@/lib/i18n';
 
 export interface PendingProductImage {
   id: string;
@@ -32,6 +33,7 @@ export function ProductImagesUpload({
   maxImages = 5,
   className,
 }: ProductImagesUploadProps) {
+  const { t } = useTranslations();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const canAddMore = images.length < maxImages;
@@ -50,10 +52,10 @@ export function ProductImagesUpload({
 
   return (
     <ProductFormSection
-      title="صور المنتج"
+      title={t('products.create.imagesTitle')}
       description={
         images.length === 0
-          ? `حتى ${maxImages} صور · JPEG, PNG, WebP`
+          ? t('products.create.imagesHint', { n: maxImages })
           : undefined
       }
       className={className}
@@ -97,7 +99,9 @@ export function ProductImagesUpload({
                     <ImagePlus className="size-4" strokeWidth={1.5} />
                   </div>
                   <p className="mt-1.5 line-clamp-2 text-[10px] font-medium leading-tight text-muted sm:text-[11px]">
-                    {images.length === 0 ? 'اضغط للرفع' : 'إضافة'}
+                    {images.length === 0
+                      ? t('products.create.uploadTap')
+                      : t('products.create.add')}
                   </p>
                 </>
               )}
@@ -119,14 +123,14 @@ export function ProductImagesUpload({
                 variant="secondary"
                 className="absolute start-1.5 top-1.5 z-10 h-5 bg-black/55 text-[9px] text-white"
               >
-                الرئيسية
+                {t('products.create.primary')}
               </Chip>
             ) : null}
             <button
               type="button"
               onClick={() => onRemove(image.id)}
               className="absolute end-1.5 top-1.5 z-10 flex size-6 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/70"
-              aria-label="إزالة الصورة"
+              aria-label={t('products.create.removeImage')}
             >
               <X className="size-3" />
             </button>

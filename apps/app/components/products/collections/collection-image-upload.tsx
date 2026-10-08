@@ -4,6 +4,7 @@ import { useId, useRef } from 'react';
 import Image from 'next/image';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { resolveMediaUrl } from '@/lib/media-url';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CollectionImageUploadProps {
@@ -27,6 +28,7 @@ export function CollectionImageUpload({
   onRemove,
   className,
 }: CollectionImageUploadProps) {
+  const { t } = useTranslations();
   const isPanel = layout === 'panel';
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,10 +87,10 @@ export function CollectionImageUpload({
                 <ImagePlus className="size-4" strokeWidth={1.5} />
               </div>
               <p className="text-[12px] font-medium text-[var(--muted-foreground)]">
-                أضف صورة البانر
+                {t('collections.addBanner')}
               </p>
               <p className="text-[11px] text-[var(--muted-foreground)]/65">
-                3200 × 410 بكسل
+                {t('collections.bannerSize')}
               </p>
             </div>
           )}
@@ -108,7 +110,7 @@ export function CollectionImageUpload({
               'absolute top-2 flex size-7 items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/60',
               isPanel ? 'end-2' : 'left-2.5',
             )}
-            aria-label="إزالة صورة البانر"
+            aria-label={t('collections.removeBanner')}
           >
             <X className="size-3.5" />
           </button>
@@ -171,9 +173,9 @@ export function CollectionImageUpload({
           onClick={onRemove}
           className={cn(
             'absolute flex items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/60',
-            isPanel ? 'end-2 top-2 size-7' : '-left-1.5 -top-1.5 size-5 border border-[var(--border)]/80 bg-[var(--surface)] text-[var(--muted-foreground)] shadow-sm hover:text-[var(--foreground)]',
+            isPanel ? 'end-2 top-2 size-7' : '-left-1.5 -top-1.5 size-5 border border-[var(--border)]/80 bg-[var(--surface)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
           )}
-          aria-label="إزالة صورة الشعار"
+          aria-label={t('collections.removeLogo')}
         >
           <X className={isPanel ? 'size-3.5' : 'size-3'} />
         </button>

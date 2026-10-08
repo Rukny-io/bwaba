@@ -97,12 +97,21 @@ export class MailAppAccessService {
     );
   }
 
+  /** Create / delete / disable / assign seats — owner & admin only. */
   canManageMailboxes(access: MailAppAccess): boolean {
     return (
-      access.isOwner ||
-      access.role === MailAppMemberRole.ADMIN ||
-      access.role === MailAppMemberRole.MEMBER
+      access.isOwner || access.role === MailAppMemberRole.ADMIN
     );
+  }
+
+  /** Password / 2FA / avatar on a seat the user may operate. */
+  canOperateMailbox(
+    userId: string,
+    access: MailAppAccess,
+    mailbox: { assignedUserId: string | null },
+  ): boolean {
+    if (this.canManageMailboxes(access)) return true;
+    return mailbox.assignedUserId === userId;
   }
 
   /** Owner, admin, or billing: view plan and open activation tickets. */

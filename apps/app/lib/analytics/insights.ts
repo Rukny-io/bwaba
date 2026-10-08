@@ -13,12 +13,18 @@ export interface AppInsight {
   href?: string;
 }
 
+type Translate = (
+  path: string,
+  vars?: Record<string, string | number>,
+) => string;
+
 export function buildAppInsights(input: {
   analytics: AnalyticsOverview;
   commerce: CommerceSnapshot;
   links: SocialLink[];
+  t: Translate;
 }): AppInsight[] {
-  const { analytics, commerce, links } = input;
+  const { analytics, commerce, links, t } = input;
   const insights: AppInsight[] = [];
   const { orderStats, productStats, storeStats } = commerce;
   const hiddenLinks = links.filter((l) => l.status === 'hidden');
@@ -28,8 +34,10 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'pending-orders',
       severity: 'warning',
-      title: `${formatNumber(orderStats.pendingOrders)} طلب معلّق`,
-      description: 'راجع الطلبات الجديدة وعالجها في أقرب وقت.',
+      title: t('analytics.insights.pendingOrdersTitle', {
+        n: formatNumber(orderStats.pendingOrders),
+      }),
+      description: t('analytics.insights.pendingOrdersDesc'),
       href: '/app/orders',
     });
   }
@@ -38,8 +46,10 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'low-stock',
       severity: 'warning',
-      title: `${formatNumber(productStats.lowStock)} منتج بمخزون منخفض`,
-      description: 'حدّث الكميات لتجنب نفاد المخزون أثناء الطلب.',
+      title: t('analytics.insights.lowStockTitle', {
+        n: formatNumber(productStats.lowStock),
+      }),
+      description: t('analytics.insights.lowStockDesc'),
       href: '/app/products',
     });
   }
@@ -48,8 +58,10 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'out-of-stock',
       severity: 'danger',
-      title: `${formatNumber(productStats.outOfStock)} منتج نفد مخزونه`,
-      description: 'أعد تفعيل المنتجات أو أخفِها من صفحتك.',
+      title: t('analytics.insights.outOfStockTitle', {
+        n: formatNumber(productStats.outOfStock),
+      }),
+      description: t('analytics.insights.outOfStockDesc'),
       href: '/app/products',
     });
   }
@@ -58,16 +70,20 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'clicks-down',
       severity: 'warning',
-      title: 'انخفاض في نقرات الروابط',
-      description: `تراجع بنسبة ${Math.abs(analytics.summary.changes.clicks)}% مقارنة بالفترة السابقة.`,
+      title: t('analytics.insights.clicksDownTitle'),
+      description: t('analytics.insights.clicksDownDesc', {
+        n: Math.abs(analytics.summary.changes.clicks),
+      }),
       href: '/app/analytics',
     });
   } else if (analytics.summary.changes.clicks > 15) {
     insights.push({
       id: 'clicks-up',
       severity: 'success',
-      title: 'نمو قوي في نقرات الروابط',
-      description: `زيادة بنسبة ${analytics.summary.changes.clicks}% عن الفترة السابقة.`,
+      title: t('analytics.insights.clicksUpTitle'),
+      description: t('analytics.insights.clicksUpDesc', {
+        n: analytics.summary.changes.clicks,
+      }),
       href: '/app/analytics',
     });
   }
@@ -76,8 +92,10 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'hidden-links',
       severity: 'info',
-      title: `${formatNumber(hiddenLinks.length)} رابط مخفي`,
-      description: 'هذه الروابط لا تظهر لزوار صفحتك حالياً.',
+      title: t('analytics.insights.hiddenLinksTitle', {
+        n: formatNumber(hiddenLinks.length),
+      }),
+      description: t('analytics.insights.hiddenLinksDesc'),
       href: '/app/links',
     });
   }
@@ -86,16 +104,16 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'no-links',
       severity: 'info',
-      title: 'ابدأ ببناء صفحتك',
-      description: 'أضف أول رابط لصفحتك الشخصية على ركني.',
+      title: t('analytics.insights.noLinksTitle'),
+      description: t('analytics.insights.noLinksDesc'),
       href: '/app/links',
     });
   } else if (activeLinks.length === 0) {
     insights.push({
       id: 'no-active-links',
       severity: 'warning',
-      title: 'لا توجد روابط نشطة',
-      description: 'فعّل رابطاً واحداً على الأقل ليظهر للزوار.',
+      title: t('analytics.insights.noActiveLinksTitle'),
+      description: t('analytics.insights.noActiveLinksDesc'),
       href: '/app/links',
     });
   }
@@ -104,16 +122,16 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'no-store',
       severity: 'info',
-      title: 'أنشئ متجرك',
-      description: 'أضف منتجاتك وابدأ باستقبال الطلبات من صفحتك.',
+      title: t('analytics.insights.noStoreTitle'),
+      description: t('analytics.insights.noStoreDesc'),
       href: '/app/products',
     });
   } else if (storeStats.hasStore && productStats.totalProducts === 0) {
     insights.push({
       id: 'no-products',
       severity: 'info',
-      title: 'أضف منتجاتك الأولى',
-      description: 'متجرك جاهز — ابدأ بإضافة منتجات للبيع.',
+      title: t('analytics.insights.noProductsTitle'),
+      description: t('analytics.insights.noProductsDesc'),
       href: '/app/products',
     });
   }
@@ -122,8 +140,10 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'processing-orders',
       severity: 'info',
-      title: `${formatNumber(orderStats.processingOrders)} طلب قيد المعالجة`,
-      description: 'تابع الشحن والتسليم للطلبات الجارية.',
+      title: t('analytics.insights.processingOrdersTitle', {
+        n: formatNumber(orderStats.processingOrders),
+      }),
+      description: t('analytics.insights.processingOrdersDesc'),
       href: '/app/orders',
     });
   }
@@ -136,8 +156,8 @@ export function buildAppInsights(input: {
     insights.push({
       id: 'all-good',
       severity: 'success',
-      title: 'أداء ممتاز',
-      description: 'صفحتك ومتجرك يعملان بشكل جيد — استمر!',
+      title: t('analytics.insights.allGoodTitle'),
+      description: t('analytics.insights.allGoodDesc'),
     });
   }
 

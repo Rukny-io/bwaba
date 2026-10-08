@@ -118,6 +118,7 @@ model User {
   mailSsoAccessLinksCreated      MailSsoAccessLink[]             @relation("mail_sso_link_creator")
   mailSsoIdentities              MailSsoIdentity[]
   mailQuarantineActions          MailQuarantineActionLog[]       @relation("mail_quarantine_actor")
+  mailSecurityAuditLogs          MailSecurityAuditLog[]           @relation("mail_security_audit_actor")
 
   // Developer Portal relations
   developerApps                DeveloperApp[]
@@ -3753,6 +3754,7 @@ model MailApp {
   filterRules                MailFilterRule[]
   securitySettings           MailAppSecuritySettings?
   quarantineActionLogs       MailQuarantineActionLog[]
+  securityAuditLogs          MailSecurityAuditLog[]
   domainVerificationRequests MailDomainVerificationRequest[]
   ssoSettings                MailAppSsoSettings?
   ssoAccessLinks             MailSsoAccessLink[]
@@ -4246,6 +4248,27 @@ model MailQuarantineActionLog {
   @@index([mailAppId, createdAt])
   @@index([actorUserId])
   @@map("mail_quarantine_action_logs")
+}
+
+/// Security-sensitive Mail workspace actions (team, SSO, mailbox access and billing).
+/// Metadata must never contain secrets or raw sign-in tokens.
+model MailSecurityAuditLog {
+  id          String   @id @default(uuid())
+  mailAppId   String
+  actorUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  actor   User?   @relation("mail_security_audit_actor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([mailAppId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@map("mail_security_audit_logs")
 }
 
 enum MailMessageDirection {

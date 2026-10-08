@@ -7,6 +7,7 @@ import {
   DiscountStripItem,
   DiscountStripItemSkeleton,
 } from '@/components/products/discounts/discount-strip-item';
+import { useTranslations } from '@/lib/i18n';
 
 interface DiscountStripProps {
   discounts: ProductDiscount[];
@@ -25,6 +26,7 @@ export function DiscountStrip({
   onEdit,
   className,
 }: DiscountStripProps) {
+  const { t } = useTranslations();
   const { ref, bind, isDragging, canScrollStart, canScrollEnd } =
     useHorizontalDragScroll<HTMLDivElement>();
 
@@ -47,7 +49,7 @@ export function DiscountStrip({
 
       <div
         ref={ref}
-        dir="rtl"
+
         {...bind}
         className={cn(
           '-mx-1 flex touch-pan-y gap-3.5 overflow-x-auto overscroll-x-contain py-1.5 ps-3 pe-2',
@@ -63,7 +65,7 @@ export function DiscountStrip({
           ))
         ) : discounts.length === 0 ? (
           <p className="cursor-default py-2 text-sm text-[var(--muted-foreground)]">
-            لا توجد خصومات بعد. اضغط «إضافة خصم» للبدء.
+            {t('discounts.stripEmpty')}
           </p>
         ) : (
           discounts.map((discount) => (

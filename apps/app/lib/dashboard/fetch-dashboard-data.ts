@@ -17,6 +17,7 @@ import {
   type WeeklySalesDay,
 } from '@/lib/commerce/types';
 import type { DashboardHomeData, ProfileMe } from '@/lib/dashboard/types';
+import { getDictionary } from '@/lib/i18n/server';
 import type { SocialLink } from '@/lib/links/types';
 
 const EMPTY_ANALYTICS: AnalyticsOverview = {
@@ -134,7 +135,8 @@ async function fetchCommerceSnapshot(): Promise<CommerceSnapshot> {
 }
 
 export async function getDashboardHomeData(days = 30): Promise<DashboardHomeData> {
-  const [analyticsRaw, commerce, links, profile] = await Promise.all([
+  const [{ t }, analyticsRaw, commerce, links, profile] = await Promise.all([
+    getDictionary(),
     apiFetch<Record<string, unknown>>(`/analytics/overview?days=${days}`),
     fetchCommerceSnapshot(),
     apiFetch<SocialLink[]>('/social-links/my-links'),
@@ -150,7 +152,7 @@ export async function getDashboardHomeData(days = 30): Promise<DashboardHomeData
     analytics,
     commerce,
     links: linkList,
-    insights: buildAppInsights({ analytics, commerce, links: linkList }),
+    insights: buildAppInsights({ analytics, commerce, links: linkList, t }),
     profile: profile ?? null,
   };
 }

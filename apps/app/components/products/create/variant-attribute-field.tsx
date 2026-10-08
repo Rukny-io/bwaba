@@ -10,6 +10,11 @@ import {
   cn,
 } from '@heroui/react';
 import type { VariantAttribute } from '@/lib/products/template-types';
+import {
+  getTemplateOptionLabel,
+  getVariantAttributeLabel,
+} from '@/lib/products/template-locale';
+import { useTranslations } from '@/lib/i18n';
 
 const CUSTOM_SELECT_OPTION = '__variant_custom__';
 
@@ -34,11 +39,13 @@ function VariantAttributeModeSwitch({
   onChange,
   label,
 }: VariantAttributeModeSwitchProps) {
+  const { t } = useTranslations();
+
   return (
     <div
       className="variant-attribute-mode flex rounded-xl bg-default p-0.5"
       role="tablist"
-      aria-label={`طريقة اختيار ${label}`}
+      aria-label={t('products.create.pickModeAria', { label })}
     >
       <button
         type="button"
@@ -46,13 +53,13 @@ function VariantAttributeModeSwitch({
         aria-selected={mode === 'list'}
         onClick={() => onChange('list')}
         className={cn(
-          'flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-[color,background-color,box-shadow] duration-150',
+          'flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors duration-150',
           mode === 'list'
-            ? 'bg-surface text-foreground shadow-sm'
+            ? 'bg-surface text-foreground'
             : 'text-muted hover:text-foreground',
         )}
       >
-        قائمة
+        {t('products.create.listMode')}
       </button>
       <button
         type="button"
@@ -60,13 +67,13 @@ function VariantAttributeModeSwitch({
         aria-selected={mode === 'custom'}
         onClick={() => onChange('custom')}
         className={cn(
-          'flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-[color,background-color,box-shadow] duration-150',
+          'flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors duration-150',
           mode === 'custom'
-            ? 'bg-surface text-foreground shadow-sm'
+            ? 'bg-surface text-foreground'
             : 'text-muted hover:text-foreground',
         )}
       >
-        مخصص
+        {t('products.create.customMode')}
       </button>
     </div>
   );
@@ -83,6 +90,8 @@ export function VariantAttributeField({
   value,
   onChange,
 }: VariantAttributeFieldProps) {
+  const { t, locale } = useTranslations();
+  const attributeLabel = getVariantAttributeLabel(attribute, locale);
   const [mode, setMode] = useState<AttributeInputMode>(() =>
     resolveAttributeMode(value, attribute.options),
   );
@@ -100,12 +109,12 @@ export function VariantAttributeField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-xs font-medium text-muted">{attribute.labelAr}</Label>
+      <Label className="text-xs font-medium text-muted">{attributeLabel}</Label>
 
       <VariantAttributeModeSwitch
         mode={mode}
         onChange={switchMode}
-        label={attribute.labelAr}
+        label={attributeLabel}
       />
 
       {mode === 'list' ? (
@@ -123,7 +132,7 @@ export function VariantAttributeField({
             }
             onChange(String(key));
           }}
-          placeholder="اختر…"
+          placeholder={t('products.create.selectPlaceholder')}
         >
           <Select.Trigger>
             <Select.Value />
@@ -131,18 +140,21 @@ export function VariantAttributeField({
           </Select.Trigger>
           <Select.Popover>
             <ListBox>
-              {attribute.options.map((option) => (
-                <ListBox.Item key={option} id={option} textValue={option}>
-                  {option}
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-              ))}
+              {attribute.options.map((option) => {
+                const optionLabel = getTemplateOptionLabel(option, locale);
+                return (
+                  <ListBox.Item key={option} id={option} textValue={optionLabel}>
+                    {optionLabel}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                );
+              })}
               <ListBox.Item
                 id={CUSTOM_SELECT_OPTION}
-                textValue="قيمة مخصصة"
+                textValue={t('products.create.customValue')}
                 className="text-accent"
               >
-                غير متوفر — أدخل قيمة مخصصة
+                {t('products.create.customUnavailable')}
                 <ListBox.ItemIndicator />
               </ListBox.Item>
             </ListBox>
@@ -155,7 +167,9 @@ export function VariantAttributeField({
           className="flex flex-col gap-0"
         >
           <Input
-            placeholder={`أدخل ${attribute.labelAr}`}
+            placeholder={t('products.create.enterAttribute', {
+              label: attributeLabel,
+            })}
             className="text-sm"
           />
         </TextField>

@@ -1,16 +1,12 @@
 'use client';
 
 import { pillTabClassName, pillTabGroupClassName } from '@/components/ui/pill-tab';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-export const ANALYTICS_PERIOD_OPTIONS = [
-  { days: 7, label: '7 أيام' },
-  { days: 30, label: '30 يوماً' },
-  { days: 90, label: '90 يوماً' },
-] as const;
+export const ANALYTICS_PERIOD_DAYS = [7, 30, 90] as const;
 
-export type AnalyticsPeriodDays =
-  (typeof ANALYTICS_PERIOD_OPTIONS)[number]['days'];
+export type AnalyticsPeriodDays = (typeof ANALYTICS_PERIOD_DAYS)[number];
 
 interface AnalyticsPeriodPickerProps {
   value: AnalyticsPeriodDays;
@@ -23,23 +19,25 @@ export function AnalyticsPeriodPicker({
   onChange,
   className,
 }: AnalyticsPeriodPickerProps) {
+  const { t } = useTranslations();
+
   return (
     <div
       className={cn(pillTabGroupClassName, className)}
       role="group"
-      aria-label="نطاق التاريخ"
+      aria-label={t('analytics.dateRange')}
     >
-      {ANALYTICS_PERIOD_OPTIONS.map((opt) => {
-        const active = value === opt.days;
+      {ANALYTICS_PERIOD_DAYS.map((days) => {
+        const active = value === days;
         return (
           <button
-            key={opt.days}
+            key={days}
             type="button"
-            onClick={() => onChange(opt.days)}
+            onClick={() => onChange(days)}
             aria-pressed={active}
             className={pillTabClassName(active)}
           >
-            {opt.label}
+            {t('analytics.periodDays', { n: days })}
           </button>
         );
       })}

@@ -7,6 +7,7 @@ import {
   parseSettingsSection,
   type SettingsSectionId,
 } from '@/lib/settings/sections';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 function SettingsNavButton({
@@ -50,6 +51,7 @@ export function SettingsNavAside() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const active = parseSettingsSection(searchParams.get('section'));
+  const { t } = useTranslations();
 
   const setSection = useCallback(
     (id: SettingsSectionId) => {
@@ -69,18 +71,18 @@ export function SettingsNavAside() {
   return (
     <aside
       className="relative flex h-full min-h-0 w-full min-w-0 flex-col px-4 pb-8 pt-4"
-      aria-label="أقسام الإعدادات"
+      aria-label={t('nav.settings')}
     >
       <p className="mb-3 px-1 text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-        الإعدادات
+        {t('nav.settings')}
       </p>
       <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {SETTINGS_SECTIONS.map((section) => (
           <SettingsNavButton
             key={section.id}
             active={active === section.id}
-            label={section.label}
-            description={section.description}
+            label={t(`settings.${section.id}.label`)}
+            description={t(`settings.${section.id}.description`)}
             onClick={() => setSection(section.id)}
           />
         ))}
@@ -95,6 +97,7 @@ export function SettingsNavMobile() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const active = parseSettingsSection(searchParams.get('section'));
+  const { t } = useTranslations();
 
   const setSection = useCallback(
     (id: SettingsSectionId) => {
@@ -112,19 +115,13 @@ export function SettingsNavMobile() {
   );
 
   return (
-    <div
-      className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden"
-      role="tablist"
-      aria-label="أقسام الإعدادات"
-    >
+    <div className="flex gap-1 overflow-x-auto pb-1 xl:hidden" aria-label={t('nav.settings')}>
       {SETTINGS_SECTIONS.map((section) => {
         const isActive = active === section.id;
         return (
           <button
             key={section.id}
             type="button"
-            role="tab"
-            aria-selected={isActive}
             onClick={() => setSection(section.id)}
             className={cn(
               'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors',
@@ -133,7 +130,7 @@ export function SettingsNavMobile() {
                 : 'bg-[var(--surface-secondary)] text-[var(--foreground)]',
             )}
           >
-            {section.label}
+            {t(`settings.${section.id}.label`)}
           </button>
         );
       })}

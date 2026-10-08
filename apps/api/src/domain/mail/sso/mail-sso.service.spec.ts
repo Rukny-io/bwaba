@@ -1,11 +1,10 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InvitationStatus, MailAppMemberRole } from '@prisma/client';
 import { MailSsoService } from './mail-sso.service';
 
-jest.mock('../mail-mailboxes.service', () => ({ MailMailboxesService: class {} }));
+jest.mock('../mail-mailboxes.service', () => ({
+  MailMailboxesService: class {},
+}));
 import { hashMailSsoToken, newMailSsoToken } from './mail-sso-token.util';
 
 describe('MailSsoService', () => {
@@ -86,7 +85,9 @@ describe('MailSsoService', () => {
       create: jest.fn().mockResolvedValue('mbx-session-token'),
       revokeMailbox: jest.fn().mockResolvedValue(undefined),
     };
-    const email = { sendMailSsoAccessLink: jest.fn().mockResolvedValue(undefined) };
+    const email = {
+      sendMailSsoAccessLink: jest.fn().mockResolvedValue(undefined),
+    };
     const config = {
       get: jest.fn((key: string) =>
         key === 'NEXT_PUBLIC_MAIL_URL' ? 'https://mail.test' : undefined,
@@ -102,7 +103,15 @@ describe('MailSsoService', () => {
       email as any,
       config as any,
     );
-    return { service, prisma, access, members, mailboxes, mailboxSessions, email };
+    return {
+      service,
+      prisma,
+      access,
+      members,
+      mailboxes,
+      mailboxSessions,
+      email,
+    };
   }
 
   function usableLink(overrides: Record<string, unknown> = {}) {
@@ -117,14 +126,20 @@ describe('MailSsoService', () => {
       lastSentAt: new Date(),
       createdAt: new Date(),
       mailApp: app,
-      mailbox: { id: 'box-1', localPart: 'sara', domain: 'acme.test', status: 'ACTIVE' },
+      mailbox: {
+        id: 'box-1',
+        localPart: 'sara',
+        domain: 'acme.test',
+        status: 'ACTIVE',
+      },
       ...overrides,
     };
   }
 
   describe('provision', () => {
     it('invites a new email silently, reserves the mailbox and emails one link', async () => {
-      const { service, prisma, members, email, mailboxSessions } = createService();
+      const { service, prisma, members, email, mailboxSessions } =
+        createService();
       members.invite.mockResolvedValue({
         kind: 'email_invite',
         emailInvite: { id: 'ei-1' },
@@ -156,24 +171,37 @@ describe('MailSsoService', () => {
       // Previous live links for the same email are revoked before the new one is created.
       expect(prisma.mailSsoAccessLink.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ email: 'sara@acme.test', usedAt: null }),
+          where: expect.objectContaining({
+            email: 'sara@acme.test',
+            usedAt: null,
+          }),
         }),
       );
       const created = prisma.mailSsoAccessLink.create.mock.calls[0][0].data;
       expect(created.emailInviteId).toBe('ei-1');
       expect(created.tokenHash).toMatch(/^[0-9a-f]{64}$/);
-      expect(result.link.url).toMatch(/^https:\/\/mail\.test\/sso\/open\/[A-Za-z0-9_-]{43}$/);
-      expect(hashMailSsoToken(result.link.url.split('/').pop()!)).toBe(created.tokenHash);
+      expect(result.link.url).toMatch(
+        /^https:\/\/mail\.test\/sso\/open\/[A-Za-z0-9_-]{43}$/,
+      );
+      expect(hashMailSsoToken(result.link.url.split('/').pop()!)).toBe(
+        created.tokenHash,
+      );
       expect(email.sendMailSsoAccessLink).toHaveBeenCalledWith(
         'sara@acme.test',
-        expect.objectContaining({ mailboxAddress: 'sara@acme.test', url: result.link.url }),
+        expect.objectContaining({
+          mailboxAddress: 'sara@acme.test',
+          url: result.link.url,
+        }),
       );
       expect(result.needsSignup).toBe(true);
     });
 
     it('assigns directly to an accepted member without re-inviting', async () => {
       const { service, prisma, members } = createService();
-      prisma.user.findFirst.mockResolvedValue({ id: 'user-2', email: 'sara@acme.test' });
+      prisma.user.findFirst.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
       prisma.mailAppMember.findUnique.mockResolvedValue({
         id: 'mem-2',
         status: InvitationStatus.ACCEPTED,
@@ -229,7 +257,9 @@ describe('MailSsoService', () => {
           email: 'sara@acme.test',
           role: 'MEMBER' as any,
         }),
-      ).rejects.toMatchObject({ response: expect.objectContaining({ code: 'MAIL_SSO_DISABLED' }) });
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ code: 'MAIL_SSO_DISABLED' }),
+      });
     });
 
     it('rejects non-managers', async () => {
@@ -248,7 +278,11 @@ describe('MailSsoService', () => {
     it('reports per-row results including the seat limit and duplicates', async () => {
       const { service, members } = createService();
       members.invite
-        .mockResolvedValueOnce({ kind: 'member', member: { id: 'mem-a' }, needsSignup: false })
+        .mockResolvedValueOnce({
+          kind: 'member',
+          member: { id: 'mem-a' },
+          needsSignup: false,
+        })
         .mockRejectedValueOnce(
           new ForbiddenException({
             statusCode: 403,
@@ -267,8 +301,14 @@ describe('MailSsoService', () => {
 
       expect(result.succeeded).toBe(1);
       expect(result.failed).toBe(2);
-      expect(result.results[1]).toMatchObject({ ok: false, code: 'MAIL_TEAM_LIMIT' });
-      expect(result.results[2]).toMatchObject({ ok: false, error: 'Duplicate row for this email.' });
+      expect(result.results[1]).toMatchObject({
+        ok: false,
+        code: 'MAIL_TEAM_LIMIT',
+      });
+      expect(result.results[2]).toMatchObject({
+        ok: false,
+        error: 'Duplicate row for this email.',
+      });
     });
   });
 
@@ -277,7 +317,9 @@ describe('MailSsoService', () => {
 
     it('rejects malformed tokens without a DB lookup', async () => {
       const { service, prisma } = createService();
-      await expect(service.consumeLink('user-2', 'nope', {})).rejects.toBeTruthy();
+      await expect(
+        service.consumeLink('user-2', 'nope', {}),
+      ).rejects.toBeTruthy();
       expect(prisma.mailSsoAccessLink.findUnique).not.toHaveBeenCalled();
     });
 
@@ -286,7 +328,9 @@ describe('MailSsoService', () => {
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(
         usableLink({ expiresAt: new Date(Date.now() - 1000) }),
       );
-      await expect(service.consumeLink('user-2', token, {})).rejects.toMatchObject({
+      await expect(
+        service.consumeLink('user-2', token, {}),
+      ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MAIL_SSO_LINK_EXPIRED' }),
       });
     });
@@ -294,9 +338,41 @@ describe('MailSsoService', () => {
     it('rejects a signed-in user whose email does not match', async () => {
       const { service, prisma } = createService();
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink());
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-9', email: 'other@acme.test' });
-      await expect(service.consumeLink('user-9', token, {})).rejects.toMatchObject({
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-9',
+        email: 'other@acme.test',
+      });
+      await expect(
+        service.consumeLink('user-9', token, {}),
+      ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MAIL_SSO_EMAIL_MISMATCH' }),
+      });
+      expect(prisma.mailSsoAccessLink.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a stale link when its mailbox was reassigned', async () => {
+      const { service, prisma } = createService();
+      prisma.mailSsoAccessLink.findUnique.mockResolvedValue(
+        usableLink({
+          mailbox: {
+            id: 'box-1',
+            localPart: 'sara',
+            domain: 'acme.test',
+            status: 'ACTIVE',
+            assignedUserId: 'another-user',
+          },
+        }),
+      );
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
+      await expect(
+        service.consumeLink('user-2', token, {}),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: 'MAIL_SSO_MAILBOX_REASSIGNED',
+        }),
       });
       expect(prisma.mailSsoAccessLink.updateMany).not.toHaveBeenCalled();
     });
@@ -304,9 +380,14 @@ describe('MailSsoService', () => {
     it('rejects double use when the atomic claim loses the race', async () => {
       const { service, prisma } = createService();
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink());
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'sara@acme.test' });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
       prisma.mailSsoAccessLink.updateMany.mockResolvedValue({ count: 0 });
-      await expect(service.consumeLink('user-2', token, {})).rejects.toMatchObject({
+      await expect(
+        service.consumeLink('user-2', token, {}),
+      ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MAIL_SSO_LINK_USED' }),
       });
     });
@@ -314,9 +395,16 @@ describe('MailSsoService', () => {
     it('claims the email invite, assigns reserved seats and opens the mailbox', async () => {
       const { service, prisma, members, mailboxSessions } = createService();
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink());
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'Sara@acme.test' });
-      prisma.mailAppEmailInvite.findFirst.mockResolvedValue({ token: 'invite-tok' });
-      members.claimEmailInvite.mockResolvedValue({ workspace: { slotIndex: 3 } });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'Sara@acme.test',
+      });
+      prisma.mailAppEmailInvite.findFirst.mockResolvedValue({
+        token: 'invite-tok',
+      });
+      members.claimEmailInvite.mockResolvedValue({
+        workspace: { slotIndex: 3 },
+      });
       prisma.mailMailbox.findFirst.mockResolvedValue({
         id: 'box-1',
         localPart: 'sara',
@@ -327,13 +415,20 @@ describe('MailSsoService', () => {
 
       const result = await service.consumeLink('user-2', token, {});
 
-      expect(members.claimEmailInvite).toHaveBeenCalledWith('user-2', 'invite-tok');
+      expect(members.claimEmailInvite).toHaveBeenCalledWith(
+        'user-2',
+        'invite-tok',
+      );
       expect(prisma.mailMailbox.updateMany).toHaveBeenCalledWith({
         where: { mailAppId: appDbId, pendingAssigneeEmail: 'sara@acme.test' },
         data: { assignedUserId: 'user-2', pendingAssigneeEmail: null },
       });
       expect(mailboxSessions.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 'user-2', mailboxId: 'box-1', appId: appPublicId }),
+        expect.objectContaining({
+          userId: 'user-2',
+          mailboxId: 'box-1',
+          appId: appPublicId,
+        }),
       );
       expect(result).toMatchObject({
         needsConfirmation: false,
@@ -345,15 +440,22 @@ describe('MailSsoService', () => {
 
     it('accepts a pending member invitation', async () => {
       const { service, prisma, members } = createService();
-      prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink({ mailboxId: null, mailbox: null }));
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'sara@acme.test' });
+      prisma.mailSsoAccessLink.findUnique.mockResolvedValue(
+        usableLink({ mailboxId: null, mailbox: null }),
+      );
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
       prisma.mailAppMember.findUnique.mockResolvedValue({
         id: 'mem-2',
         status: InvitationStatus.PENDING,
         role: MailAppMemberRole.MEMBER,
         slotIndex: null,
       });
-      members.acceptInvitation.mockResolvedValue({ workspace: { slotIndex: 1 } });
+      members.acceptInvitation.mockResolvedValue({
+        workspace: { slotIndex: 1 },
+      });
 
       const result = await service.consumeLink('user-2', token, {});
       expect(members.acceptInvitation).toHaveBeenCalledWith('user-2', 'mem-2');
@@ -370,7 +472,10 @@ describe('MailSsoService', () => {
         allowedEmailDomains: [],
       });
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink());
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'sara@acme.test' });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
 
       const result = await service.consumeLink('user-2', token, {});
       expect(result.needsConfirmation).toBe(true);
@@ -380,10 +485,15 @@ describe('MailSsoService', () => {
     it('releases the link when joining fails', async () => {
       const { service, prisma } = createService();
       prisma.mailSsoAccessLink.findUnique.mockResolvedValue(usableLink());
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-2', email: 'sara@acme.test' });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'sara@acme.test',
+      });
       prisma.mailAppEmailInvite.findFirst.mockResolvedValue(null);
 
-      await expect(service.consumeLink('user-2', token, {})).rejects.toMatchObject({
+      await expect(
+        service.consumeLink('user-2', token, {}),
+      ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MAIL_SSO_INVITE_GONE' }),
       });
       expect(prisma.mailSsoAccessLink.update).toHaveBeenCalledWith({

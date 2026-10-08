@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, CircleCheck, Loader2 } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { useTranslations } from '@/lib/i18n';
 
 const toolbarClusterClass =
   'product-create-toolbar-glass inline-flex min-h-10 min-w-0 items-center gap-0.5 p-1 sm:min-h-9 sm:gap-1 sm:p-1';
@@ -22,13 +23,15 @@ interface ProductCreateToolbarProps {
 
 export function ProductCreateToolbar({
   backHref,
-  backLabel = 'رجوع',
+  backLabel,
   submitLabel,
   submitFormId,
   submitting = false,
   submitDisabled = false,
   onSubmit,
 }: ProductCreateToolbarProps) {
+  const { t } = useTranslations();
+  const resolvedBackLabel = backLabel ?? t('products.create.back');
   const showSubmit = Boolean(submitLabel && (submitFormId || onSubmit));
 
   return (
@@ -37,7 +40,7 @@ export function ProductCreateToolbar({
         <div className={toolbarClusterClass}>
           <Link href={backHref} className={toolbarBackLinkClass}>
             <ChevronRight className="size-4 shrink-0" strokeWidth={2} />
-            <span className="whitespace-nowrap">{backLabel}</span>
+            <span className="whitespace-nowrap">{resolvedBackLabel}</span>
           </Link>
         </div>
 

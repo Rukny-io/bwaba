@@ -17,6 +17,7 @@ import {
   getStockChipColor,
   resolveProductKind,
 } from '@/lib/products/product-display';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const ROWS_PER_PAGE = 8;
@@ -59,20 +60,24 @@ function SortableColumnHeader({
   );
 }
 
-function productSortValue(product: StoreProduct, column: SortColumn): string {
+function productSortValue(
+  product: StoreProduct,
+  column: SortColumn,
+  t: (path: string, vars?: Record<string, string | number>) => string,
+): string {
   switch (column) {
     case 'product':
       return getProductDisplayName(product);
     case 'price':
       return String(product.price ?? '');
     case 'stock':
-      return getProductStockDisplay(product).label;
+      return getProductStockDisplay(product, t).label;
     case 'category':
       return getProductCategoryLabel(product) ?? '';
     case 'kind':
-      return getProductKindLabelFor(product);
+      return getProductKindLabelFor(product, t);
     case 'status':
-      return getProductStatusDisplay(product).label;
+      return getProductStatusDisplay(product, t).label;
     default:
       return '';
   }
@@ -91,6 +96,7 @@ interface ProductsTableProps {
 }
 
 function ProductsTableComponent({ products, className }: ProductsTableProps) {
+  const { t } = useTranslations();
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set());
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: 'product',
@@ -101,8 +107,8 @@ function ProductsTableComponent({ products, className }: ProductsTableProps) {
   const sortedProducts = useMemo(() => {
     const column = sortDescriptor.column as SortColumn;
     return [...products].sort((a, b) => {
-      const first = productSortValue(a, column);
-      const second = productSortValue(b, column);
+      const first = productSortValue(a, column, t);
+      const second = productSortValue(b, column, t);
       let cmp = first.localeCompare(second, 'ar');
 
       if (sortDescriptor.direction === 'descending') {
@@ -155,7 +161,7 @@ function ProductsTableComponent({ products, className }: ProductsTableProps) {
           <Table.Content
             aria-label="جدول المنتجات"
             className="min-w-[800px]"
-            dir="rtl"
+
             selectedKeys={selectedKeys}
             selectionMode="multiple"
             sortDescriptor={sortDescriptor}
@@ -281,12 +287,13 @@ interface ProductTableRowProps {
 }
 
 function ProductTableRowComponent({ product }: ProductTableRowProps) {
+  const { t } = useTranslations();
   const imageUrl = getProductImage(product as MyStoreProduct);
   const title = getProductDisplayName(product);
   const kind = resolveProductKind(product);
   const categoryLabel = getProductCategoryLabel(product);
-  const stock = getProductStockDisplay(product);
-  const status = getProductStatusDisplay(product);
+  const stock = getProductStockDisplay(product, t);
+  const status = getProductStatusDisplay(product, t);
   const basePrice = Number(product.price);
   const salePrice =
     product.salePrice != null && product.salePrice !== ''
@@ -365,7 +372,7 @@ function ProductTableRowComponent({ product }: ProductTableRowProps) {
 
       <Table.Cell className="text-center">
         <Chip color={KIND_CHIP_COLOR[kind]} size="sm" variant="soft">
-          {getProductKindLabelFor(product)}
+          {getProductKindLabelFor(product, t)}
         </Chip>
       </Table.Cell>
 

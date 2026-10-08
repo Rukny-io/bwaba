@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button, Skeleton } from "@heroui/react";
 import { resolveAccountsUrl } from "@rukny/auth/client/env-urls";
 import { MailNotice } from "@/components/app/mail-notice";
@@ -16,6 +16,7 @@ type Phase = "loading" | "signin" | "confirm" | "mismatch" | "opening" | "error"
 
 export function MailSsoOpenPage() {
   const params = useParams<{ token: string }>();
+  const router = useRouter();
   const token = typeof params?.token === "string" ? params.token : "";
   const [phase, setPhase] = useState<Phase>("loading");
   const [preview, setPreview] = useState<MailSsoLinkPreview | null>(null);
@@ -34,13 +35,13 @@ export function MailSsoOpenPage() {
           return;
         }
         const next = result.mailboxOpened ? "?next=inbox" : "";
-        window.location.assign(`/apps/${result.workspace.appId}/open${next}`);
+        router.replace(`/apps/${result.workspace.appId}/open${next}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not open your mailbox.");
         setPhase("error");
       }
     },
-    [token],
+    [router, token],
   );
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export function MailSsoOpenPage() {
           <Button
             variant="ghost"
             className="h-11 w-full rounded-full"
-            onPress={() => window.location.assign("/apps")}
+            onPress={() => router.replace("/apps")}
           >
             Go to Rukny Mail
           </Button>

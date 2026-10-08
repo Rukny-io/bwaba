@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -30,6 +31,10 @@ import {
   CreateOrderFromCartDto,
   CreateDirectOrderDto,
   UpdateOrderStatusDto,
+  UpdateOrderPaymentStatusDto,
+  BulkUpdateOrderStatusDto,
+  BulkUpdatePaymentStatusDto,
+  BulkOrderIdsDto,
   CancelOrderDto,
   OrderFiltersDto,
 } from './dto/order.dto';
@@ -216,6 +221,42 @@ export class OrdersController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, WorkspaceGuard)
   @RequiresWorkspacePermission('store:orders:write')
+  @Put('store/orders/bulk/status')
+  @ApiOperation({ summary: 'تحديث حالة عدة طلبات (للبائع)' })
+  async bulkUpdateOrderStatus(
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Body() dto: BulkUpdateOrderStatusDto,
+  ) {
+    return this.ordersService.bulkUpdateOrderStatus(ws.ownerId, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:write')
+  @Put('store/orders/bulk/payment-status')
+  @ApiOperation({ summary: 'تحديث حالة دفع عدة طلبات (للبائع)' })
+  async bulkUpdatePaymentStatus(
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Body() dto: BulkUpdatePaymentStatusDto,
+  ) {
+    return this.ordersService.bulkUpdatePaymentStatus(ws.ownerId, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:write')
+  @Delete('store/orders/bulk')
+  @ApiOperation({ summary: 'حذف عدة طلبات (للبائع)' })
+  async bulkDeleteOrders(
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Body() dto: BulkOrderIdsDto,
+  ) {
+    return this.ordersService.bulkDeleteOrders(ws.ownerId, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:write')
   @Put(':id/status')
   @ApiOperation({ summary: 'تحديث حالة الطلب (للبائع)' })
   async updateOrderStatus(
@@ -224,5 +265,22 @@ export class OrdersController {
     @Body() updateDto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateOrderStatus(orderId, ws.ownerId, updateDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:write')
+  @Put(':id/payment-status')
+  @ApiOperation({ summary: 'تحديث حالة دفع الطلب (للبائع)' })
+  async updateOrderPaymentStatus(
+    @Param('id') orderId: string,
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Body() updateDto: UpdateOrderPaymentStatusDto,
+  ) {
+    return this.ordersService.updateOrderPaymentStatus(
+      orderId,
+      ws.ownerId,
+      updateDto,
+    );
   }
 }

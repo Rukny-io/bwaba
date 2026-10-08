@@ -67,7 +67,7 @@ export function DashboardNotice({
   return (
     <div
       className={cn(
-        'flex items-start justify-between gap-3 rounded-2xl px-4 py-3',
+        'flex items-start justify-between gap-3 rounded-lg px-4 py-3',
         tone === 'success' &&
           'bg-[color-mix(in_srgb,var(--success)_12%,var(--surface-secondary))]',
         tone === 'danger' &&

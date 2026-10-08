@@ -16,17 +16,8 @@ import {
   analyticsTableChrome,
 } from '@/components/analytics/analytics-table-config';
 import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'معلّق',
-  CONFIRMED: 'مؤكد',
-  PROCESSING: 'قيد التجهيز',
-  SHIPPED: 'تم الشحن',
-  DELIVERED: 'مكتمل',
-  CANCELLED: 'ملغي',
-  REFUNDED: 'مسترد',
-};
 
 interface TopProductRow {
   id: string;
@@ -78,9 +69,9 @@ function TableShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <section className="flex min-w-0 flex-col gap-3 rounded-xl bg-[var(--surface)] p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
+        <h3 className="text-[13px] font-semibold text-[var(--foreground)]">{title}</h3>
         <Link
           href={href}
           className="text-[12px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -89,7 +80,7 @@ function TableShell({
         </Link>
       </div>
       <div className={analyticsTableChrome.shell}>{children}</div>
-    </div>
+    </section>
   );
 }
 
@@ -98,9 +89,15 @@ export function AnalyticsCommerceTables({
   recentOrders,
   isLoading,
 }: AnalyticsCommerceTablesProps) {
+  const { t } = useTranslations();
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <TableShell title="أفضل المنتجات" href="/app/products" linkLabel="المنتجات">
+      <TableShell
+        title={t('analytics.topProducts')}
+        href="/app/products"
+        linkLabel={t('analytics.products')}
+      >
         <div className={analyticsTableChrome.scroll}>
           <Table
             variant="default"
@@ -111,13 +108,18 @@ export function AnalyticsCommerceTables({
               '[&_[data-slot=table-cell]]:p-0 [&_[data-slot=table-head]]:p-0',
               '[&_[data-slot=table-body]:before]:hidden',
             )}
-            dir="rtl"
           >
             <TableHeader>
               <TableRow className={cn(analyticsTableChrome.headRow, 'hover:bg-transparent')}>
-                <TableHead className={analyticsHeadClass('start')}>المنتج</TableHead>
-                <TableHead className={analyticsHeadClass('center', 'w-[5rem]')}>طلبات</TableHead>
-                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>السعر</TableHead>
+                <TableHead className={analyticsHeadClass('start')}>
+                  {t('analytics.product')}
+                </TableHead>
+                <TableHead className={analyticsHeadClass('center', 'w-[5rem]')}>
+                  {t('analytics.orders')}
+                </TableHead>
+                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>
+                  {t('analytics.price')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,24 +127,36 @@ export function AnalyticsCommerceTables({
                 <SkeletonRows cols={3} />
               ) : topProducts.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={3} className="h-24 text-center text-sm text-[var(--muted-foreground)]">
-                    لا توجد مبيعات بعد
+                  <TableCell
+                    colSpan={3}
+                    className="h-24 text-center text-sm text-[var(--muted-foreground)]"
+                  >
+                    {t('analytics.noSalesYet')}
                   </TableCell>
                 </TableRow>
               ) : (
                 topProducts.map((product) => (
                   <TableRow key={product.id} className={analyticsTableChrome.bodyRow}>
                     <TableCell className={analyticsCellClass('start', 'min-w-0 max-w-0')}>
-                      <span className="block truncate text-[13px] font-medium">{product.name}</span>
+                      <span className="block truncate text-[13px] font-medium">
+                        {product.name}
+                      </span>
                     </TableCell>
                     <TableCell
-                      className={cn(analyticsCellClass('center', 'w-[5rem]'), analyticsTableChrome.numeric)}
+                      className={cn(
+                        analyticsCellClass('center', 'w-[5rem]'),
+                        analyticsTableChrome.numeric,
+                      )}
                       dir="ltr"
                     >
                       {formatNumber(product.ordersCount)}
                     </TableCell>
                     <TableCell
-                      className={cn(analyticsCellClass('center', 'w-[6rem]'), analyticsTableChrome.numeric, 'font-semibold')}
+                      className={cn(
+                        analyticsCellClass('center', 'w-[6rem]'),
+                        analyticsTableChrome.numeric,
+                        'font-semibold',
+                      )}
                       dir="ltr"
                     >
                       {formatCurrency(product.price)}
@@ -155,7 +169,11 @@ export function AnalyticsCommerceTables({
         </div>
       </TableShell>
 
-      <TableShell title="آخر الطلبات" href="/app/orders" linkLabel="الطلبات">
+      <TableShell
+        title={t('analytics.recentOrders')}
+        href="/app/orders"
+        linkLabel={t('analytics.orders')}
+      >
         <div className={analyticsTableChrome.scroll}>
           <Table
             variant="default"
@@ -166,14 +184,21 @@ export function AnalyticsCommerceTables({
               '[&_[data-slot=table-cell]]:p-0 [&_[data-slot=table-head]]:p-0',
               '[&_[data-slot=table-body]:before]:hidden',
             )}
-            dir="rtl"
           >
             <TableHeader>
               <TableRow className={cn(analyticsTableChrome.headRow, 'hover:bg-transparent')}>
-                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>رقم الطلب</TableHead>
-                <TableHead className={analyticsHeadClass('start')}>العميل</TableHead>
-                <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>الحالة</TableHead>
-                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>المبلغ</TableHead>
+                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>
+                  {t('analytics.orderNumber')}
+                </TableHead>
+                <TableHead className={analyticsHeadClass('start')}>
+                  {t('analytics.customer')}
+                </TableHead>
+                <TableHead className={analyticsHeadClass('center', 'w-[5.5rem]')}>
+                  {t('analytics.status')}
+                </TableHead>
+                <TableHead className={analyticsHeadClass('center', 'w-[6rem]')}>
+                  {t('analytics.amount')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,39 +206,57 @@ export function AnalyticsCommerceTables({
                 <SkeletonRows cols={4} />
               ) : recentOrders.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="h-24 text-center text-sm text-[var(--muted-foreground)]">
-                    لا توجد طلبات بعد
+                  <TableCell
+                    colSpan={4}
+                    className="h-24 text-center text-sm text-[var(--muted-foreground)]"
+                  >
+                    {t('analytics.noOrdersYet')}
                   </TableCell>
                 </TableRow>
               ) : (
-                recentOrders.map((order) => (
-                  <TableRow key={order.id} className={analyticsTableChrome.bodyRow}>
-                    <TableCell
-                      className={cn(analyticsCellClass('center', 'w-[6rem]'), analyticsTableChrome.numeric, 'text-[12px] font-medium')}
-                      dir="ltr"
-                    >
-                      <Link href={`/app/orders/${encodeURIComponent(order.id)}`} className="hover:text-[var(--primary)]">
-                        #{order.orderNumber ?? order.id.slice(0, 8)}
-                      </Link>
-                    </TableCell>
-                    <TableCell className={analyticsCellClass('start', 'min-w-0 max-w-0')}>
-                      <span className="block truncate text-[13px]">
-                        {order.customerName ?? '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell className={analyticsCellClass('center', 'w-[5.5rem]')}>
-                      <span className="text-[12px] text-[var(--muted-foreground)]">
-                        {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                      </span>
-                    </TableCell>
-                    <TableCell
-                      className={cn(analyticsCellClass('center', 'w-[6rem]'), analyticsTableChrome.numeric, 'font-semibold')}
-                      dir="ltr"
-                    >
-                      {formatCurrency(order.total, order.currency)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                recentOrders.map((order) => {
+                  const statusPath = `orders.status.${order.status}`;
+                  const statusLabel = t(statusPath);
+                  return (
+                    <TableRow key={order.id} className={analyticsTableChrome.bodyRow}>
+                      <TableCell
+                        className={cn(
+                          analyticsCellClass('center', 'w-[6rem]'),
+                          analyticsTableChrome.numeric,
+                          'text-[12px] font-medium',
+                        )}
+                        dir="ltr"
+                      >
+                        <Link
+                          href={`/app/orders/${encodeURIComponent(order.id)}`}
+                          className="hover:text-[var(--primary)]"
+                        >
+                          #{order.orderNumber ?? order.id.slice(0, 8)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className={analyticsCellClass('start', 'min-w-0 max-w-0')}>
+                        <span className="block truncate text-[13px]">
+                          {order.customerName ?? '—'}
+                        </span>
+                      </TableCell>
+                      <TableCell className={analyticsCellClass('center', 'w-[5.5rem]')}>
+                        <span className="text-[12px] text-[var(--muted-foreground)]">
+                          {statusLabel === statusPath ? order.status : statusLabel}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          analyticsCellClass('center', 'w-[6rem]'),
+                          analyticsTableChrome.numeric,
+                          'font-semibold',
+                        )}
+                        dir="ltr"
+                      >
+                        {formatCurrency(order.total, order.currency)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

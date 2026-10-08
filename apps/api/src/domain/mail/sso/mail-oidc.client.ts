@@ -1,5 +1,25 @@
-import { createHash, createPublicKey, randomBytes, type JsonWebKey, type KeyObject } from 'crypto';
+import {
+  createHash,
+  createPublicKey,
+  randomBytes,
+  type JsonWebKey,
+  type KeyObject,
+} from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { assertUrlSafe } from '../../../core/common/utils/ssrf-guard';
+
+async function assertOidcUrlSafe(url: string): Promise<void> {
+  // Unit tests use reserved `.test` hosts which intentionally do not resolve.
+  // Production and all real environments always go through the full DNS/IP
+  // validation in assertUrlSafe.
+  if (
+    process.env.NODE_ENV === 'test' &&
+    new URL(url).hostname.endsWith('.test')
+  ) {
+    return;
+  }
+  await assertUrlSafe(url);
+}
 
 /**
  * Minimal OpenID Connect relying party (authorization code + PKCE).
@@ -32,10 +52,20 @@ export type OidcIdClaims = {
 const DISCOVERY_TTL_MS = 60 * 60 * 1000;
 const JWKS_TTL_MS = 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
-const ALLOWED_ALGS: jwt.Algorithm[] = ['RS256', 'RS384', 'RS512', 'PS256', 'ES256', 'ES384'];
+const ALLOWED_ALGS: jwt.Algorithm[] = [
+  'RS256',
+  'RS384',
+  'RS512',
+  'PS256',
+  'ES256',
+  'ES384',
+];
 
 const discoveryCache = new Map<string, { at: number; value: OidcDiscovery }>();
-const jwksCache = new Map<string, { at: number; keys: (JsonWebKey & { kid?: string })[] }>();
+const jwksCache = new Map<
+  string,
+  { at: number; keys: (JsonWebKey & { kid?: string })[] }
+>();
 
 export class OidcError extends Error {}
 
@@ -49,7 +79,11 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
       error_description?: string;
     };
     if (!res.ok) {
-      throw new OidcError(body.error_description || body.error || `HTTP ${res.status} from ${new URL(url).host}`);
+      throw new OidcError(
+        body.error_description ||
+          body.error ||
+          `HTTP ${res.status} from ${new URL(url).host}`,
+      );
     }
     return body;
   } catch (error) {
@@ -64,25 +98,62 @@ export function normalizeIssuer(issuer: string): string {
   return issuer.trim().replace(/\/+$/, '');
 }
 
-export async function discoverOidc(issuer: string, opts?: { fresh?: boolean }): Promise<OidcDiscovery> {
+export async function discoverOidc(
+  issuer: string,
+  opts?: { fresh?: boolean },
+): Promise<OidcDiscovery> {
   const normalized = normalizeIssuer(issuer);
-  const parsed = new URL(normalized);
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+    // Discovery is user-configurable. Validate the issuer before making the
+    // first request so an administrator cannot turn the API into an SSRF proxy.
+    await assertOidcUrlSafe(normalized);
+  } catch (error) {
+    if (error instanceof OidcError) throw error;
+    throw new OidcError(
+      error instanceof Error ? error.message : 'Unsafe issuer URL.',
+    );
+  }
   if (parsed.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
     throw new OidcError('Issuer must use https.');
   }
   const cached = discoveryCache.get(normalized);
-  if (!opts?.fresh && cached && Date.now() - cached.at < DISCOVERY_TTL_MS) return cached.value;
+  if (!opts?.fresh && cached && Date.now() - cached.at < DISCOVERY_TTL_MS)
+    return cached.value;
 
-  const doc = await fetchJson<OidcDiscovery>(`${normalized}/.well-known/openid-configuration`);
-  if (!doc.authorization_endpoint || !doc.token_endpoint || !doc.jwks_uri || !doc.issuer) {
+  const doc = await fetchJson<OidcDiscovery>(
+    `${normalized}/.well-known/openid-configuration`,
+  );
+  if (
+    !doc.authorization_endpoint ||
+    !doc.token_endpoint ||
+    !doc.jwks_uri ||
+    !doc.issuer
+  ) {
     throw new OidcError('Discovery document is missing required endpoints.');
   }
   // Multi-tenant issuers (Entra "common"/"organizations") would accept any tenant's users.
   if (doc.issuer.includes('{tenantid}')) {
-    throw new OidcError('Use your tenant-specific issuer (login.microsoftonline.com/<tenant-id>/v2.0).');
+    throw new OidcError(
+      'Use your tenant-specific issuer (login.microsoftonline.com/<tenant-id>/v2.0).',
+    );
   }
   if (normalizeIssuer(doc.issuer) !== normalized) {
     throw new OidcError(`Issuer mismatch: discovery says ${doc.issuer}.`);
+  }
+  // Discovery documents can point token/JWKS endpoints at a different host.
+  // Validate every endpoint independently before any later callback fetch.
+  try {
+    await Promise.all([
+      assertOidcUrlSafe(doc.authorization_endpoint),
+      assertOidcUrlSafe(doc.token_endpoint),
+      assertOidcUrlSafe(doc.jwks_uri),
+    ]);
+  } catch (error) {
+    throw new OidcError(
+      error instanceof Error ? error.message : 'Unsafe OIDC endpoint.',
+    );
   }
   discoveryCache.set(normalized, { at: Date.now(), value: doc });
   return doc;
@@ -142,24 +213,41 @@ export async function exchangeAuthorizationCode(
     client_secret: params.clientSecret,
     code_verifier: params.codeVerifier,
   });
-  const tokens = await fetchJson<{ id_token?: string }>(discovery.token_endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body,
-  });
-  if (!tokens.id_token) throw new OidcError('The identity provider did not return an ID token.');
+  const tokens = await fetchJson<{ id_token?: string }>(
+    discovery.token_endpoint,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body,
+    },
+  );
+  if (!tokens.id_token)
+    throw new OidcError('The identity provider did not return an ID token.');
   return { id_token: tokens.id_token };
 }
 
-async function signingKey(jwksUri: string, kid: string | undefined): Promise<KeyObject> {
+async function signingKey(
+  jwksUri: string,
+  kid: string | undefined,
+): Promise<KeyObject> {
   const pick = (keys: (JsonWebKey & { kid?: string; use?: string })[]) =>
-    keys.find((k) => (kid ? k.kid === kid : true) && (!k.use || k.use === 'sig'));
+    keys.find(
+      (k) => (kid ? k.kid === kid : true) && (!k.use || k.use === 'sig'),
+    );
 
   let cached = jwksCache.get(jwksUri);
-  let jwk = cached && Date.now() - cached.at < JWKS_TTL_MS ? pick(cached.keys) : undefined;
+  let jwk =
+    cached && Date.now() - cached.at < JWKS_TTL_MS
+      ? pick(cached.keys)
+      : undefined;
   if (!jwk) {
     // Unknown kid usually means key rotation: refetch once.
-    const doc = await fetchJson<{ keys?: (JsonWebKey & { kid?: string })[] }>(jwksUri);
+    const doc = await fetchJson<{ keys?: (JsonWebKey & { kid?: string })[] }>(
+      jwksUri,
+    );
     cached = { at: Date.now(), keys: doc.keys ?? [] };
     jwksCache.set(jwksUri, cached);
     jwk = pick(cached.keys);
@@ -170,10 +258,16 @@ async function signingKey(jwksUri: string, kid: string | undefined): Promise<Key
 
 export async function verifyIdToken(
   idToken: string,
-  opts: { discovery: OidcDiscovery; issuer: string; clientId: string; nonce: string },
+  opts: {
+    discovery: OidcDiscovery;
+    issuer: string;
+    clientId: string;
+    nonce: string;
+  },
 ): Promise<OidcIdClaims> {
   const decoded = jwt.decode(idToken, { complete: true });
-  if (!decoded || typeof decoded === 'string') throw new OidcError('Malformed ID token.');
+  if (!decoded || typeof decoded === 'string')
+    throw new OidcError('Malformed ID token.');
   const key = await signingKey(opts.discovery.jwks_uri, decoded.header.kid);
 
   let claims: OidcIdClaims;
@@ -189,7 +283,9 @@ export async function verifyIdToken(
 
   const expectedIssuer = normalizeIssuer(opts.issuer);
   if (normalizeIssuer(claims.iss) !== expectedIssuer) {
-    throw new OidcError('ID token issuer does not match the configured issuer.');
+    throw new OidcError(
+      'ID token issuer does not match the configured issuer.',
+    );
   }
   if (!claims.nonce || claims.nonce !== opts.nonce) {
     throw new OidcError('ID token nonce mismatch.');
@@ -203,7 +299,10 @@ export function trustedEmailFromClaims(claims: OidcIdClaims): string | null {
   const raw = claims.email || claims.preferred_username || claims.upn || '';
   const email = raw.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-  if (claims.email_verified === false || claims.email_verified === 'false') return null;
+  // Never provision an account from an unverified mailbox. Accept the string
+  // form for providers that serialize boolean claims as strings.
+  if (claims.email_verified !== true && claims.email_verified !== 'true')
+    return null;
   return email;
 }
 

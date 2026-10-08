@@ -18,6 +18,7 @@ import type { ProductDiscount } from '@/lib/discounts/types';
 import { buildReservedProductMap } from '@/lib/discounts/reserved-products';
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
 import { AnimatedNumber } from '@/components/ui/animated-number';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CreateDiscountFormProps {
@@ -33,6 +34,7 @@ export function CreateDiscountForm({
   onCancel,
   className,
 }: CreateDiscountFormProps) {
+  const { t } = useTranslations();
   const [percentage, setPercentage] = useState(25);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [products, setProducts] = useState<MyStoreProduct[]>([]);
@@ -51,12 +53,12 @@ export function CreateDiscountForm({
       setError(
         err instanceof ApiException
           ? err.message
-          : 'تعذّر تحميل المنتجات',
+          : t('discounts.loadProductsFailed'),
       );
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -100,12 +102,12 @@ export function CreateDiscountForm({
     setError(null);
 
     if (percentage < 1 || percentage > 100) {
-      setError('أدخل نسبة خصم بين 1% و 100%');
+      setError(t('discounts.percentInvalid'));
       return;
     }
 
     if (!selectedProductIds.length) {
-      setError('اختر منتجاً واحداً على الأقل');
+      setError(t('discounts.productsRequired'));
       return;
     }
 
@@ -120,7 +122,7 @@ export function CreateDiscountForm({
       setError(
         err instanceof ApiException
           ? err.message
-          : 'تعذّر إنشاء الخصم',
+          : t('discounts.createFailed'),
       );
     } finally {
       setSaving(false);
@@ -134,9 +136,9 @@ export function CreateDiscountForm({
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="flex flex-col gap-4 px-4 py-4">
-          <section className="rounded-2xl border border-[rgba(34,34,34,0.08)] bg-[var(--surface-secondary)]/40 p-4 dark:border-white/10">
+          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/40 p-4">
             <p className="mb-3 text-[12px] font-medium text-[var(--muted-foreground)]">
-              نسبة الخصم
+              {t('discounts.percentLabel')}
             </p>
 
             <div className="flex items-center justify-center gap-3">
@@ -144,7 +146,7 @@ export function CreateDiscountForm({
                 type="button"
                 onClick={() => adjustPercentage(-5)}
                 className="flex size-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
-                aria-label="تقليل النسبة"
+                aria-label={t('discounts.decreasePercent')}
               >
                 <Minus className="size-4" strokeWidth={2} />
               </button>
@@ -168,7 +170,7 @@ export function CreateDiscountForm({
                         setPercentage(Math.min(100, Math.max(1, next)));
                       }}
                       className="w-16 border-0 bg-transparent p-0 text-center text-[32px] font-bold leading-none text-[var(--foreground)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      aria-label="نسبة الخصم"
+                      aria-label={t('discounts.percentLabel')}
                     />
                     <span className="text-[20px] font-semibold text-[var(--muted-foreground)]">
                       %
@@ -179,7 +181,7 @@ export function CreateDiscountForm({
                     type="button"
                     onClick={() => setEditingPercentage(true)}
                     className="flex items-baseline gap-1 rounded-lg px-1 py-0.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-                    aria-label="تعديل نسبة الخصم"
+                    aria-label={t('discounts.editPercent')}
                   >
                     <AnimatedNumber
                       value={percentage}
@@ -193,7 +195,7 @@ export function CreateDiscountForm({
                   </button>
                 )}
                 <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">
-                  من 1% إلى 100%
+                  {t('discounts.percentRange')}
                 </p>
               </div>
 
@@ -201,7 +203,7 @@ export function CreateDiscountForm({
                 type="button"
                 onClick={() => adjustPercentage(5)}
                 className="flex size-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
-                aria-label="زيادة النسبة"
+                aria-label={t('discounts.increasePercent')}
               >
                 <Plus className="size-4" strokeWidth={2} />
               </button>
@@ -211,11 +213,11 @@ export function CreateDiscountForm({
           <section className="flex min-h-0 flex-col">
             <div className="mb-3 flex items-center justify-between gap-2">
               <p className="text-[12px] text-[var(--muted-foreground)]">
-                المنتجات المشمولة
+                {t('discounts.coveredProducts')}
               </p>
               {selectedProductIds.length > 0 ? (
                 <span className="text-[11px] font-medium text-[var(--foreground)]">
-                  {selectedProductIds.length} محدد
+                  {t('discounts.selectedCount', { n: selectedProductIds.length })}
                 </span>
               ) : null}
             </div>
@@ -224,7 +226,7 @@ export function CreateDiscountForm({
               type="search"
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
-              placeholder="بحث في المنتجات…"
+              placeholder={t('discounts.searchProducts')}
               className="mb-3 h-9 w-full rounded-lg border border-[rgba(34,34,34,0.1)] bg-transparent px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60 focus:border-[rgba(34,34,34,0.18)] dark:border-white/10 dark:focus:border-white/20"
             />
 
@@ -239,7 +241,7 @@ export function CreateDiscountForm({
                   strokeWidth={1.5}
                 />
                 <p className="text-[13px] text-[var(--muted-foreground)]">
-                  لا توجد منتجات
+                  {t('discounts.noProducts')}
                 </p>
               </div>
             ) : (
@@ -348,7 +350,7 @@ export function CreateDiscountForm({
           {saving ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : (
-            <span>تطبيق الخصم</span>
+            <span>{t('discounts.apply')}</span>
           )}
         </button>
         {onCancel ? (
@@ -357,7 +359,7 @@ export function CreateDiscountForm({
             onClick={onCancel}
             className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[rgba(34,34,34,0.12)] px-4 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.05]"
           >
-            إلغاء
+            {t('discounts.cancel')}
           </button>
         ) : null}
       </div>

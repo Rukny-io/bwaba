@@ -11,6 +11,7 @@ import {
   type ProductsSortOption,
 } from '@/components/products/products-view-mode';
 import { dashboardTopTabsChipClass } from '@/components/app/nav-glass';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductsToolbarProps {
@@ -43,7 +44,7 @@ function iconButtonClass(isActive = false) {
 }
 
 const actionButtonClass =
-  'h-10 shrink-0 gap-2 rounded-xl px-3.5 text-[13px] font-semibold sm:px-4 sm:text-[14px]';
+  'h-10 shrink-0 gap-2 rounded-xl px-3.5 text-[13px] font-semibold !shadow-none sm:px-4 sm:text-[14px]';
 
 const toolbarRevealClass =
   'animate-in fade-in-0 slide-in-from-top-2 duration-250 ease-out fill-mode-both';
@@ -61,15 +62,21 @@ export function ProductsToolbar({
   onSortByChange,
   showHidden = false,
   onShowHiddenChange,
-  searchPlaceholder = 'بحث في المنتجات…',
-  addButtonLabel = 'إضافة منتج',
-  showHiddenLabel = 'إظهار المخفي',
-  hiddenSwitchAriaLabel = 'إظهار المنتجات المخفية',
-  exportLabel = 'تصدير',
+  searchPlaceholder,
+  addButtonLabel,
+  showHiddenLabel,
+  hiddenSwitchAriaLabel,
+  exportLabel,
   exportDisabled = false,
   onAdd,
   onExport,
 }: ProductsToolbarProps) {
+  const { t } = useTranslations();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('products.searchPlaceholder');
+  const resolvedAddLabel = addButtonLabel ?? t('products.addProduct');
+  const resolvedShowHiddenLabel = showHiddenLabel ?? t('products.showHidden');
+  const resolvedHiddenAria = hiddenSwitchAriaLabel ?? t('products.showHiddenAria');
+  const resolvedExportLabel = exportLabel ?? t('products.export');
   const [searchOpen, setSearchOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -117,13 +124,13 @@ export function ProductsToolbar({
                     type="search"
                     value={searchQuery}
                     onChange={(e) => onSearchQueryChange?.(e.target.value)}
-                    placeholder={searchPlaceholder}
+                    placeholder={resolvedSearchPlaceholder}
                     className="h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] py-0 pe-9 ps-9 text-[13px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus:border-[var(--foreground)]/20 focus:ring-2 focus:ring-[var(--foreground)]/8"
                   />
                   {searchQuery ? (
                     <button
                       type="button"
-                      aria-label="مسح البحث"
+                      aria-label={t('products.clearSearch')}
                       onClick={() => onSearchQueryChange?.('')}
                       className="absolute end-2.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                     >
@@ -133,20 +140,20 @@ export function ProductsToolbar({
                 </div>
                 <button
                   type="button"
-                  aria-label="إغلاق البحث"
+                  aria-label={t('products.closeSearch')}
                   onClick={() => {
                     setSearchOpen(false);
                     onSearchQueryChange?.('');
                   }}
                   className="shrink-0 text-[12px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                 >
-                  إلغاء
+                  {t('products.cancel')}
                 </button>
               </div>
             ) : (
               <button
                 type="button"
-                aria-label="بحث"
+                aria-label={t('products.search')}
                 aria-pressed={searchActive}
                 onClick={() => setSearchOpen(true)}
                 className={cn(
@@ -162,7 +169,7 @@ export function ProductsToolbar({
           {showSort ? (
             <button
               type="button"
-              aria-label="الترتيب"
+              aria-label={t('products.sort')}
               aria-expanded={sortOpen}
               aria-pressed={sortActive}
               onClick={() => setSortOpen((open) => !open)}
@@ -175,7 +182,7 @@ export function ProductsToolbar({
               )}
             >
               <ArrowUpDown className="size-4" strokeWidth={1.75} aria-hidden />
-              <span>ترتيب</span>
+              <span>{t('products.sort')}</span>
             </button>
           ) : null}
 
@@ -189,7 +196,7 @@ export function ProductsToolbar({
               )}
             >
               <Download className="size-4" strokeWidth={2} aria-hidden />
-              <span>{exportLabel}</span>
+              <span>{resolvedExportLabel}</span>
             </Button>
           ) : null}
         </div>
@@ -202,7 +209,7 @@ export function ProductsToolbar({
           )}
         >
           <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-          <span>{addButtonLabel}</span>
+          <span>{resolvedAddLabel}</span>
         </Button>
       </div>
 
@@ -215,7 +222,7 @@ export function ProductsToolbar({
         >
           <nav
             role="tablist"
-            aria-label="ترتيب المنتجات"
+            aria-label={t('products.sortProducts')}
             className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2"
           >
             {PRODUCTS_SORT_TABS.map((tab) => {
@@ -235,13 +242,13 @@ export function ProductsToolbar({
                       'inline-flex min-h-9 items-center px-3.5 py-2 text-[13px] sm:min-h-[2.375rem] sm:px-4 sm:text-[14px]',
                     )}
                   >
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </button>
                 );
               }
 
               const active = isToggleSortActive(sortBy, tab);
-              const label = getToggleSortLabel(sortBy, tab);
+              const label = getToggleSortLabel(sortBy, tab, t);
 
               return (
                 <button
@@ -265,12 +272,12 @@ export function ProductsToolbar({
           {onShowHiddenChange ? (
             <div className="flex items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 sm:px-4">
               <span className="text-[13px] font-medium text-[var(--foreground)] sm:text-[14px]">
-                {showHiddenLabel}
+                {resolvedShowHiddenLabel}
               </span>
               <Switch
                 isSelected={showHidden}
                 onChange={onShowHiddenChange}
-                aria-label={hiddenSwitchAriaLabel}
+                aria-label={resolvedHiddenAria}
                 className="scale-110"
               >
                 <Switch.Control>

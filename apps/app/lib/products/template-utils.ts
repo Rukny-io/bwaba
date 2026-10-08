@@ -89,13 +89,21 @@ function serializeTemplateValue(
 export function validateTemplateValues(
   template: CategoryTemplateFields | null,
   values: Record<string, TemplateFieldValue>,
+  t?: (path: string, vars?: Record<string, string | number>) => string,
+  locale: 'ar' | 'en' = 'ar',
 ): string | null {
   if (!template) return null;
 
   for (const field of template.productAttributes) {
     const serialized = serializeTemplateValue(field, values[field.key] ?? '');
     if (field.required && !serialized) {
-      return `أكمل الحقل: ${field.labelAr}`;
+      const label =
+        locale === 'en'
+          ? field.label || field.labelAr
+          : field.labelAr || field.label;
+      return t
+        ? t('products.create.completeField', { label })
+        : `أكمل الحقل: ${label}`;
     }
   }
 
@@ -126,6 +134,8 @@ export function buildProductAttributesPayload(
 export function validateVariantDrafts(
   template: CategoryTemplateFields | null,
   variants: ProductVariantDraft[],
+  t?: (path: string, vars?: Record<string, string | number>) => string,
+  locale: 'ar' | 'en' = 'ar',
 ): string | null {
   if (!template?.hasVariants || !variants.length) return null;
 
@@ -134,14 +144,20 @@ export function validateVariantDrafts(
   for (const variant of variants) {
     for (const key of variantKeys) {
       if (!variant.attributes[key]?.trim()) {
+        const attr = template.variantAttributes?.find((item) => item.key === key);
         const label =
-          template.variantAttributes?.find((attr) => attr.key === key)?.labelAr ??
-          key;
-        return `اختر ${label} لكل المتغيرات`;
+          (locale === 'en'
+            ? attr?.label || attr?.labelAr
+            : attr?.labelAr || attr?.label) ?? key;
+        return t
+          ? t('products.create.chooseVariantAttr', { label })
+          : `اختر ${label} لكل المتغيرات`;
       }
     }
     if (!Number.isFinite(variant.stock) || variant.stock < 0) {
-      return 'أدخل كمية مخزون صالحة لكل متغير';
+      return t
+        ? t('products.create.variantStockInvalid')
+        : 'أدخل كمية مخزون صالحة لكل متغير';
     }
   }
 

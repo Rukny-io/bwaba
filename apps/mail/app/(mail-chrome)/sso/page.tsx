@@ -5,7 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { MailSsoPage } from "@/components/app/mail-sso-page";
 import { ComingSoonPanel } from "@/components/app/coming-soon-panel";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
-import { fetchMailSubscription } from "@/lib/mail-subscription-client";
+import {
+  fetchMailSubscription,
+  workspaceActiveLimits,
+} from "@/lib/mail-subscription-client";
 
 export default function SsoPage() {
   const router = useRouter();
@@ -21,9 +24,7 @@ export default function SsoPage() {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
         const consoleSeats =
-          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
-          snap.subscription?.limits?.consoleMembersIncluded ??
-          0;
+          workspaceActiveLimits(snap)?.limits?.consoleMembersIncluded ?? 0;
         if (consoleSeats <= 0) {
           setState("blocked");
           router.replace(withMailSlot("/billing", parseMailSlot(pathname)));
@@ -45,7 +46,7 @@ export default function SsoPage() {
         title="SSO"
         description={
           state === "blocked"
-            ? "Starter does not include Team sign-in. Redirecting to Billing…"
+            ? "Your current plan does not include team sign-in. Redirecting to Billing…"
             : "Checking your plan…"
         }
       />

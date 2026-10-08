@@ -184,6 +184,38 @@ export class MailMailboxesService {
     return { access, mailbox: existing };
   }
 
+  /** Owner/admin any seat; assignees only their own (password / 2FA / avatar). */
+  private async requireOperableMailbox(
+    userId: string,
+    appId: string,
+    mailboxId: string,
+  ) {
+    const access = await this.access.requireAccess(userId, appId);
+    const existing = await this.prisma.mailMailbox.findFirst({
+      where: {
+        id: mailboxId,
+        mailAppId: access.app.id,
+        status: { not: MailMailboxStatus.DELETED },
+      },
+      include: { mailApp: { select: { appId: true } } },
+    });
+    if (!existing) {
+      throw new NotFoundException('Mailbox not found.');
+    }
+    if (
+      !this.access.canOperateMailbox(userId, access, {
+        assignedUserId: existing.assignedUserId ?? null,
+      })
+    ) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_MANAGE_REQUIRED',
+        message: 'You cannot manage mailboxes in this workspace.',
+      });
+    }
+    return { access, mailbox: existing };
+  }
+
   private viewForUser(
     userId: string,
     access: MailAppAccess,
@@ -207,7 +239,7 @@ export class MailMailboxesService {
       mailAppId: access.app.id,
       status: { not: MailMailboxStatus.DELETED },
     };
-    if (!access.isOwner && access.role !== MailAppMemberRole.ADMIN) {
+    if (!this.access.canManageMailboxes(access)) {
       where.assignedUserId = userId;
     }
     const rows = await this.prisma.mailMailbox.findMany({
@@ -413,7 +445,7 @@ export class MailMailboxesService {
     mailboxId: string,
     dto: ChangeMailMailboxPasswordDto,
   ) {
-    const { access, mailbox: existing } = await this.requireManagedMailbox(
+    const { access, mailbox: existing } = await this.requireOperableMailbox(
       userId,
       appId,
       mailboxId,
@@ -438,7 +470,7 @@ export class MailMailboxesService {
     mailbox: ReturnType<MailMailboxesService['toView']>;
     setup?: MailMailboxTotpSetup;
   }> {
-    const { access, mailbox: existing } = await this.requireManagedMailbox(
+    const { access, mailbox: existing } = await this.requireOperableMailbox(
       userId,
       appId,
       mailboxId,
@@ -482,7 +514,7 @@ export class MailMailboxesService {
     mailboxId: string,
     dto: ConfirmMailMailbox2faDto,
   ) {
-    const { access, mailbox: existing } = await this.requireManagedMailbox(
+    const { access, mailbox: existing } = await this.requireOperableMailbox(
       userId,
       appId,
       mailboxId,
@@ -667,7 +699,7 @@ export class MailMailboxesService {
     if (!file) {
       throw new BadRequestException('No file uploaded.');
     }
-    const { access, mailbox: existing } = await this.requireManagedMailbox(
+    const { access, mailbox: existing } = await this.requireOperableMailbox(
       userId,
       appId,
       mailboxId,
@@ -687,7 +719,7 @@ export class MailMailboxesService {
   }
 
   async removeAvatar(userId: string, appId: string, mailboxId: string) {
-    const { access, mailbox: existing } = await this.requireManagedMailbox(
+    const { access, mailbox: existing } = await this.requireOperableMailbox(
       userId,
       appId,
       mailboxId,

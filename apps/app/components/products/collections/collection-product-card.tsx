@@ -5,6 +5,7 @@ import { getProductDisplayName } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
 import { ProductThumbnail } from '@/components/products/product-list-primitives';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface CollectionProductCardProps {
@@ -13,6 +14,7 @@ interface CollectionProductCardProps {
 }
 
 function CollectionProductCardComponent({ product, className }: CollectionProductCardProps) {
+  const { t } = useTranslations();
   const imageUrl = getProductImage(product);
   const title = getProductDisplayName(product);
   const isDraft = product.status === 'DRAFT';
@@ -31,16 +33,16 @@ function CollectionProductCardComponent({ product, className }: CollectionProduc
         className,
       )}
     >
-      <div className="relative overflow-hidden rounded-lg ring-1 ring-[var(--border)]">
+      <div className="relative overflow-hidden rounded-xl border border-[var(--border)]">
         <ProductThumbnail
           imageUrl={imageUrl}
           alt={title}
-          className="aspect-square rounded-lg"
-          imageClassName="transition-transform duration-300 group-hover:scale-[1.02]"
+          className="aspect-square rounded-xl"
+          imageClassName="transition-opacity duration-200 group-hover:opacity-[0.96]"
         />
         {isDraft ? (
-          <span className="absolute start-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-            مسودة
+          <span className="absolute start-2 top-2 rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+            {t('collections.draft')}
           </span>
         ) : null}
       </div>

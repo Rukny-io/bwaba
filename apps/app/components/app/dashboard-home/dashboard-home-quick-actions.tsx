@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   BarChart2,
@@ -8,34 +10,33 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { dashboardPagePanelClass } from '@/components/app/dashboard-page-frame';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-const ACTIONS: Array<{
-  href: string;
-  icon: LucideIcon;
-  label: string;
-}> = [
-  { href: '/app/links?add=1', icon: Plus, label: 'رابط جديد' },
-  { href: '/app/links', icon: Link2, label: 'روابطي' },
-  { href: '/app/products', icon: Package, label: 'المنتجات' },
-  { href: '/app/orders', icon: ShoppingBag, label: 'الطلبات' },
-  { href: '/app/analytics', icon: BarChart2, label: 'التحليلات' },
-];
-
 export function DashboardHomeQuickActions() {
+  const { t } = useTranslations();
+
+  const actions: Array<{ href: string; icon: LucideIcon; label: string }> = [
+    { href: '/app/links?add=1', icon: Plus, label: t('home.newLink') },
+    { href: '/app/links', icon: Link2, label: t('nav.links') },
+    { href: '/app/products', icon: Package, label: t('nav.products') },
+    { href: '/app/orders', icon: ShoppingBag, label: t('nav.orders') },
+    { href: '/app/analytics', icon: BarChart2, label: t('nav.analytics') },
+  ];
+
   return (
     <div className={cn(dashboardPagePanelClass, 'gap-4')}>
       <div className="min-w-0">
         <h2 className="text-base font-semibold text-[var(--foreground)]">
-          إجراءات سريعة
+          {t('home.quickActions')}
         </h2>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          انتقل مباشرة للمهام الشائعة
+          {t('home.quickActionsHint')}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {ACTIONS.map(({ href, icon: Icon, label }) => (
+        {actions.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
             href={href}

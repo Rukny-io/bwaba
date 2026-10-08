@@ -19,7 +19,7 @@ export function DiscountsPageActions({
     <div className={cn('flex items-center', className)}>
       <Button
         onPress={onAdd}
-        className="h-9 shrink-0 gap-1.5 rounded-lg bg-[var(--primary)] px-3.5 text-sm font-medium text-[var(--primary-foreground)] hover:opacity-90"
+        className="h-9 shrink-0 gap-1.5 rounded-lg bg-[var(--primary)] px-3.5 text-sm font-medium text-[var(--primary-foreground)] !shadow-none hover:opacity-90"
       >
         <Plus className="size-3.5" strokeWidth={2.25} aria-hidden />
         <span>{addLabel}</span>

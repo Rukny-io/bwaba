@@ -10,38 +10,38 @@ export type ProductsSortTab =
   | {
       kind: 'single';
       value: ProductsSortOption;
-      label: string;
+      labelKey: string;
     }
   | {
       kind: 'toggle';
       id: 'price' | 'stock';
-      label: string;
+      labelKey: string;
       asc: ProductsSortOption;
       desc: ProductsSortOption;
-      ascLabel: string;
-      descLabel: string;
+      ascLabelKey: string;
+      descLabelKey: string;
     };
 
 export const PRODUCTS_SORT_TABS: ProductsSortTab[] = [
-  { kind: 'single', value: 'newest', label: 'الأحدث' },
-  { kind: 'single', value: 'name_asc', label: 'الاسم (أ-ي)' },
+  { kind: 'single', value: 'newest', labelKey: 'products.sortNewest' },
+  { kind: 'single', value: 'name_asc', labelKey: 'products.sortName' },
   {
     kind: 'toggle',
     id: 'price',
-    label: 'السعر',
+    labelKey: 'products.sortPrice',
     asc: 'price_asc',
     desc: 'price_desc',
-    ascLabel: 'الأقل',
-    descLabel: 'الأعلى',
+    ascLabelKey: 'products.sortLow',
+    descLabelKey: 'products.sortHigh',
   },
   {
     kind: 'toggle',
     id: 'stock',
-    label: 'المخزون',
+    labelKey: 'products.sortStock',
     asc: 'stock_asc',
     desc: 'stock_desc',
-    ascLabel: 'الأقل',
-    descLabel: 'الأعلى',
+    ascLabelKey: 'products.sortLow',
+    descLabelKey: 'products.sortHigh',
   },
 ];
 
@@ -55,10 +55,12 @@ export function isToggleSortActive(
 export function getToggleSortLabel(
   sortBy: ProductsSortOption,
   tab: Extract<ProductsSortTab, { kind: 'toggle' }>,
+  t: (path: string) => string,
 ): string {
-  if (sortBy === tab.asc) return `${tab.label} · ${tab.ascLabel}`;
-  if (sortBy === tab.desc) return `${tab.label} · ${tab.descLabel}`;
-  return tab.label;
+  const label = t(tab.labelKey);
+  if (sortBy === tab.asc) return `${label} · ${t(tab.ascLabelKey)}`;
+  if (sortBy === tab.desc) return `${label} · ${t(tab.descLabelKey)}`;
+  return label;
 }
 
 export function getNextToggleSort(

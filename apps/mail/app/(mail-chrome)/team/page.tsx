@@ -5,7 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { MailTeamPage } from "@/components/app/mail-team-page";
 import { ComingSoonPanel } from "@/components/app/coming-soon-panel";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
-import { fetchMailSubscription } from "@/lib/mail-subscription-client";
+import {
+  fetchMailSubscription,
+  workspaceActiveLimits,
+} from "@/lib/mail-subscription-client";
 
 export default function TeamPage() {
   const router = useRouter();
@@ -21,9 +24,7 @@ export default function TeamPage() {
         const snap = await fetchMailSubscription();
         if (cancelled) return;
         const consoleSeats =
-          snap.unifiedLimits?.limits?.consoleMembersIncluded ??
-          snap.subscription?.limits?.consoleMembersIncluded ??
-          0;
+          workspaceActiveLimits(snap)?.limits?.consoleMembersIncluded ?? 0;
         const teamOk = consoleSeats > 0;
         if (!teamOk) {
           setState("blocked");

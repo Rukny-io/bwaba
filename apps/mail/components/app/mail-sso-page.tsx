@@ -18,6 +18,7 @@ import { readMailAppIdFromDocument } from "@/lib/mail-app-id";
 import { parseMailSlot, withMailSlot } from "@/lib/mail-slot";
 import {
   getMailSsoOverview,
+  getMailSecurityAudit,
   provisionMailSso,
   provisionMailSsoBulk,
   resendMailSsoLink,
@@ -27,6 +28,7 @@ import {
   type MailSsoPerson,
   type MailSsoProvisionInput,
   type MailSsoSettings,
+  type MailSecurityAuditEvent,
 } from "@/lib/mail-sso-client";
 import type { MailTeamRole } from "@/lib/mail-team-client";
 
@@ -40,6 +42,7 @@ export function MailSsoPage() {
   const [success, setSuccess] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [auditEvents, setAuditEvents] = useState<MailSecurityAuditEvent[]>([]);
 
   useEffect(() => {
     const id = readMailAppIdFromDocument();
@@ -53,7 +56,12 @@ export function MailSsoPage() {
   const load = useCallback(async (id: string, opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      setData(await getMailSsoOverview(id));
+      const [overview, audit] = await Promise.all([
+        getMailSsoOverview(id),
+        getMailSecurityAudit(id).catch(() => []),
+      ]);
+      setData(overview);
+      setAuditEvents(audit);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load SSO.");
@@ -276,10 +284,30 @@ export function MailSsoPage() {
               appId={appId}
               summary={data.identityProvider}
               canManage={canManage}
+              isOwner={data.isOwner}
               primaryDomain={data.workspace.primaryDomain}
               domainActive={data.workspace.domainActive}
               onChanged={() => void load(appId, { silent: true })}
             />
+          ) : null}
+
+          {canManage && auditEvents.length ? (
+            <section className="rounded-2xl bg-[var(--surface)] p-4 md:px-6 md:py-5">
+              <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Security activity</h2>
+              <div className="mt-3 divide-y divide-[var(--border)]">
+                {auditEvents.slice(0, 8).map((event) => (
+                  <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-[12px]">
+                    <div>
+                      <p className="font-medium text-[var(--foreground)]">{event.action}</p>
+                      <p className="text-[var(--muted-foreground)]">{event.actor?.email || "System"}</p>
+                    </div>
+                    <time dateTime={event.createdAt} className="text-[var(--muted-foreground)]">
+                      {new Date(event.createdAt).toLocaleString()}
+                    </time>
+                  </div>
+                ))}
+              </div>
+            </section>
           ) : null}
         </>
       )}

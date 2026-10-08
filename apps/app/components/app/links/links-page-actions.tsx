@@ -3,6 +3,7 @@
 import { FolderPlus, Plus } from 'lucide-react';
 import { Button } from '@heroui/react';
 import { linksActionButtonClass } from '@/components/app/links/links-interaction';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface LinksPageActionsProps {
@@ -19,6 +20,8 @@ export function LinksPageActions({
   onAddGroup,
   className,
 }: LinksPageActionsProps) {
+  const { t } = useTranslations();
+
   return (
     <div
       className={cn(
@@ -34,7 +37,7 @@ export function LinksPageActions({
           className={cn(actionButtonBase, linksActionButtonClass, 'border border-[var(--border)]')}
         >
           <FolderPlus className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-          <span className="truncate">مجموعة جديدة</span>
+          <span className="truncate">{t('linksPage.newGroup')}</span>
         </Button>
       ) : null}
       <Button
@@ -46,7 +49,7 @@ export function LinksPageActions({
         )}
       >
         <Plus className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
-        <span className="truncate">رابط جديد</span>
+        <span className="truncate">{t('linksPage.newLink')}</span>
       </Button>
     </div>
   );

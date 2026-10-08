@@ -18,6 +18,7 @@ import {
   ProductStockBadge,
   ProductThumbnail,
 } from '@/components/products/product-list-primitives';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface ProductInlineRowProps {
@@ -26,10 +27,11 @@ interface ProductInlineRowProps {
 }
 
 function ProductInlineRowComponent({ product, className }: ProductInlineRowProps) {
+  const { t } = useTranslations();
   const imageUrl = getProductImage(product as MyStoreProduct);
   const title = getProductDisplayName(product);
   const kind = resolveProductKind(product);
-  const stock = getProductStockDisplay(product);
+  const stock = getProductStockDisplay(product, t);
   const categoryLabel = getProductCategoryLabel(product);
 
   return (
@@ -70,7 +72,7 @@ function ProductInlineRowComponent({ product, className }: ProductInlineRowProps
       </div>
 
       <div className="justify-self-start">
-        <ProductKindBadge kind={kind} label={getProductKindLabelFor(product)} />
+        <ProductKindBadge kind={kind} label={getProductKindLabelFor(product, t)} />
       </div>
     </article>
   );

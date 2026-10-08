@@ -78,6 +78,16 @@ export type MailSsoOverview = {
   identityProvider: MailIdentityProviderSummary | null;
 };
 
+export type MailSecurityAuditEvent = {
+  id: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  actor: { id: string; email: string } | null;
+};
+
 export type MailSsoProvisionInput = {
   email: string;
   role: MailTeamRole;
@@ -169,6 +179,15 @@ export async function getMailSsoOverview(appId: string): Promise<MailSsoOverview
   const data = await readJson<MailSsoOverview>(response);
   if (!response.ok) throw toError(response, data, "Could not load SSO.");
   return data;
+}
+
+export async function getMailSecurityAudit(
+  appId: string,
+): Promise<MailSecurityAuditEvent[]> {
+  const response = await sessionFetch(`${appBase(appId).replace(/\/sso$/, '')}/security-audit`);
+  const data = await readJson<{ events?: MailSecurityAuditEvent[] }>(response);
+  if (!response.ok) throw toError(response, data, "Could not load security activity.");
+  return data.events ?? [];
 }
 
 export async function updateMailSsoSettings(

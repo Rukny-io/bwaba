@@ -17,6 +17,7 @@ import type {
 } from '@/lib/products/template-types';
 import { ProductFormSection } from '@/components/products/create/product-form-section';
 import { VariantAttributeField } from '@/components/products/create/variant-attribute-field';
+import { useTranslations } from '@/lib/i18n';
 
 interface ProductVariantsFormProps {
   variantAttributes: VariantAttribute[];
@@ -31,16 +32,17 @@ function makeVariantId() {
 function formatVariantSummary(
   variant: ProductVariantDraft,
   variantAttributes: VariantAttribute[],
+  t: (path: string, vars?: Record<string, string | number>) => string,
 ): string {
   const parts = variantAttributes
     .map((attr) => variant.attributes[attr.key]?.trim())
     .filter(Boolean);
 
   if (variant.stock > 0) {
-    parts.push(`كمية ${variant.stock}`);
+    parts.push(t('products.create.variantQty', { n: variant.stock }));
   }
 
-  return parts.length ? parts.join(' · ') : 'لم يُملأ بعد';
+  return parts.length ? parts.join(' · ') : t('products.create.variantEmpty');
 }
 
 export function ProductVariantsForm({
@@ -48,6 +50,7 @@ export function ProductVariantsForm({
   variants,
   onChange,
 }: ProductVariantsFormProps) {
+  const { t } = useTranslations();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
 
   function handleExpandedChange(keys: Set<string | number>) {
@@ -108,8 +111,8 @@ export function ProductVariantsForm({
 
   return (
     <ProductFormSection
-      title="المتغيرات"
-      description="اختر من القائمة أو أدخل قياساً مخصصاً — كل متغير له مخزون مستقل"
+      title={t('products.create.variantsTitle')}
+      description={t('products.create.variantsDescription')}
       contentClassName="gap-3"
     >
       <div className="flex justify-end">
@@ -121,14 +124,14 @@ export function ProductVariantsForm({
           className="rounded-full"
         >
           <Plus className="size-3.5" />
-          إضافة
+          {t('products.create.addVariant')}
         </Button>
       </div>
 
       {variants.length === 0 ? (
         <Card variant="transparent" className="border border-dashed border-border p-4 text-center shadow-none">
           <Card.Description className="text-xs">
-            أضف متغيرات مثل المقاس واللون أو السعة التخزينية
+            {t('products.create.variantsEmpty')}
           </Card.Description>
         </Card>
       ) : (
@@ -139,7 +142,7 @@ export function ProductVariantsForm({
           className="flex flex-col gap-3"
         >
           {variants.map((variant, index) => {
-            const summary = formatVariantSummary(variant, variantAttributes);
+            const summary = formatVariantSummary(variant, variantAttributes, t);
             const isExpanded = expandedKeys.has(variant.id);
 
             return (
@@ -154,7 +157,7 @@ export function ProductVariantsForm({
                       <Disclosure.Indicator className="mt-0.5 size-4 shrink-0 text-muted" />
                       <div className="min-w-0 flex-1">
                         <Card.Title className="text-xs font-semibold">
-                          متغير {index + 1}
+                          {t('products.create.variantN', { n: index + 1 })}
                         </Card.Title>
                         {!isExpanded ? (
                           <Card.Description className="mt-0.5 truncate text-[11px] leading-snug">
@@ -170,7 +173,7 @@ export function ProductVariantsForm({
                       size="sm"
                       variant="ghost"
                       onPress={() => removeVariant(variant.id)}
-                      aria-label="حذف المتغير"
+                      aria-label={t('products.create.deleteVariant')}
                       className="shrink-0 text-muted hover:text-danger"
                     >
                       <Trash2 className="size-4" />
@@ -206,7 +209,7 @@ export function ProductVariantsForm({
                           className="col-span-2 flex flex-col gap-2 sm:col-span-1"
                         >
                           <Label className="text-xs font-medium text-muted">
-                            الكمية
+                            {t('products.create.quantityLabel')}
                           </Label>
                           <Input type="number" min={0} />
                         </TextField>

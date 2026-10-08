@@ -23,6 +23,7 @@ import { RedisOAuthCodeService } from '../../auth/redis-oauth-code.service';
 import { MailAppAccessService } from '../mail-app-access.service';
 import { MailMailboxSessionService } from '../mail-mailbox-session.service';
 import { MailMembersService } from '../mail-members.service';
+import { MailSecurityAuditService } from '../mail-security-audit.service';
 import { UpsertMailIdentityProviderDto } from './dto/mail-sso.dto';
 import {
   OidcError,
@@ -35,7 +36,10 @@ import {
   trustedEmailFromClaims,
   verifyIdToken,
 } from './mail-oidc.client';
-import { decryptMailSsoSecret, encryptMailSsoSecret } from './mail-sso-secret.util';
+import {
+  decryptMailSsoSecret,
+  encryptMailSsoSecret,
+} from './mail-sso-secret.util';
 
 const STATE_TTL_SECONDS = 10 * 60;
 const STATE_KEY = (state: string) => `mail:sso:oidc:state:${state}`;
@@ -88,6 +92,7 @@ export class MailSsoOidcService {
     private readonly mailboxSessions: MailMailboxSessionService,
     private readonly auth: AuthService,
     private readonly oauthCodes: RedisOAuthCodeService,
+    private readonly audit?: MailSecurityAuditService,
   ) {}
 
   redirectUri(): string {
@@ -105,7 +110,10 @@ export class MailSsoOidcService {
     ).replace(/\/$/, '');
   }
 
-  loginErrorRedirect(code: MailSsoLoginErrorCode, email?: string | null): string {
+  loginErrorRedirect(
+    code: MailSsoLoginErrorCode,
+    email?: string | null,
+  ): string {
     const url = new URL(`${this.mailBase()}/login`);
     url.searchParams.set('sso_error', code);
     if (email) url.searchParams.set('email', email);
@@ -151,7 +159,10 @@ export class MailSsoOidcService {
     const row = await this.prisma.mailAppIdentityProvider.findUnique({
       where: { mailAppId: access.app.id },
     });
-    return { identityProvider: row ? this.toView(row) : null, redirectUri: this.redirectUri() };
+    return {
+      identityProvider: row ? this.toView(row) : null,
+      redirectUri: this.redirectUri(),
+    };
   }
 
   async upsertIdentityProvider(
@@ -160,20 +171,35 @@ export class MailSsoOidcService {
     dto: UpsertMailIdentityProviderDto,
   ) {
     const access = await this.requireManager(userId, publicAppId);
+    if (dto.enforceSso === true && !access.isOwner) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'MAIL_SSO_OWNER_REQUIRED',
+        message: 'Only the workspace owner can enforce SSO for everyone.',
+      });
+    }
     const domain = access.app.primaryDomain?.trim().toLowerCase();
     if (!domain || access.app.domainStatus !== 'ACTIVE') {
       throw new BadRequestException({
         statusCode: 400,
         code: 'MAIL_SSO_DOMAIN_REQUIRED',
-        message: 'Verify your workspace domain before connecting an identity provider.',
+        message:
+          'Verify your workspace domain before connecting an identity provider.',
       });
     }
 
     const issuer = normalizeIssuer(dto.issuer);
-    if (dto.preset === 'GOOGLE_WORKSPACE' && issuer !== GOOGLE_ISSUER) {
-      throw new BadRequestException(`Google Workspace uses the issuer ${GOOGLE_ISSUER}.`);
+    if (String(dto.preset) === 'GOOGLE_WORKSPACE' && issuer !== GOOGLE_ISSUER) {
+      throw new BadRequestException(
+        `Google Workspace uses the issuer ${GOOGLE_ISSUER}.`,
+      );
     }
-    if (dto.preset === 'MICROSOFT_ENTRA' && !/^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/i.test(issuer)) {
+    if (
+      String(dto.preset) === 'MICROSOFT_ENTRA' &&
+      !/^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/i.test(
+        issuer,
+      )
+    ) {
       throw new BadRequestException(
         'Microsoft Entra needs the tenant-specific issuer: https://login.microsoftonline.com/<tenant-id>/v2.0',
       );
@@ -189,7 +215,10 @@ export class MailSsoOidcService {
 
     const issuerChanged = !existing || existing.issuer !== issuer;
     let lastTestError: string | null | undefined;
-    if (dto.enabled || (existing?.enabled && dto.enabled !== false && issuerChanged)) {
+    if (
+      dto.enabled ||
+      (existing?.enabled && dto.enabled !== false && issuerChanged)
+    ) {
       try {
         await discoverOidc(issuer, { fresh: true });
         lastTestError = null;
@@ -207,20 +236,31 @@ export class MailSsoOidcService {
       issuer,
       clientId: dto.clientId.trim(),
       emailDomain: domain,
-      ...(secret ? { clientSecretEncrypted: encryptMailSsoSecret(secret) } : {}),
+      ...(secret
+        ? { clientSecretEncrypted: encryptMailSsoSecret(secret) }
+        : {}),
       ...(dto.enabled !== undefined ? { enabled: dto.enabled } : {}),
-      ...(dto.jitProvisioning !== undefined ? { jitProvisioning: dto.jitProvisioning } : {}),
-      ...(dto.defaultRole ? { defaultRole: dto.defaultRole as MailAppMemberRole } : {}),
+      ...(dto.jitProvisioning !== undefined
+        ? { jitProvisioning: dto.jitProvisioning }
+        : {}),
+      ...(dto.defaultRole
+        ? { defaultRole: dto.defaultRole as MailAppMemberRole }
+        : {}),
       ...(dto.enforceSso !== undefined ? { enforceSso: dto.enforceSso } : {}),
       ...(dto.autoMapMailboxByLocalPart !== undefined
         ? { autoMapMailboxByLocalPart: dto.autoMapMailboxByLocalPart }
         : {}),
-      ...(lastTestError === null ? { lastTestedAt: new Date(), lastTestError: null } : {}),
+      ...(lastTestError === null
+        ? { lastTestedAt: new Date(), lastTestError: null }
+        : {}),
     };
 
     try {
       const row = existing
-        ? await this.prisma.mailAppIdentityProvider.update({ where: { id: existing.id }, data })
+        ? await this.prisma.mailAppIdentityProvider.update({
+            where: { id: existing.id },
+            data,
+          })
         : await this.prisma.mailAppIdentityProvider.create({
             data: {
               ...data,
@@ -228,13 +268,35 @@ export class MailSsoOidcService {
               clientSecretEncrypted: data.clientSecretEncrypted ?? '',
             },
           });
-      if (row.enforceSso && (!existing?.enforceSso || !existing.enabled) && row.enabled) {
+      if (
+        row.enforceSso &&
+        (!existing?.enforceSso || !existing.enabled) &&
+        row.enabled
+      ) {
         await this.revokePasswordSessionsForDomain(access.app.id, domain);
       }
-      return { identityProvider: this.toView(row), redirectUri: this.redirectUri() };
+      void this.audit?.record({
+        mailAppId: access.app.id,
+        actorUserId: userId,
+        action: 'sso.identity_provider.updated',
+        targetType: 'identity_provider',
+        targetId: row.id,
+        metadata: {
+          preset: row.preset,
+          enabled: row.enabled,
+          enforceSso: row.enforceSso,
+          jitProvisioning: row.jitProvisioning,
+        },
+      });
+      return {
+        identityProvider: this.toView(row),
+        redirectUri: this.redirectUri(),
+      };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
-        throw new ConflictException('Another workspace already uses SSO for this domain.');
+        throw new ConflictException(
+          'Another workspace already uses SSO for this domain.',
+        );
       }
       throw error;
     }
@@ -251,33 +313,57 @@ export class MailSsoOidcService {
     let endpoints: { authorization: string; token: string } | null = null;
     try {
       const doc = await discoverOidc(row.issuer, { fresh: true });
-      endpoints = { authorization: doc.authorization_endpoint, token: doc.token_endpoint };
+      endpoints = {
+        authorization: doc.authorization_endpoint,
+        token: doc.token_endpoint,
+      };
       if (!row.clientSecretEncrypted) error = 'Client secret is missing.';
       else decryptMailSsoSecret(row.clientSecretEncrypted);
     } catch (e) {
-      error = e instanceof OidcError ? e.message : 'The stored client secret could not be read. Save it again.';
+      error =
+        e instanceof OidcError
+          ? e.message
+          : 'The stored client secret could not be read. Save it again.';
     }
 
     const updated = await this.prisma.mailAppIdentityProvider.update({
       where: { id: row.id },
       data: { lastTestedAt: new Date(), lastTestError: error },
     });
-    return { ok: !error, error, endpoints, identityProvider: this.toView(updated) };
+    return {
+      ok: !error,
+      error,
+      endpoints,
+      identityProvider: this.toView(updated),
+    };
   }
 
   async deleteIdentityProvider(userId: string, publicAppId: string) {
     const access = await this.requireManager(userId, publicAppId);
-    await this.prisma.mailAppIdentityProvider.deleteMany({ where: { mailAppId: access.app.id } });
+    await this.prisma.mailAppIdentityProvider.deleteMany({
+      where: { mailAppId: access.app.id },
+    });
+    void this.audit?.record({
+      mailAppId: access.app.id,
+      actorUserId: userId,
+      action: 'sso.identity_provider.deleted',
+      targetType: 'identity_provider',
+    });
     return { ok: true };
   }
 
   /** Enforcing SSO must cut off sessions that were opened with a mailbox password. */
-  private async revokePasswordSessionsForDomain(mailAppId: string, domain: string) {
+  private async revokePasswordSessionsForDomain(
+    mailAppId: string,
+    domain: string,
+  ) {
     const boxes = await this.prisma.mailMailbox.findMany({
       where: { mailAppId, domain },
       select: { id: true },
     });
-    await Promise.all(boxes.map((box) => this.mailboxSessions.revokeMailbox(box.id)));
+    await Promise.all(
+      boxes.map((box) => this.mailboxSessions.revokeMailbox(box.id)),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -330,10 +416,13 @@ export class MailSsoOidcService {
         nonce,
         codeChallenge: pkce.challenge,
         loginHint,
-        hostedDomain: idp.preset === 'GOOGLE_WORKSPACE' ? idp.emailDomain : undefined,
+        hostedDomain:
+          idp.preset === 'GOOGLE_WORKSPACE' ? idp.emailDomain : undefined,
       });
     } catch (error) {
-      this.logger.warn(`OIDC start failed for ${idp.emailDomain}: ${(error as Error).message}`);
+      this.logger.warn(
+        `OIDC start failed for ${idp.emailDomain}: ${(error as Error).message}`,
+      );
       return this.loginErrorRedirect('provider', rawEmail);
     }
   }
@@ -351,16 +440,27 @@ export class MailSsoOidcService {
     const state = await this.redis.get<OidcState>(key);
     await this.redis.del(key);
     if (!state) return this.loginErrorRedirect('state');
-    if (params.error || !params.code) return this.loginErrorRedirect('provider', state.loginHint);
+    if (params.error || !params.code)
+      return this.loginErrorRedirect('provider', state.loginHint);
 
     try {
-      return await this.completeLogin(state, params.code, params.userAgent, params.ipAddress);
+      return await this.completeLogin(
+        state,
+        params.code,
+        params.userAgent,
+        params.ipAddress,
+      );
     } catch (error) {
       const code = this.classifyError(error);
       if (code === 'unknown') {
-        this.logger.error(`OIDC callback failed: ${(error as Error).message}`, (error as Error).stack);
+        this.logger.error(
+          `OIDC callback failed: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
       } else {
-        this.logger.warn(`OIDC callback rejected (${code}): ${(error as Error).message}`);
+        this.logger.warn(
+          `OIDC callback rejected (${code}): ${(error as Error).message}`,
+        );
       }
       return this.loginErrorRedirect(code, state.loginHint);
     }
@@ -372,7 +472,10 @@ export class MailSsoOidcService {
     if (error instanceof HttpException) {
       const body = error.getResponse() as { code?: string };
       if (body?.code === 'MAIL_SSO_NOT_PROVISIONED') return 'not_provisioned';
-      if (body?.code === 'MAIL_TEAM_LIMIT' || body?.code === 'MAIL_TEAM_PLAN_REQUIRED') {
+      if (
+        body?.code === 'MAIL_TEAM_LIMIT' ||
+        body?.code === 'MAIL_TEAM_PLAN_REQUIRED'
+      ) {
         return 'seat_limit';
       }
     }
@@ -387,7 +490,11 @@ export class MailSsoOidcService {
   ): Promise<string> {
     const idp = await this.prisma.mailAppIdentityProvider.findUnique({
       where: { id: state.identityProviderId },
-      include: { mailApp: { select: { id: true, appId: true, status: true, userId: true } } },
+      include: {
+        mailApp: {
+          select: { id: true, appId: true, status: true, userId: true },
+        },
+      },
     });
     if (!idp || !idp.enabled || idp.mailApp.status !== MailAppStatus.ACTIVE) {
       throw new SsoLoginError('disabled');
@@ -411,12 +518,22 @@ export class MailSsoOidcService {
 
     const email = trustedEmailFromClaims(claims);
     if (!email) throw new SsoLoginError('email');
-    if (email.split('@')[1] !== idp.emailDomain) throw new SsoLoginError('domain');
-    if (idp.preset === 'GOOGLE_WORKSPACE' && claims.hd?.toLowerCase() !== idp.emailDomain) {
+    if (email.split('@')[1] !== idp.emailDomain)
+      throw new SsoLoginError('domain');
+    if (
+      idp.preset === 'GOOGLE_WORKSPACE' &&
+      claims.hd?.toLowerCase() !== idp.emailDomain
+    ) {
       throw new SsoLoginError('domain');
     }
 
-    const user = await this.resolveUser(idp, claims.sub, email, claims.name, claims.picture);
+    const user = await this.resolveUser(
+      idp,
+      claims.sub,
+      email,
+      claims.name,
+      claims.picture,
+    );
 
     const { slotIndex } = await this.members.joinViaIdentityProvider({
       mailAppId: idp.mailApp.id,
@@ -427,7 +544,12 @@ export class MailSsoOidcService {
     });
     await this.claimMailboxes(idp, user.id, email);
 
-    const result = await this.auth.completeExternalLogin(user, 'SSO', userAgent, ipAddress);
+    const result = await this.auth.completeExternalLogin(
+      user,
+      'SSO',
+      userAgent,
+      ipAddress,
+    );
     const handoff = await this.oauthCodes.generate(
       {
         userId: result.user.id,
@@ -445,7 +567,9 @@ export class MailSsoOidcService {
     const dest = new URL(`${this.mailBase()}/callback`);
     dest.searchParams.set('code', handoff);
     dest.searchParams.set('next', `/apps/${idp.mailApp.appId}/open?next=inbox`);
-    this.logger.log(`SSO login for ${email} into ${idp.mailApp.appId} (slot ${slotIndex})`);
+    this.logger.log(
+      `SSO login for ${email} into ${idp.mailApp.appId} (slot ${slotIndex})`,
+    );
     return dest.toString();
   }
 
@@ -465,7 +589,9 @@ export class MailSsoOidcService {
     } as const;
 
     const linked = await this.prisma.mailSsoIdentity.findUnique({
-      where: { identityProviderId_subject: { identityProviderId: idp.id, subject } },
+      where: {
+        identityProviderId_subject: { identityProviderId: idp.id, subject },
+      },
       include: { user: { select: userSelect } },
     });
     if (linked) {
@@ -488,7 +614,8 @@ export class MailSsoOidcService {
           status: 'PENDING',
         },
       });
-      if (!idp.jitProvisioning && !invited) throw new SsoLoginError('not_provisioned');
+      if (!idp.jitProvisioning && !invited)
+        throw new SsoLoginError('not_provisioned');
       const created = await this.auth.createVerifiedExternalUser({
         email,
         name: name ?? null,
@@ -522,7 +649,11 @@ export class MailSsoOidcService {
   }
 
   /** Assign mailboxes reserved for this email, and optionally the one matching its local part. */
-  private async claimMailboxes(idp: MailAppIdentityProvider, userId: string, email: string) {
+  private async claimMailboxes(
+    idp: MailAppIdentityProvider,
+    userId: string,
+    email: string,
+  ) {
     const localPart = email.split('@')[0];
     const candidates = await this.prisma.mailMailbox.findMany({
       where: {
@@ -531,7 +662,16 @@ export class MailSsoOidcService {
         OR: [
           { pendingAssigneeEmail: { equals: email, mode: 'insensitive' } },
           ...(idp.autoMapMailboxByLocalPart
-            ? [{ localPart: { equals: localPart, mode: 'insensitive' as const }, domain: idp.emailDomain, assignedUserId: null }]
+            ? [
+                {
+                  localPart: {
+                    equals: localPart,
+                    mode: 'insensitive' as const,
+                  },
+                  domain: idp.emailDomain,
+                  assignedUserId: null,
+                },
+              ]
             : []),
         ],
       },

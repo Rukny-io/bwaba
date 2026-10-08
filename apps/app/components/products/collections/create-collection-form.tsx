@@ -13,6 +13,7 @@ import {
 } from '@/lib/collections/api';
 import type { MyStoreProduct } from '@/lib/collections/types';
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
+import { useTranslations } from '@/lib/i18n';
 import { uploadStorageImage } from '@/lib/storage/upload';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ export function CreateCollectionForm({
   onCancel,
   className,
 }: CreateCollectionFormProps) {
+  const { t } = useTranslations();
   const [nameAr, setNameAr] = useState('');
   const [description, setDescription] = useState('');
   const [imagePath, setImagePath] = useState<string | null>(null);
@@ -58,12 +60,12 @@ export function CreateCollectionForm({
       setError(
         err instanceof ApiException
           ? err.message
-          : 'تعذّر تحميل المنتجات',
+          : t('collections.loadProductsFailed'),
       );
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -111,7 +113,7 @@ export function CreateCollectionForm({
         if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
         return null;
       });
-      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة الشعار');
+      setError(err instanceof Error ? err.message : t('collections.logoUploadFailed'));
     } finally {
       setUploadingImage(false);
     }
@@ -135,7 +137,7 @@ export function CreateCollectionForm({
         if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
         return null;
       });
-      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة البانر');
+      setError(err instanceof Error ? err.message : t('collections.bannerUploadFailed'));
     } finally {
       setUploadingBanner(false);
     }
@@ -163,12 +165,12 @@ export function CreateCollectionForm({
 
     const trimmedName = nameAr.trim();
     if (trimmedName.length < 2) {
-      setError('أدخل اسماً للمجموعة (حرفان على الأقل)');
+      setError(t('collections.nameRequired'));
       return;
     }
 
     if (isUploading) {
-      setError('انتظر حتى يكتمل رفع الصور');
+      setError(t('collections.waitUploads'));
       return;
     }
 
@@ -186,7 +188,7 @@ export function CreateCollectionForm({
       setError(
         err instanceof ApiException
           ? err.message
-          : 'تعذّر إنشاء المجموعة',
+          : t('collections.createFailed'),
       );
     } finally {
       setSaving(false);
@@ -223,13 +225,13 @@ export function CreateCollectionForm({
               <input
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
-                placeholder="أدخل اسم المجموعة"
+                placeholder={t('collections.namePlaceholderCreate')}
                 className="w-full border-0 bg-transparent p-0 text-[15px] font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/75"
               />
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="وصف اختياري يظهر في الكتالوج"
+                placeholder={t('collections.descriptionPlaceholderCreate')}
                 className="w-full border-0 bg-transparent p-0 text-[12px] text-[var(--muted-foreground)] outline-none placeholder:text-[var(--muted-foreground)]/65"
               />
             </div>
@@ -237,14 +239,14 @@ export function CreateCollectionForm({
 
           <section className="flex min-h-0 flex-col">
             <p className="mb-3 text-[12px] text-[var(--muted-foreground)]">
-              منتجات بدون مجموعة
+              {t('collections.ungroupedProducts')}
             </p>
 
             <input
               type="search"
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
-              placeholder="بحث…"
+              placeholder={t('collections.searchShort')}
               className="mb-3 h-9 w-full rounded-lg border border-[rgba(34,34,34,0.1)] bg-transparent px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60 focus:border-[rgba(34,34,34,0.18)] dark:border-white/10 dark:focus:border-white/20"
             />
 
@@ -259,7 +261,7 @@ export function CreateCollectionForm({
                   strokeWidth={1.5}
                 />
                 <p className="text-[13px] text-[var(--muted-foreground)]">
-                  لا توجد منتجات
+                  {t('collections.noProducts')}
                 </p>
               </div>
             ) : (
@@ -339,7 +341,7 @@ export function CreateCollectionForm({
           {saving ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : (
-            <span>إنشاء المجموعة</span>
+            <span>{t('collections.createAction')}</span>
           )}
         </button>
         {onCancel ? (
@@ -348,7 +350,7 @@ export function CreateCollectionForm({
             onClick={onCancel}
             className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[rgba(34,34,34,0.12)] px-4 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.05]"
           >
-            إلغاء
+            {t('collections.cancel')}
           </button>
         ) : null}
       </div>

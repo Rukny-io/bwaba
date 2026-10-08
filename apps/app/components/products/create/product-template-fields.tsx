@@ -15,7 +15,12 @@ import type {
   TemplateField,
   TemplateFieldValue,
 } from '@/lib/products/template-types';
+import {
+  getTemplateFieldLabel,
+  getTemplateOptionLabel,
+} from '@/lib/products/template-locale';
 import { ProductFormSection } from '@/components/products/create/product-form-section';
+import { useTranslations } from '@/lib/i18n';
 
 interface ProductTemplateFieldsProps {
   fields: TemplateField[];
@@ -33,15 +38,19 @@ export function ProductTemplateFields({
   fields,
   values,
   onChange,
-  title = 'تفاصيل التصنيف',
-  description = 'حقول مخصصة حسب نشاط متجرك',
+  title,
+  description,
 }: ProductTemplateFieldsProps) {
+  const { t } = useTranslations();
+  const resolvedTitle = title ?? t('products.create.templateTitle');
+  const resolvedDescription = description ?? t('products.create.templateDescription');
+
   if (!fields.length) return null;
 
   return (
     <ProductFormSection
-      title={title}
-      description={description}
+      title={resolvedTitle}
+      description={resolvedDescription}
       contentClassName="grid grid-cols-2 gap-3 sm:gap-4"
     >
       {fields.map((field) => (
@@ -69,9 +78,11 @@ function TemplateFieldControl({
   value: TemplateFieldValue | undefined;
   onChange: (value: TemplateFieldValue) => void;
 }) {
+  const { t, locale } = useTranslations();
+  const fieldLabel = getTemplateFieldLabel(field, locale);
   const labelText = (
     <>
-      {field.labelAr}
+      {fieldLabel}
       {field.required ? <span className="text-danger"> *</span> : null}
     </>
   );
@@ -100,7 +111,7 @@ function TemplateFieldControl({
             typeof value === 'string' && value ? value : null
           }
           onSelectionChange={(key) => onChange(key ? String(key) : '')}
-          placeholder="اختر…"
+          placeholder={t('products.create.selectPlaceholder')}
           className="flex flex-col gap-2"
         >
           <Label className="text-xs font-medium text-muted">{labelText}</Label>
@@ -110,12 +121,15 @@ function TemplateFieldControl({
           </Select.Trigger>
           <Select.Popover>
             <ListBox>
-              {(field.options ?? []).map((option) => (
-                <ListBox.Item key={option} id={option} textValue={option}>
-                  {option}
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-              ))}
+              {(field.options ?? []).map((option) => {
+                const optionLabel = getTemplateOptionLabel(option, locale);
+                return (
+                  <ListBox.Item key={option} id={option} textValue={optionLabel}>
+                    {optionLabel}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                );
+              })}
             </ListBox>
           </Select.Popover>
         </Select>
@@ -129,6 +143,7 @@ function TemplateFieldControl({
           <div className="flex flex-wrap gap-2">
             {(field.options ?? []).map((option) => {
               const active = selected.includes(option);
+              const optionLabel = getTemplateOptionLabel(option, locale);
               return (
                 <Chip
                   key={option}
@@ -143,7 +158,7 @@ function TemplateFieldControl({
                     }
                   }}
                 >
-                  {option}
+                  {optionLabel}
                 </Chip>
               );
             })}
@@ -159,7 +174,7 @@ function TemplateFieldControl({
           <Switch
             isSelected={value === true}
             onChange={onChange}
-            aria-label={field.labelAr}
+            aria-label={fieldLabel}
           >
             <Switch.Control>
               <Switch.Thumb />

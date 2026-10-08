@@ -79,8 +79,14 @@ export interface StoreOrderAddress {
   landmark?: string | null;
 }
 
+export type OrderPaymentFilter = 'all' | 'PAID' | 'UNPAID';
+
 export interface FetchStoreOrdersParams {
   status?: OrderStatus;
+  paymentStatus?: OrderPaymentStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   limit?: number;
 }

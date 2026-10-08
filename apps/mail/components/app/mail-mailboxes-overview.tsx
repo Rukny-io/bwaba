@@ -28,8 +28,11 @@ import { MailMailbox2faSetupModal } from "@/components/app/mail-mailbox-2fa-setu
 import { formatMailStorageAmount } from "@/lib/mail-plans";
 import {
   fetchMailSubscription,
+  workspaceActiveLimits,
+  type MailActiveLimitsSnapshot,
   type MailPendingPlanRequest,
   type MailSubscriptionView,
+  type MailUnifiedPlanSnapshot,
 } from "@/lib/mail-subscription-client";
 import {
   assignMailMailbox,
@@ -152,10 +155,12 @@ function MailboxActionMenu({
   box,
   deletingId,
   onAction,
+  canManageMailboxes,
 }: {
   box: MailMailboxView;
   deletingId: string | null;
   onAction: (box: MailMailboxView, key: React.Key) => void;
+  canManageMailboxes: boolean;
 }) {
   return (
     <Dropdown>
@@ -187,32 +192,38 @@ function MailboxActionMenu({
           <Dropdown.Item id="settings" textValue="Settings">
             Settings
           </Dropdown.Item>
-          <Dropdown.Item id="forwarders" textValue="Create Forwarders">
-            Create Forwarders
-          </Dropdown.Item>
-          <Dropdown.Item id="alias" textValue="Create Alias">
-            Create Alias
-          </Dropdown.Item>
-          <Dropdown.Item id="auto-reply" textValue="Create Automatic Reply">
-            Create Automatic Reply
-          </Dropdown.Item>
-          <Dropdown.Item id="catch-all" textValue="Create Catch-All">
-            Create Catch-All
-          </Dropdown.Item>
+          {canManageMailboxes ? (
+            <>
+              <Dropdown.Item id="forwarders" textValue="Create Forwarders">
+                Create Forwarders
+              </Dropdown.Item>
+              <Dropdown.Item id="alias" textValue="Create Alias">
+                Create Alias
+              </Dropdown.Item>
+              <Dropdown.Item id="auto-reply" textValue="Create Automatic Reply">
+                Create Automatic Reply
+              </Dropdown.Item>
+              <Dropdown.Item id="catch-all" textValue="Create Catch-All">
+                Create Catch-All
+              </Dropdown.Item>
+            </>
+          ) : null}
           <Dropdown.Item
             id="2fa"
             textValue={box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
           >
             {box.totpEnabled ? "Disable 2FA" : "Enable 2FA"}
           </Dropdown.Item>
-          <Dropdown.Item
-            id="delete"
-            textValue="Delete"
-            variant="danger"
-            isDisabled={deletingId === box.id}
-          >
-            {deletingId === box.id ? "Deleting…" : "Delete"}
-          </Dropdown.Item>
+          {canManageMailboxes ? (
+            <Dropdown.Item
+              id="delete"
+              textValue="Delete"
+              variant="danger"
+              isDisabled={deletingId === box.id}
+            >
+              {deletingId === box.id ? "Deleting…" : "Delete"}
+            </Dropdown.Item>
+          ) : null}
         </Dropdown.Menu>
       </Dropdown.Popover>
     </Dropdown>
@@ -227,12 +238,11 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
 
   const [appId, setAppId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<MailSubscriptionView | null>(null);
-  const [unifiedLimits, setUnifiedLimits] = useState<
-    import("@/lib/mail-subscription-client").MailUnifiedLimitsSnapshot | null
-  >(null);
-  const [unifiedPlan, setUnifiedPlan] = useState<
-    import("@/lib/mail-subscription-client").MailUnifiedPlanSnapshot | null
-  >(null);
+  const [activeLimits, setActiveLimits] =
+    useState<MailActiveLimitsSnapshot | null>(null);
+  const [unifiedPlan, setUnifiedPlan] = useState<MailUnifiedPlanSnapshot | null>(
+    null,
+  );
   const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
     null,
   );
@@ -265,6 +275,8 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
   const avatarTargetIdRef = useRef<string | null>(null);
   const [team, setTeam] = useState<MailTeamRoster | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [canManageMailboxes, setCanManageMailboxes] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
 
   const refreshMailboxes = useCallback(async (id: string) => {
     const list = await listMailMailboxes(id);
@@ -310,14 +322,21 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
           setSubscription(
             current.subscription?.status === "ACTIVE" ? current.subscription : null,
           );
-          setUnifiedLimits(current.unifiedLimits ?? null);
-          setUnifiedPlan(current.unifiedPlan ?? null);
+          setActiveLimits(workspaceActiveLimits(current));
+          setUnifiedPlan(
+            current.unifiedPlan ?? workspaceActiveLimits(current)?.emailPlan ?? null,
+          );
           setPendingRequest(current.pendingRequest);
+          setCanManageMailboxes(Boolean(current.canManageMailboxes));
+          setCanManageBilling(Boolean(current.canManageBilling));
         }
       } catch {
         if (!cancelled) {
           setSubscription(null);
+          setActiveLimits(null);
           setPendingRequest(null);
+          setCanManageMailboxes(false);
+          setCanManageBilling(false);
         }
       } finally {
         if (!cancelled) setLoadingSub(false);
@@ -357,20 +376,24 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     };
   }, [appId, refreshMailboxes]);
 
-  const limits = subscription?.limits ?? unifiedLimits?.limits;
-  const seatLimit = subscription?.mailboxCount ?? unifiedLimits?.mailboxCount ?? 0;
+  const limits = activeLimits?.limits;
+  const seatLimit = activeLimits?.mailboxCount ?? 0;
   const activeCount = mailboxes.filter((m) => m.status === "ACTIVE").length;
-  const storageQuotaBytes =
-    subscription?.storageQuotaBytesPerMailbox ??
-    unifiedLimits?.storageQuotaBytesPerMailbox ??
-    0;
-  const hasActivePlan = Boolean(subscription) || Boolean(unifiedLimits);
-  const canCreate = Boolean(appId && hasActivePlan && activeCount < seatLimit);
-  const canAssign = Boolean(team?.canManage && assigneeOptions.length > 0);
+  const storageQuotaBytes = activeLimits?.storageQuotaBytesPerMailbox ?? 0;
+  const hasActivePlan = Boolean(activeLimits);
+  const canCreate = Boolean(
+    appId &&
+      canManageMailboxes &&
+      hasActivePlan &&
+      activeCount < seatLimit,
+  );
+  const canAssign = Boolean(
+    canManageMailboxes && team?.canManage && assigneeOptions.length > 0,
+  );
 
   // After Checkout activates a plan, create the pending mailbox from setup.
   useEffect(() => {
-    if (!appId || !hasActivePlan) return;
+    if (!appId || !hasActivePlan || !canManageMailboxes) return;
     let cancelled = false;
     (async () => {
       try {
@@ -386,7 +409,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
     return () => {
       cancelled = true;
     };
-  }, [appId, hasActivePlan, refreshMailboxes]);
+  }, [appId, hasActivePlan, canManageMailboxes, refreshMailboxes]);
 
   async function onAssignMailbox(mailboxId: string, userId: string) {
     if (!appId || assigningId) return;
@@ -695,6 +718,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         loading={loadingSub}
         hasActivePlan={hasActivePlan}
         subscription={subscription}
+        activeLimits={activeLimits}
         unifiedPlan={unifiedPlan}
         limits={limits}
         limitsOpen={limitsOpen}
@@ -705,6 +729,8 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         billingLabel={unifiedPlan ? "Manage plan" : "Billing"}
         externalBilling={Boolean(unifiedPlan)}
         domainSettingsHref={href("/domain")}
+        showBilling={canManageBilling}
+        showSeatUsage={canManageMailboxes}
       />
 
       <section
@@ -714,15 +740,21 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-base font-medium text-[var(--foreground)]">
-              {hasActivePlan ? "Manage mailboxes" : "Set up your email"}
+              {canManageMailboxes
+                ? hasActivePlan
+                  ? "Manage mailboxes"
+                  : "Set up your email"
+                : "Your mailboxes"}
             </h2>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {hasActivePlan
-                ? "Create addresses, assign SSO owners, and monitor usage."
-                : "Complete DNS verification to create your first address."}
+              {canManageMailboxes
+                ? hasActivePlan
+                  ? "Create addresses, assign SSO owners, and monitor usage."
+                  : "Complete DNS verification to create your first address."
+                : "Addresses assigned to you in this workspace."}
             </p>
           </div>
-          {hasActivePlan ? createButton : null}
+          {hasActivePlan && canManageMailboxes ? createButton : null}
         </div>
 
         {error ? (
@@ -843,7 +875,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
             Loading mailboxes…
           </p>
         ) : mailboxes.length === 0 ? (
-          hasActivePlan ? (
+          canManageMailboxes && hasActivePlan ? (
             <div className="mt-4 border-t border-[var(--border)] pt-5">
               <p className="text-sm font-medium text-[var(--foreground)]">
                 Create your first mailbox
@@ -865,7 +897,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                 Create mailbox
               </button>
             </div>
-          ) : (
+          ) : canManageMailboxes ? (
             <p className="mt-4 border-t border-[var(--border)] pt-5 text-sm leading-relaxed text-[var(--muted-foreground)]">
               Publish DNS for your domain, then create addresses for your team.{" "}
               <Link
@@ -874,6 +906,10 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
               >
                 Domain settings
               </Link>
+            </p>
+          ) : (
+            <p className="mt-4 border-t border-[var(--border)] pt-5 text-sm leading-relaxed text-[var(--muted-foreground)]">
+              No mailbox is assigned to you yet. Ask the workspace owner to assign one.
             </p>
           )
         ) : (
@@ -917,6 +953,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                       box={box}
                       deletingId={deletingId}
                       onAction={onMailboxAction}
+                      canManageMailboxes={canManageMailboxes}
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
@@ -1037,6 +1074,7 @@ export function MailMailboxesOverview({ setup }: { setup: MailDomainSetup }) {
                             box={box}
                             deletingId={deletingId}
                             onAction={onMailboxAction}
+                            canManageMailboxes={canManageMailboxes}
                           />
                         </div>
                       </td>

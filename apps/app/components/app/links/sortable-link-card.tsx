@@ -29,6 +29,7 @@ import {
   linksToolBtnClass,
 } from '@/components/app/links/links-interaction';
 import type { LinkGroup, SocialLink, UpdateSocialLinkInput } from '@/lib/links/types';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface SortableLinkCardProps {
@@ -91,6 +92,7 @@ export function SortableLinkCard({
   onLinkUpdated,
   onThumbnailError,
 }: SortableLinkCardProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const dragControls = useDragControls();
   const [isDragging, setIsDragging] = useState(false);
@@ -106,7 +108,7 @@ export function SortableLinkCard({
   const isHidden = link.status === 'hidden';
   const isBusy = busyId === link.id || busyId === 'reorder' || saving;
   const isBlock = catalogType === 'header' || catalogType === 'text';
-  const displayUrl = isBlock ? 'كتلة نصية' : formatLinkUrl(link.url);
+  const displayUrl = isBlock ? t('linksPage.textBlock') : formatLinkUrl(link.url);
   const isScheduled = Boolean(link.scheduledStartAt || link.scheduledEndAt);
   const isProtected = Boolean(link.isLocked || link.isPasswordProtected);
 
@@ -210,7 +212,7 @@ export function SortableLinkCard({
             e.stopPropagation();
             dragControls.start(e);
           }}
-          aria-label="اسحب لإعادة الترتيب"
+          aria-label={t('linksPage.dragReorder')}
         >
           <Grip className="size-4" strokeWidth={1.75} aria-hidden />
         </button>
@@ -250,7 +252,7 @@ export function SortableLinkCard({
                   <button
                     type="button"
                     className={cn(linksToolBtnClass, 'size-8 sm:opacity-0 sm:group-hover/link:opacity-100')}
-                    aria-label="تعديل سريع"
+                    aria-label={t('linksPage.quickEdit')}
                     disabled={isBusy}
                   >
                     <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />
@@ -292,7 +294,7 @@ export function SortableLinkCard({
                 target="_blank"
                 rel="noreferrer"
                 className={linksToolBtnClass}
-                aria-label="فتح الرابط"
+                aria-label={t('linksPage.openLink')}
               >
                 <ExternalLink className="size-4" strokeWidth={1.75} aria-hidden />
               </a>
@@ -304,7 +306,7 @@ export function SortableLinkCard({
                 linksToolBtnClass,
                 link.isPinned && 'text-amber-500 hover:text-amber-600',
               )}
-              aria-label={link.isPinned ? 'إلغاء التمييز' : 'تمييز الرابط'}
+              aria-label={link.isPinned ? t('linksPage.unpin') : t('linksPage.pin')}
               disabled={isBusy}
               onClick={() => onTogglePin(link)}
             >
@@ -325,7 +327,7 @@ export function SortableLinkCard({
                   <button
                     type="button"
                     className={cn(linksToolBtnClass, link.groupId && 'text-[var(--foreground)]')}
-                    aria-label="نقل إلى مجموعة"
+                    aria-label={t('linksPage.moveToGroup')}
                     disabled={isBusy}
                   >
                     <Folder className="size-4" strokeWidth={1.75} aria-hidden />
@@ -334,7 +336,7 @@ export function SortableLinkCard({
                 <Popover.Content placement="bottom start" className="w-[min(16rem,calc(100vw-2rem))]">
                   <Popover.Dialog className="flex flex-col gap-1 p-2">
                     <Popover.Heading className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
-                      نقل إلى مجموعة
+                      {t('linksPage.moveToGroup')}
                     </Popover.Heading>
                     <button
                       type="button"
@@ -346,7 +348,7 @@ export function SortableLinkCard({
                       )}
                       onClick={() => onMoveToGroup(link, null)}
                     >
-                      بدون مجموعة
+                      {t('linksPage.noGroup')}
                     </button>
                     {groups.map((group) => (
                       <button
@@ -378,7 +380,7 @@ export function SortableLinkCard({
                 <button
                   type="button"
                   className={cn(linksToolBtnClass, isScheduled && 'text-[var(--foreground)]')}
-                  aria-label="جدولة الظهور"
+                  aria-label={t('linksPage.schedule')}
                   disabled={isBusy}
                 >
                   <CalendarClock className="size-4" strokeWidth={1.75} aria-hidden />
@@ -443,7 +445,7 @@ export function SortableLinkCard({
                 <button
                   type="button"
                   className={cn(linksToolBtnClass, isProtected && 'text-[var(--foreground)]')}
-                  aria-label="قفل الرابط"
+                  aria-label={t('linksPage.lockLink')}
                   disabled={isBusy}
                 >
                   <Lock className="size-4" strokeWidth={1.75} aria-hidden />
@@ -454,8 +456,8 @@ export function SortableLinkCard({
                   <Popover.Heading className="text-sm font-semibold">قفل الرابط</Popover.Heading>
                   <p className="text-xs text-[var(--muted-foreground)]">
                     {isProtected
-                      ? 'الرابط محمي حالياً. يمكنك تغيير كلمة المرور أو إزالتها.'
-                      : 'أضف كلمة مرور ليطلبها الزائر قبل فتح الرابط.'}
+                      ? t('linksPage.lockActive')
+                      : t('linksPage.lockHint')}
                   </p>
                   <label className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
                     كلمة المرور
@@ -474,7 +476,7 @@ export function SortableLinkCard({
                         void runSave({ password: password.trim() }).then(() => setPassword(''));
                       }}
                     >
-                      {isProtected ? 'تغيير' : 'تفعيل القفل'}
+                      {isProtected ? t('linksPage.changeLock') : t('linksPage.enableLock')}
                     </Button>
                     {isProtected ? (
                       <Button
@@ -520,7 +522,7 @@ export function SortableLinkCard({
                 linksToolBtnClass,
                 link.notifyOnClick && 'text-[var(--foreground)]',
               )}
-              aria-label={link.notifyOnClick ? 'إيقاف إشعارات النقر' : 'تفعيل إشعارات النقر'}
+              aria-label={link.notifyOnClick ? t('linksPage.notifyOff') : t('linksPage.notifyOn')}
               disabled={isBusy}
               onClick={() => onToggleNotify(link)}
             >
@@ -539,7 +541,7 @@ export function SortableLinkCard({
               isSelected={!isHidden}
               isDisabled={isBusy}
               onChange={() => onToggleStatus(link)}
-              aria-label={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط'}
+              aria-label={isHidden ? t('linksPage.showLink') : t('linksPage.hideLink')}
               className="shrink-0 [--switch-control-bg-checked:#10b981] [--switch-control-bg-checked-hover:#059669]"
             >
               <Switch.Control>
@@ -550,7 +552,7 @@ export function SortableLinkCard({
             <button
               type="button"
               className={cn(linksToolBtnClass, 'text-[var(--muted-foreground)] hover:text-[var(--danger)]')}
-              aria-label="حذف الرابط"
+              aria-label={t('linksPage.deleteLink')}
               disabled={isBusy}
               onClick={() => onDelete(link)}
               onPointerDown={(e) => e.stopPropagation()}

@@ -16,6 +16,7 @@ import type { MyStoreProduct, ProductCollection } from '@/lib/collections/types'
 import { formatProductPrice, getProductImage } from '@/lib/collections/product-utils';
 import { formatNumber } from '@/lib/dashboard-format';
 import { formatProductDate } from '@/lib/products/product-display';
+import { useTranslations } from '@/lib/i18n';
 import { uploadStorageImage } from '@/lib/storage/upload';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +49,7 @@ export function EditCollectionForm({
   onCancel,
   className,
 }: EditCollectionFormProps) {
+  const { t } = useTranslations();
   const [nameAr, setNameAr] = useState(collection.nameAr?.trim() || collection.name);
   const [description, setDescription] = useState(collection.description ?? '');
   const [imagePath, setImagePath] = useState<string | null>(collection.imagePath ?? null);
@@ -85,7 +87,7 @@ export function EditCollectionForm({
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof ApiException ? err.message : 'تعذّر تحميل المنتجات',
+            err instanceof ApiException ? err.message : t('collections.loadProductsFailed'),
           );
         }
       } finally {
@@ -96,7 +98,7 @@ export function EditCollectionForm({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -137,7 +139,7 @@ export function EditCollectionForm({
         if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
         return null;
       });
-      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة الشعار');
+      setError(err instanceof Error ? err.message : t('collections.logoUploadFailed'));
     } finally {
       setUploadingImage(false);
     }
@@ -161,7 +163,7 @@ export function EditCollectionForm({
         if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
         return null;
       });
-      setError(err instanceof Error ? err.message : 'تعذّر رفع صورة البانر');
+      setError(err instanceof Error ? err.message : t('collections.bannerUploadFailed'));
     } finally {
       setUploadingBanner(false);
     }
@@ -189,12 +191,12 @@ export function EditCollectionForm({
 
     const trimmedName = nameAr.trim();
     if (trimmedName.length < 2) {
-      setError('أدخل اسماً للمجموعة (حرفان على الأقل)');
+      setError(t('collections.nameRequired'));
       return;
     }
 
     if (isUploading) {
-      setError('انتظر حتى يكتمل رفع الصور');
+      setError(t('collections.waitUploads'));
       return;
     }
 
@@ -210,7 +212,7 @@ export function EditCollectionForm({
       onUpdated?.();
     } catch (err) {
       setError(
-        err instanceof ApiException ? err.message : 'تعذّر حفظ التعديلات',
+        err instanceof ApiException ? err.message : t('collections.saveFailed'),
       );
     } finally {
       setSaving(false);
@@ -225,7 +227,7 @@ export function EditCollectionForm({
       onDeleted?.();
     } catch (err) {
       setError(
-        err instanceof ApiException ? err.message : 'تعذّر حذف المجموعة',
+        err instanceof ApiException ? err.message : t('collections.deleteFailed'),
       );
       setConfirmDelete(false);
     } finally {
@@ -268,19 +270,19 @@ export function EditCollectionForm({
                 id="edit-collection-title"
                 className="text-[11px] font-medium text-[var(--muted-foreground)]"
               >
-                تعديل المجموعة
+                {t('collections.editCollection')}
               </p>
               <input
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
-                placeholder="اسم المجموعة"
+                placeholder={t('collections.namePlaceholder')}
                 dir="auto"
                 className="w-full border-0 bg-transparent p-0 text-[18px] font-semibold leading-snug tracking-tight text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60"
               />
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="وصف اختياري"
+                placeholder={t('collections.descriptionPlaceholder')}
                 dir="auto"
                 className="w-full border-0 bg-transparent p-0 text-[13px] leading-relaxed text-[var(--muted-foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60"
               />
@@ -288,29 +290,33 @@ export function EditCollectionForm({
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-0.5">
               <MetaItem
-                label="الحالة"
-                value={collection.isActive ? 'نشط' : 'متوقف'}
+                label={t('collections.status')}
+                value={
+                  collection.isActive
+                    ? t('collections.statusActive')
+                    : t('collections.statusInactive')
+                }
               />
               <MetaItem
-                label="المنتجات"
+                label={t('collections.productsLabel')}
                 value={formatNumber(selectedProductIds.length)}
               />
               <MetaItem
-                label="تاريخ الإنشاء"
+                label={t('collections.createdAt')}
                 value={formatProductDate(collection.createdAt) ?? '—'}
               />
             </div>
 
             <section className="flex min-h-0 flex-col gap-2.5">
               <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
-                منتجات المجموعة
+                {t('collections.collectionProducts')}
               </p>
 
               <input
                 type="search"
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="بحث في المنتجات…"
+                placeholder={t('collections.searchProducts')}
                 className="h-9 w-full rounded-lg bg-[var(--surface-secondary)] px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]/60 focus:ring-2 focus:ring-[var(--foreground)]/8"
               />
 
@@ -325,7 +331,7 @@ export function EditCollectionForm({
                     strokeWidth={1.5}
                   />
                   <p className="text-[13px] text-[var(--muted-foreground)]">
-                    لا توجد منتجات
+                    {t('collections.noProducts')}
                   </p>
                 </div>
               ) : (
@@ -407,7 +413,7 @@ export function EditCollectionForm({
                 {saving ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
                 ) : (
-                  'حفظ التعديلات'
+                  t('collections.save')
                 )}
               </Button>
 
@@ -429,7 +435,7 @@ export function EditCollectionForm({
                 ) : (
                   <>
                     <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
-                    {confirmDelete ? 'تأكيد الحذف' : 'حذف'}
+                    {confirmDelete ? t('collections.confirmDelete') : t('collections.delete')}
                   </>
                 )}
               </Button>
@@ -448,7 +454,7 @@ export function EditCollectionForm({
                   }}
                   className="h-10 shrink-0 rounded-xl px-4 text-[13px] font-medium !shadow-none"
                 >
-                  {confirmDelete ? 'تراجع' : 'إلغاء'}
+                  {confirmDelete ? t('collections.undo') : t('collections.cancel')}
                 </Button>
               ) : null}
             </div>

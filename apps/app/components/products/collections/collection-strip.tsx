@@ -7,6 +7,7 @@ import {
   CollectionStripItemSkeleton,
 } from '@/components/products/collections/collection-strip-item';
 import type { ProductCollection } from '@/lib/collections/types';
+import { useTranslations } from '@/lib/i18n';
 
 interface CollectionStripProps {
   collections: ProductCollection[];
@@ -25,6 +26,7 @@ export function CollectionStrip({
   onEdit,
   className,
 }: CollectionStripProps) {
+  const { t } = useTranslations();
   const { ref, bind, isDragging, canScrollStart, canScrollEnd } =
     useHorizontalDragScroll<HTMLDivElement>();
 
@@ -47,7 +49,7 @@ export function CollectionStrip({
 
       <div
         ref={ref}
-        dir="rtl"
+
         {...bind}
         className={cn(
           '-mx-1 flex touch-pan-y gap-3.5 overflow-x-auto overscroll-x-contain py-1.5 ps-3 pe-2',
@@ -63,7 +65,7 @@ export function CollectionStrip({
           ))
         ) : collections.length === 0 ? (
           <p className="cursor-default py-2 text-sm text-[var(--muted-foreground)]">
-            لا توجد تصنيفات بعد. اضغط «إضافة مجموعة» للبدء.
+            {t('collections.stripEmpty')}
           </p>
         ) : (
           collections.map((collection) => (

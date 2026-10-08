@@ -107,7 +107,7 @@ export function InstagramLinkSetup({ onBack, onSubmit }: InstagramLinkSetupProps
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" dir="rtl">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 items-start gap-3 p-4 sm:p-5">
         <button
           type="button"

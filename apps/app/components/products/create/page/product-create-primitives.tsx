@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Card, Chip, Surface, cn } from '@heroui/react';
+import { Chip, Surface, cn } from '@heroui/react';
 
 export function ProductCreatePill({
   icon: Icon,
@@ -34,11 +34,13 @@ export function ProductCreatePill({
 export function ProductCreateTypeTile({
   label,
   hint,
+  examples,
   icon: Icon,
   onClick,
 }: {
   label: string;
   hint: string;
+  examples?: string[];
   icon: LucideIcon;
   onClick: () => void;
 }) {
@@ -47,30 +49,28 @@ export function ProductCreateTypeTile({
       type="button"
       onClick={onClick}
       className={cn(
-        'group w-full text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'group flex w-full items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 text-start transition-colors',
+        'hover:bg-[var(--surface-secondary)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'sm:p-4',
       )}
     >
-      <Card
-        variant="secondary"
-        className="gap-0 p-3.5 transition-colors group-hover:bg-surface-secondary/80 sm:p-4"
-      >
-        <Card.Content className="flex-row items-start gap-3 p-0">
-          <Surface
-            variant="default"
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-muted transition-colors group-hover:text-foreground"
-          >
-            <Icon size={18} strokeWidth={1.85} className="sm:size-5" aria-hidden />
-          </Surface>
-          <div className="min-w-0 flex-1">
-            <Card.Title className="text-[13px] font-bold leading-tight sm:text-sm">
-              {label}
-            </Card.Title>
-            <Card.Description className="mt-1 line-clamp-2 text-[10px] leading-snug sm:text-[11px]">
-              {hint}
-            </Card.Description>
-          </div>
-        </Card.Content>
-      </Card>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--foreground)]">
+        <Icon size={18} strokeWidth={1.85} className="sm:size-5" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold leading-tight text-[var(--foreground)] sm:text-sm">
+          {label}
+        </p>
+        <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-[var(--muted-foreground)] sm:text-[11px]">
+          {hint}
+        </p>
+        {examples?.length ? (
+          <p className="mt-2 line-clamp-2 text-[10px] leading-snug text-[var(--muted-foreground)]">
+            {examples.join(' · ')}
+          </p>
+        ) : null}
+      </div>
     </button>
   );
 }

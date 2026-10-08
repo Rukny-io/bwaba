@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import type { AppInsight } from '@/lib/analytics/insights';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const severityStyles: Record<AppInsight['severity'], string> = {
@@ -12,12 +15,13 @@ const severityStyles: Record<AppInsight['severity'], string> = {
 };
 
 export function DashboardInsightsPanel({ insights }: { insights: AppInsight[] }) {
+  const { t } = useTranslations();
   if (insights.length === 0) return null;
 
   return (
-    <section className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[var(--surface)] px-4 py-5 md:px-6 md:py-6">
-      <h2 className="text-base font-medium tracking-tight text-[var(--foreground)]">
-        رؤى ذكية
+    <section className="flex min-w-0 flex-col gap-4 rounded-xl bg-[var(--surface)] p-4 sm:p-5">
+      <h2 className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
+        {t('analytics.insightsTitle')}
       </h2>
       <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {insights.map((insight) => {

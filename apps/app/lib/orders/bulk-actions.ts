@@ -1,8 +1,26 @@
 import { api } from '@/lib/api-client';
-import type { OrderStatus } from '@/lib/orders/types';
+import type { OrderPaymentStatus, OrderStatus } from '@/lib/orders/types';
+
+export type BulkActionResult = {
+  updated: string[];
+  failed: Array<{ id: string; reason: string }>;
+  skipped: string[];
+};
+
+export type BulkDeleteResult = {
+  deleted: string[];
+  failed: Array<{ id: string; reason: string }>;
+  skipped: string[];
+};
 
 export function isMockOrderId(orderId: string): boolean {
   return orderId.startsWith('mock-');
+}
+
+function splitMockIds(orderIds: string[]) {
+  const skipped = orderIds.filter(isMockOrderId);
+  const realIds = orderIds.filter((id) => !isMockOrderId(id));
+  return { realIds, skipped };
 }
 
 export async function updateStoreOrderStatus(
@@ -15,15 +33,66 @@ export async function updateStoreOrderStatus(
 export async function bulkUpdateOrderStatus(
   orderIds: string[],
   status: OrderStatus,
-): Promise<{ updated: string[]; skipped: string[] }> {
-  const skipped = orderIds.filter(isMockOrderId);
-  const updated: string[] = [];
-
-  for (const orderId of orderIds) {
-    if (isMockOrderId(orderId)) continue;
-    await updateStoreOrderStatus(orderId, status);
-    updated.push(orderId);
+): Promise<BulkActionResult> {
+  const { realIds, skipped } = splitMockIds(orderIds);
+  if (realIds.length === 0) {
+    return { updated: [], failed: [], skipped };
   }
 
-  return { updated, skipped };
+  const response = await api.put<BulkActionResult>('/orders/store/orders/bulk/status', {
+    orderIds: realIds,
+    status,
+  });
+
+  return {
+    updated: response.data.updated ?? [],
+    failed: response.data.failed ?? [],
+    skipped,
+  };
+}
+
+export async function bulkUpdatePaymentStatus(
+  orderIds: string[],
+  paymentStatus: Extract<OrderPaymentStatus, 'PAID' | 'UNPAID'>,
+): Promise<BulkActionResult> {
+  const { realIds, skipped } = splitMockIds(orderIds);
+  if (realIds.length === 0) {
+    return { updated: [], failed: [], skipped };
+  }
+
+  const response = await api.put<BulkActionResult>(
+    '/orders/store/orders/bulk/payment-status',
+    {
+      orderIds: realIds,
+      paymentStatus,
+    },
+  );
+
+  return {
+    updated: response.data.updated ?? [],
+    failed: response.data.failed ?? [],
+    skipped,
+  };
+}
+
+export async function bulkDeleteOrders(
+  orderIds: string[],
+): Promise<BulkDeleteResult> {
+  const { realIds, skipped } = splitMockIds(orderIds);
+  if (realIds.length === 0) {
+    return { deleted: [], failed: [], skipped };
+  }
+
+  const response = await api.delete<{
+    deleted: string[];
+    failed: Array<{ id: string; reason: string }>;
+  }>('/orders/store/orders/bulk', {
+    data: { orderIds: realIds },
+  });
+
+  return {
+    deleted: response.data.deleted ?? [],
+    failed: response.data.failed ?? [],
+    skipped,
+  };
 }

@@ -5,11 +5,13 @@ import {
   IsEnum,
   IsUUID,
   IsArray,
+  ArrayMaxSize,
   ValidateNested,
   IsNumber,
   IsInt,
   Min,
   Max,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -21,6 +23,14 @@ export enum OrderStatus {
   OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
   DELIVERED = 'DELIVERED',
   CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}
+
+export enum OrderPaymentStatus {
+  UNPAID = 'UNPAID',
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
   REFUNDED = 'REFUNDED',
 }
 
@@ -89,11 +99,55 @@ export class CancelOrderDto {
   cancellationReason: string;
 }
 
+export class UpdateOrderPaymentStatusDto {
+  @ApiProperty({
+    enum: ['PAID', 'UNPAID'],
+    description: 'حالة الدفع الجديدة',
+  })
+  @IsIn(['PAID', 'UNPAID'])
+  paymentStatus: 'PAID' | 'UNPAID';
+}
+
+export class BulkOrderIdsDto {
+  @ApiProperty({ description: 'معرفات الطلبات', type: [String] })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  orderIds: string[];
+}
+
+export class BulkUpdateOrderStatusDto extends BulkOrderIdsDto {
+  @ApiProperty({ enum: OrderStatus, description: 'الحالة الجديدة' })
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
+}
+
+export class BulkUpdatePaymentStatusDto extends BulkOrderIdsDto {
+  @ApiProperty({
+    enum: ['PAID', 'UNPAID'],
+    description: 'حالة الدفع الجديدة',
+  })
+  @IsIn(['PAID', 'UNPAID'])
+  paymentStatus: 'PAID' | 'UNPAID';
+}
+
 export class OrderFiltersDto {
   @ApiPropertyOptional({ enum: OrderStatus })
   @IsOptional()
   @IsEnum(OrderStatus)
   status?: OrderStatus;
+
+  @ApiPropertyOptional({ enum: OrderPaymentStatus })
+  @IsOptional()
+  @IsEnum(OrderPaymentStatus)
+  paymentStatus?: OrderPaymentStatus;
+
+  @ApiPropertyOptional({
+    description: 'بحث برقم الطلب أو الهاتف أو اسم العميل',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
 
   @ApiPropertyOptional({ description: 'رقم الصفحة', default: 1 })
   @IsOptional()
@@ -106,7 +160,7 @@ export class OrderFiltersDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(50)
+  @Max(100)
   @Type(() => Number)
   limit?: number = 10;
 

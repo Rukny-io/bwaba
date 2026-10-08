@@ -17,6 +17,7 @@ import {
   fetchMailPlans,
   fetchMailSubscription,
   requestMailPlan,
+  workspaceActiveLimits,
   type MailCardPaymentsInfo,
   type MailPendingPlanRequest,
   type MailSubscriptionView,
@@ -100,15 +101,25 @@ export function MailPlanSettingsSection() {
     setNeedsApp(current.needsApp);
     setAppName(current.app?.name ?? null);
     setSubscription(current.subscription);
-    setUnifiedPlan(current.unifiedPlan ?? null);
+    setUnifiedPlan(
+      current.unifiedPlan ?? workspaceActiveLimits(current)?.emailPlan ?? null,
+    );
     setDomainQuota(current.domainQuota ?? null);
     setPendingRequest(current.pendingRequest);
     setCanManageBilling(Boolean(current.canManageBilling));
 
     const paidPlans = nextPlans.filter((plan) => plan.id !== "free");
+    const workspaceLimits = workspaceActiveLimits(current);
     const activeSub =
       current.subscription?.status === "ACTIVE" ? current.subscription : null;
     const preferred =
+      (workspaceLimits
+        ? paidPlans.find(
+            (plan) =>
+              plan.id === workspaceLimits.planId.toLowerCase() ||
+              plan.id === String(workspaceLimits.plan).toLowerCase(),
+          )
+        : null) ??
       (activeSub
         ? paidPlans.find(
             (plan) =>
@@ -121,6 +132,7 @@ export function MailPlanSettingsSection() {
       paidPlans[0];
     if (preferred) {
       const existingCount =
+        workspaceLimits?.mailboxCount ||
         activeSub?.mailboxCount ||
         current.pendingRequest?.mailboxCount ||
         preferred.mailboxesIncluded;

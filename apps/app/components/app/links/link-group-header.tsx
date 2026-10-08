@@ -5,6 +5,7 @@ import { ChevronDown, Folder, Pencil, Trash2 } from 'lucide-react';
 import { Popover } from '@heroui/react';
 import { linksPressableClass, linksToolBtnClass } from '@/components/app/links/links-interaction';
 import type { LinkGroup } from '@/lib/links/types';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
@@ -39,6 +40,7 @@ export function LinkGroupHeader({
   onChangeColor,
   onDelete,
 }: LinkGroupHeaderProps) {
+  const { t } = useTranslations();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(group.nameAr || group.name);
 
@@ -71,9 +73,9 @@ export function LinkGroupHeader({
                 'active:brightness-95',
               )}
               style={{ backgroundColor: group.color || '#6366f1' }}
-              title="تغيير اللون"
+              title={t('linksPage.changeColor')}
               disabled={busy}
-              aria-label="تغيير لون المجموعة"
+              aria-label={t('linksPage.changeGroupColor')}
             >
               <Folder className="size-3.5" />
             </button>
@@ -93,7 +95,7 @@ export function LinkGroupHeader({
                       'ring-2 ring-[var(--foreground)]',
                   )}
                   style={{ backgroundColor: preset }}
-                  aria-label={`لون ${preset}`}
+                  aria-label={t('linksPage.colorSwatch', { color: preset })}
                 />
               ))}
             </Popover.Dialog>
@@ -161,7 +163,7 @@ export function LinkGroupHeader({
           setName(group.nameAr || group.name);
           setEditing(true);
         }}
-        title="تعديل الاسم"
+        title={t('linksPage.rename')}
         disabled={busy}
       >
         <Pencil className="size-3.5" aria-hidden />
@@ -173,7 +175,7 @@ export function LinkGroupHeader({
           'size-8 text-[var(--muted-foreground)] hover:text-[var(--danger)] sm:size-8',
         )}
         onClick={onDelete}
-        title="حذف المجموعة"
+        title={t('linksPage.deleteGroup')}
         disabled={busy}
       >
         <Trash2 className="size-3.5" aria-hidden />

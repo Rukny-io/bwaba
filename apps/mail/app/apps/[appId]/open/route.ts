@@ -45,6 +45,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
       name: string;
       primaryDomain: string | null;
       slotIndex: number;
+      isOwner?: boolean;
     };
   }>(`/mail/apps/${encodeURIComponent(appId)}`);
   if (!appResult.ok) {
@@ -60,6 +61,8 @@ export async function GET(request: Request, ctx: RouteCtx) {
   if (!Number.isInteger(slotIndex) || slotIndex < 0) {
     return NextResponse.redirect(new URL("/apps?error=invalid", origin));
   }
+
+  const isOwner = appResult.data.app.isOwner !== false;
 
   const jar = await cookies();
   const accessToken =
@@ -81,28 +84,37 @@ export async function GET(request: Request, ctx: RouteCtx) {
     await invalidateUserSlotMap(session.userId);
   }
 
-  const cleared = await dedupeDomainBindings();
-  for (const clearedId of cleared) {
-    await syncMailAppDomainToNest(clearedId, {
-      primaryDomain: null,
-      domainStatus: "NONE",
-    });
-  }
-
   const binding = await getMailDomainBinding(appId);
   const domainReady = binding?.status === "ACTIVE";
 
-  const listedDomain = appResult.data.app.primaryDomain;
-  if (binding?.domain) {
-    await syncMailAppDomainToNest(appId, {
-      primaryDomain: binding.domain,
-      domainStatus: binding.status,
-    });
-  } else if (listedDomain) {
-    await syncMailAppDomainToNest(appId, {
-      primaryDomain: null,
-      domainStatus: "NONE",
-    });
+  // Domain write-back is owner-only. Team members (added by admin) must not PATCH.
+  if (isOwner) {
+    const cleared = await dedupeDomainBindings();
+    for (const clearedId of cleared) {
+      await syncMailAppDomainToNest(
+        clearedId,
+        { primaryDomain: null, domainStatus: "NONE" },
+        { soft: true },
+      );
+    }
+
+    const listedDomain = appResult.data.app.primaryDomain;
+    if (binding?.domain) {
+      await syncMailAppDomainToNest(
+        appId,
+        {
+          primaryDomain: binding.domain,
+          domainStatus: binding.status,
+        },
+        { soft: true },
+      );
+    } else if (listedDomain) {
+      await syncMailAppDomainToNest(
+        appId,
+        { primaryDomain: null, domainStatus: "NONE" },
+        { soft: true },
+      );
+    }
   }
 
   // Check active subscription — required before console tools after DNS.

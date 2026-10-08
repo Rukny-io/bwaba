@@ -19,6 +19,7 @@ import {
 import { dkimTokensMatch } from "@/lib/mail-domain-tokens";
 import { getSesDomainStatusCached } from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { mailCookieClearOptions, mailCookieOptions } from "@/lib/mail-cookies";
 import {
@@ -28,6 +29,7 @@ import {
 import { verifyDomainDns } from "@/lib/verify-dns";
 
 const SETUP_CACHE_TTL_SECONDS = 60;
+const softSync = { soft: true } as const;
 
 function withReadyCookies(
   response: NextResponse,
@@ -67,8 +69,14 @@ export async function GET() {
     return NextResponse.json({ setup: null });
   }
 
-  // Legacy ACTIVE bindings without ownership token must re-verify once.
-  if (!binding.ownershipToken) {
+  const appResult = await apiFetchJson<{ app?: { isOwner?: boolean } }>(
+    `/mail/apps/${encodeURIComponent(session.appId)}`,
+  );
+  const isOwner =
+    appResult.ok && appResult.data.app ? appResult.data.app.isOwner !== false : false;
+
+  // Legacy ACTIVE bindings without ownership token must re-verify once (owner only).
+  if (isOwner && !binding.ownershipToken) {
     const ownershipToken = generateOwnershipToken();
     binding = {
       ...binding,
@@ -77,12 +85,16 @@ export async function GET() {
       status: "PENDING_DNS",
     };
     await upsertMailDomainBinding(session.appId, binding);
-    await syncMailAppDomainToNest(session.appId, {
-      primaryDomain: binding.domain,
-      domainStatus: "PENDING_DNS",
-      domainOwnershipToken: ownershipToken,
-      domainOwnershipVerifiedAt: null,
-    });
+    await syncMailAppDomainToNest(
+      session.appId,
+      {
+        primaryDomain: binding.domain,
+        domainStatus: "PENDING_DNS",
+        domainOwnershipToken: ownershipToken,
+        domainOwnershipVerifiedAt: null,
+      },
+      softSync,
+    );
   }
 
   try {
@@ -102,14 +114,20 @@ export async function GET() {
       );
     }
     if (!status.found || status.tokens.length === 0) {
-      await deleteMailDomainBinding(session.appId);
-      await redisDel(cacheKey);
-      await syncMailAppDomainToNest(session.appId, {
-        primaryDomain: null,
-        domainStatus: "NONE",
-        domainOwnershipToken: null,
-        domainOwnershipVerifiedAt: null,
-      });
+      if (isOwner) {
+        await deleteMailDomainBinding(session.appId);
+        await redisDel(cacheKey);
+        await syncMailAppDomainToNest(
+          session.appId,
+          {
+            primaryDomain: null,
+            domainStatus: "NONE",
+            domainOwnershipToken: null,
+            domainOwnershipVerifiedAt: null,
+          },
+          softSync,
+        );
+      }
       return NextResponse.json({ setup: null });
     }
 
@@ -135,28 +153,34 @@ export async function GET() {
     const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], status.tokens);
     const ownershipVerifiedAt = verified ? checkedAt : binding.ownershipVerifiedAt;
 
-    try {
-      await upsertMailDomainBinding(session.appId, {
-        domain: setup.domain,
-        status: setup.status,
-        dkimTokens: tokens,
-        sesCheckedAt: checkedAt,
-        ownershipToken: binding.ownershipToken,
-        ownershipVerifiedAt,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Domain conflict.";
-      return NextResponse.json({ error: message }, { status: 409 });
+    if (isOwner) {
+      try {
+        await upsertMailDomainBinding(session.appId, {
+          domain: setup.domain,
+          status: setup.status,
+          dkimTokens: tokens,
+          sesCheckedAt: checkedAt,
+          ownershipToken: binding.ownershipToken,
+          ownershipVerifiedAt,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Domain conflict.";
+        return NextResponse.json({ error: message }, { status: 409 });
+      }
+
+      await redisSetJson(cacheKey, setup, SETUP_CACHE_TTL_SECONDS);
+
+      await syncMailAppDomainToNest(
+        session.appId,
+        {
+          primaryDomain: setup.domain,
+          domainStatus: setup.status,
+          domainOwnershipToken: binding.ownershipToken,
+          domainOwnershipVerifiedAt: verified ? checkedAt : null,
+        },
+        softSync,
+      );
     }
-
-    await redisSetJson(cacheKey, setup, SETUP_CACHE_TTL_SECONDS);
-
-    await syncMailAppDomainToNest(session.appId, {
-      primaryDomain: setup.domain,
-      domainStatus: setup.status,
-      domainOwnershipToken: binding.ownershipToken,
-      domainOwnershipVerifiedAt: verified ? checkedAt : null,
-    });
 
     return withReadyCookies(
       NextResponse.json({

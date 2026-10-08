@@ -19,6 +19,10 @@ export async function syncMailAppDomainToNest(
     domainOwnershipToken?: string | null;
     domainOwnershipVerifiedAt?: string | null;
   },
+  options?: {
+    /** Skip quietly when a team member opens the workspace (domain sync is owner-only). */
+    soft?: boolean;
+  },
 ): Promise<SyncMailAppDomainResult> {
   const result = await apiFetchJson<{
     needsCheckout?: boolean;
@@ -42,6 +46,14 @@ export async function syncMailAppDomainToNest(
   });
 
   if (!result.ok) {
+    if (
+      options?.soft &&
+      (result.status === 403 ||
+        /only the workspace owner/i.test(result.error) ||
+        /MAIL_OWNER_REQUIRED/i.test(result.error))
+    ) {
+      return {};
+    }
     throw new Error(result.error);
   }
 

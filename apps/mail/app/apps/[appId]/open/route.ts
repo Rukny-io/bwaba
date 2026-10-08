@@ -116,8 +116,10 @@ export async function GET(request: Request, ctx: RouteCtx) {
     (Boolean(subResult.data.hasWorkspaceAccess) ||
       subResult.data.subscription?.status === "ACTIVE");
 
-  // Always land on mailboxes overview (/app), never inbox.
-  const landing = `/u${slotIndex}/app`;
+  // Land on mailboxes overview (/app); quick sign-in links ask for the inbox.
+  const wantsInbox = new URL(request.url).searchParams.get("next") === "inbox";
+  const landing =
+    wantsInbox && domainReady ? `/u${slotIndex}/inbox` : `/u${slotIndex}/app`;
   const response = NextResponse.redirect(new URL(landing, origin), 303);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("Pragma", "no-cache");

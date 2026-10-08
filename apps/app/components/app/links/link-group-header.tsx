@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, Folder, Pencil, Trash2 } from 'lucide-react';
 import { Popover } from '@heroui/react';
+import { linksPressableClass, linksToolBtnClass } from '@/components/app/links/links-interaction';
 import type { LinkGroup } from '@/lib/links/types';
 import { cn } from '@/lib/utils';
 
@@ -55,7 +56,8 @@ export function LinkGroupHeader({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5',
+        'flex items-center gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5',
+        busy && 'pointer-events-none opacity-70',
       )}
     >
       {onChangeColor ? (
@@ -63,7 +65,11 @@ export function LinkGroupHeader({
           <Popover.Trigger>
             <button
               type="button"
-              className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-full text-white sm:size-8',
+                linksPressableClass,
+                'active:brightness-95',
+              )}
               style={{ backgroundColor: group.color || '#6366f1' }}
               title="تغيير اللون"
               disabled={busy}
@@ -80,7 +86,9 @@ export function LinkGroupHeader({
                   type="button"
                   onClick={() => void onChangeColor(preset)}
                   className={cn(
-                    'size-7 rounded-full ring-offset-2 ring-offset-[var(--surface)]',
+                    'size-8 rounded-full ring-offset-2 ring-offset-[var(--surface)] sm:size-7',
+                    linksPressableClass,
+                    'active:ring-2 active:ring-[var(--foreground)]/30',
                     (group.color || '#6366f1') === preset &&
                       'ring-2 ring-[var(--foreground)]',
                   )}
@@ -104,7 +112,10 @@ export function LinkGroupHeader({
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="flex min-w-0 flex-1 items-center gap-2 text-start"
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-0.5 text-start -mx-1',
+          linksPressableClass,
+        )}
         disabled={busy}
       >
         {editing ? (
@@ -131,12 +142,12 @@ export function LinkGroupHeader({
             {group.nameAr || group.name}
           </span>
         )}
-        <span className="shrink-0 text-[11px] text-[var(--muted-foreground)]">
-          {linkCount} رابط
+        <span className="shrink-0 rounded-md bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)] sm:bg-transparent sm:px-0 sm:py-0 sm:text-[11px] sm:font-normal">
+          {linkCount}
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 text-[var(--muted-foreground)] transition-transform',
+            'size-4 shrink-0 text-[var(--muted-foreground)] transition-transform duration-200 ease-out',
             expanded && 'rotate-180',
           )}
           aria-hidden
@@ -145,7 +156,7 @@ export function LinkGroupHeader({
 
       <button
         type="button"
-        className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+        className={cn(linksToolBtnClass, 'size-8 sm:size-8')}
         onClick={() => {
           setName(group.nameAr || group.name);
           setEditing(true);
@@ -157,7 +168,10 @@ export function LinkGroupHeader({
       </button>
       <button
         type="button"
-        className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--danger)]/10 hover:text-[var(--danger)]"
+        className={cn(
+          linksToolBtnClass,
+          'size-8 text-[var(--muted-foreground)] hover:text-[var(--danger)] sm:size-8',
+        )}
         onClick={onDelete}
         title="حذف المجموعة"
         disabled={busy}

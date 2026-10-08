@@ -59,6 +59,16 @@ export class EmailDomainsPortalController {
     return this.domains.get(user.id, app.id, domain);
   }
 
+  @Post('domains/:domain/verify')
+  async verifyDomain(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Param('domain') domain: string,
+  ) {
+    const app = await this.requireOwnedApp(user.id, appId);
+    return this.domains.verify(user.id, app.id, domain);
+  }
+
   @Post('domains/:domain/delete')
   async deleteDomain(
     @CurrentUser() user: AuthenticatedUser,

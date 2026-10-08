@@ -132,6 +132,7 @@ if (isGitHubOAuthConfigured()) {
     IdentityVerificationService,
     RuknyVerifiedService,
     OAuthProviderService,
+    RedisOAuthCodeService,
   ],
 })
 export class AuthModule {}

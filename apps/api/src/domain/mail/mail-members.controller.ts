@@ -37,6 +37,26 @@ export class MailMembersController {
     return this.members.listMyInvitations(user.id);
   }
 
+  @Post('invitations/email/:inviteId/accept')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accept an email invite addressed to my account email' })
+  acceptEmailInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('inviteId') inviteId: string,
+  ) {
+    return this.members.acceptEmailInvitation(user.id, inviteId);
+  }
+
+  @Post('invitations/email/:inviteId/decline')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Decline an email invite addressed to my account email' })
+  declineEmailInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('inviteId') inviteId: string,
+  ) {
+    return this.members.declineEmailInvitation(user.id, inviteId);
+  }
+
   @Post('invitations/:memberId/accept')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Accept a Mail workspace invitation' })
@@ -55,13 +75,6 @@ export class MailMembersController {
     @Param('memberId') memberId: string,
   ) {
     return this.members.declineInvitation(user.id, memberId);
-  }
-
-  @Public()
-  @Get('invites/:token')
-  @ApiOperation({ summary: 'Preview an email-only Mail workspace invite' })
-  previewInvite(@Param('token') token: string) {
-    return this.members.getEmailInvitePreview(token);
   }
 
   @Post('invites/:token/claim')
@@ -144,5 +157,19 @@ export class MailMembersController {
     @Param('memberId') memberId: string,
   ) {
     return this.members.remove(user.id, appId, memberId);
+  }
+}
+
+/** Unauthenticated invite routes; MailMembersController's class-level JwtAuthGuard ignores @Public(). */
+@ApiTags('Mail - Team')
+@Public()
+@Controller({ path: 'mail', version: '1' })
+export class MailInvitesPublicController {
+  constructor(private readonly members: MailMembersService) {}
+
+  @Get('invites/:token')
+  @ApiOperation({ summary: 'Preview an email-only Mail workspace invite' })
+  previewInvite(@Param('token') token: string) {
+    return this.members.getEmailInvitePreview(token);
   }
 }

@@ -323,4 +323,58 @@ describe('MailMembersService', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('lists email-only invites for my email with the reserved mailbox', async () => {
+    const { service, prisma } = createService();
+    prisma.user.findUnique.mockResolvedValue({ email: 'Sara@acme.test' });
+    prisma.mailAppEmailInvite.findMany.mockResolvedValue([
+      {
+        id: 'ei-1',
+        mailAppId: appDbId,
+        role: MailAppMemberRole.MEMBER,
+        status: InvitationStatus.PENDING,
+        invitedAt: new Date('2026-10-01T00:00:00Z'),
+        expiresAt: new Date('2026-10-20T00:00:00Z'),
+        inviter: { id: ownerId, email: 'owner@acme.test', profile: { name: 'Owner' } },
+        mailApp: { id: appDbId, appId: appPublicId, name: 'Acme Mail', primaryDomain: 'acme.test' },
+      },
+    ]);
+    prisma.mailMailbox.findMany.mockResolvedValue([
+      { mailAppId: appDbId, localPart: 'sara', domain: 'acme.test' },
+    ]);
+
+    const { invitations } = await service.listMyInvitations('user-2');
+
+    expect(prisma.mailAppEmailInvite.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          email: { equals: 'sara@acme.test', mode: 'insensitive' },
+        }),
+      }),
+    );
+    expect(invitations).toEqual([
+      expect.objectContaining({
+        id: 'ei-1',
+        kind: 'email_invite',
+        reservedMailboxes: ['sara@acme.test'],
+        workspace: expect.objectContaining({ appId: appPublicId }),
+      }),
+    ]);
+  });
+
+  it('only accepts email invites addressed to my email', async () => {
+    const { service, prisma } = createService();
+    prisma.user.findUnique.mockResolvedValue({ email: 'eve@evil.test' });
+    prisma.mailAppEmailInvite.findFirst.mockResolvedValue(null);
+
+    await expect(service.acceptEmailInvitation('user-3', 'ei-1')).rejects.toThrow(
+      'Invitation not found.',
+    );
+    expect(prisma.mailAppEmailInvite.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: 'ei-1',
+        email: { equals: 'eve@evil.test', mode: 'insensitive' },
+      }),
+    });
+  });
 });

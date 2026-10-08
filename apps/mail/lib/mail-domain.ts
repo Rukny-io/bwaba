@@ -1,3 +1,8 @@
+import {
+  buildDnsRecords as buildDnsRecordsCore,
+  buildOwnershipTxtValue,
+  OWNERSHIP_TXT_HOST,
+} from "@rukny/domain-verification/records";
 import { MAIL_SES } from "@/lib/ses";
 
 export type MailDomainStatus =
@@ -17,7 +22,8 @@ export type MailDnsRecord = {
     | "DMARC"
     | "BIMI"
     | "MAIL_FROM_MX"
-    | "MAIL_FROM_SPF";
+    | "MAIL_FROM_SPF"
+    | "RUKNY_OWNERSHIP";
   type: "MX" | "TXT" | "CNAME";
   host: string;
   value: string;
@@ -85,81 +91,46 @@ export function validateDomain(domain: string): string | null {
   return null;
 }
 
+const sesDnsConfig = {
+  region: MAIL_SES.region,
+  inboundMx: MAIL_SES.inboundMx,
+  mailFromMx: MAIL_SES.mailFromMx,
+  dkimTargetSuffix: MAIL_SES.dkimTargetSuffix,
+  spfInclude: MAIL_SES.spfInclude,
+};
+
 export function buildDnsRecords(
   domain: string,
   dkimTokens: string[] = [],
+  ownershipToken?: string,
 ): MailDnsRecord[] {
-  const tokens = dkimTokens.filter(Boolean);
-
-  return [
-    {
-      id: "mx",
-      purpose: "MX",
-      type: "MX",
-      host: "@",
-      value: MAIL_SES.inboundMx,
-      priority: 10,
-      status: "pending",
-      hint: "Receiving. Keep DNS only (not proxied) at Cloudflare.",
-    },
-    {
-      id: "spf",
-      purpose: "SPF",
-      type: "TXT",
-      host: "@",
-      value: `v=spf1 include:${MAIL_SES.spfInclude} ~all`,
-      status: "pending",
-      hint: "Merge with an existing SPF record instead of adding a second TXT SPF.",
-    },
-    ...tokens.map((token, index) => ({
-      id: `dkim-${index + 1}`,
-      purpose: "DKIM" as const,
-      type: "CNAME" as const,
-      host: `${token}._domainkey`,
-      value: `${token}.${MAIL_SES.dkimTargetSuffix}`,
-      status: "pending" as const,
-      hint: "Easy DKIM for SES in Stockholm. DNS only, not proxied.",
-    })),
-    {
-      id: "dmarc",
-      purpose: "DMARC",
-      type: "TXT",
-      host: "_dmarc",
-      value: "v=DMARC1; p=none;",
-      status: "pending",
-      hint: "Same value SES shows. Start with p=none. For BIMI, later raise to p=quarantine then p=reject (pct=100).",
-    },
-    {
-      id: "mail-from-mx",
-      purpose: "MAIL_FROM_MX",
-      type: "MX",
-      host: "mail",
-      value: MAIL_SES.mailFromMx,
-      priority: 10,
-      status: "pending",
-      hint: "Custom MAIL FROM so SPF aligns with your domain.",
-    },
-    {
-      id: "mail-from-spf",
-      purpose: "MAIL_FROM_SPF",
-      type: "TXT",
-      host: "mail",
-      value: `v=spf1 include:${MAIL_SES.spfInclude} ~all`,
-      status: "pending",
-      hint: "SPF for the MAIL FROM subdomain.",
-    },
-  ];
+  return buildDnsRecordsCore(
+    domain,
+    dkimTokens,
+    ownershipToken,
+    sesDnsConfig,
+  ).map((record) => ({
+    ...record,
+    purpose: record.purpose as MailDnsRecord["purpose"],
+    hint:
+      record.purpose === "RUKNY_OWNERSHIP"
+        ? "Required for ownership. Proves you control this domain for your workspace."
+        : record.hint,
+  }));
 }
+
+export { OWNERSHIP_TXT_HOST, buildOwnershipTxtValue };
 
 export function createMailDomainSetup(
   domain: string,
   dkimTokens: string[] = [],
+  ownershipToken?: string,
 ): MailDomainSetup {
   return {
     domain,
     mailFromHost: `mail.${domain}`,
     status: "PENDING_DNS",
-    records: buildDnsRecords(domain, dkimTokens),
+    records: buildDnsRecords(domain, dkimTokens, ownershipToken),
     dkimTokens,
     lastCheckedAt: null,
     createdAt: new Date().toISOString(),
@@ -178,7 +149,10 @@ export function syncMailDomainRecords(setup: MailDomainSetup): MailDomainSetup {
   const tokens = (
     setup.dkimTokens?.length ? setup.dkimTokens : fromRecords
   ).filter(Boolean);
-  const template = buildDnsRecords(setup.domain, tokens);
+  const ownershipToken = setup.records
+    .find((record) => record.purpose === "RUKNY_OWNERSHIP")
+    ?.value.replace(/^rukny-domain-verification=/i, "");
+  const template = buildDnsRecords(setup.domain, tokens, ownershipToken);
   const previous = new Map(setup.records.map((record) => [record.id, record]));
   return {
     ...setup,

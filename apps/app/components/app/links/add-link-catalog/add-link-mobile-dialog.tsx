@@ -5,13 +5,18 @@ import { AnimatePresence, motion, useDragControls, type PanInfo } from 'framer-m
 import { X } from 'lucide-react';
 import { LinkCategoryTabs } from '@/components/app/links/add-link-catalog/link-category-tabs';
 import { FormCatalogTabs } from '@/components/app/links/add-link-catalog/form-catalog-panel';
-import { LinkSearch } from '@/components/app/links/add-link-catalog/link-search';
+import {
+  LinkCatalogSearch,
+  useLinkCatalogUrlMode,
+} from '@/components/app/links/add-link-catalog/link-catalog-search';
+import { InstagramLinkSetup } from '@/components/app/links/add-link-catalog/instagram-link-setup';
 import { LinkTypeForm } from '@/components/app/links/add-link-catalog/link-type-form';
 import { FormLinkSetup } from '@/components/app/links/add-link-catalog/form-link-setup';
 import { FormCatalogPanel } from '@/components/app/links/add-link-catalog/form-catalog-panel';
 import { LinkTypeList } from '@/components/app/links/add-link-catalog/link-type-list';
 import { listMyForms, type FormListItem } from '@/lib/forms/forms-api';
 import type { CreateSocialLinkInput } from '@/lib/links/types';
+import { useIsDesktop } from '@/lib/use-media-query';
 import {
   filterLinkCatalogItems,
   LINK_CATALOG_CATEGORIES,
@@ -30,6 +35,17 @@ const HIDDEN_SCROLL =
 const DISMISS_OFFSET = 88;
 const DISMISS_VELOCITY = 420;
 
+const CATEGORY_HINTS: Partial<Record<LinkCatalogCategoryId, string>> = {
+  suggested: 'الأنواع الأكثر استخداماً لصفحتك',
+  social: 'حساباتك على منصات التواصل',
+  contact: 'طرق التواصل المباشر مع زوارك',
+  forms: 'نماذج جاهزة أو نماذجك المنشورة',
+  media: 'فيديو ومحتوى مرئي',
+  text: 'عناوين وكتل نصية',
+  commerce: 'روابط المتجر والمنتجات',
+  all: 'كل أنواع الروابط المتاحة',
+};
+
 function shouldDismissSheet(info: PanInfo) {
   return info.offset.y > DISMISS_OFFSET || info.velocity.y > DISMISS_VELOCITY;
 }
@@ -47,6 +63,7 @@ export function AddLinkMobileDialog({
   onSubmit,
   initialType,
 }: AddLinkMobileDialogProps) {
+  const isDesktop = useIsDesktop();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<LinkCatalogCategoryId>('suggested');
   const [formTab, setFormTab] = useState<'templates' | 'mine'>('templates');
@@ -134,10 +151,16 @@ export function AddLinkMobileDialog({
     };
   }, [open, category, formsPrefetched]);
 
+  const isUrlMode = useLinkCatalogUrlMode(search);
+
   const filteredItems = useMemo(
-    () => filterLinkCatalogItems({ category, search }),
-    [category, search],
+    () => filterLinkCatalogItems({ category, search: isUrlMode ? '' : search }),
+    [category, search, isUrlMode],
   );
+
+  const categoryHint = CATEGORY_HINTS[category];
+
+  if (isDesktop) return null;
 
   function handlePickItem(item: LinkCatalogItem) {
     if (item.comingSoon) return;
@@ -173,10 +196,15 @@ export function AddLinkMobileDialog({
     onClose();
   }
 
+  async function handleUrlSubmit(payload: CreateSocialLinkInput) {
+    await onSubmit(payload);
+    onClose();
+  }
+
   return (
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[120] md:hidden">
+        <div className="fixed inset-0 z-[120]">
           <motion.div
             className="fixed inset-0 bg-black/50"
             initial={{ opacity: 0 }}
@@ -204,7 +232,7 @@ export function AddLinkMobileDialog({
             aria-labelledby="add-link-mobile-title"
           >
             {step === 'catalog' ? (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col">
                 <div
                   className="shrink-0 touch-none select-none"
                   onPointerDown={startSheetDrag}
@@ -213,18 +241,28 @@ export function AddLinkMobileDialog({
                     <div className="h-1 w-10 rounded-full bg-[var(--border)]" />
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 px-4 pb-2">
-                    <h2
-                      id="add-link-mobile-title"
-                      className="text-[17px] font-bold tracking-tight text-[var(--foreground)]"
-                    >
-                      إضافة رابط
-                    </h2>
+                  <div className="flex items-start justify-between gap-3 px-4 pb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
+                        إضافة رابط
+                      </p>
+                      <h2
+                        id="add-link-mobile-title"
+                        className="text-[17px] font-bold tracking-tight text-[var(--foreground)]"
+                      >
+                        اختر النوع
+                      </h2>
+                      {categoryHint ? (
+                        <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+                          {categoryHint}
+                        </p>
+                      ) : null}
+                    </div>
                     <button
                       type="button"
                       onClick={onClose}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="flex size-9 items-center justify-center rounded-full bg-[var(--surface-secondary)]/80 text-[var(--muted-foreground)] active:scale-95"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)]/80 text-[var(--muted-foreground)] active:scale-95"
                       aria-label="إغلاق"
                     >
                       <X className="size-4" />
@@ -233,43 +271,52 @@ export function AddLinkMobileDialog({
                 </div>
 
                 <div className="shrink-0 space-y-2.5 px-4 pb-2">
-                  <LinkSearch value={search} onChange={setSearch} />
-                  <LinkCategoryTabs
-                    categories={LINK_CATALOG_CATEGORIES}
-                    active={category}
-                    onSelect={setCategory}
-                    orientation="row"
-                    compact
+                  <LinkCatalogSearch
+                    value={search}
+                    onChange={setSearch}
+                    onSubmitUrl={handleUrlSubmit}
+                    variant="panel"
                   />
+                  {!isUrlMode ? (
+                    <LinkCategoryTabs
+                      categories={LINK_CATALOG_CATEGORIES}
+                      active={category}
+                      onSelect={setCategory}
+                      orientation="row"
+                      compact
+                    />
+                  ) : null}
                 </div>
 
-                {category === 'forms' ? (
+                {!isUrlMode && category === 'forms' ? (
                   <div className="shrink-0 px-4 pb-2">
                     <FormCatalogTabs tab={formTab} onTabChange={setFormTab} compact />
                   </div>
                 ) : null}
 
-                <div
-                  className={`${HIDDEN_SCROLL} px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}
-                  key={`${category}-${category === 'forms' ? formTab : 'links'}`}
-                >
-                  {category === 'forms' ? (
-                    <FormCatalogPanel
-                      search={search}
-                      variant="compact"
-                      tab={formTab}
-                      hideTabs
-                      myForms={myForms}
-                      loadingForms={loadingForms}
-                      formsError={formsError}
-                      onPickTemplate={handlePickFormTemplate}
-                      onPickForm={handlePickExistingForm}
-                    />
-                  ) : (
-                    <LinkTypeList items={filteredItems} onPick={handlePickItem} compact />
-                  )}
-                </div>
-              </>
+                {!isUrlMode ? (
+                  <div
+                    className={`${HIDDEN_SCROLL} px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}
+                    key={`${category}-${category === 'forms' ? formTab : 'links'}`}
+                  >
+                    {category === 'forms' ? (
+                      <FormCatalogPanel
+                        search={search}
+                        variant="compact"
+                        tab={formTab}
+                        hideTabs
+                        myForms={myForms}
+                        loadingForms={loadingForms}
+                        formsError={formsError}
+                        onPickTemplate={handlePickFormTemplate}
+                        onPickForm={handlePickExistingForm}
+                      />
+                    ) : (
+                      <LinkTypeList items={filteredItems} onPick={handlePickItem} compact />
+                    )}
+                  </div>
+                ) : null}
+              </div>
             ) : step === 'forms-setup' ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div
@@ -285,6 +332,17 @@ export function AddLinkMobileDialog({
                   templateId={formTemplateId}
                   existingForm={formExisting}
                 />
+              </div>
+            ) : selectedItem?.id === 'instagram' ? (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div
+                  className="flex shrink-0 touch-none select-none justify-center pt-2.5 pb-1"
+                  onPointerDown={startSheetDrag}
+                  aria-hidden
+                >
+                  <div className="h-1 w-10 rounded-full bg-[var(--border)]" />
+                </div>
+                <InstagramLinkSetup onBack={handleBackFromForm} onSubmit={handleFormSubmit} />
               </div>
             ) : selectedItem ? (
               <div className="flex min-h-0 flex-1 flex-col">

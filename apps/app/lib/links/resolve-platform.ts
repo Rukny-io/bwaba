@@ -1,4 +1,6 @@
-import type { LinkCatalogTypeId } from '@/lib/links/link-type-catalog';
+import { getUrlHostLabel } from '@/lib/links/build-link-from-type';
+import { resolvePlatformFromUrl } from '@/lib/links/domain-platform-map';
+import { LINK_CATALOG_ITEMS, type LinkCatalogTypeId } from '@/lib/links/link-type-catalog';
 
 const CATALOG_TYPES = new Set<LinkCatalogTypeId>([
   'url',
@@ -11,6 +13,15 @@ const CATALOG_TYPES = new Set<LinkCatalogTypeId>([
   'whatsapp',
   'telegram',
   'snapchat',
+  'kick',
+  'discord',
+  'spotify',
+  'github',
+  'reddit',
+  'soundcloud',
+  'vimeo',
+  'notion',
+  'shopify',
   'email',
   'phone',
   'form',
@@ -33,4 +44,26 @@ export function getLinkDisplayLabel(link: {
   platform: string;
 }): string {
   return link.title?.trim() || link.username?.trim() || link.platform;
+}
+
+export function resolveCatalogTypeFromUrl(url: string): LinkCatalogTypeId {
+  return resolvePlatformFromUrl(url) ?? 'url';
+}
+
+export function resolveCatalogTypeForLink(link: { platform: string; url: string }): LinkCatalogTypeId {
+  const fromPlatform = resolveCatalogTypeFromPlatform(link.platform);
+  if (fromPlatform !== 'url') return fromPlatform;
+  return resolveCatalogTypeFromUrl(link.url);
+}
+
+export function getDefaultLinkTitleFromUrl(url: string): string {
+  const type = resolveCatalogTypeFromUrl(url);
+  if (type !== 'url') {
+    return LINK_CATALOG_ITEMS.find((item) => item.id === type)?.label ?? getUrlHostLabel(url);
+  }
+
+  const host = getUrlHostLabel(url);
+  const segment = host.split('.')[0] ?? host;
+  if (!segment) return host;
+  return segment.charAt(0).toUpperCase() + segment.slice(1);
 }

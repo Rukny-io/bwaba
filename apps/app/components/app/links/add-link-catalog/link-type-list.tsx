@@ -42,11 +42,11 @@ export function LinkTypeList({ items, onPick, compact }: LinkTypeListProps) {
               disabled={disabled}
               onClick={() => onPick(item)}
               className={cn(
-                'group flex w-full items-center gap-3 rounded-2xl text-start transition-colors duration-150',
-                compact ? 'px-2.5 py-2.5' : 'px-2.5 py-2.5 sm:px-3 sm:py-3',
+                'group flex w-full items-center gap-2.5 rounded-xl text-start transition-[color,background-color,transform] duration-150',
+                compact ? 'px-1 py-2' : 'px-2.5 py-2.5 sm:px-3 sm:py-3',
                 disabled
                   ? 'cursor-not-allowed opacity-50'
-                  : 'hover:bg-[var(--surface-secondary)]/50 active:bg-[var(--surface-secondary)] active:scale-[0.995]',
+                  : 'hover:bg-[var(--surface-secondary)]/70 active:bg-[var(--surface-secondary)] active:scale-[0.99]',
               )}
               dir="rtl"
             >
@@ -54,7 +54,7 @@ export function LinkTypeList({ items, onPick, compact }: LinkTypeListProps) {
 
               <div className="min-w-0 flex-1 text-right">
                 <div className="flex items-center gap-2">
-                  <p className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-[var(--foreground)] sm:text-[15px]">
+                  <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--foreground)] sm:text-[14.5px]">
                     {item.label}
                   </p>
                   {item.comingSoon ? (

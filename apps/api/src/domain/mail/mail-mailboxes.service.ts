@@ -7,6 +7,7 @@ import {
 import {
   InvitationStatus,
   MailAppMemberRole,
+  MailDomainStatus,
   MailMailboxStatus,
   Prisma,
 } from '@prisma/client';
@@ -18,6 +19,7 @@ import { StorageService } from '../storage/storage.service';
 import {
   MailAppAccessService,
   type MailAppAccess,
+  type MailSsoPolicy,
 } from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailSubscriptionsService } from './mail-subscriptions.service';
@@ -186,16 +188,21 @@ export class MailMailboxesService {
     userId: string,
     access: MailAppAccess,
     row: Parameters<MailMailboxesService['toView']>[0],
+    policy?: MailSsoPolicy,
   ) {
     return this.toView(row, {
-      canSsoUnlock: this.access.canSsoSelectForUser(userId, access, {
-        assignedUserId: row.assignedUserId ?? null,
-      }),
+      canSsoUnlock: this.access.canSsoSelectForUser(
+        userId,
+        access,
+        { assignedUserId: row.assignedUserId ?? null },
+        policy,
+      ),
     });
   }
 
   async list(userId: string, appId: string) {
     const access = await this.access.requireAccess(userId, appId);
+    const policy = await this.access.ssoPolicy(access.app.id);
     const where: Prisma.MailMailboxWhereInput = {
       mailAppId: access.app.id,
       status: { not: MailMailboxStatus.DELETED },
@@ -209,7 +216,9 @@ export class MailMailboxesService {
       orderBy: { createdAt: 'asc' },
     });
     return {
-      mailboxes: rows.map((row) => this.viewForUser(userId, access, row)),
+      mailboxes: rows.map((row) =>
+        this.viewForUser(userId, access, row, policy),
+      ),
     };
   }
 
@@ -221,6 +230,11 @@ export class MailMailboxesService {
     if (!domain) {
       throw new BadRequestException(
         'Connect and verify a domain before creating mailboxes.',
+      );
+    }
+    if (app.domainStatus !== MailDomainStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Domain must be verified before creating mailboxes.',
       );
     }
 
@@ -387,7 +401,7 @@ export class MailMailboxesService {
 
     const updated = await this.prisma.mailMailbox.update({
       where: { id: existing.id },
-      data: { assignedUserId },
+      data: { assignedUserId, pendingAssigneeEmail: null },
       include: { mailApp: { select: { appId: true } } },
     });
     return { mailbox: this.viewForUser(userId, access, updated) };
@@ -516,6 +530,22 @@ export class MailMailboxesService {
       throwMailboxLoginFailed('Email or password is incorrect.');
     }
 
+    const policy = await this.access.ssoPolicy(access.app.id);
+    if (policy.enforcedSsoDomain) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (user && this.access.isPasswordUnlockBlocked(access, user.email, policy)) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'MAILBOX_SSO_REQUIRED',
+          message:
+            'This workspace requires company SSO. Open your mailbox with single sign-on instead of a password.',
+        });
+      }
+    }
+
     // Non-admins may only unlock their assigned seat (or any with password if owner/admin).
     if (
       !access.isOwner &&
@@ -610,7 +640,8 @@ export class MailMailboxesService {
         message: 'This mailbox is disabled.',
       });
     }
-    if (!this.access.canSsoSelectForUser(userId, access, mailbox)) {
+    const policy = await this.access.ssoPolicy(access.app.id);
+    if (!this.access.canSsoSelectForUser(userId, access, mailbox, policy)) {
       throw new ForbiddenException({
         statusCode: 403,
         code: 'MAILBOX_SSO_FORBIDDEN',

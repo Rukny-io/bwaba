@@ -5,18 +5,15 @@ import {
   BarChart2,
   Settings,
   HelpCircle,
-  Palette,
   Package,
   ShoppingBag,
   Layers,
   Percent,
-  Receipt,
 } from 'lucide-react';
 
 export const APP_BASE = '/app';
 export const PRODUCTS_SECTION_BASE = `${APP_BASE}/products`;
 export const ORDERS_HREF = `${APP_BASE}/orders`;
-export const INVOICES_HREF = `${APP_BASE}/invoices`;
 
 export type NavItem = {
   href: string;
@@ -47,7 +44,6 @@ export const productsSubNavTabs: NavItem[] = [
     label: 'الخصومات',
   },
   { href: ORDERS_HREF, icon: ShoppingBag, label: 'الطلبات' },
-  { href: INVOICES_HREF, icon: Receipt, label: 'الفواتير' },
 ];
 
 /** Main mobile dock (single pill) */
@@ -77,7 +73,6 @@ export const productsDockItems: NavItem[] = [
     icon: Percent,
     label: 'الخصومات',
   },
-  { href: INVOICES_HREF, icon: Receipt, label: 'الفواتير' },
 ];
 
 /** @deprecated Prefer primaryDockItems */
@@ -86,11 +81,6 @@ export const primaryNavItems: NavItem[] = primaryDockItems;
 export const middleNavItems: NavItem[] = [
   { href: ORDERS_HREF, icon: ShoppingBag, label: 'الطلبات' },
   { href: `${APP_BASE}/analytics`, icon: BarChart2, label: 'تحليلات' },
-  {
-    href: `${APP_BASE}/settings/appearance`,
-    icon: Palette,
-    label: 'المظهر',
-  },
 ];
 
 export const bottomNavItems: NavItem[] = [
@@ -129,7 +119,7 @@ export const commandPaletteSections: CommandPaletteSection[] = [
         href: `${APP_BASE}/settings`,
         icon: Settings,
         label: 'الإعدادات',
-        description: 'الحساب والمظهر والتفضيلات',
+        description: 'الحساب والتفضيلات',
       },
       {
         href: `${APP_BASE}/help`,
@@ -174,22 +164,10 @@ export const commandPaletteSections: CommandPaletteSection[] = [
         description: 'متابعة الطلبات والمبيعات',
       },
       {
-        href: INVOICES_HREF,
-        icon: Receipt,
-        label: 'الفواتير',
-        description: 'فواتير المبيعات والمدفوعات',
-      },
-      {
         href: `${APP_BASE}/analytics`,
         icon: BarChart2,
         label: 'التحليلات',
         description: 'مشاهدات، نقرات، ومبيعات المتجر',
-      },
-      {
-        href: `${APP_BASE}/settings/appearance`,
-        icon: Palette,
-        label: 'المظهر',
-        description: 'تخصيص مظهر صفحتك العامة',
       },
     ],
   },
@@ -202,10 +180,8 @@ export const PAGE_LABELS: Record<string, string> = {
   collections: 'التصنيفات',
   discounts: 'الخصومات',
   orders: 'الطلبات',
-  invoices: 'الفواتير',
   analytics: 'تحليلات',
   settings: 'الإعدادات',
-  appearance: 'المظهر',
   help: 'المساعدة',
 };
 
@@ -251,7 +227,6 @@ export function isStoreDockMode(pathname: string): boolean {
 
   if (isProductsSection(path)) return true;
   if (path === ORDERS_HREF || path.startsWith(`${ORDERS_HREF}/`)) return true;
-  if (path === INVOICES_HREF || path.startsWith(`${INVOICES_HREF}/`)) return true;
   return false;
 }
 

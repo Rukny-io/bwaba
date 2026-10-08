@@ -5,11 +5,16 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   ArrowLeft,
+  Eye,
   Link2,
+  MousePointerClick,
+  Package,
+  ShoppingBag,
 } from 'lucide-react';
 import { AnalyticsCommerceSection } from '@/components/analytics/analytics-commerce-section';
 import { AnalyticsCountryBreakdown } from '@/components/analytics/analytics-country-breakdown';
 import { AnalyticsDeviceBreakdown } from '@/components/analytics/analytics-device-breakdown';
+import { AnalyticsLinksTable } from '@/components/analytics/analytics-links-table';
 import {
   AnalyticsPeriodPicker,
   type AnalyticsPeriodDays,
@@ -18,8 +23,10 @@ import { AnalyticsTrendChart } from '@/components/analytics/analytics-trend-char
 import { DashboardErrorState } from '@/components/app/dashboard-error-state';
 import { DashboardInsightsPanel } from '@/components/app/dashboard-insights-panel';
 import { DashboardMetricCard } from '@/components/app/dashboard-metric-card';
-import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import { DashboardSectionHeader } from '@/components/app/dashboard-section-header';
+import {
+  DashboardPanel,
+  DashboardSection,
+} from '@/components/app/dashboard-section';
 import { DashboardSurface } from '@/components/app/dashboard-surface';
 import { getFullAppAnalytics, type FullAppAnalytics } from '@/lib/analytics/api';
 import { buildAppInsights } from '@/lib/analytics/insights';
@@ -37,23 +44,21 @@ import {
   formatShortDate,
   formatTrendBadge,
 } from '@/lib/dashboard-format';
-import { Table } from '@heroui/react';
-import { appDetailCardSurfaceClass } from '@/lib/app-detail-styles';
 import { cn } from '@/lib/utils';
 
 function AnalyticsSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-10 w-64 animate-pulse rounded-full bg-[var(--surface-secondary)]" />
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="h-16 animate-pulse rounded-2xl bg-[var(--surface-secondary)]" />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-[7.25rem] animate-pulse rounded-4xl bg-[var(--surface-secondary)] sm:h-28"
+            className="h-[7.25rem] animate-pulse rounded-2xl bg-[var(--surface-secondary)] sm:h-28"
           />
         ))}
       </div>
-      <div className="h-56 animate-pulse rounded-4xl bg-[var(--surface-secondary)] sm:h-64" />
+      <div className="h-56 animate-pulse rounded-2xl bg-[var(--surface-secondary)] sm:h-64" />
     </div>
   );
 }
@@ -102,34 +107,39 @@ export function AnalyticsOverviewView() {
   const referrers = toReferrerItems(analytics.referrerBreakdown);
   const hiddenLinks = links.filter((l) => l.status === 'hidden');
   const insights = buildAppInsights({ analytics, commerce, links });
+  const refreshing = loading && Boolean(data);
 
   return (
-    <>
-      <DashboardPageHeader
-        title="تحليلات"
-        description={
-          <>
-            تحليل ذكي لصفحتك ومتجرك — روابط، طلبات، منتجات ومخزون ·{' '}
+    <div
+      className={cn(
+        'flex w-full min-w-0 flex-col gap-5 sm:gap-6',
+        refreshing && 'pointer-events-none opacity-60',
+      )}
+    >
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            التحليلات
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+            تحليل صفحتك ومتجرك — روابط، زيارات، طلبات ومبيعات ·{' '}
             <span dir="ltr" lang="en" className="tabular-nums">
               {formatShortDate(period.startDate)} — {formatShortDate(period.endDate)}
             </span>
-          </>
-        }
-        actions={<AnalyticsPeriodPicker value={days} onChange={setDays} />}
-      />
+          </p>
+        </div>
+        <AnalyticsPeriodPicker value={days} onChange={setDays} className="shrink-0" />
+      </header>
 
       <DashboardInsightsPanel insights={insights} />
 
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <DashboardSectionHeader
-          title="الصفحة والروابط"
-          description="أداء صفحتك الشخصية ونقرات الزوار"
-          href="/app/links"
-        />
-
+      <DashboardSection
+        title="الصفحة والروابط"
+        description="أداء صفحتك الشخصية ونقرات الزوار"
+      >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <DashboardMetricCard
-            icon="mouse-pointer-click"
+            icon={MousePointerClick}
             label="نقرات الروابط"
             value={formatNumber(summary.totalClicks)}
             trend={formatTrendBadge(summary.changes.clicks)}
@@ -138,21 +148,22 @@ export function AnalyticsOverviewView() {
             comparisonSecondary="مقابل السابقة"
           />
           <DashboardMetricCard
-            icon="eye"
+            icon={Eye}
             label="زيارات الصفحة"
             value={formatNumber(summary.totalLinkViews)}
             comparisonPrimary="إجمالي المشاهدات"
             comparisonSecondary="على جميع الروابط"
           />
           <DashboardMetricCard
-            icon="link"
+            icon={Link2}
             label="روابط نشطة"
             value={formatNumber(links.filter((l) => l.status === 'active').length)}
             comparisonPrimary="ظاهرة للزوار"
             comparisonSecondary={`من ${summary.linksCount}`}
           />
           <DashboardMetricCard
-            icon="alert-triangle"
+            icon={AlertTriangle}
+            iconClassName="text-[var(--warning)]"
             label="روابط مخفية"
             value={formatNumber(hiddenLinks.length)}
             comparisonPrimary="غير ظاهرة"
@@ -160,40 +171,38 @@ export function AnalyticsOverviewView() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-          <DashboardSurface as="article" className="xl:col-span-2">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)] sm:mb-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <DashboardSurface as="article" className="xl:col-span-2" padding="md">
+            <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
               الاتجاه اليومي للنقرات
             </h3>
             <AnalyticsTrendChart data={toTrendPoints(analytics.chartData)} height={220} />
           </DashboardSurface>
 
-          <DashboardSurface as="article">
+          <DashboardSurface as="article" padding="md">
             <h3 className="mb-4 text-sm font-semibold text-[var(--foreground)]">الأجهزة</h3>
             <AnalyticsDeviceBreakdown items={toDeviceItems(analytics.deviceBreakdown)} />
           </DashboardSurface>
         </div>
 
-        <DashboardSurface as="article">
+        <DashboardSurface as="article" padding="md">
           <AnalyticsCountryBreakdown items={toCountryItems(analytics.countryBreakdown)} />
         </DashboardSurface>
 
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-          <DashboardSurface as="article">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <DashboardSurface as="article" padding="md">
             <h3 className="mb-4 text-sm font-semibold text-[var(--foreground)]">أفضل الروابط</h3>
             {analytics.topLinks.length === 0 ? (
-              <p className="text-sm italic text-[var(--muted-foreground)]">
-                لا توجد نقرات في هذه الفترة
-              </p>
+              <p className="text-sm text-[var(--muted-foreground)]">لا توجد نقرات في هذه الفترة</p>
             ) : (
               <ul className="space-y-2">
                 {analytics.topLinks.map((link, i) => (
                   <li key={link.id}>
                     <Link
                       href="/app/links"
-                      className="flex items-center gap-3 rounded-2xl bg-[var(--surface-secondary)] px-3.5 py-2.5 transition-colors hover:bg-[var(--surface-secondary)]/80"
+                      className="flex items-center gap-3 rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 hover:bg-[color-mix(in_oklab,var(--surface-secondary)_80%,var(--surface))]"
                     >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/15 text-xs font-bold text-[var(--primary)]">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--primary)_14%,transparent)] text-xs font-bold text-[var(--primary)]">
                         {i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -201,7 +210,7 @@ export function AnalyticsOverviewView() {
                           {link.title}
                         </p>
                         <p className="text-xs text-[var(--muted-foreground)]">
-                          <span dir="ltr" lang="en" className="tabular-nums">
+                          <span dir="ltr" className="tabular-nums">
                             {formatNumber(link.clicks)}
                           </span>{' '}
                           نقرة · {link.platform}
@@ -215,7 +224,7 @@ export function AnalyticsOverviewView() {
             )}
           </DashboardSurface>
 
-          <DashboardSurface as="article">
+          <DashboardSurface as="article" padding="md">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
               <AlertTriangle className="size-4 text-[var(--warning)]" />
               يحتاج انتباهك
@@ -232,7 +241,7 @@ export function AnalyticsOverviewView() {
                   <li key={product.id}>
                     <Link
                       href="/app/products"
-                      className="block rounded-2xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 px-3.5 py-2.5"
+                      className="block rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[color-mix(in_oklab,var(--warning)_6%,transparent)] px-3 py-2.5"
                     >
                       <p className="text-sm font-medium">{product.name}</p>
                       <p className="text-xs text-[var(--muted-foreground)]">
@@ -245,18 +254,16 @@ export function AnalyticsOverviewView() {
                   <li key={link.id}>
                     <Link
                       href="/app/links"
-                      className="block rounded-2xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 px-3.5 py-2.5"
+                      className="block rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[color-mix(in_oklab,var(--warning)_6%,transparent)] px-3 py-2.5"
                     >
                       <p className="text-sm font-medium">{link.title ?? link.platform}</p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        الرابط مخفي عن الزوار
-                      </p>
+                      <p className="text-xs text-[var(--muted-foreground)]">الرابط مخفي عن الزوار</p>
                     </Link>
                   </li>
                 ))}
                 {referrers.slice(0, 2).map((ref) => (
                   <li key={ref.referrer}>
-                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/50 px-3.5 py-2.5">
+                    <div className="rounded-xl border border-[color-mix(in_oklab,var(--border)_50%,transparent)] bg-[var(--surface-secondary)] px-3 py-2.5">
                       <p className="text-sm font-medium">مصدر: {ref.referrer}</p>
                       <p className="text-xs text-[var(--muted-foreground)]">
                         {formatNumber(ref.clicks)} نقرة ({ref.percentage}%)
@@ -269,89 +276,34 @@ export function AnalyticsOverviewView() {
           </DashboardSurface>
         </div>
 
-        <div className={appDetailCardSurfaceClass}>
-          <h3 className="mb-4 text-sm font-semibold text-[var(--foreground)]">كل الروابط</h3>
-          {links.length === 0 ? (
-            <p className="text-sm italic text-[var(--muted-foreground)]">لا توجد روابط بعد</p>
-          ) : (
-            <Table variant="secondary">
-              <Table.ScrollContainer>
-                <Table.Content
-                  aria-label="أداء الروابط"
-                  className="min-w-[36rem]"
-                >
-                  <Table.Header>
-                    <Table.Column isRowHeader id="title">
-                      الرابط
-                    </Table.Column>
-                    <Table.Column id="status">الحالة</Table.Column>
-                    <Table.Column id="platform">المنصة</Table.Column>
-                    <Table.Column id="views" className="text-end">
-                      مشاهدات
-                    </Table.Column>
-                    <Table.Column id="clicks" className="text-end">
-                      نقرات
-                    </Table.Column>
-                  </Table.Header>
-                  <Table.Body items={links}>
-                    {(link) => (
-                      <Table.Row id={link.id}>
-                        <Table.Cell>
-                          <Link
-                            href="/app/links"
-                            className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
-                          >
-                            {link.title ?? link.platform}
-                          </Link>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-medium',
-                              link.status === 'active'
-                                ? 'bg-[var(--success)]/15 text-[var(--success)]'
-                                : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
-                            )}
-                          >
-                            {link.status === 'active' ? 'نشط' : 'مخفي'}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell className="text-[var(--muted-foreground)]">
-                          {link.platform}
-                        </Table.Cell>
-                        <Table.Cell className="text-end tabular-nums">
-                          {formatNumber(link.views)}
-                        </Table.Cell>
-                        <Table.Cell className="text-end font-medium tabular-nums">
-                          {formatNumber(link.totalClicks)}
-                        </Table.Cell>
-                      </Table.Row>
-                    )}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
-            </Table>
-          )}
-        </div>
-      </section>
+        <DashboardPanel className="flex flex-col gap-3 border-t-0 pt-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-[var(--foreground)]">كل الروابط</h3>
+            <Link
+              href="/app/links"
+              className="text-[12px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            >
+              إدارة الروابط
+            </Link>
+          </div>
+          <AnalyticsLinksTable links={links} isLoading={refreshing} />
+        </DashboardPanel>
+      </DashboardSection>
 
-      <section className="flex flex-col gap-3 sm:gap-4">
-        <DashboardSectionHeader
-          title="المتجر والمبيعات"
-          description="الطلبات، المنتجات، المخزون والإيرادات"
-          href="/app/orders"
-        />
-
+      <DashboardSection
+        title="المتجر والمبيعات"
+        description="الطلبات، المنتجات، المخزون والإيرادات"
+      >
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <DashboardMetricCard
-            icon="shopping-bag"
+            icon={ShoppingBag}
             label="إجمالي الطلبات"
             value={formatNumber(orderStats.totalOrders)}
             comparisonPrimary={`${formatNumber(orderStats.pendingOrders)} معلّقة`}
             comparisonSecondary={formatCurrency(orderStats.totalRevenue)}
           />
           <DashboardMetricCard
-            icon="package"
+            icon={Package}
             label="منتجات نشطة"
             value={formatNumber(productStats.activeProducts)}
             comparisonPrimary={`${formatNumber(productStats.totalProducts)} إجمالي`}
@@ -362,14 +314,15 @@ export function AnalyticsOverviewView() {
             }
           />
           <DashboardMetricCard
-            icon="alert-triangle"
+            icon={AlertTriangle}
+            iconClassName="text-[var(--warning)]"
             label="نفد المخزون"
             value={formatNumber(productStats.outOfStock)}
             comparisonPrimary="منتجات غير متاحة"
             comparisonSecondary="تحتاج إعادة تخزين"
           />
           <DashboardMetricCard
-            icon="shopping-bag"
+            icon={ShoppingBag}
             label="طلبات مكتملة"
             value={formatNumber(orderStats.completedOrders)}
             comparisonPrimary="تم تسليمها"
@@ -384,8 +337,9 @@ export function AnalyticsOverviewView() {
           recentOrders={commerce.recentOrders}
           orderStats={orderStats}
           productStats={productStats}
+          isLoading={refreshing}
         />
-      </section>
-    </>
+      </DashboardSection>
+    </div>
   );
 }

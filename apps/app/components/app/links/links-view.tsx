@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Reorder } from 'framer-motion';
+import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { Link2, Loader2, Plus } from 'lucide-react';
 import { AddLinkCatalogDialog } from '@/components/app/links/add-link-catalog/add-link-catalog-dialog';
 import { AddLinkMobileDialog } from '@/components/app/links/add-link-catalog/add-link-mobile-dialog';
@@ -34,6 +34,7 @@ import type {
   SocialLink,
   UpdateSocialLinkInput,
 } from '@/lib/links/types';
+import { linksActionButtonClass } from '@/components/app/links/links-interaction';
 import { cn } from '@/lib/utils';
 
 function sortLinks(a: SocialLink, b: SocialLink) {
@@ -121,6 +122,7 @@ export function LinksView() {
 
     if (igStatus === 'success') {
       setError(null);
+      setCatalogOpen(false);
       void loadLinks();
       router.replace(cleanPath, { scroll: false });
       if (linkId) {
@@ -504,6 +506,7 @@ export function LinksView() {
               'mt-5 inline-flex h-10 items-center gap-2 rounded-xl px-4',
               'text-sm font-semibold text-[var(--primary-foreground)]',
               'bg-[var(--primary)] hover:opacity-95',
+              linksActionButtonClass,
             )}
           >
             <Plus className="size-4" strokeWidth={2.5} aria-hidden />
@@ -512,8 +515,8 @@ export function LinksView() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="text-xs leading-relaxed text-[var(--muted-foreground)] sm:text-sm">
-            اسحب من النقاط بجانب كل رابط لإعادة الترتيب داخل القسم. انقل الرابط لمجموعة من أيقونة المجلد.
+          <p className="rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 text-xs leading-relaxed text-[var(--muted-foreground)] sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm">
+            اسحب من النقاط لإعادة الترتيب. انقل الرابط لمجموعة من أيقونة المجلد.
           </p>
 
           {sortedGroups.map((group) => {
@@ -531,24 +534,37 @@ export function LinksView() {
                   onChangeColor={(color) => handleChangeGroupColor(group, color)}
                   onDelete={() => void handleDeleteGroup(group)}
                 />
-                {expanded ? (
-                  sectionLinks.length > 0 ? (
-                    <Reorder.Group
-                      axis="y"
-                      as="ul"
-                      values={sectionLinks}
-                      onReorder={(next) => handleSectionReorder(group.id, next)}
-                      onPointerUp={() => void handleReorderPointerUp()}
-                      className="flex list-none flex-col gap-3 p-0 sm:gap-3.5"
+                <AnimatePresence initial={false}>
+                  {expanded ? (
+                    <motion.div
+                      key={`${group.id}-links`}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                      className="overflow-hidden"
                     >
-                      {sectionLinks.map((link) => renderLinkCard(link))}
-                    </Reorder.Group>
-                  ) : (
-                    <p className="rounded-xl border border-dashed border-[var(--border)] px-3 py-4 text-center text-xs text-[var(--muted-foreground)]">
-                      لا روابط في هذه المجموعة بعد — انقل رابطاً إليها من أيقونة المجلد
-                    </p>
-                  )
-                ) : null}
+                      <div className="pt-2">
+                        {sectionLinks.length > 0 ? (
+                          <Reorder.Group
+                            axis="y"
+                            as="ul"
+                            values={sectionLinks}
+                            onReorder={(next) => handleSectionReorder(group.id, next)}
+                            onPointerUp={() => void handleReorderPointerUp()}
+                            className="flex list-none flex-col gap-3 p-0 sm:gap-3.5"
+                          >
+                            {sectionLinks.map((link) => renderLinkCard(link))}
+                          </Reorder.Group>
+                        ) : (
+                          <p className="rounded-xl border border-dashed border-[var(--border)] px-3 py-4 text-center text-xs text-[var(--muted-foreground)]">
+                            لا روابط في هذه المجموعة بعد — انقل رابطاً إليها من أيقونة المجلد
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </div>
             );
           })}

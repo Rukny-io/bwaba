@@ -16,6 +16,8 @@ export async function syncMailAppDomainToNest(
     primaryDomain: string | null;
     domainStatus: NestMailDomainStatus;
     dkimTokens?: string[];
+    domainOwnershipToken?: string | null;
+    domainOwnershipVerifiedAt?: string | null;
   },
 ): Promise<SyncMailAppDomainResult> {
   const result = await apiFetchJson<{
@@ -30,6 +32,12 @@ export async function syncMailAppDomainToNest(
       domainStatus: input.domainStatus,
       domainCheckedAt: new Date().toISOString(),
       ...(input.dkimTokens?.length ? { dkimTokens: input.dkimTokens } : {}),
+      ...(input.domainOwnershipToken !== undefined
+        ? { domainOwnershipToken: input.domainOwnershipToken }
+        : {}),
+      ...(input.domainOwnershipVerifiedAt !== undefined
+        ? { domainOwnershipVerifiedAt: input.domainOwnershipVerifiedAt }
+        : {}),
     }),
   });
 

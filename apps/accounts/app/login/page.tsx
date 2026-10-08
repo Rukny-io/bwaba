@@ -56,7 +56,7 @@ function LoginPageContent() {
   const [mode, setMode] = useState<AuthMode>(
     modeParam === "password" ? "password" : "sso",
   )
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => searchParams.get("email")?.trim() || "")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isRegister, setIsRegister] = useState(false)

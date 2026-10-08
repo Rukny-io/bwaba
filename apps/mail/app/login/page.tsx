@@ -1,7 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { KeyRound } from "lucide-react";
+import { discoverMailSso, mailSsoStartUrl } from "@/lib/mail-sso-client";
 import { AuthLoadingCard } from "@/components/auth/auth-status-card";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { agLayout } from "@/lib/mail-antigravity-theme";
@@ -43,6 +45,101 @@ function sessionCopy(flag: string | null) {
   if (flag === "invalid") return "Could not verify your session. Sign in again.";
   if (flag === "logout") return "Signed out successfully.";
   return "Create a workspace, connect your domain, and start sending.";
+}
+
+const SSO_ERRORS: Record<string, string> = {
+  state: "Your SSO sign-in timed out. Try again.",
+  provider: "Your identity provider did not complete the sign-in. Try again or contact your admin.",
+  email: "Your identity provider did not share a verified email address.",
+  domain: "That account is not on your company's domain. Sign in with your work account.",
+  not_provisioned: "You have not been added to this workspace yet. Ask an admin to invite you.",
+  seat_limit: "This workspace has no free seats. Ask an admin to free one up.",
+  disabled: "SSO is not set up for this email domain.",
+  unknown: "SSO sign-in failed. Try again.",
+};
+
+function SsoSignIn({
+  initialEmail,
+  initialError,
+}: {
+  initialEmail: string;
+  initialError: string | null;
+}) {
+  const [open, setOpen] = useState(Boolean(initialError || initialEmail));
+  const [email, setEmail] = useState(initialEmail);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(
+    initialError ? (SSO_ERRORS[initialError] ?? SSO_ERRORS.unknown) : null,
+  );
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#E5E5E5] px-6 text-[14px] font-medium text-[#1D1D1D] transition-colors hover:bg-[#F5F5F5]"
+        onClick={() => setOpen(true)}
+      >
+        <KeyRound className="size-4" aria-hidden />
+        Sign in with SSO
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-2 text-start"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (!valid || pending) return;
+        setPending(true);
+        setError(null);
+        try {
+          const result = await discoverMailSso(email.trim());
+          if (!result.sso) {
+            setError(
+              `SSO is not set up for @${email.trim().split("@")[1]}. Use Google or Rukny sign-in.`,
+            );
+            setPending(false);
+            return;
+          }
+          window.location.href = mailSsoStartUrl(email.trim());
+        } catch (err) {
+          setError((err as Error).message);
+          setPending(false);
+        }
+      }}
+    >
+      <label htmlFor="sso-email" className="text-[13px] font-medium text-[#1D1D1D]">
+        Work email
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="sso-email"
+          type="email"
+          dir="ltr"
+          autoFocus
+          autoComplete="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          className="h-11 min-w-0 flex-1 rounded-full border border-[#E5E5E5] px-4 text-[14px] text-[#1D1D1D] outline-none focus:border-[#1D1D1D]"
+        />
+        <button
+          type="submit"
+          disabled={!valid || pending}
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[#1D1D1D] px-5 text-[14px] font-medium text-white transition-opacity disabled:opacity-40"
+        >
+          {pending ? "…" : "Continue"}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className="text-[13px] leading-5 text-[#B42318]">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
 }
 
 function LoginContent() {
@@ -106,6 +203,11 @@ function LoginContent() {
           >
             Sign in with Rukny
           </button>
+
+          <SsoSignIn
+            initialEmail={searchParams.get("email")?.trim() ?? ""}
+            initialError={searchParams.get("sso_error")}
+          />
         </div>
 
         <p className="mt-6 text-[13px] leading-relaxed text-[#9CA3AF]">

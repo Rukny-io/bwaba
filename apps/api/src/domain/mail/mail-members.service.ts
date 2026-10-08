@@ -408,7 +408,13 @@ export class MailMembersService {
     };
   }
 
-  async invite(userId: string, publicAppId: string, dto: InviteMailAppMemberDto) {
+  async invite(
+    userId: string,
+    publicAppId: string,
+    dto: InviteMailAppMemberDto,
+    opts: { sendEmail?: boolean } = {},
+  ) {
+    const sendEmail = opts.sendEmail !== false;
     const access = await this.access.requireAccess(userId, publicAppId);
     if (!this.access.canManageTeam(access)) {
       throw new ForbiddenException({
@@ -455,6 +461,7 @@ export class MailMembersService {
         role,
         invitedBy: userId,
         inviterName,
+        sendEmail,
       });
     }
 
@@ -533,12 +540,14 @@ export class MailMembersService {
       },
     });
 
-    await this.sendExistingUserInviteEmail({
-      to: invitee.email,
-      inviterName,
-      role,
-      workspaceName: access.app.name,
-    });
+    if (sendEmail) {
+      await this.sendExistingUserInviteEmail({
+        to: invitee.email,
+        inviterName,
+        role,
+        workspaceName: access.app.name,
+      });
+    }
 
     return {
       kind: 'member' as const,
@@ -555,6 +564,7 @@ export class MailMembersService {
     role: MailAppMemberRole;
     invitedBy: string;
     inviterName: string;
+    sendEmail: boolean;
   }) {
     const expiresAt = this.inviteExpiryDate();
     const token = this.newInviteToken();
@@ -623,13 +633,15 @@ export class MailMembersService {
           },
         });
 
-    await this.sendSignupInviteEmail({
-      to: opts.email,
-      inviterName: opts.inviterName,
-      role: opts.role,
-      workspaceName: opts.workspaceName,
-      token: row.token,
-    });
+    if (opts.sendEmail) {
+      await this.sendSignupInviteEmail({
+        to: opts.email,
+        inviterName: opts.inviterName,
+        role: opts.role,
+        workspaceName: opts.workspaceName,
+        token: row.token,
+      });
+    }
 
     return {
       kind: 'email_invite' as const,
@@ -825,6 +837,7 @@ export class MailMembersService {
 
     const member = await this.prisma.mailAppMember.findFirst({
       where: { id: memberId, mailAppId: access.app.id },
+      include: { user: { select: { email: true } } },
     });
     if (member) {
       await this.prisma.mailMailbox.updateMany({
@@ -834,6 +847,7 @@ export class MailMembersService {
         },
         data: { assignedUserId: null },
       });
+      await this.releaseQuickAccess(access.app.id, member.user.email);
 
       await this.prisma.mailAppMember.update({
         where: { id: member.id },
@@ -858,34 +872,184 @@ export class MailMembersService {
       where: { id: emailInvite.id },
       data: { status: InvitationStatus.CANCELLED },
     });
+    await this.releaseQuickAccess(access.app.id, emailInvite.email);
 
     return { ok: true as const, kind: 'email_invite' as const };
   }
 
+  /** Drop mailbox reservations and revoke unused quick sign-in links for a removed teammate. */
+  private async releaseQuickAccess(mailAppId: string, rawEmail: string) {
+    const email = rawEmail.trim().toLowerCase();
+    await this.prisma.mailMailbox.updateMany({
+      where: { mailAppId, pendingAssigneeEmail: email },
+      data: { pendingAssigneeEmail: null },
+    });
+    await this.prisma.mailSsoAccessLink.updateMany({
+      where: { mailAppId, email, usedAt: null, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /**
+   * Member invites plus email-only invites addressed to this account's email,
+   * so people invited before signing up can join from /apps without the email link.
+   */
   async listMyInvitations(userId: string) {
     await this.expireStaleMemberInvites();
 
-    const rows = await this.prisma.mailAppMember.findMany({
-      where: {
-        userId,
-        status: InvitationStatus.PENDING,
-        mailApp: { status: MailAppStatus.ACTIVE },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      include: memberInclude,
-      orderBy: { invitedAt: 'desc' },
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
     });
+    if (!user) throw new NotFoundException('User not found.');
+    const email = user.email.trim().toLowerCase();
+
+    const [rows, emailInvites] = await Promise.all([
+      this.prisma.mailAppMember.findMany({
+        where: {
+          userId,
+          status: InvitationStatus.PENDING,
+          mailApp: { status: MailAppStatus.ACTIVE },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        include: memberInclude,
+        orderBy: { invitedAt: 'desc' },
+      }),
+      this.prisma.mailAppEmailInvite.findMany({
+        where: {
+          email: { equals: email, mode: 'insensitive' },
+          status: InvitationStatus.PENDING,
+          expiresAt: { gt: new Date() },
+          mailApp: {
+            status: MailAppStatus.ACTIVE,
+            userId: { not: userId },
+            members: {
+              none: { userId, status: InvitationStatus.ACCEPTED },
+            },
+          },
+        },
+        include: {
+          mailApp: { select: { id: true, appId: true, name: true, primaryDomain: true } },
+          inviter: {
+            select: {
+              id: true,
+              email: true,
+              profile: { select: { name: true, username: true } },
+            },
+          },
+        },
+        orderBy: { invitedAt: 'desc' },
+      }),
+    ]);
+
+    const memberAppIds = new Set(rows.map((row) => row.mailApp.id));
+    const freshEmailInvites = emailInvites.filter(
+      (invite) => !memberAppIds.has(invite.mailAppId),
+    );
+    const appIds = [...memberAppIds, ...freshEmailInvites.map((i) => i.mailAppId)];
+    const reserved = appIds.length
+      ? await this.prisma.mailMailbox.findMany({
+          where: {
+            mailAppId: { in: appIds },
+            status: MailMailboxStatus.ACTIVE,
+            OR: [
+              { pendingAssigneeEmail: { equals: email, mode: 'insensitive' } },
+              { assignedUserId: userId },
+            ],
+          },
+          select: { mailAppId: true, localPart: true, domain: true },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
+    const reservedByApp = new Map<string, string[]>();
+    for (const box of reserved) {
+      const list = reservedByApp.get(box.mailAppId) ?? [];
+      list.push(`${box.localPart}@${box.domain}`);
+      reservedByApp.set(box.mailAppId, list);
+    }
 
     return {
-      invitations: rows.map((row) => ({
-        ...this.toMemberView(row),
-        workspace: {
-          appId: row.mailApp.appId,
-          name: row.mailApp.name,
-          primaryDomain: row.mailApp.primaryDomain,
-        },
-      })),
+      invitations: [
+        ...rows.map((row) => ({
+          ...this.toMemberView(row),
+          kind: 'member' as const,
+          reservedMailboxes: reservedByApp.get(row.mailApp.id) ?? [],
+          workspace: {
+            appId: row.mailApp.appId,
+            name: row.mailApp.name,
+            primaryDomain: row.mailApp.primaryDomain,
+          },
+        })),
+        ...freshEmailInvites.map((invite) => ({
+          id: invite.id,
+          kind: 'email_invite' as const,
+          role: invite.role,
+          status: invite.status,
+          invitedAt: invite.invitedAt.toISOString(),
+          expiresAt: invite.expiresAt.toISOString(),
+          inviter: {
+            id: invite.inviter.id,
+            email: invite.inviter.email,
+            name: invite.inviter.profile?.name || invite.inviter.profile?.username || null,
+          },
+          reservedMailboxes: reservedByApp.get(invite.mailAppId) ?? [],
+          workspace: {
+            appId: invite.mailApp.appId,
+            name: invite.mailApp.name,
+            primaryDomain: invite.mailApp.primaryDomain,
+          },
+        })),
+      ],
     };
+  }
+
+  /** Accept an email-only invite from /apps (same checks as the email link). */
+  async acceptEmailInvitation(userId: string, inviteId: string) {
+    const invite = await this.findOwnEmailInvite(userId, inviteId);
+    return this.claimEmailInvite(userId, invite.token);
+  }
+
+  async declineEmailInvitation(userId: string, inviteId: string) {
+    const invite = await this.findOwnEmailInvite(userId, inviteId);
+    await this.prisma.mailAppEmailInvite.update({
+      where: { id: invite.id },
+      data: { status: InvitationStatus.DECLINED },
+    });
+    await this.releaseQuickAccess(invite.mailAppId, invite.email);
+    return { ok: true as const };
+  }
+
+  private async findOwnEmailInvite(userId: string, inviteId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    const invite = await this.prisma.mailAppEmailInvite.findFirst({
+      where: {
+        id: inviteId,
+        status: InvitationStatus.PENDING,
+        email: { equals: user?.email.trim() ?? '', mode: 'insensitive' },
+      },
+    });
+    if (!user || !invite) throw new NotFoundException('Invitation not found.');
+    return invite;
+  }
+
+  /** Mailboxes the admin reserved for this email become assigned once the person joins. */
+  private async assignReservedMailboxes(mailAppId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    if (!user) return;
+    await this.prisma.mailMailbox.updateMany({
+      where: {
+        mailAppId,
+        status: MailMailboxStatus.ACTIVE,
+        pendingAssigneeEmail: { equals: user.email.trim(), mode: 'insensitive' },
+      },
+      data: { assignedUserId: userId, pendingAssigneeEmail: null },
+    });
   }
 
   private async allocateMemberSlot(userId: string): Promise<number> {
@@ -906,6 +1070,102 @@ export class MailMembersService {
     const maxOwned = owned._max.slotIndex ?? -1;
     const maxMember = memberships._max.slotIndex ?? -1;
     return Math.max(maxOwned, maxMember) + 1;
+  }
+
+  /**
+   * Enterprise SSO: the IdP already vouched for the email, so pending invites are
+   * accepted directly and (with JIT) unknown users get a seat with `defaultRole`.
+   */
+  async joinViaIdentityProvider(opts: {
+    mailAppId: string;
+    userId: string;
+    email: string;
+    jitProvisioning: boolean;
+    defaultRole: MailAppMemberRole;
+  }): Promise<{ slotIndex: number; joined: boolean }> {
+    await this.expireStaleMemberInvites(opts.mailAppId);
+    const app = await this.prisma.mailApp.findUnique({
+      where: { id: opts.mailAppId },
+      select: { id: true, userId: true, slotIndex: true },
+    });
+    if (!app) throw new NotFoundException('Workspace not found.');
+    if (app.userId === opts.userId) return { slotIndex: app.slotIndex, joined: false };
+
+    const email = opts.email.trim().toLowerCase();
+    const [existing, emailInvite] = await Promise.all([
+      this.prisma.mailAppMember.findUnique({
+        where: { mailAppId_userId: { mailAppId: app.id, userId: opts.userId } },
+      }),
+      this.prisma.mailAppEmailInvite.findFirst({
+        where: {
+          mailAppId: app.id,
+          email: { equals: email, mode: 'insensitive' },
+          status: InvitationStatus.PENDING,
+        },
+      }),
+    ]);
+
+    if (existing?.status === InvitationStatus.ACCEPTED) {
+      if (emailInvite) {
+        await this.prisma.mailAppEmailInvite.update({
+          where: { id: emailInvite.id },
+          data: { status: InvitationStatus.ACCEPTED, acceptedAt: new Date() },
+        });
+      }
+      return { slotIndex: existing.slotIndex ?? app.slotIndex, joined: false };
+    }
+
+    const holdsSeat = existing?.status === InvitationStatus.PENDING || !!emailInvite;
+    if (!holdsSeat) {
+      if (!opts.jitProvisioning) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'MAIL_SSO_NOT_PROVISIONED',
+          message: 'Your account has not been added to this workspace yet. Ask an admin to invite you.',
+        });
+      }
+      const subscription = await this.prisma.mailSubscription.findUnique({
+        where: { mailAppId: app.id },
+      });
+      await this.assertSeatAvailable(
+        app.id,
+        await this.resolveConsoleMemberLimit(app.id, subscription),
+      );
+    }
+
+    const role = emailInvite?.role ?? existing?.role ?? opts.defaultRole;
+    const slotIndex = await this.allocateMemberSlot(opts.userId);
+    const data = {
+      role,
+      status: InvitationStatus.ACCEPTED,
+      acceptedAt: new Date(),
+      slotIndex,
+      expiresAt: null,
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      if (existing) {
+        await tx.mailAppMember.update({ where: { id: existing.id }, data });
+      } else {
+        await tx.mailAppMember.create({
+          data: {
+            ...data,
+            mailAppId: app.id,
+            userId: opts.userId,
+            invitedBy: emailInvite?.invitedBy ?? app.userId,
+            invitedAt: emailInvite?.invitedAt ?? new Date(),
+          },
+        });
+      }
+      if (emailInvite) {
+        await tx.mailAppEmailInvite.update({
+          where: { id: emailInvite.id },
+          data: { status: InvitationStatus.ACCEPTED, acceptedAt: new Date() },
+        });
+      }
+    });
+
+    return { slotIndex, joined: true };
   }
 
   async acceptInvitation(userId: string, memberId: string) {
@@ -942,6 +1202,7 @@ export class MailMembersService {
       },
       include: memberInclude,
     });
+    await this.assignReservedMailboxes(updated.mailAppId, userId);
 
     return {
       member: this.toMemberView(updated),
@@ -1143,6 +1404,7 @@ export class MailMembersService {
 
       return saved;
     });
+    await this.assignReservedMailboxes(invite.mailAppId, user.id);
 
     return {
       member: this.toMemberView(member),

@@ -56,6 +56,17 @@ export function formatShortDate(dateStr: string): string {
   return formatDate(dateStr, { month: 'short', day: 'numeric' });
 }
 
+export function formatIsoDate(value: Date | string): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '—';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate());
+
+  return `${year}-${month}-${day}`;
+}
+
 export function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   const diffMs = Date.now() - date.getTime();

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { generateOwnershipToken } from "@rukny/domain-verification";
 import {
   deleteMailDomainBinding,
   findMailAppIdByDomain,
   getMailDomainBinding,
   upsertMailDomainBinding,
 } from "@/lib/mail-domain-bindings";
-import { createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
+import { applyDnsCheckResults, createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
@@ -55,13 +56,18 @@ export async function POST(request: Request) {
 
   const binding = await getMailDomainBinding(session.appId);
   const bindingTokens = binding?.domain === normalized ? binding.dkimTokens ?? [] : [];
-  const result = await verifyDomainDns(domain, bindingTokens);
+  const ownershipToken =
+    binding?.domain === normalized && binding.ownershipToken
+      ? binding.ownershipToken
+      : generateOwnershipToken();
+  const result = await verifyDomainDns(domain, bindingTokens, ownershipToken);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
   const tokens = resolveDkimTokens(result.ses?.tokens ?? [], bindingTokens);
   const response = NextResponse.json({ ...result, tokens });
+  const checkedAt = new Date().toISOString();
 
   if (normalized) {
     const status = result.verified ? "ACTIVE" : "PENDING_DNS";
@@ -70,7 +76,9 @@ export async function POST(request: Request) {
         domain: normalized,
         status,
         dkimTokens: tokens,
-        sesCheckedAt: new Date().toISOString(),
+        sesCheckedAt: checkedAt,
+        ownershipToken,
+        ownershipVerifiedAt: result.verified ? checkedAt : undefined,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Domain conflict.";
@@ -79,14 +87,13 @@ export async function POST(request: Request) {
 
     await redisDel(mailSetupCacheKey(session.appId));
     if (tokens.length > 0) {
-      const setup = createMailDomainSetup(normalized, tokens);
-      setup.status = status;
-      if (status === "ACTIVE") {
-        setup.records = setup.records.map((record) => ({
-          ...record,
-          status: "verified" as const,
-        }));
-      }
+      let setup = createMailDomainSetup(normalized, tokens, ownershipToken);
+      setup = applyDnsCheckResults(
+        setup,
+        result.results,
+        result.verified,
+        result.waiting,
+      );
       await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
     }
 
@@ -96,6 +103,8 @@ export async function POST(request: Request) {
         primaryDomain: normalized,
         domainStatus: status,
         dkimTokens: tokens,
+        domainOwnershipToken: ownershipToken,
+        domainOwnershipVerifiedAt: result.verified ? checkedAt : null,
       });
     } catch (error) {
       const message =

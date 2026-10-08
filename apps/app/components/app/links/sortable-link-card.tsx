@@ -21,8 +21,13 @@ import { LinkPlatformIconBadge } from '@/components/app/links/platform-icons/lin
 import { formatNumber } from '@/lib/dashboard-format';
 import {
   getLinkDisplayLabel,
-  resolveCatalogTypeFromPlatform,
+  resolveCatalogTypeForLink,
 } from '@/lib/links/resolve-platform';
+import {
+  linksCardClass,
+  linksPressableClass,
+  linksToolBtnClass,
+} from '@/components/app/links/links-interaction';
 import type { LinkGroup, SocialLink, UpdateSocialLinkInput } from '@/lib/links/types';
 import { cn } from '@/lib/utils';
 
@@ -47,13 +52,6 @@ const reorderTransition = {
   damping: 38,
   mass: 0.55,
 };
-
-const toolBtnClass = cn(
-  'inline-flex size-8 items-center justify-center rounded-lg',
-  'text-[var(--muted-foreground)] transition-colors',
-  'hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]',
-  'disabled:pointer-events-none disabled:opacity-40',
-);
 
 function formatLinkUrl(url: string): string {
   try {
@@ -103,7 +101,7 @@ export function SortableLinkCard({
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const catalogType = resolveCatalogTypeFromPlatform(link.platform);
+  const catalogType = resolveCatalogTypeForLink(link);
   const label = getLinkDisplayLabel(link);
   const isHidden = link.status === 'hidden';
   const isBusy = busyId === link.id || busyId === 'reorder' || saving;
@@ -130,6 +128,10 @@ export function SortableLinkCard({
     router.push(`/app/links/${link.id}?tab=insights`);
   }, [link.id, router]);
 
+  const openDetail = useCallback(() => {
+    router.push(`/app/links/${link.id}`);
+  }, [link.id, router]);
+
   async function runSave(patch: UpdateSocialLinkInput) {
     setSaving(true);
     try {
@@ -142,11 +144,11 @@ export function SortableLinkCard({
   const cardClassName = cn(
     'group/link relative list-none w-full',
     'rounded-2xl border border-[var(--border)] bg-[var(--surface)]',
-    'transition-[border-color,background-color,opacity] duration-150',
+    linksCardClass,
     'hover:border-[color-mix(in_srgb,var(--border)_50%,var(--foreground)_50%)]',
     isHidden && 'opacity-70',
     isDragging &&
-      'z-20 border-[color-mix(in_srgb,var(--border)_35%,var(--primary)_65%)] bg-[var(--surface)]',
+      'z-20 scale-[1.01] border-[color-mix(in_srgb,var(--border)_35%,var(--primary)_65%)] bg-[var(--surface)] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)] active:scale-[1.01]',
   );
 
   function renderEditPopover() {
@@ -191,16 +193,16 @@ export function SortableLinkCard({
   }
 
   const content = (
-    <div className="flex gap-1 p-3 sm:gap-2 sm:p-4">
+    <div className="flex gap-1 p-2.5 sm:gap-2 sm:p-4">
       {sortable ? (
         <button
           type="button"
           className={cn(
-            'mt-0.5 flex size-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg',
-            'text-[var(--muted-foreground)]/55 transition-colors',
+            'mt-0.5 flex size-9 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg sm:size-8',
+            'text-[var(--muted-foreground)]/55 transition-[color,background-color,transform] duration-150',
             'hover:bg-[var(--surface-secondary)] hover:text-[var(--muted-foreground)]',
-            'active:cursor-grabbing',
-            isDragging && 'cursor-grabbing text-[var(--foreground)]',
+            'active:scale-95 active:cursor-grabbing active:bg-[var(--surface-secondary)]',
+            isDragging && 'cursor-grabbing scale-100 text-[var(--foreground)]',
           )}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
@@ -214,8 +216,8 @@ export function SortableLinkCard({
         </button>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:gap-3">
+        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
           {!isBlock ? (
             <LinkThumbnailControl
               link={link}
@@ -226,103 +228,70 @@ export function SortableLinkCard({
               onError={onThumbnailError}
             />
           ) : (
-            <LinkPlatformIconBadge type={catalogType} size="md" className="size-11 rounded-full sm:size-12" />
+            <LinkPlatformIconBadge type={catalogType} size="md" className="size-10 rounded-full sm:size-12" />
           )}
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <Popover>
-              <Popover.Trigger className="block w-full min-w-0">
-                <button
-                  type="button"
-                  className="group/title flex w-full max-w-full items-center gap-1.5 text-start"
-                >
-                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--foreground)] sm:text-[0.95rem]">
-                    {label}
-                  </span>
-                  <Pencil
-                    className="size-3.5 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover/title:opacity-100 group-hover/link:opacity-70"
-                    strokeWidth={1.75}
-                    aria-hidden
-                  />
-                </button>
-              </Popover.Trigger>
-              {renderEditPopover()}
-            </Popover>
-
-            <Popover>
-              <Popover.Trigger className="block w-full min-w-0">
-                <button
-                  type="button"
-                  className="group/url flex w-full max-w-full items-center gap-1.5 text-start"
-                >
-                  <span
-                    className="min-w-0 truncate text-xs text-[var(--muted-foreground)] sm:text-[13px]"
-                    dir="ltr"
+            <div className="flex min-w-0 items-center gap-0.5">
+              <button
+                type="button"
+                onClick={openDetail}
+                className={cn(
+                  'group/title min-w-0 flex-1 rounded-lg px-1 py-0.5 text-start -mx-1',
+                  linksPressableClass,
+                )}
+              >
+                <span className="block min-w-0 truncate text-sm font-semibold text-[var(--foreground)] sm:text-[0.95rem]">
+                  {label}
+                </span>
+              </button>
+              <Popover>
+                <Popover.Trigger>
+                  <button
+                    type="button"
+                    className={cn(linksToolBtnClass, 'size-8 sm:opacity-0 sm:group-hover/link:opacity-100')}
+                    aria-label="تعديل سريع"
+                    disabled={isBusy}
                   >
-                    {displayUrl}
-                  </span>
-                  {!isBlock ? (
-                    <Pencil
-                      className="size-3.5 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover/url:opacity-100 group-hover/link:opacity-70"
-                      strokeWidth={1.75}
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-              </Popover.Trigger>
-              {renderEditPopover()}
-            </Popover>
-          </div>
+                    <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  </button>
+                </Popover.Trigger>
+                {renderEditPopover()}
+              </Popover>
+            </div>
 
-          <div
-            className="flex shrink-0 items-center gap-1.5 sm:gap-2"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
             <button
               type="button"
+              onClick={openDetail}
               className={cn(
-                toolBtnClass,
-                link.notifyOnClick && 'text-[var(--foreground)]',
+                'group/url w-full max-w-full rounded-lg px-1 py-0.5 text-start -mx-1',
+                linksPressableClass,
               )}
-              aria-label={link.notifyOnClick ? 'إيقاف إشعارات النقر' : 'تفعيل إشعارات النقر'}
-              disabled={isBusy}
-              onClick={() => onToggleNotify(link)}
             >
-              <Bell
-                className="size-4"
-                strokeWidth={1.75}
-                fill={link.notifyOnClick ? 'currentColor' : 'none'}
-                aria-hidden
-              />
+              <span
+                className="block min-w-0 truncate text-xs text-[var(--muted-foreground)] sm:text-[13px]"
+                dir="ltr"
+              >
+                {displayUrl}
+              </span>
             </button>
-
-            <Switch
-              isSelected={!isHidden}
-              isDisabled={isBusy}
-              onChange={() => onToggleStatus(link)}
-              aria-label={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط'}
-              className="shrink-0 [--switch-control-bg-checked:#10b981] [--switch-control-bg-checked-hover:#059669]"
-            >
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-            </Switch>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
+        <div
+          className="flex items-center justify-between gap-2 border-t border-[var(--border)]/70 pt-2 sm:border-0 sm:pt-0"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <div
-            className="flex min-w-0 flex-wrap items-center gap-0.5"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
+            className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overscroll-x-contain scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {!isBlock ? (
               <a
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
-                className={toolBtnClass}
+                className={linksToolBtnClass}
                 aria-label="فتح الرابط"
               >
                 <ExternalLink className="size-4" strokeWidth={1.75} aria-hidden />
@@ -332,7 +301,7 @@ export function SortableLinkCard({
             <button
               type="button"
               className={cn(
-                toolBtnClass,
+                linksToolBtnClass,
                 link.isPinned && 'text-amber-500 hover:text-amber-600',
               )}
               aria-label={link.isPinned ? 'إلغاء التمييز' : 'تمييز الرابط'}
@@ -340,7 +309,10 @@ export function SortableLinkCard({
               onClick={() => onTogglePin(link)}
             >
               <Star
-                className="size-4"
+                className={cn(
+                  'size-4 transition-transform duration-200 ease-out',
+                  link.isPinned && 'scale-110',
+                )}
                 strokeWidth={1.75}
                 fill={link.isPinned ? 'currentColor' : 'none'}
                 aria-hidden
@@ -352,7 +324,7 @@ export function SortableLinkCard({
                 <Popover.Trigger>
                   <button
                     type="button"
-                    className={cn(toolBtnClass, link.groupId && 'text-[var(--foreground)]')}
+                    className={cn(linksToolBtnClass, link.groupId && 'text-[var(--foreground)]')}
                     aria-label="نقل إلى مجموعة"
                     disabled={isBusy}
                   >
@@ -405,7 +377,7 @@ export function SortableLinkCard({
               <Popover.Trigger>
                 <button
                   type="button"
-                  className={cn(toolBtnClass, isScheduled && 'text-[var(--foreground)]')}
+                  className={cn(linksToolBtnClass, isScheduled && 'text-[var(--foreground)]')}
                   aria-label="جدولة الظهور"
                   disabled={isBusy}
                 >
@@ -470,7 +442,7 @@ export function SortableLinkCard({
               <Popover.Trigger>
                 <button
                   type="button"
-                  className={cn(toolBtnClass, isProtected && 'text-[var(--foreground)]')}
+                  className={cn(linksToolBtnClass, isProtected && 'text-[var(--foreground)]')}
                   aria-label="قفل الرابط"
                   disabled={isBusy}
                 >
@@ -527,7 +499,7 @@ export function SortableLinkCard({
               <button
                 type="button"
                 className={cn(
-                  toolBtnClass,
+                  linksToolBtnClass,
                   'h-8 w-auto gap-1.5 px-2 text-xs font-medium',
                 )}
                 aria-label={`${formatNumber(link.totalClicks)} نقرة`}
@@ -541,16 +513,51 @@ export function SortableLinkCard({
             ) : null}
           </div>
 
-          <button
-            type="button"
-            className={cn(toolBtnClass, 'shrink-0 text-[var(--muted-foreground)] hover:text-[var(--danger)]')}
-            aria-label="حذف الرابط"
-            disabled={isBusy}
-            onClick={() => onDelete(link)}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
-          </button>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+            <button
+              type="button"
+              className={cn(
+                linksToolBtnClass,
+                link.notifyOnClick && 'text-[var(--foreground)]',
+              )}
+              aria-label={link.notifyOnClick ? 'إيقاف إشعارات النقر' : 'تفعيل إشعارات النقر'}
+              disabled={isBusy}
+              onClick={() => onToggleNotify(link)}
+            >
+              <Bell
+                className={cn(
+                  'size-4 transition-transform duration-200 ease-out',
+                  link.notifyOnClick && 'scale-110',
+                )}
+                strokeWidth={1.75}
+                fill={link.notifyOnClick ? 'currentColor' : 'none'}
+                aria-hidden
+              />
+            </button>
+
+            <Switch
+              isSelected={!isHidden}
+              isDisabled={isBusy}
+              onChange={() => onToggleStatus(link)}
+              aria-label={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط'}
+              className="shrink-0 [--switch-control-bg-checked:#10b981] [--switch-control-bg-checked-hover:#059669]"
+            >
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch>
+
+            <button
+              type="button"
+              className={cn(linksToolBtnClass, 'text-[var(--muted-foreground)] hover:text-[var(--danger)]')}
+              aria-label="حذف الرابط"
+              disabled={isBusy}
+              onClick={() => onDelete(link)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -563,6 +570,7 @@ export function SortableLinkCard({
   return (
     <Reorder.Item
       value={link}
+      layout
       dragListener={false}
       dragControls={dragControls}
       dragElastic={0.08}

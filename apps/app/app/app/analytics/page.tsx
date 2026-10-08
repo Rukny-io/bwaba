@@ -2,8 +2,8 @@ import { AnalyticsOverviewView } from '@/components/analytics/analytics-overview
 
 export default function AnalyticsPage() {
   return (
-    <section className="dashboard-page dashboard-section-stack">
+    <div className="dashboard-page flex w-full min-w-0 flex-col pt-5 sm:pt-6">
       <AnalyticsOverviewView />
-    </section>
+    </div>
   );
 }

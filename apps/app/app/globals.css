@@ -81,6 +81,7 @@
   --accent: var(--primary);
   --accent-foreground: var(--primary-foreground);
   --link: var(--primary);
+  --card: var(--surface);
   --surface-shadow: var(--card-shadow);
   --overlay-shadow: var(--card-shadow-hover);
   --animate-spin-fast: spin 0.75s linear infinite;
@@ -115,6 +116,7 @@
   --accent-hover: #93c5fd;
 
   --surface: #12161e;
+  --card: var(--surface);
   --surface-foreground: #f1f5f9;
   --surface-secondary: #1a2030;
   --surface-secondary-foreground: #e2e8f0;
@@ -190,6 +192,7 @@ body {
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-surface: var(--surface);
+  --color-card: var(--card);
   --color-danger: var(--danger);
   --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
 }
@@ -244,6 +247,7 @@ body {
   --border: #e8e8e8;
   --separator: #f0f0f0;
   --surface: #ffffff;
+  --card: var(--surface);
   --surface-foreground: #111111;
   --surface-secondary: #f5f5f5;
   --surface-secondary-foreground: #111111;
@@ -269,6 +273,7 @@ body {
   --border: #2a2a2a;
   --separator: #1a1a1a;
   --surface: #141414;
+  --card: var(--surface);
   --surface-foreground: #f5f5f5;
   --surface-secondary: #1a1a1a;
   --surface-secondary-foreground: #e5e5e5;
@@ -339,6 +344,49 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise {
+    animation: none;
+  }
+}
+
+.auth-shell-root {
+  min-height: 100dvh;
+  min-height: 100svh;
+  width: 100%;
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(66, 133, 244, 0.07), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(52, 168, 83, 0.05), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 20%, rgba(234, 67, 53, 0.04), transparent 45%);
+}
+
+html:has(.auth-shell-root),
+html:has(.auth-shell-root) body {
+  min-height: 100dvh;
+  min-height: 100svh;
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(66, 133, 244, 0.07), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(52, 168, 83, 0.05), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 20%, rgba(234, 67, 53, 0.04), transparent 45%);
 }
 
 .metric-value-animate {

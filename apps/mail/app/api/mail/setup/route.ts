@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { generateOwnershipToken } from "@rukny/domain-verification";
 import {
+  applyDnsCheckResults,
   createMailDomainSetup,
   type MailDomainSetup,
 } from "@/lib/mail-domain";
@@ -23,21 +25,9 @@ import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
 } from "@/lib/ses";
+import { verifyDomainDns } from "@/lib/verify-dns";
 
 const SETUP_CACHE_TTL_SECONDS = 60;
-
-function buildSetupFromSes(
-  domain: string,
-  tokens: string[],
-  active: boolean,
-): MailDomainSetup {
-  const setup = createMailDomainSetup(domain, tokens);
-  setup.status = active ? "ACTIVE" : "PENDING_DNS";
-  if (active) {
-    setup.records = setup.records.map((record) => ({ ...record, status: "verified" }));
-  }
-  return setup;
-}
 
 function withReadyCookies(
   response: NextResponse,
@@ -72,9 +62,27 @@ export async function GET() {
   }
 
   const cacheKey = mailSetupCacheKey(session.appId);
-  const binding = await getMailDomainBinding(session.appId);
+  let binding = await getMailDomainBinding(session.appId);
   if (!binding?.domain) {
     return NextResponse.json({ setup: null });
+  }
+
+  // Legacy ACTIVE bindings without ownership token must re-verify once.
+  if (!binding.ownershipToken) {
+    const ownershipToken = generateOwnershipToken();
+    binding = {
+      ...binding,
+      ownershipToken,
+      ownershipVerifiedAt: undefined,
+      status: "PENDING_DNS",
+    };
+    await upsertMailDomainBinding(session.appId, binding);
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: binding.domain,
+      domainStatus: "PENDING_DNS",
+      domainOwnershipToken: ownershipToken,
+      domainOwnershipVerifiedAt: null,
+    });
   }
 
   try {
@@ -84,12 +92,13 @@ export async function GET() {
       cachedSetup?.domain === binding.domain &&
       cachedSetup.dkimTokens?.length &&
       status.tokens.length > 0 &&
-      dkimTokensMatch(cachedSetup.dkimTokens, status.tokens)
+      dkimTokensMatch(cachedSetup.dkimTokens, status.tokens) &&
+      cachedSetup.status !== "ACTIVE"
     ) {
       return withReadyCookies(
         NextResponse.json({ setup: cachedSetup, tokensChanged: false }),
         session.appId,
-        cachedSetup.status === "ACTIVE",
+        false,
       );
     }
     if (!status.found || status.tokens.length === 0) {
@@ -98,21 +107,42 @@ export async function GET() {
       await syncMailAppDomainToNest(session.appId, {
         primaryDomain: null,
         domainStatus: "NONE",
+        domainOwnershipToken: null,
+        domainOwnershipVerifiedAt: null,
       });
       return NextResponse.json({ setup: null });
     }
 
-    const active = status.sending && status.dkim === "SUCCESS";
-    const setup = buildSetupFromSes(binding.domain, status.tokens, active);
+    const tokens = status.tokens.length > 0 ? status.tokens : binding.dkimTokens ?? [];
+    const dnsResult = await verifyDomainDns(
+      binding.domain,
+      tokens,
+      binding.ownershipToken,
+    );
+    if (!dnsResult.ok) {
+      return NextResponse.json({ error: dnsResult.error }, { status: 400 });
+    }
+
+    const verified = dnsResult.verified;
+    let setup = createMailDomainSetup(binding.domain, tokens, binding.ownershipToken);
+    setup = applyDnsCheckResults(
+      setup,
+      dnsResult.results,
+      verified,
+      dnsResult.waiting,
+    );
     const checkedAt = new Date().toISOString();
     const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], status.tokens);
+    const ownershipVerifiedAt = verified ? checkedAt : binding.ownershipVerifiedAt;
 
     try {
       await upsertMailDomainBinding(session.appId, {
         domain: setup.domain,
         status: setup.status,
-        dkimTokens: status.tokens,
+        dkimTokens: tokens,
         sesCheckedAt: checkedAt,
+        ownershipToken: binding.ownershipToken,
+        ownershipVerifiedAt,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Domain conflict.";
@@ -124,6 +154,8 @@ export async function GET() {
     await syncMailAppDomainToNest(session.appId, {
       primaryDomain: setup.domain,
       domainStatus: setup.status,
+      domainOwnershipToken: binding.ownershipToken,
+      domainOwnershipVerifiedAt: verified ? checkedAt : null,
     });
 
     return withReadyCookies(

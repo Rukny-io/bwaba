@@ -124,10 +124,50 @@ export class MailAppAccessService {
     userId: string,
     access: MailAppAccess,
     mailbox: { assignedUserId: string | null },
+    policy?: MailSsoPolicy,
   ): boolean {
     if (access.isOwner || access.role === MailAppMemberRole.ADMIN) {
       return true;
     }
+    // With enforced SSO the mailbox password is blocked, so the IdP login is the only way in.
+    if (policy && !policy.skipMailboxPasswordForAssigned && !policy.enforcedSsoDomain) {
+      return false;
+    }
     return mailbox.assignedUserId === userId;
   }
+
+  async ssoPolicy(mailAppId: string): Promise<MailSsoPolicy> {
+    const [settings, idp] = await Promise.all([
+      this.prisma.mailAppSsoSettings.findUnique({
+        where: { mailAppId },
+        select: { skipMailboxPasswordForAssigned: true },
+      }),
+      this.prisma.mailAppIdentityProvider.findUnique({
+        where: { mailAppId },
+        select: { enabled: true, enforceSso: true, emailDomain: true },
+      }),
+    ]);
+    return {
+      skipMailboxPasswordForAssigned:
+        settings?.skipMailboxPasswordForAssigned ?? true,
+      enforcedSsoDomain:
+        idp?.enabled && idp.enforceSso ? idp.emailDomain : null,
+    };
+  }
+
+  /** Enterprise SSO enforcement: domain members must not use mailbox passwords. */
+  isPasswordUnlockBlocked(
+    access: MailAppAccess,
+    userEmail: string,
+    policy: MailSsoPolicy,
+  ): boolean {
+    if (access.isOwner || !policy.enforcedSsoDomain) return false;
+    const domain = userEmail.trim().toLowerCase().split('@')[1] ?? '';
+    return domain === policy.enforcedSsoDomain;
+  }
 }
+
+export type MailSsoPolicy = {
+  skipMailboxPasswordForAssigned: boolean;
+  enforcedSsoDomain: string | null;
+};

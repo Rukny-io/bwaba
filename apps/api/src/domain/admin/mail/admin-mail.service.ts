@@ -913,10 +913,9 @@ export class AdminMailService {
 
     try {
       const identity = await this.mailSes.getEmailIdentity(app.primaryDomain);
-      const domainStatus = mapSesToDomainStatus(identity);
       const updated = await this.prisma.mailApp.update({
         where: { id: app.id },
-        data: { domainStatus, domainCheckedAt: new Date() },
+        data: { domainCheckedAt: new Date() },
         select: {
           primaryDomain: true,
           domainStatus: true,
@@ -934,6 +933,8 @@ export class AdminMailService {
           sending: identity.sending,
           dkim: identity.dkim,
         },
+        note:
+          'SES status only. Domain activation requires DNS ownership verification in Mail.',
       };
     } catch (error) {
       this.logger.warn(

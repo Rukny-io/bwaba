@@ -2,6 +2,8 @@ type RawMimeAttachment = {
   filename: string;
   contentType: string;
   content: Buffer;
+  contentId?: string;
+  inline?: boolean;
 };
 
 type RawMimeInput = {
@@ -97,6 +99,60 @@ function buildAlternativePart(
   ].join('\r\n');
 }
 
+function buildInlineAttachmentPart(attachment: RawMimeAttachment): string {
+  const filename = sanitizeFilename(attachment.filename);
+  const contentType =
+    attachment.contentType?.trim() || 'application/octet-stream';
+  const lines = [
+    `Content-Type: ${contentType}; name="${filename}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: inline; filename="${filename}"`,
+  ];
+  if (attachment.contentId) {
+    lines.push(`Content-ID: <${attachment.contentId}>`);
+  }
+  lines.push('', wrapBase64Buffer(attachment.content), '');
+  return lines.join('\r\n');
+}
+
+function buildFileAttachmentPart(attachment: RawMimeAttachment): string {
+  const filename = sanitizeFilename(attachment.filename);
+  const contentType =
+    attachment.contentType?.trim() || 'application/octet-stream';
+  return [
+    `Content-Type: ${contentType}; name="${filename}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; filename="${filename}"`,
+    '',
+    wrapBase64Buffer(attachment.content),
+    '',
+  ].join('\r\n');
+}
+
+function buildRelatedPart(
+  relatedBoundary: string,
+  altBoundary: string,
+  text: string,
+  html?: string,
+  inlineAttachments: RawMimeAttachment[] = [],
+): string {
+  const chunks = [
+    `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
+    '',
+    `--${relatedBoundary}`,
+    buildAlternativePart(altBoundary, text, html),
+  ];
+  for (const attachment of inlineAttachments) {
+    chunks.push(`--${relatedBoundary}`, buildInlineAttachmentPart(attachment));
+  }
+  chunks.push(`--${relatedBoundary}--`, '');
+  return chunks.join('\r\n');
+}
+
+function makeBoundary(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
   const now = new Date().toUTCString().replace(/GMT$/, '+0000');
   const messageId = input.messageIdHeader.trim();
@@ -111,6 +167,10 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
   const attachments = input.attachments?.filter(
     (item) => item.content?.length && item.filename,
   );
+  const inlineAttachments =
+    attachments?.filter((item) => item.inline || item.contentId) ?? [];
+  const fileAttachments =
+    attachments?.filter((item) => !item.inline && !item.contentId) ?? [];
 
   const headers = [
     `From: ${fromHeader}`,
@@ -128,9 +188,47 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
   ].filter((line): line is string => Boolean(line));
 
   let body: string;
-  if (attachments?.length) {
-    const mixedBoundary = `rukny-mix-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-    const altBoundary = `rukny-alt-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  const altBoundary = makeBoundary('rukny-alt');
+  const hasInline = inlineAttachments.length > 0;
+  const hasFiles = fileAttachments.length > 0;
+
+  if (hasInline && hasFiles) {
+    const mixedBoundary = makeBoundary('rukny-mix');
+    const relatedBoundary = makeBoundary('rukny-rel');
+    headers.push(
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    );
+    const parts = [
+      `--${mixedBoundary}`,
+      buildRelatedPart(
+        relatedBoundary,
+        altBoundary,
+        text,
+        html,
+        inlineAttachments,
+      ),
+    ];
+    for (const attachment of fileAttachments) {
+      parts.push(`--${mixedBoundary}`, buildFileAttachmentPart(attachment));
+    }
+    parts.push(`--${mixedBoundary}--`, '');
+    body = parts.join('\r\n');
+  } else if (hasInline) {
+    const relatedBoundary = makeBoundary('rukny-rel');
+    headers.push(
+      `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
+    );
+    const parts = [
+      `--${relatedBoundary}`,
+      buildAlternativePart(altBoundary, text, html),
+    ];
+    for (const attachment of inlineAttachments) {
+      parts.push(`--${relatedBoundary}`, buildInlineAttachmentPart(attachment));
+    }
+    parts.push(`--${relatedBoundary}--`, '');
+    body = parts.join('\r\n');
+  } else if (hasFiles) {
+    const mixedBoundary = makeBoundary('rukny-mix');
     headers.push(
       `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
     );
@@ -140,25 +238,14 @@ export function buildRawMimeMessage(input: RawMimeInput): Uint8Array {
       buildAlternativePart(altBoundary, text, html),
     ];
 
-    for (const attachment of attachments) {
-      const filename = sanitizeFilename(attachment.filename);
-      const contentType =
-        attachment.contentType?.trim() || 'application/octet-stream';
-      parts.push(
-        `--${mixedBoundary}`,
-        `Content-Type: ${contentType}; name="${filename}"`,
-        'Content-Transfer-Encoding: base64',
-        `Content-Disposition: attachment; filename="${filename}"`,
-        '',
-        wrapBase64Buffer(attachment.content),
-        '',
-      );
+    for (const attachment of fileAttachments) {
+      parts.push(`--${mixedBoundary}`, buildFileAttachmentPart(attachment));
     }
 
     parts.push(`--${mixedBoundary}--`, '');
     body = parts.join('\r\n');
   } else if (html) {
-    const boundary = `rukny-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    const boundary = makeBoundary('rukny');
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     body = [
       `--${boundary}`,

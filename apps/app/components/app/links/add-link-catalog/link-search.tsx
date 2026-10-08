@@ -6,22 +6,36 @@ import { cn } from '@/lib/utils';
 interface LinkSearchProps {
   value: string;
   onChange: (value: string) => void;
+  variant?: 'default' | 'panel';
 }
 
-export function LinkSearch({ value, onChange }: LinkSearchProps) {
+export function LinkSearch({ value, onChange, variant = 'default' }: LinkSearchProps) {
+  const isPanel = variant === 'panel';
+
   return (
     <div
       className={cn(
-        'flex h-11 items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-4 transition-colors duration-150',
-        'focus-within:bg-[var(--surface-secondary)]/80 focus-within:ring-2 focus-within:ring-[var(--foreground)]/8',
+        'flex items-center gap-2 bg-[var(--surface-secondary)] transition-colors duration-150',
+        'focus-within:ring-2 focus-within:ring-[var(--foreground)]/8',
+        isPanel
+          ? 'h-9 rounded-lg px-3 focus-within:bg-[var(--surface-secondary)]'
+          : 'h-11 rounded-full px-4 focus-within:bg-[var(--surface-secondary)]/80',
       )}
     >
-      <Search className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+      <Search
+        className={cn(
+          'shrink-0 text-[var(--muted-foreground)]',
+          isPanel ? 'size-3.5' : 'size-4',
+        )}
+      />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="الصق أو ابحث عن رابط"
-        className="w-full bg-transparent text-right text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+        placeholder={isPanel ? 'بحث في الأنواع…' : 'الصق أو ابحث عن رابط'}
+        className={cn(
+          'w-full bg-transparent text-right text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]',
+          isPanel ? 'text-[12px]' : 'text-[14px]',
+        )}
         dir="rtl"
         inputMode="search"
         autoComplete="off"

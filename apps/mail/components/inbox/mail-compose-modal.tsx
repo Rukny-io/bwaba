@@ -98,6 +98,15 @@ function plainTextToHtml(value: string) {
     .join("");
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read this image."));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function imageFileToDataUrl(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Choose an image file.");
@@ -106,37 +115,43 @@ async function imageFileToDataUrl(file: File): Promise<string> {
     throw new Error("Image must be smaller than 8 MB.");
   }
 
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1000 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Could not process this image.");
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not process this image.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
 
-  let quality = 0.82;
-  let blob: Blob | null = null;
-  do {
-    blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", quality),
+    let quality = 0.86;
+    let blob: Blob | null = null;
+    do {
+      blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", quality),
+      );
+      quality -= 0.1;
+    } while (blob && blob.size > 900 * 1024 && quality >= 0.4);
+
+    if (!blob) {
+      return fileToDataUrl(file);
+    }
+
+    return await fileToDataUrl(
+      new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", {
+        type: "image/jpeg",
+      }),
     );
-    quality -= 0.12;
-  } while (blob && blob.size > 220 * 1024 && quality >= 0.34);
-
-  if (!blob || blob.size > 220 * 1024) {
-    throw new Error("Image is too detailed. Choose a smaller image.");
+  } catch {
+    if (file.size > 1024 * 1024) {
+      throw new Error("Image is too large. Use an image under 1 MB.");
+    }
+    return fileToDataUrl(file);
   }
-
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read this image."));
-    reader.readAsDataURL(blob);
-  });
 }
 
 export function MailComposeModal({
@@ -367,12 +382,17 @@ export function MailComposeModal({
   async function onAttachmentSelected(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !appId || !mailboxId) return;
+    if (!file) return;
+    const resolvedMailboxId = mailboxId;
+    if (!appId || !resolvedMailboxId || !isValidMailboxId(resolvedMailboxId)) {
+      setLocalError("Unlock a mailbox before attaching files.");
+      return;
+    }
     setLocalError("");
     try {
       const uploaded = await uploadMailAttachment(
         appId,
-        mailboxId,
+        resolvedMailboxId,
         file,
         draftId ?? undefined,
       );
@@ -393,6 +413,16 @@ export function MailComposeModal({
     setProcessingImage(true);
     setLocalError("");
     try {
+      const resolvedMailboxId = mailboxId;
+      if (appId && resolvedMailboxId && isValidMailboxId(resolvedMailboxId)) {
+        const uploaded = await uploadMailAttachment(
+          appId,
+          resolvedMailboxId,
+          file,
+          draftId ?? undefined,
+        );
+        setAttachments((prev) => [...prev, uploaded]);
+      }
       const src = await imageFileToDataUrl(file);
       editor.chain().focus().setImage({ src, alt: file.name }).run();
     } catch (uploadError) {
@@ -459,7 +489,7 @@ export function MailComposeModal({
       <input
         ref={imageInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
         className="hidden"
         onChange={(event) => void onImageSelected(event)}
       />

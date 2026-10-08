@@ -642,17 +642,17 @@ export function MailInboxShell({ demo = false }: { demo?: boolean }) {
         draftId: draft.draftId,
         scheduledAt: draft.scheduledAt,
       });
+      const targetFolder = draft.scheduledAt ? "scheduled" : "sent";
       setComposeOpen(false);
       showToast(
         draft.scheduledAt ? "Message scheduled" : "Message sent",
       );
-      await loadMessages(appId, selectedMailboxId, folder, { quiet: true });
+      setFolder(targetFolder);
+      setSelectedMessageId(null);
+      await loadMessages(appId, selectedMailboxId, targetFolder, {
+        quiet: true,
+      });
       await loadCounts(appId, selectedMailboxId);
-      const targetFolder = draft.scheduledAt ? "scheduled" : "sent";
-      if (folder !== targetFolder) {
-        setFolder(targetFolder);
-        setSelectedMessageId(null);
-      }
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed.");
       if (err instanceof MailboxLockedError) {

@@ -1,6 +1,22 @@
 import type { CreateSocialLinkInput } from '@/lib/links/types';
 import type { LinkCatalogTypeId } from '@/lib/links/link-type-catalog';
 
+export const URL_LINK_CATALOG_TYPES: LinkCatalogTypeId[] = [
+  'url',
+  'linkedin',
+  'facebook',
+  'youtube',
+  'kick',
+  'discord',
+  'spotify',
+  'github',
+  'reddit',
+  'soundcloud',
+  'vimeo',
+  'notion',
+  'shopify',
+];
+
 const PLACEHOLDER_URL = 'https://rukny.io';
 
 function stripAt(value: string): string {
@@ -11,10 +27,43 @@ function digitsOnly(value: string): string {
   return value.replace(/\D/g, '');
 }
 
-function ensureHttps(url: string): string {
+export function ensureHttps(url: string): string {
   const trimmed = url.trim();
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+export function parseQuickLinkUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed || trimmed.includes(' ')) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      if (url.hostname.includes('.')) return url.href;
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  if (/^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+/i.test(trimmed)) {
+    try {
+      return new URL(ensureHttps(trimmed)).href;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+export function getUrlHostLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 export interface LinkFormValues {
@@ -67,6 +116,15 @@ export function getLinkFormFields(type: LinkCatalogTypeId): {
     case 'linkedin':
     case 'facebook':
     case 'youtube':
+    case 'kick':
+    case 'discord':
+    case 'spotify':
+    case 'github':
+    case 'reddit':
+    case 'soundcloud':
+    case 'vimeo':
+    case 'notion':
+    case 'shopify':
       return {
         titleLabel: 'العنوان',
         titlePlaceholder: `رابط ${type}`,
@@ -196,8 +254,17 @@ export function buildLinkFromType(
     case 'linkedin':
     case 'facebook':
     case 'youtube':
+    case 'kick':
+    case 'discord':
+    case 'spotify':
+    case 'github':
+    case 'reddit':
+    case 'soundcloud':
+    case 'vimeo':
+    case 'notion':
+    case 'shopify':
       url = ensureHttps(trimmedValue);
-      username = trimmedTitle || new URL(url).hostname;
+      username = trimmedTitle || new URL(url).hostname.replace(/^www\./, '');
       break;
     case 'whatsapp': {
       const phone = digitsOnly(trimmedValue);
@@ -271,6 +338,15 @@ export function validateLinkForm(type: LinkCatalogTypeId, values: LinkFormValues
     case 'linkedin':
     case 'facebook':
     case 'youtube':
+    case 'kick':
+    case 'discord':
+    case 'spotify':
+    case 'github':
+    case 'reddit':
+    case 'soundcloud':
+    case 'vimeo':
+    case 'notion':
+    case 'shopify':
       try {
         new URL(ensureHttps(value));
         return null;

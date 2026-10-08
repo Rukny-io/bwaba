@@ -83,28 +83,31 @@ export function FormLinkSetup({
   const templateName = initialTemplate?.title ?? selectedForm?.title ?? 'نموذج';
 
   return (
-    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col" dir="rtl">
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)]/70 px-5 py-3.5">
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden" dir="rtl">
+      <div className="flex shrink-0 items-start gap-3 p-4 sm:p-5">
         <button
           type="button"
           onClick={onBack}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-all hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-all hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] active:scale-95"
           aria-label="رجوع"
         >
-          <ArrowRight className="size-5" />
+          <ArrowRight className="size-4" />
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <LinkPlatformIconBadge type="form" size="sm" />
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-bold text-[var(--foreground)]">{templateName}</h3>
-            <p className="truncate text-xs text-[var(--muted-foreground)]">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium text-[var(--muted-foreground)]">إضافة نموذج</p>
+            <h3 className="truncate text-[18px] font-semibold leading-snug text-[var(--foreground)]">
+              {templateName}
+            </h3>
+            <p className="mt-0.5 truncate text-[12px] text-[var(--muted-foreground)]">
               خصّص العنوان وأضفه لصفحتك
             </p>
           </div>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5 sm:pb-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]">
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--foreground)]">
@@ -115,7 +118,7 @@ export function FormLinkSetup({
               value={linkTitle}
               onChange={(e) => setLinkTitle(e.target.value)}
               placeholder="مثال: تواصل معنا"
-              className="h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--field-background)] px-4 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+              className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3.5 text-[13px] text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
             />
           </div>
 
@@ -127,7 +130,7 @@ export function FormLinkSetup({
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 placeholder="عنوان يظهر للزائر"
-                className="h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--field-background)] px-4 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3.5 text-[13px] text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               />
               <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
                 يمكنك تخصيص الحقول والتصميم لاحقاً من محرّر النماذج بعد الإضافة.
@@ -155,18 +158,18 @@ export function FormLinkSetup({
         </div>
       </div>
 
-      <div className="flex shrink-0 gap-2 border-t border-[var(--border)]/70 px-5 py-4">
+      <div className="flex shrink-0 gap-2 px-4 pb-4 pt-2 sm:px-5 sm:pb-5">
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
+          className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--primary)] text-[13px] font-semibold text-[var(--primary-foreground)] transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : 'إضافة للملف الشخصي'}
         </button>
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-[var(--border)] px-5 text-sm font-medium text-[var(--foreground)]"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border)] px-4 text-[13px] font-medium text-[var(--foreground)] transition-transform active:scale-[0.98]"
         >
           إلغاء
         </button>

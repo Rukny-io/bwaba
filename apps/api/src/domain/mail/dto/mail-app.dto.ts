@@ -83,6 +83,17 @@ export class UpdateMailAppDto {
   @IsArray()
   @IsString({ each: true })
   dkimTokens?: string[];
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(128)
+  domainOwnershipToken?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsISO8601()
+  domainOwnershipVerifiedAt?: string | null;
 }
 
 export class SendMailAppOtpDto {

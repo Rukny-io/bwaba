@@ -26,14 +26,14 @@ import {
 import { LinkDetailsTab } from '@/components/app/links/link-detail/link-details-tab';
 import { LinkInsightsTab } from '@/components/app/links/link-detail/link-insights-tab';
 import { LinkPowerupsTab } from '@/components/app/links/link-detail/link-powerups-tab';
-import { LinkPlatformIconBadge } from '@/components/app/links/platform-icons/link-platform-icon-badge';
+import { LinkLogo } from '@/components/app/links/platform-icons/link-logo';
 import { useProfilePreviewSync } from '@/components/app/links/profile-preview-provider';
 import { ApiException } from '@/lib/api-client';
 import { formatNumber } from '@/lib/dashboard-format';
 import { deleteLink, fetchLink, fetchMyLinks, updateLink } from '@/lib/links/api';
 import {
   getLinkDisplayLabel,
-  resolveCatalogTypeFromPlatform,
+  resolveCatalogTypeForLink,
 } from '@/lib/links/resolve-platform';
 import type { SocialLink, UpdateSocialLinkInput } from '@/lib/links/types';
 import { fetchMyProfile } from '@/lib/profile/api';
@@ -195,7 +195,7 @@ export function LinkDetailView({ linkId }: LinkDetailViewProps) {
   }
 
   const title = getLinkDisplayLabel(link);
-  const catalogType = resolveCatalogTypeFromPlatform(link.platform);
+  const catalogType = resolveCatalogTypeForLink(link);
   const publicUrl = getPublicProfileUrl(profile?.username);
   const hostLabel = (() => {
     try {
@@ -258,14 +258,13 @@ export function LinkDetailView({ linkId }: LinkDetailViewProps) {
       </div>
 
       <article className="flex items-center gap-3 rounded-[1.35rem] p-3.5 sm:gap-3.5 sm:rounded-4xl sm:p-4">
-        {link.thumbnail ? (
-          <div className="size-11 shrink-0 overflow-hidden rounded-2xl ring-1 ring-[var(--border)] sm:size-12">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={link.thumbnail} alt="" className="size-full object-cover" />
-          </div>
-        ) : (
-          <LinkPlatformIconBadge type={catalogType} size="md" />
-        )}
+        <LinkLogo
+          url={link.url}
+          platformType={catalogType}
+          thumbnailSrc={link.thumbnail}
+          size="md"
+          className="size-11 sm:size-12"
+        />
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
           <div className="flex min-w-0 items-center gap-1.5">

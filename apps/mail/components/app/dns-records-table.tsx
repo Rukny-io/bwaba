@@ -22,14 +22,18 @@ function downloadFile(filename: string, contents: string, type: string) {
 const COLUMNS = "grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1.45fr)]";
 
 function groupedRecords(records: MailDnsRecord[]) {
+  const ownership = records.filter((record) => record.purpose === "RUKNY_OWNERSHIP");
   const mx = records.filter((record) => record.type === "MX");
   const dkim = records.filter((record) => record.purpose === "DKIM");
-  const txt = records.filter((record) => record.type === "TXT");
+  const txt = records.filter(
+    (record) => record.type === "TXT" && record.purpose !== "RUKNY_OWNERSHIP",
+  );
   const otherCname = records.filter(
     (record) => record.type === "CNAME" && record.purpose !== "DKIM",
   );
 
   return [
+    { title: "Ownership", records: ownership, required: true },
     { title: "MX", records: mx },
     { title: "DKIM", records: dkim },
     { title: "CNAME", records: otherCname },
@@ -187,6 +191,11 @@ export function DnsRecordsTable({
               <span className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
                 {group.title}
               </span>
+              {"required" in group && group.required ? (
+                <span className="rounded-full bg-[color-mix(in_srgb,var(--warning)_15%,var(--surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]">
+                  Required
+                </span>
+              ) : null}
               <span className="text-[12px] tabular-nums text-[var(--muted-foreground)]">
                 {group.records.length}
               </span>

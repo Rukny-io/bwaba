@@ -8,7 +8,9 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -163,6 +165,43 @@ export class OrdersController {
     @Query() filters: OrderFiltersDto,
   ) {
     return this.ordersService.getStoreOrders(ws.ownerId, filters);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:read')
+  @Get('store/orders/:id/invoice')
+  @ApiOperation({ summary: 'تحميل فاتورة الطلب بصيغة PDF (كبائع)' })
+  @ApiResponse({ status: 404, description: 'الطلب غير موجود' })
+  async getStoreOrderInvoice(
+    @Param('id') orderId: string,
+    @ActiveWorkspace() ws: WorkspaceContext,
+    @Res() res: Response,
+  ) {
+    const invoice = await this.ordersService.getStoreOrderInvoicePdf(
+      orderId,
+      ws.ownerId,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${invoice.filename}"`,
+    );
+    res.setHeader('X-Invoice-Number', invoice.invoiceNumber);
+    res.send(invoice.buffer);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, WorkspaceGuard)
+  @RequiresWorkspacePermission('store:orders:read')
+  @Get('store/orders/:id')
+  @ApiOperation({ summary: 'عرض تفاصيل طلب من متجري (كبائع)' })
+  @ApiResponse({ status: 404, description: 'الطلب غير موجود' })
+  async getStoreOrder(
+    @Param('id') orderId: string,
+    @ActiveWorkspace() ws: WorkspaceContext,
+  ) {
+    return this.ordersService.getOrder(orderId, ws.ownerId);
   }
 
   @ApiBearerAuth()

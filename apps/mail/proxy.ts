@@ -25,7 +25,7 @@ import {
 import { secureNext, secureResponse } from "@/lib/secure-response";
 
 const AUTH_PAGES = ["/login", "/callback"];
-const PUBLIC_PREFIXES = ["/login", "/callback", "/invite"];
+const PUBLIC_PREFIXES = ["/login", "/callback", "/invite", "/sso/open"];
 const APP_PICKER_PREFIXES = ["/apps"];
 const BILLING_PREFIXES = ["/billing"];
 const INVITE_PREFIXES = ["/invite"];
@@ -74,6 +74,7 @@ const SLOTTED_PRODUCT_PREFIXES = [
   "/profile",
   "/developers",
   "/team",
+  "/sso",
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {

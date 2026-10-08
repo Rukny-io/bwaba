@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  DeleteEmailIdentityCommand,
   GetEmailIdentityCommand,
   CreateEmailIdentityCommand,
   SESv2Client,
@@ -80,8 +81,18 @@ export class MailSesService {
     }
   }
 
-  /** Starts SES domain verification and returns DKIM DNS tokens. Safe to call
-   * repeatedly: SES preserves an existing identity rather than creating a new one. */
+  async deleteEmailIdentity(domain: string): Promise<void> {
+    try {
+      await this.getClient().send(
+        new DeleteEmailIdentityCommand({ EmailIdentity: domain }),
+      );
+    } catch (error) {
+      const name = this.errorName(error);
+      if (!name.includes('NotFound')) throw error;
+    }
+  }
+
+  /** Starts SES domain verification and returns DKIM DNS tokens. */
   async createEmailIdentity(domain: string): Promise<{
     sending: boolean;
     dkim: string;

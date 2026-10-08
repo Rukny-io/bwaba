@@ -42,10 +42,18 @@ export class EmailDomainsController {
 
   @Get('domains/:domain')
   @RequireScopes('email:domains:read')
-  @ApiOperation({ summary: 'Refresh domain verification status' })
+  @ApiOperation({ summary: 'Get domain verification status' })
   get(@Req() request: EmailApiRequest, @Param('domain') domain: string) {
     const developerAppId = this.requireAppId(request);
     return this.domains.get(request.userId, developerAppId, domain);
+  }
+
+  @Post('domains/:domain/verify')
+  @RequireScopes('email:domains:write')
+  @ApiOperation({ summary: 'Verify domain DNS and ownership TXT' })
+  verify(@Req() request: EmailApiRequest, @Param('domain') domain: string) {
+    const developerAppId = this.requireAppId(request);
+    return this.domains.verify(request.userId, developerAppId, domain);
   }
 
   @Post('senders')

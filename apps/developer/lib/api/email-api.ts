@@ -4,6 +4,8 @@ export interface EmailDomain {
   domain: string;
   status: "pending" | "verified" | "failed";
   dkimTokens: string[];
+  ownershipToken: string | null;
+  ownershipVerifiedAt: string | null;
   verifiedAt: string | null;
   createdAt: string;
 }
@@ -124,6 +126,16 @@ export async function refreshEmailDomain(
   const { data } = await api.get<EmailDomain>(
     `${base(appId)}/domains/${encodeURIComponent(domain)}`,
   );
+  return data;
+}
+
+export async function verifyEmailDomain(
+  appId: string,
+  domain: string,
+): Promise<EmailDomain & { verified?: boolean; waiting?: boolean }> {
+  const { data } = await api.post<
+    EmailDomain & { verified?: boolean; waiting?: boolean }
+  >(`${base(appId)}/domains/${encodeURIComponent(domain)}/verify`);
   return data;
 }
 

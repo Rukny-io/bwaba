@@ -31,6 +31,15 @@ export type LinkCatalogTypeId =
   | 'whatsapp'
   | 'telegram'
   | 'snapchat'
+  | 'kick'
+  | 'discord'
+  | 'spotify'
+  | 'github'
+  | 'reddit'
+  | 'soundcloud'
+  | 'vimeo'
+  | 'notion'
+  | 'shopify'
   | 'email'
   | 'phone'
   | 'form'
@@ -135,6 +144,69 @@ export const LINK_CATALOG_ITEMS: LinkCatalogItem[] = [
     platform: 'snapchat',
   },
   {
+    id: 'kick',
+    label: 'Kick',
+    description: 'منصة بث مباشر للفيديوهات والبث الحي',
+    categories: ['suggested', 'media', 'social'],
+    platform: 'kick',
+  },
+  {
+    id: 'discord',
+    label: 'Discord',
+    description: 'سيرفر أو قناة ديسكورد',
+    categories: ['social', 'contact'],
+    platform: 'discord',
+  },
+  {
+    id: 'spotify',
+    label: 'Spotify',
+    description: 'أغاني أو قوائم تشغيل',
+    categories: ['media'],
+    platform: 'spotify',
+  },
+  {
+    id: 'github',
+    label: 'GitHub',
+    description: 'ملفك أو مشروعك على جيت هب',
+    categories: ['social'],
+    platform: 'github',
+  },
+  {
+    id: 'reddit',
+    label: 'Reddit',
+    description: 'ملف أو مجتمع ريديت',
+    categories: ['social'],
+    platform: 'reddit',
+  },
+  {
+    id: 'soundcloud',
+    label: 'SoundCloud',
+    description: 'مقاطعك على ساوند كلاود',
+    categories: ['media'],
+    platform: 'soundcloud',
+  },
+  {
+    id: 'vimeo',
+    label: 'Vimeo',
+    description: 'فيديوهاتك على فيميو',
+    categories: ['media'],
+    platform: 'vimeo',
+  },
+  {
+    id: 'notion',
+    label: 'Notion',
+    description: 'صفحة أو نموذج نوشن',
+    categories: ['forms', 'all'],
+    platform: 'notion',
+  },
+  {
+    id: 'shopify',
+    label: 'Shopify',
+    description: 'متجرك على شوبيفاي',
+    categories: ['commerce'],
+    platform: 'shopify',
+  },
+  {
     id: 'email',
     label: 'بريد إلكتروني',
     description: 'فتح تطبيق البريد مباشرة',
@@ -179,6 +251,7 @@ export function filterLinkCatalogItems(options: {
   const q = options.search.trim().toLowerCase();
 
   return LINK_CATALOG_ITEMS.filter((item) => {
+    if (item.id === 'url') return false;
     if (options.category !== 'all' && !item.categories.includes(options.category)) {
       return false;
     }

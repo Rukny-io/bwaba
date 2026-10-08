@@ -44,6 +44,28 @@ describe('buildRawMimeMessage', () => {
     );
   });
 
+  it('embeds inline images in multipart/related', () => {
+    const message = Buffer.from(
+      buildRawMimeMessage({
+        ...baseInput,
+        bodyHtml: '<p>Hi</p><img src="cid:rukny-img-1@inline" />',
+        attachments: [
+          {
+            filename: 'image-1.png',
+            contentType: 'image/png',
+            content: Buffer.from('png-bytes'),
+            contentId: 'rukny-img-1@inline',
+            inline: true,
+          },
+        ],
+      }),
+    ).toString('utf8');
+
+    expect(message).toContain('multipart/related');
+    expect(message).toContain('Content-ID: <rukny-img-1@inline>');
+    expect(message).toContain('Content-Disposition: inline');
+  });
+
   it('embeds PDF attachments in multipart/mixed', () => {
     const message = Buffer.from(
       buildRawMimeMessage({

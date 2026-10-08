@@ -726,6 +726,56 @@ export class EmailService {
     }
   }
 
+  async sendMailSsoAccessLink(
+    to: string,
+    data: {
+      inviterName: string;
+      workspaceName: string;
+      mailboxAddress: string | null;
+      url: string;
+      expiresAt: Date;
+    },
+  ) {
+    const esc = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    const inviter = esc(data.inviterName);
+    const workspace = esc(data.workspaceName);
+    const mailboxLine = data.mailboxAddress
+      ? `<p style="margin:0 0 12px;">Your mailbox: <strong dir="ltr">${esc(data.mailboxAddress)}</strong></p>`
+      : '';
+    const expires = data.expiresAt.toUTCString();
+
+    const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+            <h2 style="margin:0 0 12px;">Open your mailbox</h2>
+            <p style="margin:0 0 12px;"><strong>${inviter}</strong> added you to <strong>${workspace}</strong> on Rukny Mail.</p>
+            ${mailboxLine}
+            <p style="margin:0 0 20px;">
+              <a href="${esc(data.url)}" style="display:inline-block;padding:12px 24px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
+                Open my mailbox
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;margin:0 0 8px;">One click signs you in with this email, joins the workspace and opens your inbox. No mailbox password needed.</p>
+            <p style="color:#666;font-size:13px;margin:0 0 8px;">This link works once and expires on ${expires}.</p>
+            <p style="color:#666;font-size:13px;margin:0;">If you did not expect this, you can ignore this email.</p>
+          </div>
+        `;
+
+    try {
+      await this.sendEmail({
+        to,
+        subject: `Open your ${data.workspaceName} mailbox on Rukny Mail`,
+        html,
+      });
+    } catch (error) {
+      console.error('Failed to send mail SSO access link:', error);
+    }
+  }
+
   async sendMailOwnershipTransferred(
     to: string,
     data: {

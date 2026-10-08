@@ -17,6 +17,10 @@ import {
   OrderFiltersDto,
 } from './dto/order.dto';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  renderStoreOrderInvoicePdf,
+  type StoreOrderInvoicePdfInput,
+} from './store-order-invoice-pdf.util';
 
 @Injectable()
 export class OrdersService {
@@ -952,6 +956,197 @@ export class OrdersService {
     return await this.formatOrder(order, isStoreOwner);
   }
 
+  async getStoreOrderInvoicePdf(orderId: string, ownerId: string) {
+    const order = await this.prisma.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        stores: {
+          select: { id: true, name: true, userId: true },
+        },
+        users: {
+          select: {
+            email: true,
+            profile: { select: { name: true } },
+          },
+        },
+        addresses: true,
+        order_items: true,
+        coupons: { select: { code: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('الطلب غير موجود');
+    }
+
+    if (order.stores?.userId !== ownerId) {
+      throw new ForbiddenException('غير مصرح لك بعرض هذا الطلب');
+    }
+
+    const input = this.buildStoreOrderInvoiceInput(order);
+    const buffer = await renderStoreOrderInvoicePdf(input);
+    const safeId = (order.orderNumber || order.id.slice(0, 8)).replace(
+      /[^a-zA-Z0-9-]/g,
+      '',
+    );
+
+    return {
+      buffer,
+      filename: `invoice-${safeId}.pdf`,
+      invoiceNumber: input.invoiceNumber,
+    };
+  }
+
+  private buildStoreOrderInvoiceInput(order: {
+    id: string;
+    orderNumber: string | null;
+    createdAt: Date;
+    subtotal: unknown;
+    shippingFee: unknown;
+    discount: unknown;
+    total: unknown;
+    currency: string;
+    customerNote: string | null;
+    paymentMethod: string | null;
+    paymentStatus: string | null;
+    status: string;
+    phoneNumber: string | null;
+    stores: { name: string } | null;
+    users: { email: string; profile: { name: string | null } | null } | null;
+    addresses: {
+      fullName: string | null;
+      phoneNumber: string | null;
+      city: string | null;
+      district: string | null;
+      street: string | null;
+      buildingNo: string | null;
+      floor: string | null;
+      apartmentNo: string | null;
+      landmark: string | null;
+    } | null;
+    order_items: Array<{
+      productName: string;
+      productNameAr: string | null;
+      price: unknown;
+      quantity: number;
+      subtotal: unknown;
+      variantAttributes: unknown;
+    }>;
+    coupons: { code: string } | null;
+  }): StoreOrderInvoicePdfInput {
+    const customerName =
+      order.users?.profile?.name?.trim() ||
+      order.addresses?.fullName?.trim() ||
+      'عميل';
+
+    const addressLines: string[] = [];
+    if (order.addresses) {
+      const area = [
+        order.addresses.city,
+        order.addresses.district,
+        order.addresses.street,
+      ]
+        .filter(Boolean)
+        .join('، ');
+      const building = [
+        order.addresses.buildingNo
+          ? `بناية ${order.addresses.buildingNo}`
+          : null,
+        order.addresses.floor ? `طابق ${order.addresses.floor}` : null,
+        order.addresses.apartmentNo
+          ? `شقة ${order.addresses.apartmentNo}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('، ');
+      if (area) addressLines.push(area);
+      if (building) addressLines.push(building);
+      if (order.addresses.landmark) addressLines.push(order.addresses.landmark);
+    }
+
+    const items = order.order_items.map((item) => ({
+      name: item.productNameAr?.trim() || item.productName,
+      quantity: item.quantity,
+      unitPrice: Number(item.price),
+      subtotal: Number(item.subtotal),
+      variantLabel: this.formatInvoiceVariantAttributes(item.variantAttributes),
+    }));
+
+    const orderNumber = order.orderNumber || order.id.slice(0, 8).toUpperCase();
+
+    return {
+      invoiceNumber: `INV-${orderNumber}`,
+      orderNumber,
+      issuedAt: order.createdAt,
+      storeName: order.stores?.name?.trim() || 'المتجر',
+      customerName,
+      customerPhone: order.phoneNumber || order.addresses?.phoneNumber || null,
+      customerEmail: order.users?.email || null,
+      paymentMethodLabel: this.mapPaymentMethodLabel(order.paymentMethod),
+      paymentStatusLabel: this.mapPaymentStatusLabel(order.paymentStatus),
+      orderStatusLabel: this.mapOrderStatusLabel(order.status),
+      items,
+      subtotal: Number(order.subtotal),
+      shippingFee: Number(order.shippingFee),
+      discount: Number(order.discount),
+      total: Number(order.total),
+      currency: order.currency || 'IQD',
+      couponCode: order.coupons?.code ?? null,
+      addressLines,
+      customerNote: order.customerNote,
+    };
+  }
+
+  private formatInvoiceVariantAttributes(value: unknown): string | null {
+    if (!value || typeof value !== 'object') return null;
+    const entries = Object.entries(value as Record<string, unknown>).filter(
+      ([, v]) => v != null && String(v).trim() !== '',
+    );
+    if (entries.length === 0) return null;
+    return entries.map(([, v]) => String(v)).join(' · ');
+  }
+
+  private mapPaymentMethodLabel(method: string | null): string {
+    switch (method) {
+      case 'CASH':
+        return 'عند الاستلام';
+      case 'QASEH_CARD':
+        return 'بطاقة';
+      case 'BANK_TRANSFER':
+        return 'تحويل بنكي';
+      default:
+        return 'عند الاستلام';
+    }
+  }
+
+  private mapPaymentStatusLabel(status: string | null): string {
+    switch (status) {
+      case 'PAID':
+        return 'مدفوع';
+      case 'REFUNDED':
+        return 'مسترد';
+      case 'PENDING':
+      case 'FAILED':
+      case 'UNPAID':
+      default:
+        return 'غير مدفوع';
+    }
+  }
+
+  private mapOrderStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      PENDING: 'معلّق',
+      CONFIRMED: 'مؤكد',
+      PROCESSING: 'قيد التجهيز',
+      SHIPPED: 'تم الشحن',
+      OUT_FOR_DELIVERY: 'في الطريق',
+      DELIVERED: 'مكتمل',
+      CANCELLED: 'ملغي',
+      REFUNDED: 'مسترد',
+    };
+    return labels[status] ?? status;
+  }
+
   /**
    * Update order status (store owner only)
    */
@@ -1270,6 +1465,8 @@ export class OrdersService {
       cancelledAt: order.cancelledAt,
       cancellationReason: order.cancellationReason,
       createdAt: order.createdAt,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
       itemsCount: order._count?.order_items || order.order_items?.length || 0,
       store: order.stores,
       address: order.addresses,

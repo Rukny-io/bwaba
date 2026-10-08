@@ -73,13 +73,28 @@ export type MailTeamRoster = {
   };
 };
 
-export type MailTeamInvitation = MailTeamMemberView & {
+/** A workspace invite for the signed-in user: a member row or an email-only invite to their email. */
+export type MailTeamInvitation = {
+  id: string;
+  kind: "member" | "email_invite";
+  role: MailTeamRole;
+  invitedAt: string;
+  expiresAt: string | null;
+  inviter: { id: string; email: string; name: string | null };
+  reservedMailboxes: string[];
   workspace: {
     appId: string;
     name: string;
     primaryDomain: string | null;
   };
 };
+
+function invitationPath(invite: Pick<MailTeamInvitation, "id" | "kind">, action: string) {
+  const id = encodeURIComponent(invite.id);
+  return invite.kind === "email_invite"
+    ? `/api/v1/mail/invitations/email/${id}/${action}`
+    : `/api/v1/mail/invitations/${id}/${action}`;
+}
 
 export type MailEmailInvitePreview = {
   email: string;
@@ -259,12 +274,11 @@ export async function listMailInvitations(): Promise<MailTeamInvitation[]> {
 }
 
 export async function acceptMailInvitation(
-  memberId: string,
+  invite: Pick<MailTeamInvitation, "id" | "kind">,
 ): Promise<{ appId: string; slotIndex: number }> {
-  const response = await sessionFetch(
-    `/api/v1/mail/invitations/${encodeURIComponent(memberId)}/accept`,
-    { method: "POST" },
-  );
+  const response = await sessionFetch(invitationPath(invite, "accept"), {
+    method: "POST",
+  });
   const data = await readJson<{
     workspace?: { appId?: string; slotIndex?: number };
   }>(response);
@@ -277,11 +291,12 @@ export async function acceptMailInvitation(
   };
 }
 
-export async function declineMailInvitation(memberId: string): Promise<void> {
-  const response = await sessionFetch(
-    `/api/v1/mail/invitations/${encodeURIComponent(memberId)}/decline`,
-    { method: "POST" },
-  );
+export async function declineMailInvitation(
+  invite: Pick<MailTeamInvitation, "id" | "kind">,
+): Promise<void> {
+  const response = await sessionFetch(invitationPath(invite, "decline"), {
+    method: "POST",
+  });
   const data = await readJson(response);
   if (!response.ok) {
     throw new Error(errorMessage(data, "Could not decline invitation."));

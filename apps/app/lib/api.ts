@@ -76,3 +76,28 @@ export const exchangeCodeOnce = createExchangeCodeOnce(exchangeCode);
 export async function logout(): Promise<void> {
   await authFetch('logout', { method: 'POST' });
 }
+
+export interface QuickSignRequestResponse {
+  success: boolean;
+  message: string;
+  type: 'LOGIN' | 'SIGNUP';
+  expiresIn: number;
+}
+
+export async function requestMagicLink(
+  email: string,
+): Promise<QuickSignRequestResponse> {
+  return authFetch<QuickSignRequestResponse>('quicksign/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resendMagicLink(
+  email: string,
+): Promise<QuickSignRequestResponse> {
+  return authFetch<QuickSignRequestResponse>('quicksign/resend', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}

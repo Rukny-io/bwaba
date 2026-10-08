@@ -222,6 +222,59 @@ export class AuthService {
       await this.subscriptionsService.createFreeSubscription(user.id);
     }
 
+    return this.completeExternalLogin(user, providerLabel, userAgent, ipAddress);
+  }
+
+  /**
+   * إنشاء مستخدم جديد من مزود هوية خارجي موثوق (مثل SSO المؤسسي) — البريد مؤكد مسبقاً.
+   */
+  async createVerifiedExternalUser(data: {
+    email: string;
+    name?: string | null;
+    avatar?: string | null;
+  }) {
+    const user = await this.prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: data.email,
+        emailVerified: true,
+        profileCompleted: false,
+        profile: {
+          create: {
+            id: crypto.randomUUID(),
+            username:
+              data.email.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex'),
+            name: data.name || null,
+            avatar: data.avatar || null,
+          },
+        },
+      },
+      include: { profile: true },
+    });
+    await this.subscriptionsService.createFreeSubscription(user.id);
+    return user;
+  }
+
+  /**
+   * خطوات ما بعد التعرف على المستخدم لأي مزود خارجي:
+   * كشف الشذوذ + سجل الأمان + الإشعارات (بدون إنشاء جلسة — يتم في /oauth/exchange)
+   */
+  async completeExternalLogin(
+    user: {
+      id: string;
+      email: string;
+      role: string;
+      profileCompleted: boolean;
+      profile: {
+        name: string | null;
+        username: string | null;
+        avatar: string | null;
+      } | null;
+    },
+    providerLabel: string,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<AuthResult> {
     // 4. 🔍 تحليل تسجيل الدخول للكشف عن الأنشطة المشبوهة
     const parser = new UAParser(userAgent);
     const deviceInfo = parser.getResult();

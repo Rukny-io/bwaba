@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
-import { LinkCategoryTabs } from '@/components/app/links/add-link-catalog/link-category-tabs';
-import { LinkSearch } from '@/components/app/links/add-link-catalog/link-search';
-import { LinkTypeForm } from '@/components/app/links/add-link-catalog/link-type-form';
+import { Modal } from '@heroui/react';
+import { FormCatalogPanel, FormCatalogTabs } from '@/components/app/links/add-link-catalog/form-catalog-panel';
 import { FormLinkSetup } from '@/components/app/links/add-link-catalog/form-link-setup';
-import { FormCatalogPanel } from '@/components/app/links/add-link-catalog/form-catalog-panel';
+import { LinkCategoryTabs } from '@/components/app/links/add-link-catalog/link-category-tabs';
+import {
+  LinkCatalogSearch,
+  useLinkCatalogUrlMode,
+} from '@/components/app/links/add-link-catalog/link-catalog-search';
+import { InstagramLinkSetup } from '@/components/app/links/add-link-catalog/instagram-link-setup';
+import { LinkTypeForm } from '@/components/app/links/add-link-catalog/link-type-form';
 import { LinkTypeList } from '@/components/app/links/add-link-catalog/link-type-list';
 import type { FormListItem } from '@/lib/forms/forms-api';
 import type { CreateSocialLinkInput } from '@/lib/links/types';
+import { useIsDesktop } from '@/lib/use-media-query';
 import {
   filterLinkCatalogItems,
   LINK_CATALOG_CATEGORIES,
@@ -19,7 +23,6 @@ import {
   type LinkCatalogItem,
   type LinkCatalogTypeId,
 } from '@/lib/links/link-type-catalog';
-import { cn } from '@/lib/utils';
 
 interface AddLinkCatalogDialogProps {
   open: boolean;
@@ -28,14 +31,30 @@ interface AddLinkCatalogDialogProps {
   initialType?: LinkCatalogTypeId;
 }
 
+const SCROLL_PANEL =
+  'min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
+const CATEGORY_HINTS: Partial<Record<LinkCatalogCategoryId, string>> = {
+  suggested: 'الأنواع الأكثر استخداماً لصفحتك',
+  social: 'حساباتك على منصات التواصل',
+  contact: 'طرق التواصل المباشر مع زوارك',
+  forms: 'نماذج جاهزة أو نماذجك المنشورة',
+  media: 'فيديو ومحتوى مرئي',
+  text: 'عناوين وكتل نصية',
+  commerce: 'روابط المتجر والمنتجات',
+  all: 'كل أنواع الروابط المتاحة',
+};
+
 export function AddLinkCatalogDialog({
   open,
   onClose,
   onSubmit,
   initialType,
 }: AddLinkCatalogDialogProps) {
+  const isDesktop = useIsDesktop();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<LinkCatalogCategoryId>('suggested');
+  const [formTab, setFormTab] = useState<'templates' | 'mine'>('templates');
   const [step, setStep] = useState<'catalog' | 'form' | 'forms-setup'>('catalog');
   const [selectedItem, setSelectedItem] = useState<LinkCatalogItem | null>(null);
   const [formTemplateId, setFormTemplateId] = useState<string | null>(null);
@@ -44,6 +63,7 @@ export function AddLinkCatalogDialog({
   useEffect(() => {
     if (!open) return;
     setSearch('');
+    setFormTab('templates');
     setFormTemplateId(null);
     setFormExisting(null);
     if (initialType === 'form') {
@@ -67,19 +87,14 @@ export function AddLinkCatalogDialog({
     }
   }, [open, initialType]);
 
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+  const isUrlMode = useLinkCatalogUrlMode(search);
 
   const filteredItems = useMemo(
-    () => filterLinkCatalogItems({ category, search }),
-    [category, search],
+    () => filterLinkCatalogItems({ category, search: isUrlMode ? '' : search }),
+    [category, search, isUrlMode],
   );
+
+  const categoryHint = CATEGORY_HINTS[category];
 
   function handlePickItem(item: LinkCatalogItem) {
     if (item.comingSoon) return;
@@ -115,120 +130,120 @@ export function AddLinkCatalogDialog({
     onClose();
   }
 
+  async function handleUrlSubmit(payload: CreateSocialLinkInput) {
+    await onSubmit(payload);
+    onClose();
+  }
+
+  function handleOpenChange(isOpen: boolean) {
+    if (!isOpen) onClose();
+  }
+
+  if (!isDesktop) return null;
+
   return (
-    <AnimatePresence>
-      {open ? (
-        <div className="fixed inset-0 z-[120] hidden md:block">
-          <motion.div
-            className="fixed inset-0 bg-black/45 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-            onClick={onClose}
-            aria-hidden
-          />
-
-          <motion.div
-            className="fixed inset-0 flex items-center justify-center p-6"
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 8 }}
-            transition={{ type: 'spring', damping: 32, stiffness: 360, mass: 0.9 }}
-            onClick={onClose}
-          >
-            <div
-              className={cn(
-                'relative flex h-[76vh] max-h-[37rem] w-full max-w-[53.25rem] flex-col overflow-hidden',
-                'rounded-4xl  bg-[var(--surface)] p-2 shadow-2xl',
-              )}
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="add-link-catalog-title"
-              dir="rtl"
-            >
-              {step === 'catalog' ? (
-                <>
-                  <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)]/70 px-5 py-3.5">
-                    <div className="min-w-0">
-                      <h2
-                        id="add-link-catalog-title"
-                        className="text-[1.25rem] font-bold tracking-tight text-[var(--foreground)]"
-                      >
-                        إضافة رابط
-                      </h2>
-                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                        ابحث عن نوع الرابط أو اختر من التصنيفات
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-all hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] active:scale-90"
-                      aria-label="إغلاق"
+    <Modal.Backdrop
+      isOpen={open}
+      onOpenChange={handleOpenChange}
+      isDismissable
+      variant="blur"
+    >
+      <Modal.Container placement="center" className="px-2 sm:px-3">
+        <Modal.Dialog
+          dir="rtl"
+          lang="ar"
+          aria-labelledby="add-link-catalog-title"
+          className="flex h-[min(28rem,85vh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] p-0 !shadow-none ring-0 outline-none"
+        >
+          {step === 'catalog' ? (
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="grid h-full min-h-0 flex-1 gap-4 overflow-hidden p-4 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-5 sm:p-5">
+                <aside className="flex h-full min-h-0 flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[11px] font-medium text-[var(--muted-foreground)]">
+                      إضافة رابط
+                    </p>
+                    <h2
+                      id="add-link-catalog-title"
+                      className="text-[18px] font-semibold leading-snug tracking-tight text-[var(--foreground)]"
                     >
-                      <X className="size-5" />
-                    </button>
+                      اختر النوع
+                    </h2>
+                    <p className="min-h-[2rem] text-[12px] leading-relaxed text-[var(--muted-foreground)] line-clamp-2">
+                      {categoryHint}
+                    </p>
                   </div>
 
-                  <div className="shrink-0 px-5 py-3.5">
-                    <LinkSearch value={search} onChange={setSearch} />
+                  <div className={SCROLL_PANEL}>
+                    <LinkCategoryTabs
+                      categories={LINK_CATALOG_CATEGORIES}
+                      active={category}
+                      onSelect={setCategory}
+                      orientation="column"
+                      variant="panel"
+                    />
                   </div>
+                </aside>
 
-                  <div className="grid min-h-0 flex-1 grid-cols-[220px_1fr]">
-                    <aside className="border-e border-[var(--border)]/60 px-2.5 py-2.5">
-                      <LinkCategoryTabs
-                        categories={LINK_CATALOG_CATEGORIES}
-                        active={category}
-                        onSelect={setCategory}
-                        orientation="column"
-                      />
-                    </aside>
+                <div className="flex h-full min-h-0 flex-col gap-3">
+                  <LinkCatalogSearch
+                    value={search}
+                    onChange={setSearch}
+                    onSubmitUrl={handleUrlSubmit}
+                    variant="panel"
+                  />
 
-                    <main className="flex min-h-0 flex-col p-3">
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <AnimatePresence mode="wait" initial={false}>
-                          <motion.div
-                            key={`${category}-${search}`}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-                          >
-                            {category === 'forms' ? (
-                              <FormCatalogPanel
-                                search={search}
-                                onPickTemplate={handlePickFormTemplate}
-                                onPickForm={handlePickExistingForm}
-                              />
-                            ) : (
-                              <LinkTypeList items={filteredItems} onPick={handlePickItem} />
-                            )}
-                          </motion.div>
-                        </AnimatePresence>
-                      </div>
-                    </main>
-                  </div>
-                </>
-              ) : step === 'forms-setup' ? (
-                <FormLinkSetup
-                  onBack={handleBack}
-                  onSubmit={handleFormSubmit}
-                  templateId={formTemplateId}
-                  existingForm={formExisting}
-                />
-              ) : selectedItem ? (
-                <LinkTypeForm
-                  item={selectedItem}
-                  onBack={handleBack}
-                  onSubmit={handleFormSubmit}
-                />
-              ) : null}
+                  {!isUrlMode && category === 'forms' ? (
+                    <FormCatalogTabs tab={formTab} onTabChange={setFormTab} compact />
+                  ) : null}
+
+                  {!isUrlMode ? (
+                    <div className={SCROLL_PANEL}>
+                      {category === 'forms' ? (
+                        <FormCatalogPanel
+                          search={search}
+                          variant="compact"
+                          tab={formTab}
+                          hideTabs
+                          onPickTemplate={handlePickFormTemplate}
+                          onPickForm={handlePickExistingForm}
+                        />
+                      ) : (
+                        <LinkTypeList
+                          items={filteredItems}
+                          onPick={handlePickItem}
+                          compact
+                        />
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
-          </motion.div>
-        </div>
-      ) : null}
-    </AnimatePresence>
+          ) : step === 'forms-setup' ? (
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              <FormLinkSetup
+                onBack={handleBack}
+                onSubmit={handleFormSubmit}
+                templateId={formTemplateId}
+                existingForm={formExisting}
+              />
+            </div>
+          ) : selectedItem?.id === 'instagram' ? (
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              <InstagramLinkSetup onBack={handleBack} onSubmit={handleFormSubmit} />
+            </div>
+          ) : selectedItem ? (
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              <LinkTypeForm
+                item={selectedItem}
+                onBack={handleBack}
+                onSubmit={handleFormSubmit}
+              />
+            </div>
+          ) : null}
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

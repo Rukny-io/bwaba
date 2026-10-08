@@ -1,10 +1,19 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeveloperEmailDomainStatus } from '@prisma/client';
+import {
+  DeveloperEmailDomainStatus,
+  MailAppStatus,
+  MailDomainStatus,
+} from '@prisma/client';
+import {
+  generateOwnershipToken,
+  verifyDomainDns,
+} from '@rukny/domain-verification';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MailSesService } from '../../mail/mail-ses.service';
 import { EmailEntitlementService } from '../shared/email-entitlement.service';
@@ -26,6 +35,8 @@ export class EmailDomainsService {
         domain: true,
         status: true,
         dkimTokens: true,
+        ownershipToken: true,
+        ownershipVerifiedAt: true,
         verifiedAt: true,
         createdAt: true,
       },
@@ -80,29 +91,33 @@ export class EmailDomainsService {
       );
     }
 
+    await this.assertDomainAvailableGlobally(domain, developerAppId);
+    await this.ses.deleteEmailIdentity(domain).catch(() => undefined);
     const identity = await this.ses.createEmailIdentity(domain);
-    const status = identity.sending
-      ? DeveloperEmailDomainStatus.VERIFIED
-      : DeveloperEmailDomainStatus.PENDING;
+    const ownershipToken = generateOwnershipToken();
     const saved = await this.prisma.developerEmailDomain.upsert({
       where: { developerAppId_domain: { developerAppId, domain } },
       create: {
         userId,
         developerAppId,
         domain,
-        status,
+        status: DeveloperEmailDomainStatus.PENDING,
         dkimTokens: identity.tokens,
-        verifiedAt: identity.sending ? new Date() : undefined,
+        ownershipToken,
       },
       update: {
-        status,
+        status: DeveloperEmailDomainStatus.PENDING,
         dkimTokens: identity.tokens,
-        verifiedAt: identity.sending ? new Date() : undefined,
+        ownershipToken,
+        ownershipVerifiedAt: null,
+        verifiedAt: null,
       },
       select: {
         domain: true,
         status: true,
         dkimTokens: true,
+        ownershipToken: true,
+        ownershipVerifiedAt: true,
         verifiedAt: true,
         createdAt: true,
       },
@@ -119,6 +134,8 @@ export class EmailDomainsService {
         domain: true,
         status: true,
         dkimTokens: true,
+        ownershipToken: true,
+        ownershipVerifiedAt: true,
         verifiedAt: true,
         createdAt: true,
         userId: true,
@@ -127,26 +144,78 @@ export class EmailDomainsService {
     if (!record || record.userId !== userId) {
       throw new NotFoundException('Email domain not found.');
     }
-    const identity = await this.ses.getEmailIdentity(domain);
-    const status = identity.sending
-      ? DeveloperEmailDomainStatus.VERIFIED
-      : DeveloperEmailDomainStatus.PENDING;
+    return this.publicDomain(record);
+  }
+
+  async verify(userId: string, developerAppId: string, rawDomain: string) {
+    const domain = this.normalizeDomain(rawDomain);
+    const record = await this.prisma.developerEmailDomain.findUnique({
+      where: { developerAppId_domain: { developerAppId, domain } },
+      select: {
+        id: true,
+        domain: true,
+        status: true,
+        dkimTokens: true,
+        ownershipToken: true,
+        ownershipVerifiedAt: true,
+        verifiedAt: true,
+        createdAt: true,
+        userId: true,
+      },
+    });
+    if (!record || record.userId !== userId) {
+      throw new NotFoundException('Email domain not found.');
+    }
+    const ownershipToken = record.ownershipToken ?? generateOwnershipToken();
+    if (!record.ownershipToken) {
+      await this.prisma.developerEmailDomain.update({
+        where: { id: record.id },
+        data: { ownershipToken },
+      });
+    }
+
+    await this.assertDomainAvailableGlobally(domain, developerAppId);
+
+    const result = await verifyDomainDns(domain, {
+      dkimTokens: record.dkimTokens,
+      ownershipToken,
+      getSesStatus: (name) => this.ses.getEmailIdentity(name),
+    });
+    if (!result.ok) {
+      throw new BadRequestException(result.error);
+    }
+
+    const verified = result.verified;
     const updated = await this.prisma.developerEmailDomain.update({
       where: { id: record.id },
       data: {
-        status,
-        dkimTokens: identity.tokens,
-        verifiedAt: identity.sending ? (record.verifiedAt ?? new Date()) : null,
+        status: verified
+          ? DeveloperEmailDomainStatus.VERIFIED
+          : DeveloperEmailDomainStatus.PENDING,
+        dkimTokens: result.ses.tokens.length
+          ? result.ses.tokens
+          : record.dkimTokens,
+        ownershipToken,
+        ownershipVerifiedAt: verified ? new Date() : null,
+        verifiedAt: verified ? new Date() : null,
       },
       select: {
         domain: true,
         status: true,
         dkimTokens: true,
+        ownershipToken: true,
+        ownershipVerifiedAt: true,
         verifiedAt: true,
         createdAt: true,
       },
     });
-    return this.publicDomain(updated);
+
+    return {
+      ...this.publicDomain(updated),
+      verified,
+      waiting: result.waiting,
+      results: result.results,
+    };
   }
 
   async delete(userId: string, developerAppId: string, rawDomain: string) {
@@ -164,6 +233,7 @@ export class EmailDomainsService {
     await this.prisma.developerEmailDomain.delete({
       where: { id: record.id },
     });
+    await this.ses.deleteEmailIdentity(domain).catch(() => undefined);
     return { success: true };
   }
 
@@ -217,6 +287,37 @@ export class EmailDomainsService {
     };
   }
 
+  private async assertDomainAvailableGlobally(
+    domain: string,
+    developerAppId: string,
+  ) {
+    const mailConflict = await this.prisma.mailApp.count({
+      where: {
+        primaryDomain: domain,
+        status: MailAppStatus.ACTIVE,
+        domainStatus: MailDomainStatus.ACTIVE,
+      },
+    });
+    if (mailConflict > 0) {
+      throw new ConflictException(
+        'This domain is already active on a Mail workspace.',
+      );
+    }
+
+    const emailConflict = await this.prisma.developerEmailDomain.count({
+      where: {
+        domain,
+        status: DeveloperEmailDomainStatus.VERIFIED,
+        developerAppId: { not: developerAppId },
+      },
+    });
+    if (emailConflict > 0) {
+      throw new ConflictException(
+        'This domain is already verified on another developer app.',
+      );
+    }
+  }
+
   private normalizeDomain(value: string) {
     const domain = value.trim().toLowerCase().replace(/\.$/, '');
     if (
@@ -241,6 +342,8 @@ export class EmailDomainsService {
     domain: string;
     status: DeveloperEmailDomainStatus;
     dkimTokens: string[];
+    ownershipToken?: string | null;
+    ownershipVerifiedAt?: Date | null;
     verifiedAt: Date | null;
     createdAt: Date;
   }) {
@@ -248,6 +351,8 @@ export class EmailDomainsService {
       domain: domain.domain,
       status: domain.status.toLowerCase(),
       dkimTokens: domain.dkimTokens,
+      ownershipToken: domain.ownershipToken ?? null,
+      ownershipVerifiedAt: domain.ownershipVerifiedAt?.toISOString() ?? null,
       verifiedAt: domain.verifiedAt?.toISOString() ?? null,
       createdAt: domain.createdAt.toISOString(),
     };

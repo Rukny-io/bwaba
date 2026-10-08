@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { generateOwnershipToken } from "@rukny/domain-verification";
 import {
   createMailDomainSetup,
   normalizeDomain,
@@ -20,15 +21,10 @@ import {
   fetchMailDomainQuota,
   syncMailAppDomainToNest,
 } from "@/lib/sync-mail-app-domain";
+import { releaseMailDomain } from "@/lib/release-mail-domain";
 import { mailCookieClearOptions } from "@/lib/mail-cookies";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
-import {
-  mailSetupCacheKey,
-  mailSesStatusKey,
-  mailAppOwnerKey,
-  redisDel,
-  redisSetJson,
-} from "@/lib/redis";
+import { mailSetupCacheKey, redisDel, redisSetJson } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,8 +58,6 @@ export async function POST(request: Request) {
 
     const owner = await findMailAppIdByDomain(domain);
     if (owner && owner !== session.appId) {
-      // Redis can keep a binding after archive/delete. Reclaim when no ACTIVE
-      // Nest workspace still claims the domain.
       const taken = await apiFetchJson<{ taken?: boolean }>(
         `/mail/apps/domain-taken?domain=${encodeURIComponent(domain)}`,
       );
@@ -99,14 +93,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Rotate SES identity on every new claim so stale DKIM tokens cannot be reused.
+    await deleteSesDomainIdentity(domain).catch(() => undefined);
     const { tokens } = await ensureSesDomainIdentity(domain);
-    const setup = createMailDomainSetup(domain, tokens);
+    const ownershipToken = generateOwnershipToken();
+    const setup = createMailDomainSetup(domain, tokens, ownershipToken);
 
     await upsertMailDomainBinding(session.appId, {
       domain: setup.domain,
       status: setup.status,
       dkimTokens: tokens,
       sesCheckedAt: new Date().toISOString(),
+      ownershipToken,
+      ownershipVerifiedAt: undefined,
     });
     await redisDel(mailSetupCacheKey(session.appId));
     await redisSetJson(mailSetupCacheKey(session.appId), setup, 60);
@@ -115,6 +114,8 @@ export async function POST(request: Request) {
         primaryDomain: setup.domain,
         domainStatus: setup.status,
         dkimTokens: tokens,
+        domainOwnershipToken: ownershipToken,
+        domainOwnershipVerifiedAt: null,
       });
     } catch (error) {
       const message =
@@ -157,17 +158,7 @@ export async function DELETE(request: Request) {
       return jsonError("This domain belongs to another workspace.", 403);
     }
 
-    await deleteSesDomainIdentity(domain);
-    await deleteMailDomainBinding(session.appId);
-    await redisDel(
-      mailSetupCacheKey(session.appId),
-      mailSesStatusKey(domain),
-      `${mailAppOwnerKey(session.appId)}:${session.userId}`,
-    );
-    await syncMailAppDomainToNest(session.appId, {
-      primaryDomain: null,
-      domainStatus: "NONE",
-    });
+    await releaseMailDomain(session.appId, domain, session.userId);
 
     const response = NextResponse.json(
       { ok: true },

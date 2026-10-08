@@ -23,7 +23,7 @@ import {
   getEmailSubscription,
   listEmailDomains,
   listEmailSenders,
-  refreshEmailDomain,
+  verifyEmailDomain,
   type EmailDomain,
 } from "@/lib/api/email-api";
 import { cn } from "@/lib/utils";
@@ -31,11 +31,24 @@ import { cn } from "@/lib/utils";
 const queryKey = (appId: string) => ["email-api", appId] as const;
 
 function dnsRecords(item: EmailDomain) {
-  return item.dkimTokens.map((token) => ({
-    type: "CNAME",
-    name: `${token}._domainkey.${item.domain}`,
-    value: `${token}.dkim.amazonses.com`,
-  }));
+  const records = [];
+  if (item.ownershipToken) {
+    records.push({
+      type: "TXT",
+      name: `_rukny-verify.${item.domain}`,
+      value: `rukny-domain-verification=${item.ownershipToken}`,
+      ownership: true,
+    });
+  }
+  for (const token of item.dkimTokens) {
+    records.push({
+      type: "CNAME",
+      name: `${token}._domainkey.${item.domain}`,
+      value: `${token}.dkim.amazonses.com`,
+      ownership: false,
+    });
+  }
+  return records;
 }
 
 function dnsText(item: EmailDomain) {
@@ -93,13 +106,17 @@ export function EmailApiDomainManager() {
     onError: (error) =>
       appToast.fromError(error, "Could not authorize sender."),
   });
-  const refresh = useMutation({
-    mutationFn: (value: string) => refreshEmailDomain(app.appId, value),
-    onSuccess: () => {
+  const verify = useMutation({
+    mutationFn: (value: string) => verifyEmailDomain(app.appId, value),
+    onSuccess: (result) => {
       void invalidate();
-      appToast.success("Domain status refreshed.");
+      if (result.verified) {
+        appToast.success("Domain verified and ready to send.");
+      } else {
+        appToast.info("DNS records are not fully verified yet.");
+      }
     },
-    onError: (error) => appToast.fromError(error, "Could not refresh domain."),
+    onError: (error) => appToast.fromError(error, "Could not verify domain."),
   });
 
   async function copy(value: string, id = value) {
@@ -234,7 +251,8 @@ export function EmailApiDomainManager() {
               Verification records
             </h2>
             <p className="mt-1.5 text-[13px] text-[var(--muted-foreground)]">
-              Add all records at your DNS provider, then refresh the status.
+              Add all records at your DNS provider, including the ownership TXT,
+              then verify.
             </p>
           </div>
           {domains.data?.length ? (
@@ -321,21 +339,21 @@ export function EmailApiDomainManager() {
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => refresh.mutate(item.domain)}
+                        onClick={() => verify.mutate(item.domain)}
                         disabled={
-                          refresh.isPending && refresh.variables === item.domain
+                          verify.isPending && verify.variables === item.domain
                         }
                         className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--foreground)] px-3 text-xs font-medium text-[var(--background)] transition hover:opacity-90 disabled:opacity-60"
                       >
                         <RefreshCw
                           className={cn(
                             "size-3.5",
-                            refresh.isPending &&
-                              refresh.variables === item.domain &&
+                            verify.isPending &&
+                              verify.variables === item.domain &&
                               "animate-spin",
                           )}
                         />
-                        Refresh
+                        Verify DNS
                       </button>
                     </div>
                   </div>
@@ -357,9 +375,16 @@ export function EmailApiDomainManager() {
                                 key={record.name}
                                 className="grid gap-2 rounded-xl bg-[var(--surface-secondary)] p-3 sm:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_32px] sm:items-center sm:gap-3"
                               >
-                                <span className="w-fit rounded-md bg-[var(--surface)] px-2 py-1 font-mono text-[10px] font-semibold text-[var(--primary)]">
-                                  {record.type}
-                                </span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="w-fit rounded-md bg-[var(--surface)] px-2 py-1 font-mono text-[10px] font-semibold text-[var(--primary)]">
+                                    {record.type}
+                                  </span>
+                                  {record.ownership ? (
+                                    <span className="w-fit rounded-md bg-[color-mix(in_srgb,var(--warning)_15%,var(--surface))] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--warning)]">
+                                      Ownership
+                                    </span>
+                                  ) : null}
+                                </div>
                                 <code className="break-all text-[11px] leading-5">
                                   {record.name}
                                 </code>

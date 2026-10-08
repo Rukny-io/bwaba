@@ -1,214 +1,91 @@
-'use client';
-
-import {
-  AlertTriangle,
-  Eye,
-  Link2,
-  MousePointerClick,
-  Package,
-  ShoppingBag,
-  type LucideIcon,
-} from 'lucide-react';
-import { AnimatedNumber } from '@/components/ui/animated-number';
-import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
-import { cn } from '@/lib/utils';
-
-export type DashboardMetricChipTone =
-  | 'success'
-  | 'warning'
-  | 'neutral'
-  | 'danger';
-
-export type DashboardMetricIconName =
-  | 'mouse-pointer-click'
-  | 'eye'
-  | 'link'
-  | 'package'
-  | 'shopping-bag'
-  | 'alert-triangle';
-
-export type DashboardNumericFormat = 'number' | 'currency' | 'trend-percent';
-
-const METRIC_ICONS: Record<DashboardMetricIconName, LucideIcon> = {
-  'mouse-pointer-click': MousePointerClick,
-  eye: Eye,
-  link: Link2,
-  package: Package,
-  'shopping-bag': ShoppingBag,
-  'alert-triangle': AlertTriangle,
-};
-
-function formatNumericValue(format: DashboardNumericFormat, value: number): string {
-  if (format === 'currency') return formatCurrency(value);
-  if (format === 'trend-percent') {
-    return `${value >= 0 ? '+' : ''}${Math.round(value * 10) / 10}%`;
-  }
-  return formatNumber(value);
-}
+import type { LucideIcon } from 'lucide-react';
+import { Card, Surface, cn } from '@heroui/react';
 
 export interface DashboardMetricCardProps {
-  icon: DashboardMetricIconName;
+  icon: LucideIcon;
+  iconClassName?: string;
   label: string;
   value: string | number;
   comparisonPrimary: string;
-  comparisonSecondary: string;
-  /** Optional label before comparisonPrimary (e.g. إيرادات before currency). */
-  comparisonPrimaryLabel?: string;
+  comparisonSecondary?: string;
   trend?: string;
   trendPositive?: boolean;
-  chip?: string;
-  chipTone?: DashboardMetricChipTone;
-  tabular?: boolean;
-  numericValue?: number;
-  numericFormat?: DashboardNumericFormat;
-  animationDelay?: number;
-  trendNumericValue?: number;
+  className?: string;
 }
 
-const chipToneClass: Record<DashboardMetricChipTone, string> = {
-  success: 'text-[var(--success)]',
-  warning: 'text-[var(--warning)]',
-  danger: 'text-[var(--danger)]',
-  neutral: 'text-[var(--muted-foreground)]',
-};
-
 export function DashboardMetricCard({
-  icon,
+  icon: Icon,
+  iconClassName,
   label,
   value,
   comparisonPrimary,
   comparisonSecondary,
-  comparisonPrimaryLabel,
   trend,
   trendPositive = true,
-  chip,
-  chipTone = 'neutral',
-  tabular = true,
-  numericValue,
-  numericFormat = 'number',
-  animationDelay = 0,
-  trendNumericValue,
+  className,
 }: DashboardMetricCardProps) {
-  const Icon = METRIC_ICONS[icon];
-
-  const valueNode =
-    numericValue != null ? (
-      <AnimatedNumber
-        value={numericValue}
-        format={(n) => formatNumericValue(numericFormat, n)}
-        delay={animationDelay}
-        animateFromZeroOnMount={false}
-      />
-    ) : tabular ? (
-      <span>{value}</span>
-    ) : (
-      value
-    );
-
-  const showTrend = Boolean(trend);
-
-  const trendNode = showTrend
-    ? trendNumericValue != null && trendNumericValue !== 0
-      ? (
-          <AnimatedNumber
-            value={trendNumericValue}
-            format={(n) => formatNumericValue('trend-percent', n)}
-            delay={animationDelay + 120}
-            duration={700}
-            animateFromZeroOnMount={false}
-          />
-        )
-      : trend
-    : null;
-
-  const footerLines = [chip, comparisonPrimary, comparisonSecondary].filter(Boolean);
-
   return (
-    <article
-      className={cn(
-        'flex min-h-[8.25rem] flex-col rounded-xl p-4',
-        'bg-[color-mix(in_srgb,var(--surface-secondary)_88%,var(--surface)_12%)]',
-        'ring-1 ring-[color-mix(in_srgb,var(--border)_70%,transparent)]',
-        'transition-[box-shadow,ring-color] duration-150',
-        'hover:ring-[color-mix(in_srgb,var(--border)_55%,var(--foreground)_20%)]',
-      )}
-    >
-      <div className="flex items-center gap-2.5">
-        <div
-          className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-lg',
-            'bg-[var(--surface)] text-[var(--foreground)]',
-            'ring-1 ring-[color-mix(in_srgb,var(--border)_75%,transparent)]',
-          )}
+    <Card className={cn('min-h-[7.25rem] gap-2 p-3 sm:min-h-0 sm:gap-4 sm:p-5', className)}>
+      <Card.Header className="flex-row items-center justify-between gap-2 p-0">
+        <Surface
+          variant="secondary"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-10 sm:rounded-xl"
         >
-          <Icon className="size-4" strokeWidth={1.75} aria-hidden />
-        </div>
-        <p className="min-w-0 text-xs font-medium leading-snug text-[var(--muted-foreground)]">
-          {label}
-        </p>
-      </div>
-
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <p
-          className={cn(
-            'min-w-0 font-bold leading-none tracking-tight text-[var(--foreground)]',
-            tabular ? 'text-[1.75rem] tabular-nums' : 'text-lg leading-snug',
-          )}
-          dir={tabular ? 'ltr' : undefined}
-          lang={tabular ? 'en' : undefined}
-        >
-          {valueNode}
-        </p>
-
-        {trendNode ? (
+          <Icon
+            className={cn(
+              'size-[18px] sm:size-5',
+              iconClassName ?? 'text-[var(--primary)]',
+            )}
+            strokeWidth={1.6}
+          />
+        </Surface>
+        {trend ? (
           <span
             className={cn(
-              'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+              'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums sm:px-2.5 sm:py-1 sm:text-[11px]',
               trendPositive
-                ? 'bg-[color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--success)]'
-                : 'bg-[var(--surface)] text-[var(--muted-foreground)]',
+                ? 'bg-[var(--success)]/15 text-[var(--success)]'
+                : 'bg-[var(--danger)]/15 text-[var(--danger)]',
             )}
             dir="ltr"
             lang="en"
           >
-            {trendNode}
+            {trend}
           </span>
-        ) : null}
-      </div>
+        ) : (
+          <span className="size-0 sm:hidden" aria-hidden />
+        )}
+      </Card.Header>
 
-      {footerLines.length > 0 ? (
-        <div className="mt-auto flex flex-col gap-1 pt-3">
-          {chip ? (
-            <p className={cn('text-xs font-medium leading-snug', chipToneClass[chipTone])}>
-              {chip}
-            </p>
-          ) : null}
-          {!chip && comparisonPrimary ? (
-            <p
-              className="text-xs leading-snug text-[var(--muted-foreground)]"
-              dir={comparisonPrimaryLabel ? 'ltr' : undefined}
-              lang={comparisonPrimaryLabel ? 'en' : undefined}
-            >
-              {comparisonPrimaryLabel ? (
-                <>
-                  <span className="font-medium text-[var(--foreground)]">
-                    {comparisonPrimaryLabel}
-                  </span>
-                  <span className="mx-1 text-[var(--border)]">·</span>
-                  <span className="tabular-nums">{comparisonPrimary}</span>
-                </>
-              ) : (
-                comparisonPrimary
-              )}
-            </p>
-          ) : null}
-          {!chip && comparisonSecondary ? (
-            <p className="text-xs leading-snug text-[var(--muted-foreground)]">
+      <Card.Title className="line-clamp-2 text-xs font-medium leading-snug text-[var(--muted-foreground)] sm:text-[13px]">
+        {label}
+      </Card.Title>
+
+      <Card.Content className="mt-auto gap-1 p-0 sm:gap-0">
+        <div className="flex items-end justify-between gap-2 sm:gap-3">
+          <p
+            className="text-[1.35rem] font-bold leading-none tabular-nums text-[var(--foreground)] sm:text-[1.75rem]"
+            dir="ltr"
+            lang="en"
+          >
+            {value}
+          </p>
+          {comparisonSecondary ? (
+            <p className="hidden max-w-[9rem] text-end text-[11px] leading-snug text-[var(--muted-foreground)]/70 sm:block">
+              {comparisonPrimary}
+              <br />
               {comparisonSecondary}
             </p>
-          ) : null}
+          ) : (
+            <p className="hidden max-w-[9rem] text-end text-[11px] leading-snug text-[var(--muted-foreground)]/70 sm:block">
+              {comparisonPrimary}
+            </p>
+          )}
         </div>
-      ) : null}
-    </article>
+        <p className="line-clamp-1 text-[10px] leading-tight text-[var(--muted-foreground)]/70 sm:hidden">
+          {comparisonPrimary}
+        </p>
+      </Card.Content>
+    </Card>
   );
 }

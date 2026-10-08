@@ -22,6 +22,7 @@ import {
   SendMailMessageDto,
 } from './dto/mail-message.dto';
 import { sanitizeMailHtml } from './mail-html-sanitize.util';
+import { inlineDataUriImages } from './mail-inline-images.util';
 import { MailAttachmentsService } from './mail-attachments.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
@@ -989,7 +990,8 @@ export class MailMessagesService {
     }
 
     const bodyText = dto.bodyText?.trim() || undefined;
-    const bodyHtml = sanitizeMailHtml(dto.bodyHtml);
+    const sanitizedHtml = sanitizeMailHtml(dto.bodyHtml);
+    const { html: bodyHtml, inlineParts } = inlineDataUriImages(sanitizedHtml);
     if (!bodyText && !bodyHtml) {
       throw new BadRequestException('Message body is required.');
     }
@@ -1008,7 +1010,17 @@ export class MailMessagesService {
       attachmentIds,
       mailbox.id,
     );
-    const mimeAttachments = await this.attachments.loadBuffers(attachmentIds);
+    const fileAttachments = await this.attachments.loadBuffers(attachmentIds);
+    const mimeAttachments = [
+      ...inlineParts.map((part) => ({
+        filename: part.filename,
+        contentType: part.contentType,
+        content: part.content,
+        contentId: part.contentId,
+        inline: true,
+      })),
+      ...fileAttachments,
+    ];
 
     const limits = await this.subscriptions.getActiveLimitsForApp(
       mailbox.mailAppId,
@@ -1394,7 +1406,8 @@ export class MailMessagesService {
 
     const bodies = await this.bodyCrypto.resolveBodies(this.asBodyRow(draft));
     const bodyText = bodies.bodyText?.trim() || undefined;
-    const bodyHtml = sanitizeMailHtml(bodies.bodyHtml);
+    const sanitizedHtml = sanitizeMailHtml(bodies.bodyHtml);
+    const { html: bodyHtml, inlineParts } = inlineDataUriImages(sanitizedHtml);
     if (!bodyText && !bodyHtml) {
       throw new BadRequestException('Message body is required.');
     }
@@ -1424,9 +1437,19 @@ export class MailMessagesService {
     const fromAddress = `${mailbox.localPart}@${mailbox.domain}`;
     const messageIdHeader =
       draft.messageId ?? this.rfcMessageId(mailbox.domain);
-    const mimeAttachments = await this.attachments.loadBuffers(
+    const fileAttachments = await this.attachments.loadBuffers(
       draft.attachments.map((row) => row.id),
     );
+    const mimeAttachments = [
+      ...inlineParts.map((part) => ({
+        filename: part.filename,
+        contentType: part.contentType,
+        content: part.content,
+        contentId: part.contentId,
+        inline: true,
+      })),
+      ...fileAttachments,
+    ];
 
     try {
       const { sesMessageId } = await this.ses.sendEmail({

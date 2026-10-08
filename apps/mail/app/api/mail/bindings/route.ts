@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
-import { deleteMailDomainBinding } from "@/lib/mail-domain-bindings";
+import { getMailDomainBinding } from "@/lib/mail-domain-bindings";
 import { requireMailAppSession } from "@/lib/require-mail-app";
-import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
+import { releaseMailDomain } from "@/lib/release-mail-domain";
 import { mailCookieClearOptions } from "@/lib/mail-cookies";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
-import {
-  mailSetupCacheKey,
-  mailAppOwnerKey,
-  redisDel,
-} from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Release this workspace's domain lock in Redis without deleting the SES identity.
- * Used when archiving a workspace so the domain can be claimed again.
+ * Release this workspace's domain lock and delete the SES identity.
+ * Used when archiving a workspace so the domain can be claimed again safely.
  */
 export async function DELETE() {
   const session = await requireMailAppSession({ fresh: true });
@@ -26,15 +21,12 @@ export async function DELETE() {
     );
   }
 
-  await deleteMailDomainBinding(session.appId);
-  await redisDel(
-    mailSetupCacheKey(session.appId),
-    `${mailAppOwnerKey(session.appId)}:${session.userId}`,
-  );
-  await syncMailAppDomainToNest(session.appId, {
-    primaryDomain: null,
-    domainStatus: "NONE",
-  });
+  const binding = await getMailDomainBinding(session.appId);
+  if (binding?.domain) {
+    await releaseMailDomain(session.appId, binding.domain, session.userId);
+  } else {
+    await releaseMailDomain(session.appId, "", session.userId);
+  }
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(MAIL_READY_COOKIE, "", mailCookieClearOptions());

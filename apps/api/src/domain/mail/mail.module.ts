@@ -37,7 +37,10 @@ import { MailMessagesService } from './mail-messages.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailMembersService } from './mail-members.service';
-import { MailMembersController } from './mail-members.controller';
+import {
+  MailInvitesPublicController,
+  MailMembersController,
+} from './mail-members.controller';
 import { MailSesModule } from './mail-ses.module';
 import { MailInboundService } from './mail-inbound.service';
 import { MailRealtimeService } from './mail-realtime.service';
@@ -57,6 +60,13 @@ import { MailUnifiedEntitlementService } from './mail-unified-entitlement.servic
 import { MailPlanQuotaService } from './mail-plan-quota.service';
 import { MailAttachmentsService } from './mail-attachments.service';
 import { MailScheduledSendService } from './mail-scheduled-send.service';
+import {
+  MailSsoController,
+  MailSsoPublicController,
+} from './sso/mail-sso.controller';
+import { MailSsoService } from './sso/mail-sso.service';
+import { MailSsoOidcService } from './sso/mail-sso-oidc.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -79,6 +89,7 @@ import { MailScheduledSendService } from './mail-scheduled-send.service';
     SecurityModule,
     EmailModule,
     forwardRef(() => QasehPaymentModule),
+    forwardRef(() => AuthModule),
   ],
   controllers: [
     MailSubscriptionsController,
@@ -97,6 +108,9 @@ import { MailScheduledSendService } from './mail-scheduled-send.service';
     MailPublicController,
     MailDomainVerificationController,
     MailAppPasswordsController,
+    MailSsoController,
+    MailSsoPublicController,
+    MailInvitesPublicController,
   ],
   providers: [
     CheckoutSessionGuard,
@@ -128,6 +142,8 @@ import { MailScheduledSendService } from './mail-scheduled-send.service';
     MailPlanQuotaService,
     MailAttachmentsService,
     MailScheduledSendService,
+    MailSsoService,
+    MailSsoOidcService,
   ],
   exports: [
     MailSesModule,

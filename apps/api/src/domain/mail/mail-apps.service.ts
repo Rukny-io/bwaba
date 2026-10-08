@@ -117,6 +117,8 @@ export class MailAppsService {
       primaryDomain: string | null;
       domainStatus?: MailDomainStatus;
       domainCheckedAt?: Date | null;
+      domainOwnershipToken?: string | null;
+      domainOwnershipVerifiedAt?: Date | null;
       domainTrustStatus?: MailDomainTrustStatus;
       domainVerifiedAt?: Date | null;
       createdAt: Date;
@@ -147,6 +149,9 @@ export class MailAppsService {
       primaryDomain: app.primaryDomain,
       domainStatus: app.domainStatus ?? MailDomainStatus.NONE,
       domainCheckedAt: app.domainCheckedAt?.toISOString() ?? null,
+      domainOwnershipToken: app.domainOwnershipToken ?? null,
+      domainOwnershipVerifiedAt:
+        app.domainOwnershipVerifiedAt?.toISOString() ?? null,
       domainTrustStatus:
         app.domainTrustStatus ?? MailDomainTrustStatus.UNVERIFIED,
       domainVerifiedAt: app.domainVerifiedAt?.toISOString() ?? null,
@@ -482,6 +487,36 @@ export class MailAppsService {
       domainStatus = MailDomainStatus.NONE;
     }
 
+    let domainOwnershipToken: string | null | undefined;
+    if (dto.domainOwnershipToken === null) {
+      domainOwnershipToken = null;
+    } else if (dto.domainOwnershipToken !== undefined) {
+      domainOwnershipToken = dto.domainOwnershipToken.trim() || null;
+    }
+
+    let domainOwnershipVerifiedAt: Date | null | undefined;
+    if (dto.domainOwnershipVerifiedAt === null) {
+      domainOwnershipVerifiedAt = null;
+    } else if (dto.domainOwnershipVerifiedAt) {
+      const parsed = new Date(dto.domainOwnershipVerifiedAt);
+      domainOwnershipVerifiedAt = Number.isNaN(parsed.getTime())
+        ? undefined
+        : parsed;
+    }
+
+    const previousOwnershipVerifiedAt = previous.domainOwnershipVerifiedAt
+      ? new Date(previous.domainOwnershipVerifiedAt)
+      : null;
+    const effectiveOwnershipVerifiedAt =
+      domainOwnershipVerifiedAt !== undefined
+        ? domainOwnershipVerifiedAt
+        : previousOwnershipVerifiedAt;
+    if (domainStatus === MailDomainStatus.ACTIVE && !effectiveOwnershipVerifiedAt) {
+      throw new BadRequestException(
+        'Domain ownership must be verified before activation.',
+      );
+    }
+
     let domainCheckedAt: Date | null | undefined;
     if (dto.domainCheckedAt === null) {
       domainCheckedAt = null;
@@ -524,6 +559,16 @@ export class MailAppsService {
         ...(primaryDomain !== undefined ? { primaryDomain } : {}),
         ...(domainStatus !== undefined ? { domainStatus } : {}),
         ...(domainCheckedAt !== undefined ? { domainCheckedAt } : {}),
+        ...(domainOwnershipToken !== undefined
+          ? { domainOwnershipToken }
+          : primaryDomain === null
+            ? { domainOwnershipToken: null }
+            : {}),
+        ...(domainOwnershipVerifiedAt !== undefined
+          ? { domainOwnershipVerifiedAt }
+          : primaryDomain === null
+            ? { domainOwnershipVerifiedAt: null }
+            : {}),
         ...(domainChanged
           ? {
               domainTrustStatus: MailDomainTrustStatus.UNVERIFIED,

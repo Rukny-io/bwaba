@@ -115,34 +115,36 @@ model User {
   mailAppInvitationsSent         MailAppMember[]                 @relation("mail_app_inviter")
   mailAppEmailInvitesSent        MailAppEmailInvite[]            @relation("mail_app_email_inviter")
   mailMailboxesAssigned          MailMailbox[]                   @relation("mail_mailbox_assignee")
+  mailSsoAccessLinksCreated      MailSsoAccessLink[]             @relation("mail_sso_link_creator")
+  mailSsoIdentities              MailSsoIdentity[]
   mailQuarantineActions          MailQuarantineActionLog[]       @relation("mail_quarantine_actor")
 
   // Developer Portal relations
-  developerApps             DeveloperApp[]
-  developerApiKeys          DeveloperApiKey[]
-  developerWhatsappAccounts DeveloperWhatsappAccount[]
-  developerContacts         DeveloperContact[]
-  developerWebhooks         DeveloperWebhook[]
-  developerMessageLogs      WhatsappMessageLog[]        @relation("developer_message_logs")
-  developerEmailMessages    DeveloperEmailMessage[]
-  developerEmailDomains     DeveloperEmailDomain[]
-  developerEmailSuppression DeveloperEmailSuppression[]
-  developerEmailEntitlements DeveloperEmailEntitlement[]
-  developerEmailContacts    DeveloperEmailContact[]
-  developerEmailBroadcasts  DeveloperEmailBroadcast[]
-  developerEmailAutomations DeveloperEmailAutomation[]
+  developerApps                DeveloperApp[]
+  developerApiKeys             DeveloperApiKey[]
+  developerWhatsappAccounts    DeveloperWhatsappAccount[]
+  developerContacts            DeveloperContact[]
+  developerWebhooks            DeveloperWebhook[]
+  developerMessageLogs         WhatsappMessageLog[]          @relation("developer_message_logs")
+  developerEmailMessages       DeveloperEmailMessage[]
+  developerEmailDomains        DeveloperEmailDomain[]
+  developerEmailSuppression    DeveloperEmailSuppression[]
+  developerEmailEntitlements   DeveloperEmailEntitlement[]
+  developerEmailContacts       DeveloperEmailContact[]
+  developerEmailBroadcasts     DeveloperEmailBroadcast[]
+  developerEmailAutomations    DeveloperEmailAutomation[]
   developerEmailAutomationRuns DeveloperEmailAutomationRun[]
-  developerApiRequestLogs   ApiRequestLog[]
-  developerSubscription     DeveloperSubscription?      @relation("developer_subscription")
-  developerWallet           DeveloperWallet?            @relation("developer_wallet")
-  formTeamWorkspaceMembers  FormTeamMember[]            @relation("form_team_workspace")
-  formTeamMemberships       FormTeamMember[]            @relation("form_team_member")
-  formTeamInvitationsSent   FormTeamMember[]            @relation("form_team_inviter")
-  workspaceOwnedMembers     WorkspaceMember[]           @relation("workspace_owner")
-  workspaceMemberships      WorkspaceMember[]           @relation("workspace_member")
-  workspaceInvitationsSent  WorkspaceMember[]           @relation("workspace_inviter")
-  supportTickets            SupportTicket[]
-  businessWorkflows         BusinessWorkflow[]
+  developerApiRequestLogs      ApiRequestLog[]
+  developerSubscription        DeveloperSubscription?        @relation("developer_subscription")
+  developerWallet              DeveloperWallet?              @relation("developer_wallet")
+  formTeamWorkspaceMembers     FormTeamMember[]              @relation("form_team_workspace")
+  formTeamMemberships          FormTeamMember[]              @relation("form_team_member")
+  formTeamInvitationsSent      FormTeamMember[]              @relation("form_team_inviter")
+  workspaceOwnedMembers        WorkspaceMember[]             @relation("workspace_owner")
+  workspaceMemberships         WorkspaceMember[]             @relation("workspace_member")
+  workspaceInvitationsSent     WorkspaceMember[]             @relation("workspace_inviter")
+  supportTickets               SupportTicket[]
+  businessWorkflows            BusinessWorkflow[]
 
   @@index([telegramChatId])
   @@index([telegramConnectedAt])
@@ -607,38 +609,38 @@ model SecurityLog {
 }
 
 model Store {
-  id                  String                @id @default(uuid())
-  userId              String
-  name                String
-  slug                String                @unique
-  description         String?
-  logo                String?
-  banner              String?
-  contactEmail        String?
-  contactPhone        String?
-  status              StoreStatus           @default(ACTIVE)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  address             String?
-  categoryId          String?
-  category            String?
-  employeesCount      String?
-  city                String?
-  country             String                @default("Iraq")
-  latitude            Float?
-  longitude           Float?
-  descriptionAr       String?
-  metadata            Json?
-  cashOnDeliveryEnabled Boolean             @default(true)
-  coupons             coupons[]
-  forms               Form[]
-  orders              orders[]
-  product_categories  product_categories[]
-  product_collections product_collections[]
-  product_discounts   product_discounts[]
-  products            products[]
-  store_categories    store_categories?     @relation(fields: [categoryId], references: [id])
-  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                @id @default(uuid())
+  userId                String
+  name                  String
+  slug                  String                @unique
+  description           String?
+  logo                  String?
+  banner                String?
+  contactEmail          String?
+  contactPhone          String?
+  status                StoreStatus           @default(ACTIVE)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  address               String?
+  categoryId            String?
+  category              String?
+  employeesCount        String?
+  city                  String?
+  country               String                @default("Iraq")
+  latitude              Float?
+  longitude             Float?
+  descriptionAr         String?
+  metadata              Json?
+  cashOnDeliveryEnabled Boolean               @default(true)
+  coupons               coupons[]
+  forms                 Form[]
+  orders                orders[]
+  product_categories    product_categories[]
+  product_collections   product_collections[]
+  product_discounts     product_discounts[]
+  products              products[]
+  store_categories      store_categories?     @relation(fields: [categoryId], references: [id])
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@index([status])
@@ -2631,7 +2633,7 @@ model DeveloperApp {
   emailSenders      DeveloperEmailSender[]
   emailEntitlement  DeveloperEmailEntitlement?
   emailDomains      DeveloperEmailDomain[]
-  linkedMailApps    MailApp[]                   @relation("mail_linked_developer_app")
+  linkedMailApps    MailApp[]                  @relation("mail_linked_developer_app")
 
   @@index([userId])
   @@index([appId])
@@ -2807,18 +2809,20 @@ enum DeveloperEmailAutomationStatus {
 
 /// Verified sending domain scoped to one Developer App (plan limits apply per app).
 model DeveloperEmailDomain {
-  id             String                     @id @default(uuid())
-  userId         String
-  developerAppId String
-  domain         String
-  status         DeveloperEmailDomainStatus @default(PENDING)
-  dkimTokens     String[]                   @default([])
-  verifiedAt     DateTime?
-  createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
+  id                  String                     @id @default(uuid())
+  userId              String
+  developerAppId      String
+  domain              String
+  status              DeveloperEmailDomainStatus @default(PENDING)
+  dkimTokens          String[]                   @default([])
+  ownershipToken      String?
+  ownershipVerifiedAt DateTime?
+  verifiedAt          DateTime?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp           @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
   senders      DeveloperEmailSender[]
 
   @@unique([developerAppId, domain])
@@ -2952,8 +2956,8 @@ model DeveloperEmailContact {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user        User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipients  DeveloperEmailBroadcastRecipient[]
+  user       User                               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients DeveloperEmailBroadcastRecipient[]
 
   @@unique([userId, emailHash])
   @@index([userId, unsubscribedAt])
@@ -2974,22 +2978,22 @@ model DeveloperEmailBroadcast {
   createdAt   DateTime                      @default(now())
   updatedAt   DateTime                      @updatedAt
 
-  user        User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipients  DeveloperEmailBroadcastRecipient[]
+  user       User                               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients DeveloperEmailBroadcastRecipient[]
 
   @@index([userId, status, createdAt])
   @@map("developer_email_broadcasts")
 }
 
 model DeveloperEmailBroadcastRecipient {
-  id          String                               @id @default(uuid())
+  id          String                                 @id @default(uuid())
   broadcastId String
   contactId   String
   status      DeveloperEmailBroadcastRecipientStatus @default(PENDING)
   errorCode   String?
   sentAt      DateTime?
-  createdAt   DateTime                             @default(now())
-  updatedAt   DateTime                             @updatedAt
+  createdAt   DateTime                               @default(now())
+  updatedAt   DateTime                               @updatedAt
 
   broadcast DeveloperEmailBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
   contact   DeveloperEmailContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
@@ -3000,19 +3004,19 @@ model DeveloperEmailBroadcastRecipient {
 }
 
 model DeveloperEmailAutomation {
-  id          String                        @id @default(uuid())
+  id          String                         @id @default(uuid())
   userId      String
   name        String
-  triggerType String                        @default("webhook")
-  actionType  String                        @default("send_email")
-  configJson  Json                          @default("{}")
+  triggerType String                         @default("webhook")
+  actionType  String                         @default("send_email")
+  configJson  Json                           @default("{}")
   status      DeveloperEmailAutomationStatus @default(ACTIVE)
-  runsTotal   Int                           @default(0)
-  createdAt   DateTime                      @default(now())
-  updatedAt   DateTime                      @updatedAt
+  runsTotal   Int                            @default(0)
+  createdAt   DateTime                       @default(now())
+  updatedAt   DateTime                       @updatedAt
 
-  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  runs        DeveloperEmailAutomationRun[]
+  user User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs DeveloperEmailAutomationRun[]
 
   @@index([userId, status])
   @@map("developer_email_automations")
@@ -3705,32 +3709,35 @@ enum MailAuthenticationVerdict {
 
 /// Mail workspace/app owned by a user account (independent of DeveloperApp)
 model MailApp {
-  id                 String                @id @default(uuid())
+  id                        String                @id @default(uuid())
   /// Public 16-digit id used by the Mail product UI
-  appId              String                @unique
-  userId             String
+  appId                     String                @unique
+  userId                    String
   /// Stable per-user URL slot: /u0, /u1, … (never reused)
-  slotIndex          Int
-  name               String
-  contactEmail       String?
-  appType            MailAppType           @default(BUSINESS)
-  description        String?
-  status             MailAppStatus         @default(ACTIVE)
+  slotIndex                 Int
+  name                      String
+  contactEmail              String?
+  appType                   MailAppType           @default(BUSINESS)
+  description               String?
+  status                    MailAppStatus         @default(ACTIVE)
   /// Optional primary domain label cached for list UI
-  primaryDomain      String?
-  domainStatus       MailDomainStatus      @default(NONE)
-  domainCheckedAt    DateTime?
+  primaryDomain             String?
+  domainStatus              MailDomainStatus      @default(NONE)
+  domainCheckedAt           DateTime?
+  /// Per-workspace TXT challenge token (_rukny-verify).
+  domainOwnershipToken      String?
+  domainOwnershipVerifiedAt DateTime?
   /// Rukny's administrative trust decision; separate from SES/DNS verification.
-  domainTrustStatus  MailDomainTrustStatus @default(UNVERIFIED)
-  domainVerifiedAt   DateTime?
-  domainReviewedById String?
-  domainTrustReason  String?
+  domainTrustStatus         MailDomainTrustStatus @default(UNVERIFIED)
+  domainVerifiedAt          DateTime?
+  domainReviewedById        String?
+  domainTrustReason         String?
   /// When true (and MAIL_BODY_ENCRYPTION_ENABLED), new mail bodies are envelope-encrypted.
-  bodyEncryptionEnabled Boolean           @default(false)
+  bodyEncryptionEnabled     Boolean               @default(false)
   /// Optional link to a Developer app for unified Mail + Email API billing.
-  linkedDeveloperAppId  String?
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  linkedDeveloperAppId      String?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
 
   user                       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedDeveloperApp         DeveloperApp?                   @relation("mail_linked_developer_app", fields: [linkedDeveloperAppId], references: [id], onDelete: SetNull)
@@ -3747,6 +3754,9 @@ model MailApp {
   securitySettings           MailAppSecuritySettings?
   quarantineActionLogs       MailQuarantineActionLog[]
   domainVerificationRequests MailDomainVerificationRequest[]
+  ssoSettings                MailAppSsoSettings?
+  ssoAccessLinks             MailSsoAccessLink[]
+  identityProvider           MailAppIdentityProvider?
 
   @@unique([userId, slotIndex])
   @@index([userId])
@@ -3818,6 +3828,115 @@ model MailAppEmailInvite {
   @@map("mail_app_email_invites")
 }
 
+/// Workspace quick sign-in (SSO) preferences for teammates and assigned mailboxes.
+model MailAppSsoSettings {
+  id                             String   @id @default(uuid())
+  mailAppId                      String   @unique
+  quickLinkEnabled               Boolean  @default(true)
+  /// Accept the pending team invite automatically when the access link is opened.
+  autoAcceptOnLink               Boolean  @default(true)
+  /// Assignees open their mailbox with their Rukny session (no mailbox password).
+  skipMailboxPasswordForAssigned Boolean  @default(true)
+  linkTtlHours                   Int      @default(72)
+  /// When non-empty, quick links may only be issued to these email domains.
+  allowedEmailDomains            String[] @default([])
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+
+  @@map("mail_app_sso_settings")
+}
+
+/// One-time "open your mailbox" link: signs the teammate in, joins the workspace and opens the mailbox.
+model MailSsoAccessLink {
+  id            String    @id @default(uuid())
+  mailAppId     String
+  /// sha256 of the raw token; the raw token is only ever sent by email / shown once.
+  tokenHash     String    @unique
+  email         String
+  mailboxId     String?
+  memberId      String?
+  emailInviteId String?
+  createdBy     String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  usedByUserId  String?
+  revokedAt     DateTime?
+  lastSentAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  mailApp MailApp      @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailbox MailMailbox? @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+  creator User         @relation("mail_sso_link_creator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([mailAppId])
+  @@index([email])
+  @@index([mailboxId])
+  @@index([expiresAt])
+  @@map("mail_sso_access_links")
+}
+
+enum MailIdentityProviderType {
+  OIDC
+  SAML
+}
+
+enum MailIdentityProviderPreset {
+  GOOGLE_WORKSPACE
+  MICROSOFT_ENTRA
+  CUSTOM
+}
+
+/// Enterprise identity provider (OIDC) bound to a workspace's verified email domain.
+model MailAppIdentityProvider {
+  id                        String                     @id @default(uuid())
+  mailAppId                 String                     @unique
+  type                      MailIdentityProviderType   @default(OIDC)
+  preset                    MailIdentityProviderPreset @default(CUSTOM)
+  enabled                   Boolean                    @default(false)
+  issuer                    String
+  clientId                  String
+  /// AES-256-GCM ciphertext (never returned to clients).
+  clientSecretEncrypted     String
+  /// Lowercase email domain used for IdP discovery; must match the verified workspace domain.
+  emailDomain               String                     @unique
+  jitProvisioning           Boolean                    @default(true)
+  defaultRole               MailAppMemberRole          @default(MEMBER)
+  /// Members on emailDomain may not unlock mailboxes with a mailbox password.
+  enforceSso                Boolean                    @default(false)
+  autoMapMailboxByLocalPart Boolean                    @default(true)
+  lastTestedAt              DateTime?
+  lastTestError             String?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+
+  mailApp    MailApp           @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  identities MailSsoIdentity[]
+
+  @@map("mail_app_identity_providers")
+}
+
+/// Link between an IdP subject (`sub`) and a Rukny user.
+model MailSsoIdentity {
+  id                 String    @id @default(uuid())
+  identityProviderId String
+  subject            String
+  userId             String
+  email              String
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  identityProvider MailAppIdentityProvider @relation(fields: [identityProviderId], references: [id], onDelete: Cascade)
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([identityProviderId, subject])
+  @@index([userId])
+  @@map("mail_sso_identities")
+}
+
 /// Auditable request/decision history for Rukny's administrative domain trust.
 model MailDomainVerificationRequest {
   id              String                              @id @default(uuid())
@@ -3882,42 +4001,46 @@ enum MailMailboxStatus {
 
 /// Email address / mailbox under a Mail app domain
 model MailMailbox {
-  id               String            @id @default(uuid())
-  mailAppId        String
+  id                   String            @id @default(uuid())
+  mailAppId            String
   /// Local part before @ (e.g. info)
-  localPart        String
+  localPart            String
   /// Domain at creation time (usually MailApp.primaryDomain)
-  domain           String
-  displayName      String?
+  domain               String
+  displayName          String?
   /// S3 object key for mailbox profile photo (served via /api/media/…)
-  avatarKey        String?
+  avatarKey            String?
   /// bcrypt hash — required for new mailboxes; optional for legacy rows
-  passwordHash     String?
+  passwordHash         String?
   /// Optional mailbox-level TOTP 2FA
-  totpEnabled      Boolean           @default(false)
-  totpSecret       String?
+  totpEnabled          Boolean           @default(false)
+  totpSecret           String?
   /// Rukny user who may open this mailbox via SSO (no mailbox password).
-  assignedUserId   String?
+  assignedUserId       String?
+  /// Reserved for a teammate who has not joined yet; becomes assignedUserId on first quick sign-in.
+  pendingAssigneeEmail String?
   /// UTF-8 body bytes stored in this mailbox (send + inbound)
-  storageUsedBytes BigInt            @default(0)
-  status           MailMailboxStatus @default(ACTIVE)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  storageUsedBytes     BigInt            @default(0)
+  status               MailMailboxStatus @default(ACTIVE)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  mailApp      MailApp         @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
-  assignedUser User?           @relation("mail_mailbox_assignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  messages     MailMessage[]
-  attachments  MailAttachment[]
-  catchAlls    MailCatchAll[]
-  autoReply    MailAutoReply?
-  aliases      MailAlias[]
-  forwarders   MailForwarder[]
-  filterRules  MailFilterRule[]
-  appPasswords MailAppPassword[]
+  mailApp        MailApp             @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  assignedUser   User?               @relation("mail_mailbox_assignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages       MailMessage[]
+  attachments    MailAttachment[]
+  catchAlls      MailCatchAll[]
+  autoReply      MailAutoReply?
+  aliases        MailAlias[]
+  forwarders     MailForwarder[]
+  filterRules    MailFilterRule[]
+  appPasswords   MailAppPassword[]
+  ssoAccessLinks MailSsoAccessLink[]
 
   @@unique([domain, localPart])
   @@index([mailAppId])
   @@index([assignedUserId])
+  @@index([pendingAssigneeEmail])
   @@index([status])
   @@index([createdAt])
   @@map("mail_mailboxes")
@@ -4083,15 +4206,15 @@ model MailFilterRule {
 
 /// Workspace-level anti-spam and quarantine preferences
 model MailAppSecuritySettings {
-  mailAppId            String  @id
-  quarantineSuspicious Boolean @default(true)
-  notifyOnQuarantine   Boolean @default(false)
+  mailAppId                        String   @id
+  quarantineSuspicious             Boolean  @default(true)
+  notifyOnQuarantine               Boolean  @default(false)
   /// Days before quarantined messages are auto-deleted (0 = never)
-  quarantineRetentionDays Int @default(30)
+  quarantineRetentionDays          Int      @default(30)
   /// Off by default — avoids false positives on legitimate new senders
-  quarantineNewSendersWithoutDmarc Boolean @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  quarantineNewSendersWithoutDmarc Boolean  @default(false)
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
 
   mailApp MailApp @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
 
@@ -4183,39 +4306,39 @@ model MailMessage {
   bccAddresses String[]                   @default([])
   replyTo      String?
 
-  subject  String  @default("")
-  bodyText String? @db.Text
-  bodyHtml String? @db.Text
+  subject            String               @default("")
+  bodyText           String?              @db.Text
+  bodyHtml           String?              @db.Text
   bodyCryptoStatus   MailBodyCryptoStatus @default(NONE)
   bodyCryptoVersion  Int?
   bodyKmsKeyId       String?
   bodyEncryptedDek   Bytes?
   bodyTextCiphertext Bytes?
   bodyHtmlCiphertext Bytes?
-  snippet  String?
+  snippet            String?
 
   isRead    Boolean @default(false)
   isStarred Boolean @default(false)
 
-  sesMessageId String?
-  errorMessage String?
+  sesMessageId        String?
+  errorMessage        String?
   /// webmail | smtp — null for inbound/system rows
-  clientSource String?
+  clientSource        String?
   /// Raw MIME object key after inbound S3 delivery (future)
-  rawS3Key     String?
+  rawS3Key            String?
   /// Filter rule that matched at inbound time (if any)
-  matchedRuleId    String?
+  matchedRuleId       String?
   /// Why the message was quarantined (e.g. ses_gray, partial_auth, rule:uuid)
-  quarantineReason String?
+  quarantineReason    String?
   /// Auto-delete quarantined mail after this time (null = no expiry)
   quarantineExpiresAt DateTime?
 
-  sentAt     DateTime?
-  receivedAt DateTime?
+  sentAt      DateTime?
+  receivedAt  DateTime?
   /// When set in the future, message stays in DRAFTS until sent by scheduler.
   scheduledAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   mailbox     MailMailbox      @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4263,25 +4386,25 @@ enum MailPlan {
 }
 
 model MailSubscription {
-  id                 String             @id @default(uuid())
+  id                  String             @id @default(uuid())
   /// Owning Mail app — unique so each app has its own plan/seats/storage
-  mailAppId          String             @unique
+  mailAppId           String             @unique
   /// Owner snapshot (not unique: one user can have many Mail apps)
-  userId             String
-  plan               MailPlan
-  status             SubscriptionStatus @default(ACTIVE)
-  billingCycle       BillingCycle       @default(MONTHLY)
+  userId              String
+  plan                MailPlan
+  status              SubscriptionStatus @default(ACTIVE)
+  billingCycle        BillingCycle       @default(MONTHLY)
   /// Billed mailbox seats for this app (monthly total = base + extras)
-  mailboxCount       Int                @default(1)
+  mailboxCount        Int                @default(1)
   /// Outbound emails sent in the current billing period (included + packs)
-  outboundUsed       Int                @default(0)
+  outboundUsed        Int                @default(0)
   /// Remaining prepaid outbound emails purchased for this period
-  outboundPackCredits Int               @default(0)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  cancelledAt        DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  outboundPackCredits Int                @default(0)
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   mailApp  MailApp                   @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
   user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)

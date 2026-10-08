@@ -14,6 +14,10 @@ export type MailDomainBinding = {
   dkimTokens?: string[];
   /** ISO time of last successful SES status read used for this binding. */
   sesCheckedAt?: string;
+  /** Per-workspace TXT challenge for _rukny-verify. */
+  ownershipToken?: string;
+  /** ISO time ownership TXT was confirmed. */
+  ownershipVerifiedAt?: string;
 };
 
 /** Keyed by Mail appId — one domain per app; domains are unique across apps. */
@@ -78,7 +82,15 @@ export async function findMailAppIdByDomain(domain: string): Promise<string | nu
 
 export async function upsertMailDomainBinding(
   mailAppId: string,
-  binding: Pick<MailDomainBinding, "domain" | "status" | "dkimTokens" | "sesCheckedAt">,
+  binding: Pick<
+    MailDomainBinding,
+    | "domain"
+    | "status"
+    | "dkimTokens"
+    | "sesCheckedAt"
+    | "ownershipToken"
+    | "ownershipVerifiedAt"
+  >,
 ) {
   const domain = binding.domain.trim().toLowerCase();
   const map = await readMap();
@@ -99,6 +111,9 @@ export async function upsertMailDomainBinding(
     updatedAt: new Date().toISOString(),
     dkimTokens: binding.dkimTokens ?? previous?.dkimTokens,
     sesCheckedAt: binding.sesCheckedAt ?? previous?.sesCheckedAt,
+    ownershipToken: binding.ownershipToken ?? previous?.ownershipToken,
+    ownershipVerifiedAt:
+      binding.ownershipVerifiedAt ?? previous?.ownershipVerifiedAt,
   };
 
   // Skip write when nothing meaningful changed.
@@ -106,7 +121,9 @@ export async function upsertMailDomainBinding(
     previous &&
     previous.domain === next.domain &&
     previous.status === next.status &&
-    JSON.stringify(previous.dkimTokens ?? []) === JSON.stringify(next.dkimTokens ?? [])
+    JSON.stringify(previous.dkimTokens ?? []) === JSON.stringify(next.dkimTokens ?? []) &&
+    previous.ownershipToken === next.ownershipToken &&
+    previous.ownershipVerifiedAt === next.ownershipVerifiedAt
   ) {
     return previous;
   }

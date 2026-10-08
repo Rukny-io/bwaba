@@ -1,37 +1,21 @@
-import Link from 'next/link';
+import { Suspense } from 'react';
+import { SettingsView } from '@/components/settings/settings-view';
 
-const settingsLinks = [
-  {
-    href: '/app/settings/appearance',
-    title: 'المظهر',
-    description: 'تخصيص ألوان وخلفية صفحتك العامة',
-  },
-];
+function SettingsViewFallback() {
+  return (
+    <div className="flex flex-col gap-4 pt-2">
+      <div className="h-8 w-48 animate-pulse rounded-lg bg-[var(--surface-secondary)]" />
+      <div className="h-40 animate-pulse rounded-2xl bg-[var(--surface-secondary)]" />
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   return (
-    <div className="dashboard-page dashboard-section-stack">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
-          الإعدادات
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          إدارة حسابك وصفحتك الشخصية.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {settingsLinks.map(({ href, title, description }) => (
-          <Link
-            key={href}
-            href={href}
-            className="dashboard-panel block transition-shadow hover:shadow-md"
-          >
-            <h2 className="text-base font-semibold text-[var(--foreground)]">{title}</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">{description}</p>
-          </Link>
-        ))}
-      </div>
+    <div className="dashboard-page flex w-full min-w-0 flex-col pt-5 sm:pt-6">
+      <Suspense fallback={<SettingsViewFallback />}>
+        <SettingsView />
+      </Suspense>
     </div>
   );
 }

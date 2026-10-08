@@ -142,7 +142,11 @@ function ProductsTableComponent({ products, className }: ProductsTableProps) {
     <div
       className={cn(
         '[&_.table-root--primary]:bg-transparent [&_.table-root--primary]:p-0',
-        '[&_.table__row:last-child_.table__cell]:border-b-0',
+        '[&_.table__header]:border-0',
+        '[&_.table__row]:border-0',
+        '[&_.table__cell]:border-0',
+        '[&_.table-root--secondary_.table__row_.table__cell]:border-0',
+        '[&_.table__column]:after:hidden',
         className,
       )}
     >

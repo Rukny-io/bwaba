@@ -12,6 +12,7 @@ WORKDIR /app
 COPY packages/auth ./packages/auth
 COPY packages/email-api-pricing ./packages/email-api-pricing
 COPY packages/mail-pricing ./packages/mail-pricing
+COPY packages/domain-verification ./packages/domain-verification
 COPY packages/forms-shared ./packages/forms-shared
 COPY packages/Thmanyah-Font-Family ./packages/Thmanyah-Font-Family
 COPY apps/mail/package.json apps/mail/package-lock.json* ./apps/mail/
@@ -29,6 +30,8 @@ RUN --mount=type=cache,id=npm-mail,target=/root/.npm \
   && npm --prefix /app/packages/email-api-pricing run build \
   && npm --prefix /app/packages/mail-pricing install --no-audit --no-fund \
   && npm --prefix /app/packages/mail-pricing run build \
+  && npm --prefix /app/packages/domain-verification install --no-audit --no-fund \
+  && npm --prefix /app/packages/domain-verification run build \
   && node -e "const fs=require('fs');const path=require('path');function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.name==='package.json'){const pkg=JSON.parse(fs.readFileSync(p,'utf8'));for(const field of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){if(!pkg[field])continue;for(const [k,v] of Object.entries(pkg[field])){if(String(v).startsWith('workspace:'))delete pkg[field][k];}}fs.writeFileSync(p,JSON.stringify(pkg,null,2)+'\n');}}}walk('packages');" \
   && npm config set fetch-retries 10 \
   && npm config set fetch-timeout 600000 \
@@ -45,6 +48,7 @@ COPY --from=deps /app/apps/mail/node_modules ./node_modules
 COPY --from=deps /app/packages/auth /app/packages/auth
 COPY --from=deps /app/packages/email-api-pricing /app/packages/email-api-pricing
 COPY --from=deps /app/packages/mail-pricing /app/packages/mail-pricing
+COPY --from=deps /app/packages/domain-verification /app/packages/domain-verification
 COPY --from=deps /app/packages/forms-shared /app/packages/forms-shared
 COPY --from=deps /app/packages/Thmanyah-Font-Family /app/packages/Thmanyah-Font-Family
 
@@ -56,6 +60,8 @@ RUN node scripts/materialize-workspace-deps.mjs \
   && cp -a /app/packages/email-api-pricing node_modules/@rukny/email-api-pricing \
   && rm -rf node_modules/@rukny/mail-pricing \
   && cp -a /app/packages/mail-pricing node_modules/@rukny/mail-pricing \
+  && rm -rf node_modules/@rukny/domain-verification \
+  && cp -a /app/packages/domain-verification node_modules/@rukny/domain-verification \
   && rm -rf node_modules/@rukny/forms-shared \
   && cp -a /app/packages/forms-shared node_modules/@rukny/forms-shared \
   && rm -rf node_modules/@rukny/thmanyah-font \

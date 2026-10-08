@@ -12,6 +12,7 @@ const repoRoot = path.resolve(appDir, "../..");
 
 const workspaceDeps = [
   { name: "@rukny/auth", src: "packages/auth" },
+  { name: "@rukny/domain-verification", src: "packages/domain-verification" },
   { name: "@rukny/email-api-pricing", src: "packages/email-api-pricing" },
   { name: "@rukny/mail-pricing", src: "packages/mail-pricing" },
   { name: "@rukny/forms-shared", src: "packages/forms-shared" },

@@ -1,0 +1,8 @@
+alqasehio.shop. 3600 IN MX 10 inbound-smtp.eu-north-1.amazonaws.com.
+alqasehio.shop. 3600 IN TXT "v=spf1 include:amazonses.com ~all"
+pinsa6dojtgisnlbivplohnpcpb3ukyq._domainkey.alqasehio.shop. 3600 IN CNAME pinsa6dojtgisnlbivplohnpcpb3ukyq.dkim.amazonses.com.
+ae3qocboyw6kaftzorkp3ieinmjpkamc._domainkey.alqasehio.shop. 3600 IN CNAME ae3qocboyw6kaftzorkp3ieinmjpkamc.dkim.amazonses.com.
+pkdbfmn6lnwigctbjkyxdpqrwse5lg2y._domainkey.alqasehio.shop. 3600 IN CNAME pkdbfmn6lnwigctbjkyxdpqrwse5lg2y.dkim.amazonses.com.
+_dmarc.alqasehio.shop. 3600 IN TXT "v=DMARC1; p=none;"
+mail.alqasehio.shop. 3600 IN MX 10 feedback-smtp.eu-north-1.amazonses.com.
+mail.alqasehio.shop. 3600 IN TXT "v=spf1 include:amazonses.com ~all"

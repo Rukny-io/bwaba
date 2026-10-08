@@ -19,7 +19,7 @@ function downloadFile(filename: string, contents: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-const COLUMNS = "grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1.45fr)]";
+const COLUMNS = "grid-cols-[2.75rem_3.5rem_minmax(0,1fr)_minmax(0,1.45fr)]";
 
 function groupedRecords(records: MailDnsRecord[]) {
   const ownership = records.filter((record) => record.purpose === "RUKNY_OWNERSHIP");
@@ -206,6 +206,9 @@ export function DnsRecordsTable({
                 Pri
               </span>
               <span className="pb-1.5 text-[11px] font-medium tracking-wide text-[var(--muted-foreground)]">
+                Type
+              </span>
+              <span className="pb-1.5 text-[11px] font-medium tracking-wide text-[var(--muted-foreground)]">
                 Host
               </span>
               <span className="pb-1.5 text-[11px] font-medium tracking-wide text-[var(--muted-foreground)]">
@@ -216,6 +219,9 @@ export function DnsRecordsTable({
                 <div key={record.id} className="contents">
                   <span className="flex min-h-9 items-center border-t border-[var(--border)]/50 text-[12px] tabular-nums text-[var(--muted-foreground)]">
                     {record.priority ?? "—"}
+                  </span>
+                  <span className="flex min-h-9 items-center border-t border-[var(--border)]/50 font-mono text-[12px] font-semibold text-[var(--foreground)]">
+                    {record.type}
                   </span>
                   <div className="min-w-0 border-t border-[var(--border)]/50">
                     <CopyCell

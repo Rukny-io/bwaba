@@ -48,7 +48,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const records = buildDnsRecords(domain, ses.tokens);
+    const records = buildDnsRecords(
+      domain,
+      ses.tokens,
+      binding.ownershipToken,
+    );
     const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], ses.tokens);
 
     return NextResponse.json(

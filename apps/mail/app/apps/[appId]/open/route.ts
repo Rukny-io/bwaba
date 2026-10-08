@@ -8,11 +8,7 @@ import { isValidMailAppId, MAIL_APP_ID_COOKIE } from "@/lib/mail-app-id";
 import { apiFetchJson, requireMailSession } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { warmMailAppOwnerCache } from "@/lib/require-mail-app";
-import {
-  buildSlotMap,
-  invalidateUserSlotMap,
-  setCachedUserSlotMap,
-} from "@/lib/mail-slot-map";
+import { buildSlotMap, setCachedUserSlotMap } from "@/lib/mail-slot-map";
 import {
   MAIL_BOUND_DOMAIN_COOKIE,
   MAIL_PLAN_COOKIE,
@@ -44,6 +40,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
       appId: string;
       name: string;
       primaryDomain: string | null;
+      domainStatus?: string;
       slotIndex: number;
       isOwner?: boolean;
     };
@@ -62,7 +59,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
     return NextResponse.redirect(new URL("/apps?error=invalid", origin));
   }
 
-  const isOwner = appResult.data.app.isOwner !== false;
+  const isOwner = appResult.data.app.isOwner === true;
 
   const jar = await cookies();
   const accessToken =
@@ -71,21 +68,22 @@ export async function GET(request: Request, ctx: RouteCtx) {
     await warmMailAppOwnerCache(appId, session.userId, session.email, accessToken);
   }
 
-  // Refresh slot map so /uN resolves immediately.
+  // Refresh slot map so /uN resolves immediately. Always pin the opened app —
+  // team members can be missing from a stale list when slotIndex was just fixed.
   const listResult = await apiFetchJson<{
     apps: { appId: string; slotIndex: number }[];
   }>("/mail/apps");
-  if (listResult.ok) {
-    await setCachedUserSlotMap(
-      session.userId,
-      buildSlotMap(listResult.data.apps ?? []),
-    );
-  } else {
-    await invalidateUserSlotMap(session.userId);
-  }
+  const slotMap = listResult.ok
+    ? buildSlotMap(listResult.data.apps ?? [])
+    : buildSlotMap([]);
+  slotMap.slots[String(slotIndex)] = appId;
+  slotMap.apps[appId] = slotIndex;
+  await setCachedUserSlotMap(session.userId, slotMap);
 
   const binding = await getMailDomainBinding(appId);
-  const domainReady = binding?.status === "ACTIVE";
+  const domainReady =
+    binding?.status === "ACTIVE" ||
+    appResult.data.app.domainStatus === "ACTIVE";
 
   // Domain write-back is owner-only. Team members (added by admin) must not PATCH.
   if (isOwner) {

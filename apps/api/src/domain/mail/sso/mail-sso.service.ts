@@ -838,6 +838,24 @@ export class MailSsoService {
     let mailbox: { id: string; address: string } | null = null;
     let mailboxSessionToken: string | null = null;
     if (link.mailboxId) {
+      // Bind the linked mailbox to this user when still free or already theirs.
+      await this.prisma.mailMailbox.updateMany({
+        where: {
+          id: link.mailboxId,
+          mailAppId: app.id,
+          OR: [
+            { assignedUserId: null },
+            { assignedUserId: userId },
+            {
+              pendingAssigneeEmail: {
+                equals: link.email,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        },
+        data: { assignedUserId: userId, pendingAssigneeEmail: null },
+      });
       const box = await this.prisma.mailMailbox.findFirst({
         where: { id: link.mailboxId, mailAppId: app.id },
         select: { id: true, localPart: true, domain: true, status: true, assignedUserId: true },
@@ -876,7 +894,10 @@ export class MailSsoService {
   ): Promise<number> {
     if (app.userId === userId) return app.slotIndex;
     if (member?.status === InvitationStatus.ACCEPTED) {
-      return member.slotIndex ?? 0;
+      const slot =
+        member.slotIndex ??
+        (await this.members.ensureAcceptedMemberSlot(app.id, userId));
+      return slot ?? 0;
     }
     if (member?.status === InvitationStatus.PENDING) {
       const accepted = await this.members.acceptInvitation(userId, member.id);

@@ -34,6 +34,7 @@ import { MailSubscriptionsService } from './mail-subscriptions.service';
 import { MailAppAccessService } from './mail-app-access.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 import { MailPlanQuotaService } from './mail-plan-quota.service';
+import { MailMembersService } from './mail-members.service';
 import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 
 const OTP_EXPIRY_MINUTES = 5;
@@ -53,6 +54,7 @@ export class MailAppsService {
     private readonly access: MailAppAccessService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
     private readonly planQuota: MailPlanQuotaService,
+    private readonly members: MailMembersService,
   ) {}
 
   private isUnifiedBillingOnly(): boolean {
@@ -303,7 +305,6 @@ export class MailAppsService {
           userId,
           status: InvitationStatus.ACCEPTED,
           mailApp: { status: MailAppStatus.ACTIVE },
-          slotIndex: { not: null },
         },
         include: {
           mailApp: { include: { subscription: true } },
@@ -312,6 +313,19 @@ export class MailAppsService {
       }),
     ]);
 
+    const memberViews = await Promise.all(
+      memberships.map(async (m) => {
+        const slotIndex =
+          m.slotIndex ??
+          (await this.members.ensureAcceptedMemberSlot(m.mailAppId, userId));
+        return this.toView(m.mailApp, m.mailApp.subscription, {
+          membershipRole: m.role,
+          isOwner: false,
+          slotIndexOverride: slotIndex ?? undefined,
+        });
+      }),
+    );
+
     const apps = [
       ...owned.map((app) =>
         this.toView(app, app.subscription, {
@@ -319,13 +333,7 @@ export class MailAppsService {
           isOwner: true,
         }),
       ),
-      ...memberships.map((m) =>
-        this.toView(m.mailApp, m.mailApp.subscription, {
-          membershipRole: m.role,
-          isOwner: false,
-          slotIndexOverride: m.slotIndex ?? undefined,
-        }),
-      ),
+      ...memberViews,
     ].sort((a, b) => a.slotIndex - b.slotIndex);
 
     return { apps };
@@ -346,15 +354,11 @@ export class MailAppsService {
     let membershipRole = 'OWNER';
     if (!access.isOwner) {
       membershipRole = String(access.role);
-      const membership = await this.prisma.mailAppMember.findUnique({
-        where: {
-          mailAppId_userId: { mailAppId: app.id, userId },
-        },
-      });
-      if (membership?.slotIndex != null) {
-        slotIndexOverride = membership.slotIndex;
+      const ensured = await this.members.ensureAcceptedMemberSlot(app.id, userId);
+      if (ensured != null) {
+        slotIndexOverride = ensured;
       } else {
-        // Assigned-only access without accepted membership row slot — allocate temp view slot.
+        // Assigned-only access without accepted membership — allocate temp view slot.
         const ownedMax = await this.prisma.mailApp.aggregate({
           where: { userId },
           _max: { slotIndex: true },

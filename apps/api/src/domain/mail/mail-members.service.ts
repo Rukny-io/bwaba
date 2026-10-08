@@ -1073,6 +1073,32 @@ export class MailMembersService {
   }
 
   /**
+   * Team members need a stable /uN slot in the Mail slot map.
+   * Older invites sometimes left slotIndex null → inbox opens as not_found.
+   */
+  async ensureAcceptedMemberSlot(
+    mailAppId: string,
+    userId: string,
+  ): Promise<number | null> {
+    const member = await this.prisma.mailAppMember.findUnique({
+      where: { mailAppId_userId: { mailAppId, userId } },
+      select: { id: true, status: true, slotIndex: true },
+    });
+    if (!member || member.status !== InvitationStatus.ACCEPTED) {
+      return null;
+    }
+    if (member.slotIndex != null) {
+      return member.slotIndex;
+    }
+    const slotIndex = await this.allocateMemberSlot(userId);
+    await this.prisma.mailAppMember.update({
+      where: { id: member.id },
+      data: { slotIndex },
+    });
+    return slotIndex;
+  }
+
+  /**
    * Enterprise SSO: the IdP already vouched for the email, so pending invites are
    * accepted directly and (with JIT) unknown users get a seat with `defaultRole`.
    */

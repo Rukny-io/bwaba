@@ -45,7 +45,7 @@ export function OrderDetailSheet({
       variant="blur"
       className="!bg-black/5 !backdrop-blur-[3px]"
     >
-      <Drawer.Content placement="left" dir="ltr">
+      <Drawer.Content placement="left">
         <Drawer.Dialog
           dir="rtl"
           lang="ar"

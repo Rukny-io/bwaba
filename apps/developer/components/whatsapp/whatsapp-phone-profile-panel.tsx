@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Input, Label, TextField } from '@heroui/react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { AppImageUpload } from '@/components/settings/app-image-upload';
 import {
-  AppSettingsSection,
   settingsInputClassName,
   settingsLabelClassName,
   settingsTextareaClassName,
 } from '@/components/settings/app-settings-section';
-import { SettingsRowDivider } from '@/components/settings/settings-primitives';
+import {
+  PhoneStatusBadge,
+  whatsappBtnPrimary,
+  whatsappBtnSecondary,
+} from '@/components/whatsapp/whatsapp-ui';
 import { useWhatsappPhone } from '@/components/whatsapp/whatsapp-phone-context';
 import { useWhatsappMutations } from '@/hooks/use-whatsapp';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
@@ -41,6 +43,26 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function parseWebsites(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === 'string');
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className={settingsLabelClassName}>{label}</label>
+      {children}
+      {hint ? (
+        <p className="text-[12px] leading-relaxed text-[var(--muted-foreground)]">{hint}</p>
+      ) : null}
+    </div>
+  );
 }
 
 export function WhatsappPhoneProfilePanel() {
@@ -94,9 +116,9 @@ export function WhatsappPhoneProfilePanel() {
   }
 
   const phoneId = phone.id;
-
   const displayName =
     phone.verifiedName || phone.account?.businessName || w.businessName;
+  const displayNumber = phone.displayPhoneNumber || phone.phoneNumber;
 
   function updateWebsite(index: number, value: string) {
     setWebsites((prev) => prev.map((url, i) => (i === index ? value : url)));
@@ -171,9 +193,12 @@ export function WhatsappPhoneProfilePanel() {
   }
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
-      <AppSettingsSection flush title={w.profileTitle} description={w.profileDesc}>
+    <div className="dashboard-section-stack pb-28 sm:pb-0">
+      <p className="text-sm text-[var(--muted-foreground)]">{w.profileDesc}</p>
+
+      <section className="dashboard-panel overflow-hidden">
         <AppImageUpload
+          variant="hero"
           label={w.profilePicture}
           hint={w.profilePictureHint}
           value={profilePictureUrl}
@@ -183,81 +208,90 @@ export function WhatsappPhoneProfilePanel() {
           onUpload={(file) => handlePictureUpload(file)}
           onClear={() => setProfilePictureUrl('')}
         />
-
-        <SettingsRowDivider />
-
-        <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:gap-y-5 sm:p-5">
-          <div className="sm:col-span-2">
-            <p className={settingsLabelClassName}>{w.profileDisplayName}</p>
-            <Input
-              value={displayName}
-              readOnly
-              className={cn(settingsInputClassName, 'mt-1.5 opacity-80')}
-            />
-            <p className="mt-1.5 text-[12px] text-[var(--muted-foreground)]">
-              {w.profileDisplayNameHint}
-            </p>
+        <div className="border-t border-[var(--border)]/70 px-4 py-4 text-center sm:px-5 sm:text-start">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <h3 className="text-base font-semibold text-[var(--foreground)]">{displayName}</h3>
+            <PhoneStatusBadge status={phone.status} />
           </div>
-
-          <TextField className="sm:col-span-2">
-            <Label className={settingsLabelClassName}>{w.profileAbout}</Label>
-            <textarea
-              value={about}
-              onChange={(e) => setAbout(e.target.value.slice(0, MAX_ABOUT))}
-              rows={2}
-              className={settingsTextareaClassName}
-              placeholder={w.profileAboutHint}
-            />
-            <p className="mt-1 text-[11px] text-[var(--muted-foreground)]" dir="ltr">
-              {about.length}/{MAX_ABOUT}
-            </p>
-          </TextField>
-
-          <TextField className="sm:col-span-2">
-            <Label className={settingsLabelClassName}>{w.profileDescription}</Label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
-              rows={4}
-              className={settingsTextareaClassName}
-              placeholder={w.profileDescriptionHint}
-            />
-            <p className="mt-1 text-[11px] text-[var(--muted-foreground)]" dir="ltr">
-              {description.length}/{MAX_DESCRIPTION}
-            </p>
-          </TextField>
-
-          <TextField className="sm:col-span-2">
-            <Label className={settingsLabelClassName}>{w.profileAddress}</Label>
-            <Input
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className={settingsInputClassName}
-            />
-          </TextField>
-
-          <TextField>
-            <Label className={settingsLabelClassName}>{w.profileEmail}</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="hello@example.com"
-              dir="ltr"
-              className={settingsInputClassName}
-            />
-          </TextField>
+          <p className="mt-1 font-mono text-sm text-[var(--muted-foreground)]" dir="ltr">
+            {displayNumber}
+          </p>
+          <p className="mt-2 text-[12px] text-[var(--muted-foreground)]">
+            {w.profileDisplayNameHint}
+          </p>
         </div>
-      </AppSettingsSection>
+      </section>
 
-      <AppSettingsSection
-        title={w.profileWebsites}
-        description={w.profileWebsitesHint}
-      >
+      <section className="dashboard-panel space-y-5 p-4 sm:p-5">
+        <header>
+          <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
+            {w.profileTitle}
+          </h3>
+        </header>
+
+        <Field label={w.profileAbout}>
+          <textarea
+            value={about}
+            onChange={(e) => setAbout(e.target.value.slice(0, MAX_ABOUT))}
+            rows={3}
+            className={settingsTextareaClassName}
+            placeholder={w.profileAboutHint}
+          />
+          <p className="text-[11px] text-[var(--muted-foreground)]" dir="ltr">
+            {about.length}/{MAX_ABOUT}
+          </p>
+        </Field>
+
+        <Field label={w.profileDescription}>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
+            rows={4}
+            className={settingsTextareaClassName}
+            placeholder={w.profileDescriptionHint}
+          />
+          <p className="text-[11px] text-[var(--muted-foreground)]" dir="ltr">
+            {description.length}/{MAX_DESCRIPTION}
+          </p>
+        </Field>
+
+        <Field label={w.profileAddress}>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={settingsInputClassName}
+          />
+        </Field>
+
+        <Field label={w.profileEmail}>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="hello@example.com"
+            dir="ltr"
+            className={settingsInputClassName}
+          />
+        </Field>
+      </section>
+
+      <section className="dashboard-panel space-y-4 p-4 sm:p-5">
+        <header>
+          <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
+            {w.profileWebsites}
+          </h3>
+          <p className="mt-1 text-[13px] text-[var(--muted-foreground)]">
+            {w.profileWebsitesHint}
+          </p>
+        </header>
+
         <div className="space-y-3">
           {websites.map((url, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
+            <div
+              key={index}
+              className="flex flex-col gap-2 sm:flex-row sm:items-center"
+            >
+              <input
                 value={url}
                 onChange={(e) => updateWebsite(index, e.target.value)}
                 placeholder={w.profileWebsitePlaceholder}
@@ -268,10 +302,14 @@ export function WhatsappPhoneProfilePanel() {
                 <button
                   type="button"
                   onClick={() => removeWebsite(index)}
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                  className={cn(
+                    whatsappBtnSecondary,
+                    'w-full shrink-0 sm:w-auto sm:min-w-[2.75rem] sm:px-0',
+                  )}
                   aria-label={w.profileRemoveWebsite}
                 >
                   <Trash2 className="size-4" />
+                  <span className="sm:hidden">{w.profileRemoveWebsite}</span>
                 </button>
               ) : null}
             </div>
@@ -288,16 +326,33 @@ export function WhatsappPhoneProfilePanel() {
             </button>
           ) : null}
         </div>
-      </AppSettingsSection>
+      </section>
 
-      <div className="flex justify-end">
-        <Button
-          onPress={() => void handleSave()}
-          isDisabled={!dirty || profileMutation.isPending}
-          className="w-full rounded-full sm:w-auto"
-        >
-          {profileMutation.isPending ? w.profileSaving : w.profileSave}
-        </Button>
+      <div
+        className={cn(
+          'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-40',
+          'max-sm:border-t max-sm:border-[var(--border)]/80 max-sm:bg-[var(--background)]/95 max-sm:px-4 max-sm:py-3 max-sm:backdrop-blur-md',
+          'max-sm:pb-[max(calc(0.75rem+4.75rem),env(safe-area-inset-bottom))]',
+          'sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none',
+        )}
+      >
+        <div className="mx-auto flex max-w-3xl sm:justify-end">
+          <button
+            type="button"
+            disabled={!dirty || profileMutation.isPending}
+            onClick={() => void handleSave()}
+            className={cn(whatsappBtnPrimary, 'h-11 w-full sm:w-auto sm:min-w-[10rem]')}
+          >
+            {profileMutation.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {w.profileSaving}
+              </>
+            ) : (
+              w.profileSave
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

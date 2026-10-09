@@ -102,8 +102,8 @@ export function WhatsappPhoneChrome({ children }: { children: React.ReactNode })
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="dashboard-panel p-4 sm:p-5">
-        <div className="flex flex-col gap-4">
+      <section className="dashboard-panel p-3.5 sm:p-5">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Link
             href={appWhatsappHref(appId, 'phones')}
             className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -111,24 +111,25 @@ export function WhatsappPhoneChrome({ children }: { children: React.ReactNode })
             <ArrowLeft className="size-3.5" />
             {w.backToPhones}
           </Link>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2
-                  className="font-mono text-lg font-semibold text-[var(--foreground)] sm:text-xl"
-                  dir="ltr"
-                >
-                  {phone.displayPhoneNumber || phone.phoneNumber}
-                </h2>
-                <PhoneStatusBadge status={phone.status} />
-              </div>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                {phone.verifiedName || w.businessName}
-              </p>
-              <p className="mt-2 font-mono text-xs text-[var(--muted-foreground)]" dir="ltr">
-                {w.phonePublicId}: {phone.phoneId}
-              </p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                className="font-mono text-base font-semibold text-[var(--foreground)] sm:text-xl"
+                dir="ltr"
+              >
+                {phone.displayPhoneNumber || phone.phoneNumber}
+              </h2>
+              <PhoneStatusBadge status={phone.status} />
             </div>
+            <p className="mt-1 truncate text-sm text-[var(--muted-foreground)]">
+              {phone.verifiedName || w.businessName}
+            </p>
+            <p
+              className="mt-1.5 hidden font-mono text-xs text-[var(--muted-foreground)] sm:block"
+              dir="ltr"
+            >
+              {w.phonePublicId}: {phone.phoneId}
+            </p>
           </div>
           <WhatsappPhoneTabsNav />
         </div>

@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -95,9 +96,26 @@ export class WabaController {
   getTemplateLibrary(
     @CurrentUser('id') userId: string,
     @Query('appId') appId: string,
-    @Query() query: TemplateLibraryQueryDto,
     @Query('accountId') accountId?: string,
+    @Query('search') search?: string,
+    @Query('topic') topic?: string,
+    @Query('usecase') usecase?: string,
+    @Query('industry') industry?: string,
+    @Query('language') language?: string,
+    @Query('name') name?: string,
+    @Query('after') after?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
+    const query: TemplateLibraryQueryDto = {
+      search,
+      topic,
+      usecase,
+      industry,
+      language,
+      name,
+      after,
+      limit,
+    };
     return this.templatesService.browseLibrary(userId, appId, query, accountId);
   }
 

@@ -18,6 +18,8 @@ interface AppImageUploadProps {
   onUpload: (file: File) => Promise<void>;
   onClear?: () => void;
   shape?: 'square' | 'circle';
+  /** Row (settings) or centered hero (e.g. WhatsApp profile on mobile). */
+  variant?: 'row' | 'hero';
 }
 
 export function AppImageUpload({
@@ -29,6 +31,7 @@ export function AppImageUpload({
   onUpload,
   onClear,
   shape = 'square',
+  variant = 'row',
 }: AppImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [failed, setFailed] = useState(false);
@@ -46,11 +49,22 @@ export function AppImageUpload({
     await onUpload(file);
   }
 
+  const isHero = variant === 'hero';
+  const avatarSize = isHero ? 'size-20 sm:size-16' : 'size-11';
+
   return (
-    <div className="settings-row flex w-full items-center gap-3 px-4 py-3.5 sm:gap-3.5 sm:px-5 sm:py-4">
+    <div
+      className={cn(
+        'w-full',
+        isHero
+          ? 'flex flex-col items-center gap-4 px-4 py-6 text-center sm:flex-row sm:items-center sm:gap-5 sm:px-5 sm:py-5 sm:text-start'
+          : 'settings-row flex items-center gap-3 px-4 py-3.5 sm:gap-3.5 sm:px-5 sm:py-4',
+      )}
+    >
       <div
         className={cn(
-          'relative flex size-11 shrink-0 items-center justify-center overflow-hidden border border-[var(--border)]/80 bg-[var(--surface-secondary)]',
+          'relative flex shrink-0 items-center justify-center overflow-hidden border border-[var(--border)]/80 bg-[var(--surface-secondary)]',
+          avatarSize,
           shape === 'circle' ? 'rounded-full' : 'rounded-2xl',
         )}
       >
@@ -64,19 +78,39 @@ export function AppImageUpload({
             onError={() => setFailed(true)}
           />
         ) : (
-          <span className="text-sm font-semibold text-[var(--foreground)]">
+          <span
+            className={cn(
+              'font-semibold text-[var(--foreground)]',
+              isHero ? 'text-2xl sm:text-xl' : 'text-sm',
+            )}
+          >
             {initial}
           </span>
         )}
       </div>
 
-      <div className="min-w-0 flex-1 text-start">
-        <p className="text-[14px] font-medium leading-snug text-[var(--foreground)]">
+      <div className={cn('min-w-0', isHero ? 'w-full sm:flex-1' : 'flex-1 text-start')}>
+        <p
+          className={cn(
+            'font-medium leading-snug text-[var(--foreground)]',
+            isHero ? 'text-[15px] sm:text-[14px]' : 'text-[14px]',
+          )}
+        >
           {label}
         </p>
+        {isHero && hint ? (
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+            {hint}
+          </p>
+        ) : null}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div
+        className={cn(
+          'flex shrink-0 items-center gap-1.5',
+          isHero && 'w-full justify-center sm:w-auto sm:justify-end',
+        )}
+      >
         <button
           type="button"
           disabled={uploading}
@@ -84,7 +118,7 @@ export function AppImageUpload({
           className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)] disabled:opacity-60"
         >
           <ImagePlus className="size-3.5" strokeWidth={1.85} aria-hidden />
-          {hint ?? label}
+          {isHero ? label : (hint ?? label)}
         </button>
         {value && onClear ? (
           <button

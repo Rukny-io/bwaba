@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Loader2, Search } from 'lucide-react';
+import { BookOpen, LayoutTemplate, Loader2, Search } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { FormDropdown } from '@/components/ui/form-dropdown';
 import {
@@ -20,10 +20,10 @@ import {
   buildDefaultLibraryButtonInputs,
   defaultLibraryTemplateName,
   fillLibraryBodyPreview,
-  libraryTemplateNeedsButtonInputs,
 } from '@/lib/whatsapp-template-library';
 import { normalizeTemplateName } from '@/lib/whatsapp-template-builder';
 import { TEMPLATE_LANGUAGES } from '@/lib/whatsapp-template-builder';
+import { WhatsappTemplateTile } from '@/components/whatsapp/whatsapp-template-tile';
 import { cn } from '@/lib/utils';
 
 const LIBRARY_TOPICS = [
@@ -32,6 +32,15 @@ const LIBRARY_TOPICS = [
   'ORDER_MANAGEMENT',
   'PAYMENTS',
 ] as const;
+
+function libraryCategoryLabel(
+  category: string,
+  w: { categoryUTILITY: string; categoryAUTHENTICATION: string },
+) {
+  if (category === 'AUTHENTICATION') return w.categoryAUTHENTICATION;
+  if (category === 'UTILITY') return w.categoryUTILITY;
+  return category;
+}
 
 function LibraryTemplateCard({
   template,
@@ -42,36 +51,22 @@ function LibraryTemplateCard({
 }) {
   const w = useTranslations().whatsapp;
   const preview = fillLibraryBodyPreview(template.body, template.body_params);
+  const previewText =
+    [template.header, preview || template.body, template.footer]
+      .filter(Boolean)
+      .join(' · ') || template.name;
 
   return (
-    <article
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]"
-    >
-      <div className="flex-1 p-4">
-        <div className="rounded-xl bg-[#ECE5DD] p-3 text-start">
-          {template.header ? (
-            <p className="text-[12px] font-semibold text-[#1D1D1D]">{template.header}</p>
-          ) : null}
-          <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#1D1D1D]">
-            {preview || template.name}
-          </p>
-          {template.footer ? (
-            <p className="mt-2 text-[11px] text-[#6B6F76]">{template.footer}</p>
-          ) : null}
-        </div>
-      </div>
-      <div className="border-t border-[var(--border)] px-4 py-3">
-        <p className="truncate font-mono text-[11px] text-[var(--muted-foreground)]">
-          {template.name}
-        </p>
-        <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
-          {template.category} · {template.language}
-        </p>
-        <button type="button" onClick={onUse} className={`${whatsappBtnSecondary} mt-3 w-full`}>
-          {w.libraryUseTemplate}
-        </button>
-      </div>
-    </article>
+    <WhatsappTemplateTile
+      metaLabel={libraryCategoryLabel(template.category, w)}
+      title={template.name}
+      preview={previewText}
+      footerPrimary={w.libraryUseTemplate}
+      footerPrimaryTone="neutral"
+      footerExtra={template.language}
+      icon={LayoutTemplate}
+      onClick={onUse}
+    />
   );
 }
 
@@ -94,7 +89,6 @@ function UseLibraryTemplateDialog({
   const [urlBase, setUrlBase] = useState('https://example.com/{{1}}');
   const [phone, setPhone] = useState('+9640000000000');
 
-  const needsButtons = libraryTemplateNeedsButtonInputs(template);
   const hasUrlButton = template.buttons?.some((b) => b.type === 'URL');
   const hasPhoneButton = template.buttons?.some((b) => b.type === 'PHONE_NUMBER');
 
@@ -108,11 +102,23 @@ function UseLibraryTemplateDialog({
       return;
     }
 
+    const defaults = buildDefaultLibraryButtonInputs(template);
+    const buttonSources =
+      defaults.length > 0
+        ? defaults
+        : category === 'AUTHENTICATION'
+          ? [{ type: 'OTP', otp_type: 'COPY_CODE' }]
+          : [];
+
     let libraryTemplateButtonInputs: unknown[] | undefined;
-    if (needsButtons) {
-      const defaults = buildDefaultLibraryButtonInputs(template);
-      libraryTemplateButtonInputs = defaults.map((item) => {
-        const entry = item as { type: string; url?: { base_url: string; url_suffix_example: string }; phone_number?: string };
+    if (buttonSources.length > 0) {
+      libraryTemplateButtonInputs = buttonSources.map((item) => {
+        const entry = item as {
+          type: string;
+          url?: { base_url: string; url_suffix_example: string };
+          phone_number?: string;
+          otp_type?: string;
+        };
         if (entry.type === 'URL' && entry.url) {
           return {
             type: 'URL',
@@ -233,7 +239,7 @@ export function WhatsappTemplateLibraryPanel({
   const w = useTranslations().whatsapp;
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [language, setLanguage] = useState('en_US');
+  const [language, setLanguage] = useState('');
   const [topic, setTopic] = useState<string>('');
   const [category, setCategory] = useState<'UTILITY' | 'AUTHENTICATION' | ''>('');
   const [cursor, setCursor] = useState<string | undefined>();
@@ -255,10 +261,11 @@ export function WhatsappTemplateLibraryPanel({
       search: debouncedSearch || undefined,
       language: language || undefined,
       topic: topic || undefined,
-      limit: 24,
+      category: category || undefined,
+      limit: 50,
       after: cursor,
     }),
-    [debouncedSearch, language, topic, cursor],
+    [debouncedSearch, language, topic, category, cursor],
   );
 
   const { data, isLoading, isFetching, error } = useWhatsappTemplateLibrary(
@@ -284,20 +291,19 @@ export function WhatsappTemplateLibraryPanel({
     });
   }, [data?.data, cursor]);
 
-  const items = useMemo(() => {
-    if (!category) return accumulated;
-    return accumulated.filter((t) => t.category === category);
-  }, [accumulated, category]);
+  const items = accumulated;
 
   const nextCursor = data?.paging?.cursors?.after;
 
   const languageOptions = useMemo(
-    () =>
-      TEMPLATE_LANGUAGES.map((opt) => {
+    () => [
+      { id: '', label: w.libraryAllLanguages },
+      ...TEMPLATE_LANGUAGES.map((opt) => {
         const id =
           opt.value === 'en' ? 'en_US' : opt.value === 'ar' ? 'ar' : opt.value;
         return { id, label: w[opt.labelKey] };
       }),
+    ],
     [w],
   );
 
@@ -386,7 +392,7 @@ export function WhatsappTemplateLibraryPanel({
             {w.libraryResultsCount.replace('{count}', String(items.length))}
             {isFetching ? ' …' : ''}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid auto-rows-fr grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3">
             {items.map((template) => (
               <LibraryTemplateCard
                 key={`${template.id}-${template.name}`}

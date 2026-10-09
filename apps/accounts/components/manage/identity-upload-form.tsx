@@ -136,6 +136,7 @@ export function IdentityUploadForm({
       return;
     }
     setSessionLoading(true);
+    setSession(null);
     setError(null);
     try {
       const s = await createIdentityUploadSession();
@@ -294,9 +295,10 @@ export function IdentityUploadForm({
                 type="button"
                 disabled={submitting || success}
                 onClick={() => {
+                  if (value === documentType) return;
                   setDocumentType(value);
                   setUploadedSlots(new Set());
-                  initSession();
+                  void initSession();
                 }}
                 className={cn(
                   "rounded-full border px-3.5 py-1.5 text-sm transition-colors",
@@ -317,7 +319,7 @@ export function IdentityUploadForm({
             hint={slotHints[slot]}
             uploaded={uploadedSlots.has(slot)}
             uploading={uploadingSlot === slot}
-            disabled={submitting || success || !session}
+            disabled={submitting || success || !session || sessionLoading}
             onSelect={(file) => handleFile(slot, file)}
           />
         ))}

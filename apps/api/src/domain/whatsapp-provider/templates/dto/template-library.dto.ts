@@ -34,6 +34,11 @@ export class TemplateLibraryQueryDto {
   @IsString()
   language?: string;
 
+  /** Filter by Meta library category (server aggregates pages when set). */
+  @IsOptional()
+  @IsIn(['UTILITY', 'AUTHENTICATION'])
+  category?: string;
+
   @IsOptional()
   @IsString()
   name?: string;

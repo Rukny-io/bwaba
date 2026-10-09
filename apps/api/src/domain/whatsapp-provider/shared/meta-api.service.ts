@@ -128,11 +128,23 @@ export class MetaApiService {
     },
   ) {
     const client = this.createClient(accessToken);
+    const raw = {
+      limit: params?.limit ?? 50,
+      search: params?.search,
+      topic: params?.topic,
+      usecase: params?.usecase,
+      industry: params?.industry,
+      language: params?.language,
+      name: params?.name,
+      after: params?.after,
+    };
+    const query = Object.fromEntries(
+      Object.entries(raw).filter(
+        ([, value]) => value !== undefined && value !== null && value !== '',
+      ),
+    );
     const response = await client.get('/message_template_library', {
-      params: {
-        limit: params?.limit ?? 50,
-        ...params,
-      },
+      params: query,
     });
     return response.data;
   }

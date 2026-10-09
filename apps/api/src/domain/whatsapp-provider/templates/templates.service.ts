@@ -181,6 +181,78 @@ export class TemplatesService {
   /**
    * Browse Meta Template Library (pre-built templates).
    */
+  private extractLibraryData(result: unknown): Record<string, unknown>[] {
+    if (!result || typeof result !== 'object') return [];
+    const record = result as { data?: unknown };
+    if (Array.isArray(record.data)) {
+      return record.data as Record<string, unknown>[];
+    }
+    if (Array.isArray(result)) {
+      return result as Record<string, unknown>[];
+    }
+    return [];
+  }
+
+  private async browseLibraryFromMeta(
+    accessToken: string,
+    query: TemplateLibraryQueryDto,
+  ) {
+    const pageSize = Math.min(query.limit ?? 50, 100);
+    const category = query.category;
+    const maxPages = category ? 15 : 1;
+    const targetCount = pageSize;
+
+    let after = query.after;
+    const merged: Record<string, unknown>[] = [];
+    let lastPaging: { cursors?: { after?: string } } | null = null;
+
+    for (let page = 0; page < maxPages; page++) {
+      const result = await this.metaApi.listTemplateLibrary(accessToken, {
+        search: query.search,
+        topic: query.topic,
+        usecase: query.usecase,
+        industry: query.industry,
+        language: query.language,
+        name: query.name,
+        after,
+        limit: category ? 100 : pageSize,
+      });
+
+      const batch = this.extractLibraryData(result);
+      lastPaging =
+        result && typeof result === 'object' && 'paging' in result
+          ? (result as { paging: typeof lastPaging }).paging
+          : null;
+
+      const slice = category
+        ? batch.filter((row) => row.category === category)
+        : batch;
+      merged.push(...slice);
+
+      after = lastPaging?.cursors?.after;
+      if (!after) break;
+      if (!category) break;
+      if (merged.length >= targetCount) break;
+    }
+
+    const seen = new Set<string>();
+    const data = merged.filter((row) => {
+      const id = String(row.id ?? row.name ?? '');
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    return {
+      data: category ? data.slice(0, targetCount) : data,
+      paging: category
+        ? after
+          ? { cursors: { after } }
+          : null
+        : lastPaging ?? null,
+    };
+  }
+
   async browseLibrary(
     userId: string,
     appId: string,
@@ -193,27 +265,7 @@ export class TemplatesService {
     );
 
     try {
-      const result = await this.metaApi.listTemplateLibrary(accessToken, {
-        search: query.search,
-        topic: query.topic,
-        usecase: query.usecase,
-        industry: query.industry,
-        language: query.language,
-        name: query.name,
-        after: query.after,
-        limit: query.limit,
-      });
-
-      const data = Array.isArray(result?.data)
-        ? result.data
-        : Array.isArray(result)
-          ? result
-          : [];
-
-      return {
-        data,
-        paging: result?.paging ?? null,
-      };
+      return await this.browseLibraryFromMeta(accessToken, query);
     } catch (error) {
       const errorData = error.response?.data?.error || {};
       throw new BadRequestException({
@@ -290,11 +342,19 @@ export class TemplatesService {
       return template;
     } catch (error) {
       const errorData = error.response?.data?.error || {};
-      throw new BadRequestException({
-        message: 'Failed to create template from library',
-        error: errorData.message || error.message,
-        code: errorData.code,
-      });
+      const metaDetail =
+        errorData.error_user_msg ||
+        errorData.error_user_title ||
+        errorData.message ||
+        error.message;
+      this.logger.warn(
+        `createFromLibrary failed for ${dto.libraryTemplateName}: ${JSON.stringify(errorData)}`,
+      );
+      throw new BadRequestException(
+        metaDetail
+          ? `فشل إنشاء القالب من المكتبة: ${metaDetail}`
+          : 'فشل إنشاء القالب من المكتبة',
+      );
     }
   }
 

@@ -1,15 +1,27 @@
 import type { WhatsappLibraryTemplate } from '@/lib/api/types';
 
+const LIBRARY_NAMED_PLACEHOLDER_SAMPLES: Record<string, string> = {
+  code: '123456',
+  text: 'example',
+  number: '42',
+  phone: '+1 555 0100',
+};
+
 export function fillLibraryBodyPreview(
   body: string | undefined,
   params?: string[],
 ): string {
   if (!body) return '';
-  return body.replace(/\{\{(\d+)\}\}/g, (_, index: string) => {
+  let preview = body.replace(/\{\{(\d+)\}\}/g, (_, index: string) => {
     const i = Number.parseInt(index, 10) - 1;
     const sample = params?.[i];
     return sample?.trim() ? sample : `{{${index}}}`;
   });
+  preview = preview.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+    const sample = LIBRARY_NAMED_PLACEHOLDER_SAMPLES[key.toLowerCase()];
+    return sample ?? match;
+  });
+  return preview;
 }
 
 export function defaultLibraryTemplateName(libraryName: string): string {
@@ -58,6 +70,12 @@ export function buildDefaultLibraryButtonInputs(
         return {
           type: 'PHONE_NUMBER',
           phone_number: btn.phone_number || '+9640000000000',
+        };
+      }
+      if (btn.type === 'OTP') {
+        return {
+          type: 'OTP',
+          otp_type: 'COPY_CODE',
         };
       }
       return null;

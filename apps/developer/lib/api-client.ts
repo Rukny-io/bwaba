@@ -217,6 +217,17 @@ async function apiClient<T>(
             ? nested.join(', ')
             : errorMessage;
     }
+    const extra =
+      typeof (responseData as { error?: unknown }).error === 'string'
+        ? (responseData as { error: string }).error
+        : undefined;
+    if (
+      extra &&
+      extra.trim() &&
+      !errorMessage.includes(extra.trim())
+    ) {
+      errorMessage = `${errorMessage}: ${extra}`;
+    }
     throw new ApiException(response.status, errorMessage);
   }
 

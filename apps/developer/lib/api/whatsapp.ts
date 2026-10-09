@@ -211,6 +211,7 @@ export interface TemplateLibraryQuery {
   usecase?: string;
   industry?: string;
   language?: string;
+  category?: 'UTILITY' | 'AUTHENTICATION';
   name?: string;
   after?: string;
   limit?: number;

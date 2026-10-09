@@ -2,24 +2,30 @@
 
 import { useMemo, useState } from 'react';
 import { CircleX, ListFilter, Loader2, Search, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/components/providers/translations-provider';
 import type { WhatsappTemplate } from '@/lib/api/types';
 import { templateComponentsPreview } from '@/lib/whatsapp-template-preview';
-import { whatsappBtnSecondary } from '@/components/whatsapp/whatsapp-ui';
+import {
+  templateStatusTone,
+  WhatsappTemplateTile,
+} from '@/components/whatsapp/whatsapp-template-tile';
 import { cn } from '@/lib/utils';
 
-function statusBadgeVariant(status: string) {
-  const s = status.toUpperCase();
-  if (s === 'APPROVED') return 'success' as const;
-  if (s === 'PENDING') return 'warning' as const;
-  if (s === 'REJECTED') return 'destructive' as const;
-  return 'secondary' as const;
+function categoryLabel(
+  category: string,
+  w: { categoryUTILITY: string; categoryAUTHENTICATION: string; categoryMARKETING: string },
+) {
+  const c = category.toUpperCase();
+  if (c === 'UTILITY') return w.categoryUTILITY;
+  if (c === 'AUTHENTICATION') return w.categoryAUTHENTICATION;
+  if (c === 'MARKETING') return w.categoryMARKETING;
+  return category;
 }
 
 function TemplateCard({
   template,
   statusLabel,
+  categoryText,
   onDelete,
   deleting,
   deleteLabel,
@@ -27,75 +33,48 @@ function TemplateCard({
 }: {
   template: WhatsappTemplate;
   statusLabel: (status: string) => string;
+  categoryText: string;
   onDelete?: (name: string) => void;
   deleting: boolean;
   deleteLabel: string;
   deleteConfirm: string;
 }) {
   const preview = templateComponentsPreview(template.components);
-  const bodyText = preview.body ?? template.name;
+  const bodyText =
+    [preview.header, preview.body, preview.footer].filter(Boolean).join(' · ') ||
+    template.name;
 
   return (
-    <article
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]"
-    >
-      <div className="flex items-start justify-between gap-2 border-b border-[var(--border)] px-4 py-3">
-        <Badge variant={statusBadgeVariant(template.status)}>
-          {statusLabel(template.status)}
-        </Badge>
-        <span
-          dir="ltr"
-          className="truncate text-[11px] uppercase tracking-wide text-[var(--muted-foreground)]"
-        >
-          {template.category}
-        </span>
-      </div>
-
-      <div className="flex-1 p-4">
-        <div className="rounded-xl bg-[#ECE5DD] p-3 text-start">
-          {preview.header ? (
-            <p className="text-[12px] font-semibold text-[#1D1D1D]">{preview.header}</p>
-          ) : null}
-          <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#1D1D1D]">
-            {bodyText}
-          </p>
-          {preview.footer ? (
-            <p className="mt-2 text-[11px] text-[#6B6F76]">{preview.footer}</p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="border-t border-[var(--border)] px-4 py-3">
-        <p className="truncate font-mono text-[12px] font-medium text-[var(--foreground)]" dir="ltr">
-          {template.name}
-        </p>
-        <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]" dir="ltr">
-          {template.language}
-        </p>
-        {onDelete ? (
+    <WhatsappTemplateTile
+      metaLabel={categoryText}
+      title={template.name}
+      preview={bodyText}
+      footerPrimary={statusLabel(template.status)}
+      footerPrimaryTone={templateStatusTone(template.status)}
+      footerExtra={template.language}
+      headerActions={
+        onDelete ? (
           <button
             type="button"
             disabled={deleting}
+            aria-label={deleteLabel}
+            title={deleteLabel}
             onClick={() => {
               const msg = deleteConfirm.replace('{name}', template.name);
               if (!window.confirm(msg)) return;
               onDelete(template.name);
             }}
-            className={cn(
-              whatsappBtnSecondary,
-              'mt-3 w-full text-[var(--muted-foreground)] hover:text-[var(--danger)]',
-            )}
+            className="flex size-8 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--danger)] disabled:opacity-50"
           >
             {deleting ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
-              <Trash2 className="size-3.5" />
+              <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
             )}
-            {deleteLabel}
           </button>
-        ) : null}
-      </div>
-    </article>
+        ) : null
+      }
+    />
   );
 }
 
@@ -210,12 +189,13 @@ export function WhatsappTemplatesCards({
           <p className="text-[12px] text-[var(--muted-foreground)]">
             {w.libraryResultsCount.replace('{count}', String(filtered.length))}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid auto-rows-fr grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3">
             {filtered.map((template) => (
               <TemplateCard
                 key={`${template.id}-${template.name}-${template.language}`}
                 template={template}
                 statusLabel={statusLabel}
+                categoryText={categoryLabel(template.category, w)}
                 onDelete={onDelete}
                 deleting={deletingName === template.name}
                 deleteLabel={w.deleteTemplate}

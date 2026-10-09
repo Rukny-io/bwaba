@@ -132,6 +132,7 @@ export function MobileDock({ appId }: MobileDockProps) {
     apps: t.sidebar.apps,
     appSettings: t.sidebar.appSettings,
     analytics: t.sidebar.analytics,
+    wallet: t.sidebar.wallet,
     help: t.sidebar.help,
     logout: t.sidebar.logout,
     more: t.mobile.more,

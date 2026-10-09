@@ -172,6 +172,9 @@ services:
       WHATSAPP_APP_ID: ${WHATSAPP_APP_ID}
       WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
       WHATSAPP_CONFIG_ID: ${WHATSAPP_CONFIG_ID}
+      WHATSAPP_SOLUTION_ID: ${WHATSAPP_SOLUTION_ID:-}
+      YCLOUD_API_KEY: ${YCLOUD_API_KEY:-}
+      YCLOUD_API_BASE_URL: ${YCLOUD_API_BASE_URL:-https://api.ycloud.com}
       # WhatsApp Personal API (TechnoPlus)
       WHATSAPP_API_URL: ${WHATSAPP_API_URL:-https://message.dashboard.technoplus.tech}
       WHATSAPP_SESSION_ID: ${WHATSAPP_SESSION_ID}

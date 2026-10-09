@@ -266,6 +266,9 @@ export interface WhatsappTemplate {
 export interface EmbeddedSignupConfig {
   appId: string;
   configId: string;
+  /** Meta Multi-Partner Solution ID (e.g. YCloud) — enables BSP credit line */
+  solutionId?: string | null;
+  partnerBillingEnabled?: boolean;
   graphApiVersion?: string;
   paymentHelpUrl?: string;
   whatsappManagerUrl?: string;

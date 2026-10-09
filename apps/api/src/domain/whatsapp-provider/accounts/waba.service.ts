@@ -12,6 +12,7 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
 import { QuotaService } from '../shared/quota.service';
+import { YCloudApiService } from '../shared/ycloud-api.service';
 import { ConnectWabaDto } from './dto/connect-waba.dto';
 import { generateNumericPublicId } from '../shared/public-id.util';
 
@@ -38,17 +39,19 @@ export class WabaService {
     private metaApi: MetaApiService,
     private tokenEncryption: TokenEncryptionService,
     private quotaService: QuotaService,
+    private ycloudApi: YCloudApiService,
     private configService: ConfigService,
   ) {}
 
   /**
-   * ربط حساب WABA عبر Embedded Signup (Tech Provider onboarding)
+   * ربط حساب WABA عبر Embedded Signup (Tech Provider + BSP Multi-Partner)
    *
-   * Meta required steps:
+   * Meta / YCloud steps:
    * 1. Exchange code → business token
    * 2. Subscribe app to WABA webhooks
    * 3. Register phone number(s) with a 6-digit two-step PIN
-   * 4. Instruct customer to add a payment method in WhatsApp Manager
+   * 4. Bind WABA to YCloud credit line (when solution partner is configured)
+   * 5. Otherwise instruct customer to add a payment method in WhatsApp Manager
    */
   async connect(userId: string, dto: ConnectWabaDto) {
     const app = await this.prisma.developerApp.findFirst({
@@ -154,7 +157,7 @@ export class WabaService {
         webhookSubscribed: false,
         metadata: {
           onboarding: {
-            paymentMethodRequired: true,
+            paymentMethodRequired: !this.hasPartnerSolution(),
             paymentHelpUrl: PAYMENT_HELP_URL,
             whatsappManagerUrl: WHATSAPP_MANAGER_URL,
           },
@@ -171,6 +174,14 @@ export class WabaService {
       pin: dto.pin,
       reconnect: false,
     });
+  }
+
+  private getPartnerSolutionId(): string | undefined {
+    return this.configService.get<string>('WHATSAPP_SOLUTION_ID')?.trim() || undefined;
+  }
+
+  private hasPartnerSolution(): boolean {
+    return Boolean(this.getPartnerSolutionId());
   }
 
   private async finalizeConnection(params: {
@@ -235,12 +246,30 @@ export class WabaService {
       pin,
     });
 
+    const ycloudBind = await this.attachPartnerCreditLine(
+      wabaId,
+      registrationPins
+        .filter((r) => r.registered || r.alreadyRegistered)
+        .map((r) => r.phoneNumberId),
+    );
+
+    const paymentMethodRequired = !(
+      this.hasPartnerSolution() && ycloudBind.paymentMethodAttached
+    );
+
     await this.mergeAccountMetadata(accountId, {
       onboarding: {
-        paymentMethodRequired: true,
+        paymentMethodRequired,
         paymentHelpUrl: PAYMENT_HELP_URL,
         whatsappManagerUrl: WHATSAPP_MANAGER_URL,
         completedAt: new Date().toISOString(),
+        partnerSolutionId: this.getPartnerSolutionId() || null,
+        ycloud: {
+          bindAttempted: ycloudBind.attempted,
+          bindSuccess: ycloudBind.success,
+          paymentMethodAttached: ycloudBind.paymentMethodAttached,
+          error: ycloudBind.error || null,
+        },
       },
       registrationPinCiphertexts: Object.fromEntries(
         registrationPins
@@ -266,24 +295,54 @@ export class WabaService {
     const { metadata: _metadata, accessTokenEncrypted: _token, ...safe } =
       account;
 
+    const nextSteps: string[] = [
+      ...(registrationPins.some((r) => !r.registered && !r.alreadyRegistered)
+        ? (['register_phone'] as const)
+        : []),
+      ...(paymentMethodRequired ? (['add_payment_method'] as const) : []),
+      'save_two_step_pin',
+    ];
+
     return {
       ...safe,
       onboarding: {
         webhookSubscribed,
-        paymentMethodRequired: true,
+        paymentMethodRequired,
         paymentHelpUrl: PAYMENT_HELP_URL,
         whatsappManagerUrl: WHATSAPP_MANAGER_URL,
-        nextSteps: [
-          ...(registrationPins.some((r) => !r.registered && !r.alreadyRegistered)
-            ? (['register_phone'] as const)
-            : []),
-          'add_payment_method',
-          'save_two_step_pin',
-        ],
+        nextSteps,
       },
       // Returned once so the developer can store the two-step PIN securely.
       registrationPins,
     };
+  }
+
+  /**
+   * Bind WABA to YCloud so Meta conversation fees use the BSP credit line.
+   */
+  private async attachPartnerCreditLine(
+    wabaId: string,
+    phoneNumberIds: string[],
+  ) {
+    if (!this.hasPartnerSolution()) {
+      return {
+        attempted: false,
+        success: false,
+        paymentMethodAttached: false,
+      };
+    }
+
+    const bind = await this.ycloudApi.bindTechProviderWaba(wabaId);
+
+    if (bind.success) {
+      await Promise.all(
+        phoneNumberIds.map((phoneNumberId) =>
+          this.ycloudApi.registerPhoneNumber(wabaId, phoneNumberId),
+        ),
+      );
+    }
+
+    return bind;
   }
 
   private async registerConnectedPhones(params: {
@@ -717,6 +776,7 @@ export class WabaService {
   getEmbeddedSignupConfig() {
     const appId = this.configService.get<string>('WHATSAPP_APP_ID')?.trim();
     const configId = this.configService.get<string>('WHATSAPP_CONFIG_ID')?.trim();
+    const solutionId = this.getPartnerSolutionId();
 
     if (!appId || !configId) {
       throw new BadRequestException(
@@ -727,6 +787,8 @@ export class WabaService {
     return {
       appId,
       configId,
+      solutionId: solutionId || null,
+      partnerBillingEnabled: Boolean(solutionId),
       graphApiVersion:
         this.configService.get('WHATSAPP_GRAPH_API_VERSION', 'v25.0') ||
         'v25.0',

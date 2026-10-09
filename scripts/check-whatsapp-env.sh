@@ -93,5 +93,15 @@ else
   echo "   ✅ Core Tech Provider vars present"
   echo "   Graph API version: ${WHATSAPP_GRAPH_API_VERSION:-v25.0}"
 fi
+if [[ -n "${WHATSAPP_SOLUTION_ID:-}" ]]; then
+  echo "   ✅ WHATSAPP_SOLUTION_ID=${WHATSAPP_SOLUTION_ID}"
+else
+  echo "   ⚠️  WHATSAPP_SOLUTION_ID unset — Embedded Signup will not attach BSP credit line"
+fi
+if [[ -n "${YCLOUD_API_KEY:-}" ]]; then
+  echo "   ✅ YCLOUD_API_KEY present"
+else
+  echo "   ⚠️  YCLOUD_API_KEY unset — WABA credit-line bind after connect will be skipped"
+fi
 echo ""
 echo "After fixing .env, run: docker compose --env-file $ENV_FILE up -d api"

@@ -50,7 +50,7 @@
 /* Similar to select popover styles */
 .dropdown__popover {
   @apply max-w-[48svw] origin-(--trigger-anchor-point) scroll-py-1 overflow-y-auto overscroll-contain bg-overlay p-0 text-sm scrollbar md:min-w-55;
-  border-radius: var(--radius);
+  border-radius: min(1.5rem, var(--radius-2xl));
   box-shadow: var(--shadow-overlay);
 
   /* Focus state */

@@ -44,11 +44,19 @@ declare global {
   }
 }
 
-function buildSignupExtras(mode: EmbeddedSignupMode, wabaId?: string) {
+function buildSignupExtras(
+  mode: EmbeddedSignupMode,
+  options?: { wabaId?: string; solutionId?: string | null },
+) {
   const setup: Record<string, unknown> = {};
 
-  if (mode === 'add-phone' && wabaId) {
-    setup.whatsAppBusinessAccount = { ids: [wabaId] };
+  if (mode === 'add-phone' && options?.wabaId) {
+    setup.whatsAppBusinessAccount = { ids: [options.wabaId] };
+  }
+
+  // Multi-Partner Solution (YCloud) — attaches BSP credit line on new WABAs
+  if (options?.solutionId) {
+    setup.solutionID = options.solutionId;
   }
 
   return {
@@ -365,7 +373,10 @@ export function EmbeddedSignupButton({
         config_id: String(config.configId),
         response_type: 'code',
         override_default_response_type: true,
-        extras: buildSignupExtras(mode, existingWabaId),
+        extras: buildSignupExtras(mode, {
+          wabaId: existingWabaId,
+          solutionId: config.solutionId,
+        }),
       },
     );
   }

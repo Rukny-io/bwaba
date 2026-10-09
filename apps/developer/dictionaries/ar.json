@@ -490,6 +490,8 @@
     "docs": "التوثيق",
     "tools": "الأدوات",
     "support": "الدعم",
+    "wallet": "المحفظة",
+    "openWallet": "فتح المحفظة",
     "walletBalance": "رصيد المحفظة",
     "topUp": "تعبئة الرصيد",
     "viewInvoices": "عرض الفواتير",

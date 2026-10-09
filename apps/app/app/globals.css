@@ -76,7 +76,7 @@
   --landing-glass-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
   --landing-glass-ring: rgba(15, 23, 42, 0.06);
 
-  --radius: 1rem;
+  --radius: 1.25rem;
   --radius-3xl: calc(var(--radius) * 3);
   --accent: var(--primary);
   --accent-foreground: var(--primary-foreground);

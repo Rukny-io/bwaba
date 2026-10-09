@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   Receipt,
@@ -17,6 +17,8 @@ import {
   ClipboardList,
   Mail,
   MessageCircle,
+  Wallet,
+  Check,
 } from 'lucide-react';
 import { Dropdown } from '@heroui/react';
 import { useCurrentApp } from '@/components/providers/app-context';
@@ -32,7 +34,7 @@ import { useMasterWallet } from '@/hooks/use-wallet';
 import { formatIqd } from '@/lib/wallet-format';
 import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
 import { appToast } from '@/lib/app-toast';
-import { appTools } from '@/lib/app-routes';
+import { appTools, appWallet } from '@/lib/app-routes';
 import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
 
 const DEFAULT_TOP_UP_AMOUNT = 10_000;
@@ -48,13 +50,21 @@ export function HeaderTopBar({
 }) {
   const t = useTranslations();
   const pathname = usePathname();
+  const router = useRouter();
   const { appId } = useCurrentApp();
-  const appsActive = pathname === '/apps' || pathname.startsWith('/apps/');
+  const walletHref = appWallet(appId);
   const toolsHref = appTools(appId);
+  const appsActive =
+    pathname === '/apps' ||
+    pathname === '/apps/creation' ||
+    pathname.startsWith('/apps/creation/');
   const toolsActive =
     pathname === toolsHref || pathname.startsWith(`${toolsHref}/`);
+  const walletActive =
+    pathname === walletHref || pathname.startsWith(`${walletHref}/`);
   const { data: wallet } = useMasterWallet();
   const [topUpBusy, setTopUpBusy] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
   const balanceLabel = formatIqd(wallet?.balance ?? 0, t.dashboard.iqd);
 
@@ -75,11 +85,11 @@ export function HeaderTopBar({
   }
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-start bg-transparent px-3 pt-3 pb-2 sm:flex sm:px-5 sm:pt-4">
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden justify-center bg-transparent px-3 pt-3 pb-2 sm:flex sm:px-5 sm:pt-4">
       <nav
         aria-label={t.topbar.myApps}
         className={cn(
-          'pointer-events-auto inline-flex w-auto max-w-full items-center gap-0.5 p-1 sm:gap-1 sm:p-1.5',
+          'pointer-events-auto inline-flex w-auto max-w-full cursor-pointer items-center gap-0.5 p-1 sm:gap-1 sm:p-1.5',
           dashboardTopTabsGlassClass,
           '![overflow:visible]',
         )}
@@ -108,12 +118,24 @@ export function HeaderTopBar({
           {t.topbar.tools}
         </Link>
 
+        <Link
+          href={walletHref}
+          aria-current={walletActive ? 'page' : undefined}
+          className={cn(dashboardTopTabsChipClass, 'hidden sm:inline-flex')}
+        >
+          {t.topbar.wallet}
+        </Link>
+
         <Dropdown>
           <Dropdown.Trigger className={cn(chipTriggerClass, 'hidden lg:inline-flex')}>
             {t.topbar.docs}
             <ChevronDown size={14} className="opacity-70" />
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" offset={14} className="min-w-[14rem]">
+          <Dropdown.Popover
+            placement="bottom start"
+            offset={8}
+            className="dashboard-top-tabs-popover min-w-[14rem]"
+          >
             <Dropdown.Menu>
               <Dropdown.Item
                 id="doc-email"
@@ -160,7 +182,11 @@ export function HeaderTopBar({
             {t.topbar.support}
             <ChevronDown size={14} className="opacity-70" />
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" offset={14} className="min-w-[14rem]">
+          <Dropdown.Popover
+            placement="bottom start"
+            offset={8}
+            className="dashboard-top-tabs-popover min-w-[14rem]"
+          >
             <Dropdown.Menu>
               <Dropdown.Item id="status" textValue={t.topbar.platformStatus} className="gap-2">
                 <Activity className="size-4 shrink-0" />
@@ -186,8 +212,10 @@ export function HeaderTopBar({
           </Dropdown.Popover>
         </Dropdown>
 
-        <Dropdown>
-          <Dropdown.Trigger className={cn(chipTriggerClass, 'max-w-[11rem] truncate sm:max-w-none')}>
+        <Dropdown isOpen={walletMenuOpen} onOpenChange={setWalletMenuOpen}>
+          <Dropdown.Trigger
+            className={cn(chipTriggerClass, 'max-w-[11rem] truncate sm:max-w-none')}
+          >
             <span className="truncate" dir="ltr" lang="en">
               <span className="sm:hidden">{balanceLabel}</span>
               <span className="hidden sm:inline">
@@ -196,12 +224,36 @@ export function HeaderTopBar({
             </span>
             <ChevronDown size={14} className="shrink-0 opacity-70" />
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom end" offset={14} className="min-w-[13rem]">
+          <Dropdown.Popover
+            placement="bottom end"
+            offset={8}
+            className="dashboard-top-tabs-popover min-w-[13rem]"
+          >
             <Dropdown.Menu
               onAction={(key) => {
+                if (key === 'open-wallet') {
+                  setWalletMenuOpen(false);
+                  if (!walletActive) {
+                    router.push(walletHref);
+                  }
+                  return;
+                }
                 if (key === 'top-up') void handleTopUp();
               }}
             >
+              <Dropdown.Item
+                id="open-wallet"
+                textValue={walletActive ? t.topbar.wallet : t.topbar.openWallet}
+                className="gap-2"
+              >
+                <Wallet className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">
+                  {walletActive ? t.topbar.wallet : t.topbar.openWallet}
+                </span>
+                {walletActive ? (
+                  <Check className="size-4 shrink-0 text-[var(--primary)]" aria-hidden />
+                ) : null}
+              </Dropdown.Item>
               <Dropdown.Item
                 id="top-up"
                 textValue={t.topbar.topUp}

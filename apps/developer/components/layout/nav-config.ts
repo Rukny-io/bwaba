@@ -5,8 +5,15 @@ import {
   Settings,
   Package,
   ChartColumn,
+  Wallet,
 } from 'lucide-react';
-import { extractAppIdFromPath, appSettings, appProducts, appAnalytics } from '@/lib/app-routes';
+import {
+  extractAppIdFromPath,
+  appSettings,
+  appProducts,
+  appAnalytics,
+  appWallet,
+} from '@/lib/app-routes';
 
 export type NavItem = {
   href: string;
@@ -27,6 +34,7 @@ export function getPrimaryNavItems(appId: string): NavItem[] {
     { href: `${base}/dashboard`, icon: LayoutGrid, label: 'الرئيسية', exact: true },
     { href: appAnalytics(appId), icon: ChartColumn, label: 'التحليلات' },
     { href: `${base}/api-keys`, icon: KeyRound, label: 'مفاتيح API' },
+    { href: appWallet(appId), icon: Wallet, label: 'المحفظة' },
   ];
 }
 
@@ -69,6 +77,7 @@ export type SidebarLabelMap = {
   apps: string;
   appSettings: string;
   analytics: string;
+  wallet: string;
   help: string;
   logout: string;
   more: string;
@@ -83,6 +92,7 @@ export function resolveNavItemLabel(label: string, labels: SidebarLabelMap): str
     التطبيقات: labels.apps,
     'إعدادات التطبيق': labels.appSettings,
     التحليلات: labels.analytics,
+    المحفظة: labels.wallet,
     المساعدة: labels.help,
   };
   return map[label] ?? label;
@@ -138,6 +148,7 @@ export function resolvePageLabel(pathname: string): string {
     dashboard: 'الرئيسية',
     analytics: 'التحليلات',
     'api-keys': 'مفاتيح API',
+    wallet: 'المحفظة',
     products: 'المنتجات',
     forms: 'النماذج',
     whatsapp: 'WhatsApp Business',

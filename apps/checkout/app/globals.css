@@ -44,8 +44,8 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --radius: 1rem;
-  --field-radius: 0.875rem;
+  --radius: 1.25rem;
+  --field-radius: 1.25rem;
   /* Arabic default; English switches to Inter via html[lang="en"] */
   --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
   --font-arabic: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;

@@ -8,6 +8,7 @@ import { DeveloperModule } from '../developer/developer.module';
 import { MetaApiService } from './shared/meta-api.service';
 import { TokenEncryptionService } from './shared/token-encryption.service';
 import { QuotaService } from './shared/quota.service';
+import { YCloudApiService } from './shared/ycloud-api.service';
 
 // Accounts
 import { WabaService } from './accounts/waba.service';
@@ -54,6 +55,7 @@ import { ContactsApiController } from './contacts/contacts-api.controller';
     MetaApiService,
     TokenEncryptionService,
     QuotaService,
+    YCloudApiService,
     WabaService,
     MessagingService,
     MessagingSecurityService,

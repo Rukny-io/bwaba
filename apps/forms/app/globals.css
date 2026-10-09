@@ -71,8 +71,8 @@
   --landing-subtle-hover: rgba(15, 23, 42, 0.05);
   --landing-outline-inset: rgba(15, 23, 42, 0.14);
 
-  --radius: 1rem;
-  --field-radius: 1rem;
+  --radius: 1.25rem;
+  --field-radius: 1.25rem;
   --radius-3xl: calc(var(--radius) * 3);
   --font-sans: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;
   --font-arabic: var(--font-thmanyah-sans), "Thmanyah Sans", system-ui, sans-serif;

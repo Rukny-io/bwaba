@@ -493,6 +493,8 @@
     "docs": "Documentation",
     "tools": "Tools",
     "support": "Support",
+    "wallet": "Wallet",
+    "openWallet": "Open wallet",
     "walletBalance": "Wallet balance",
     "topUp": "Top up",
     "viewInvoices": "View invoices",

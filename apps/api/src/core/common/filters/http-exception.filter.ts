@@ -117,6 +117,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         request.socket.remoteAddress,
       userAgent: request.get('User-Agent'),
     };
+    const userAgent = request.get('User-Agent') || '';
+    const isScannerOrUnknownRoute =
+      status === HttpStatus.NOT_FOUND &&
+      (/bot|crawler|spider|qwen/i.test(userAgent) ||
+        request.url.includes('/node-load-method/'));
 
     // Skip logging entirely for expected auth failures on auth endpoints
     const isAuthEndpoint = request.url.includes('/auth/');
@@ -136,6 +141,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status === HttpStatus.FORBIDDEN
     ) {
       // Non-auth endpoint auth failures might be interesting
+      this.logger.debug(logPayload);
+    } else if (isScannerOrUnknownRoute) {
       this.logger.debug(logPayload);
     } else {
       this.logger.error(logPayload);

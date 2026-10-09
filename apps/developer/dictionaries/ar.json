@@ -479,6 +479,9 @@
     "createKey": "إنشاء مفتاح",
     "tryTitle": "جرّب",
     "tryDesc": "تم تعطيل Try it لأن WhatsApp لا يوفر Sandbox آمناً هنا. أرسل من خادمك بمفتاح rk_live_ بعد تجهيز الربط والرصيد.",
+    "liveSendTitle": "إرسال من مشروعك",
+    "liveSendDesc": "الإرسال الحقيقي يتم من Backend مشروعك بمفتاح rk_live_ ويُخصم من محفظة التطبيق.",
+    "liveSendCta": "فتح أمثلة الإرسال",
     "tryApiKey": "مفتاح API للاختبار",
     "tryApiKeyPlaceholder": "اختر مفتاح اختبار…",
     "tryApiKeyHint": "مفاتيح rk_test_ المرتبطة بهذا التطبيق فقط. السر لا يدخل المتصفح.",
@@ -822,6 +825,10 @@
     "more": "المزيد",
     "moreMenu": "قائمة المزيد",
     "closeMenu": "إغلاق القائمة",
+    "openMoreSections": "أقسام إضافية",
+    "closeMoreSections": "إغلاق الأقسام الإضافية",
+    "backToMenu": "العودة إلى القائمة",
+    "sectionApp": "التطبيق",
     "navigation": "التنقل"
   },
   "wallet": {

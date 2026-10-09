@@ -249,7 +249,7 @@ export function ApiKeyCard({
         {maskedKey}
       </code>
 
-      <p className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+      <div className="mt-auto pt-3 text-[12px] leading-relaxed text-[var(--muted-foreground)]">
         <span className={cn('font-medium', chipToneClass[statusTone])}>
           {statusLabel}
         </span>
@@ -271,7 +271,7 @@ export function ApiKeyCard({
         </span>
         {' · '}
         <span>{lastUsed}</span>
-      </p>
+      </div>
     </article>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CircleCheck, Clock, Loader2, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
+import { CircleCheck, Clock, Loader2, Phone, RefreshCw, UserRound } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
@@ -19,6 +19,7 @@ import { EmbeddedSignupButton } from '@/components/whatsapp/embedded-signup-butt
 import { usePhoneNumbers, useWhatsappAccounts, useWhatsappMutations } from '@/hooks/use-whatsapp';
 import type { WhatsappPhoneSummary } from '@/lib/api/types';
 import { appWhatsappPhoneHref } from '@/lib/whatsapp-phone-routes';
+import { appWhatsappApiHref } from '@/lib/whatsapp-api-routes';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 import { cn } from '@/lib/utils';
 
@@ -72,12 +73,7 @@ export function PhoneCard({
   pin,
   setRegisterId,
   setPin,
-  testId,
-  testTo,
-  setTestId,
-  setTestTo,
   registerMutation,
-  testMessageMutation,
 }: {
   appId: string;
   phone: WhatsappPhoneSummary;
@@ -85,14 +81,10 @@ export function PhoneCard({
   pin: string;
   setRegisterId: (id: string | null) => void;
   setPin: (pin: string) => void;
-  testId: string | null;
-  testTo: string;
-  setTestId: (id: string | null) => void;
-  setTestTo: (to: string) => void;
   registerMutation: ReturnType<typeof useWhatsappMutations>['registerMutation'];
-  testMessageMutation: ReturnType<typeof useWhatsappMutations>['testMessageMutation'];
 }) {
   const w = useTranslations().whatsapp;
+  const api = useTranslations().whatsappApi;
   const isPending = phone.status === 'PENDING';
 
   return (
@@ -152,46 +144,13 @@ export function PhoneCard({
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <PhoneActionSection title={w.sendTest} description={w.sendTestDesc}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="min-w-0 flex-1">
-              <label className="mb-1.5 block text-xs font-medium text-[var(--foreground)]">
-                {w.testRecipient}
-              </label>
-              <input
-                type="tel"
-                value={testId === phone.id ? testTo : ''}
-                onChange={(e) => {
-                  setTestId(phone.id);
-                  setTestTo(e.target.value);
-                }}
-                placeholder="+9647XXXXXXXX"
-                className={inputClass}
-                dir="ltr"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={testMessageMutation.isPending || !testTo.trim()}
-              onClick={() =>
-                testMessageMutation.mutate(
-                  { phoneId: phone.id, to: testTo.trim() },
-                  {
-                    onSuccess: () => appToast.success(w.testSent),
-                    onError: (e) => appToast.error(getApiErrorMessage(e)),
-                  },
-                )
-              }
-              className={whatsappBtnSecondary}
-            >
-              {testMessageMutation.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Send className="size-3.5" />
-              )}
-              {w.sendTest}
-            </button>
-          </div>
+        <PhoneActionSection title={api.liveSendTitle} description={api.liveSendDesc}>
+          <Link
+            href={appWhatsappApiHref(appId, 'messages')}
+            className={cn(whatsappBtnSecondary, 'w-full justify-center sm:w-auto')}
+          >
+            {api.liveSendCta}
+          </Link>
         </PhoneActionSection>
 
         <PhoneActionSection title={w.profileManageCta} description={w.profileManageDesc}>

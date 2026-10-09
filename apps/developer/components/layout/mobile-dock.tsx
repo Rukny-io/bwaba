@@ -1,27 +1,26 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { MoreHorizontal, X, LayoutGrid, LogOut, Plus, type LucideIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutGrid, LogOut, Plus, X, type LucideIcon } from 'lucide-react';
+import { Dropdown, Header, Label } from '@heroui/react';
 import {
-  getMobileDockItems,
+  getMobileDockBarItems,
+  getMobileDockOverflowNavItems,
   getProductsCatalogNavItem,
   isNavItemActive,
   resolveNavItemLabel,
+  type NavItem,
 } from '@/components/layout/nav-config';
 import {
   MobileDockShell,
   MobileDockPill,
-  MobileDockItem,
-  MobileDockFab,
+  MobileDockNavLink,
+  mobileDockSideButtonClass,
 } from '@/components/layout/mobile-dock-primitives';
 import { logoutWithNotification } from '@/lib/auth-notify';
 import { useSidebarProducts } from '@/hooks/use-sidebar-products';
-import {
-  resolveProductHref,
-  type DeveloperProduct,
-} from '@/lib/developer-products';
+import { resolveProductHref } from '@/lib/developer-products';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
 import { usesBottomIslandNav } from '@/lib/portal-island-nav';
@@ -30,105 +29,60 @@ interface MobileDockProps {
   appId: string;
 }
 
-function drawerRowClass(active: boolean) {
-  return cn(
-    'flex items-center gap-2.5 rounded-xl px-2 py-2 transition-colors',
-    active
-      ? 'bg-[var(--surface-secondary)]'
-      : 'hover:bg-[var(--surface-secondary)]/80 active:bg-[var(--surface-secondary)]',
-  );
-}
-
-function DrawerIcon({
-  icon: Icon,
-  active,
-  danger,
-}: {
-  icon: LucideIcon;
-  active?: boolean;
-  danger?: boolean;
-}) {
+function MoreMenuItem({ item, label }: { item: NavItem; label: string }) {
+  const Icon = item.icon;
   return (
-    <span
-      className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-xl',
-        danger
-          ? 'bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] text-[var(--danger)]'
-          : active
-            ? 'bg-[var(--foreground)] text-[var(--background)]'
-            : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)]',
-      )}
-    >
-      <Icon size={15} strokeWidth={1.9} aria-hidden />
-    </span>
+    <Dropdown.Item key={item.href} id={item.href} textValue={label}>
+      <Dropdown.ItemIndicator />
+      <Icon
+        size={16}
+        strokeWidth={1.9}
+        className="shrink-0 text-[var(--muted-foreground)]"
+        aria-hidden
+      />
+      <Label>{label}</Label>
+    </Dropdown.Item>
   );
 }
 
-function MobilePinnedProductRow({
-  product,
-  appId,
+function ProductMenuItem({
+  id,
+  href,
   label,
-  pathname,
-  onNavigate,
+  icon: Icon,
+  external,
 }: {
-  product: DeveloperProduct;
-  appId: string;
+  id: string;
+  href: string;
   label: string;
-  pathname: string;
-  onNavigate: () => void;
+  icon: LucideIcon;
+  external: boolean;
 }) {
-  const href = resolveProductHref(product, appId);
-  if (!href) return null;
-
-  const isExternal = Boolean(product.externalHref);
-  const active = !isExternal && isNavItemActive(pathname, href);
-  const Icon = product.icon;
-
-  const content = (
-    <>
-      <DrawerIcon icon={Icon} active={active} />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
-        {label}
-      </span>
-    </>
-  );
-
-  if (isExternal) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={onNavigate}
-        className={drawerRowClass(false)}
-      >
-        {content}
-      </a>
-    );
-  }
-
   return (
-    <Link href={href} onClick={onNavigate} className={drawerRowClass(active)}>
-      {content}
-    </Link>
+    <Dropdown.Item key={id} id={id} textValue={label}>
+      <Dropdown.ItemIndicator />
+      <Icon
+        size={16}
+        strokeWidth={1.9}
+        className="shrink-0 text-[var(--muted-foreground)]"
+        aria-hidden
+      />
+      <Label>{label}</Label>
+    </Dropdown.Item>
   );
 }
 
 export function MobileDock({ appId }: MobileDockProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const handleClose = useCallback(() => setOpen(false), []);
+  const { installedProducts, hydrated } = useSidebarProducts();
 
-  if (/\/apps\/\d{16}\/settings(?:\/|$)/.test(pathname)) {
-    return null;
-  }
+  const hideDock =
+    /\/apps\/\d{16}\/settings(?:\/|$)/.test(pathname) ||
+    usesBottomIslandNav(pathname);
 
-  if (usesBottomIslandNav(pathname)) {
-    return null;
-  }
-
-  const isRtl = t.common.switchLang === 'English';
   const labels = {
     dashboard: t.sidebar.dashboard,
     keys: t.sidebar.keys,
@@ -143,141 +97,182 @@ export function MobileDock({ appId }: MobileDockProps) {
     more: t.mobile.more,
   };
 
-  const dockItems = getMobileDockItems(appId);
+  const dockItems = getMobileDockBarItems(appId);
+  const overflowNav = getMobileDockOverflowNavItems(appId);
   const catalogItem = getProductsCatalogNavItem(appId);
-  const { installedProducts, hydrated } = useSidebarProducts();
   const productMeta = (t.products.items ?? {}) as Record<string, { name?: string }>;
-  const catalogActive = isNavItemActive(pathname, catalogItem.href);
-  const hasProducts = hydrated && installedProducts.length > 0;
+
+  const productEntries = useMemo(() => {
+    if (!hydrated) return [];
+    return installedProducts
+      .map((product) => {
+        const href = resolveProductHref(product, appId);
+        if (!href) return null;
+        return {
+          id: `product:${product.id}`,
+          href,
+          label: productMeta[product.id]?.name ?? product.id,
+          icon: product.icon,
+          external: Boolean(product.externalHref),
+        };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      href: string;
+      label: string;
+      icon: LucideIcon;
+      external: boolean;
+    }>;
+  }, [appId, hydrated, installedProducts, productMeta]);
+
+  const appMenuItems = useMemo(() => {
+    const items: NavItem[] = [...overflowNav, catalogItem];
+    items.push({
+      href: '/apps',
+      icon: LayoutGrid,
+      label: labels.apps,
+      exact: true,
+    });
+    return items;
+  }, [catalogItem, labels.apps, overflowNav]);
+
+  const moreKeys = useMemo(() => {
+    const keys = new Set<string>([
+      ...appMenuItems.map((item) => item.href),
+      ...productEntries.map((entry) => entry.id),
+      'logout',
+    ]);
+    return keys;
+  }, [appMenuItems, productEntries]);
+
+  const activeMoreKey = useMemo(() => {
+    for (const item of appMenuItems) {
+      if (isNavItemActive(pathname, item.href, item.exact)) {
+        return item.href;
+      }
+    }
+    for (const entry of productEntries) {
+      if (!entry.external && isNavItemActive(pathname, entry.href)) {
+        return entry.id;
+      }
+    }
+    return null;
+  }, [appMenuItems, pathname, productEntries]);
 
   async function handleLogout() {
     setOpen(false);
     await logoutWithNotification();
   }
 
+  if (hideDock) {
+    return null;
+  }
+
   return (
-    <>
-      {open ? (
-        <button
-          type="button"
-          aria-label={t.mobile.closeMenu}
-          className="fixed inset-0 z-40 sm:hidden"
-          style={{
-            background: 'rgba(15, 23, 42, 0.22)',
-            backdropFilter: 'blur(6px)',
-          }}
-          onClick={handleClose}
-        />
-      ) : null}
-
-      {open ? (
-        <div
-          dir={isRtl ? 'rtl' : 'ltr'}
-          role="menu"
-          aria-label={labels.more}
-          className="fixed inset-x-0 bottom-[5.5rem] z-50 mx-auto flex max-h-[min(52vh,22rem)] w-[min(100%-2rem,18.5rem)] flex-col overflow-hidden rounded-2xl bg-[var(--surface)]/96 backdrop-blur-xl sm:hidden"
-        >
-          <div className="max-h-[inherit] overflow-y-auto overscroll-contain px-1.5 py-1.5">
-            {hasProducts ? (
-              <div className="px-1.5 pb-1 pt-1.5">
-                <p className="px-1.5 pb-1 text-[10px] font-semibold tracking-wide text-[var(--muted-foreground)]">
-                  {t.products.mobileDrawerProducts}
-                </p>
-                <div className="flex flex-col gap-0.5">
-                  {installedProducts.map((product) => (
-                    <MobilePinnedProductRow
-                      key={product.id}
-                      product={product}
-                      appId={appId}
-                      label={productMeta[product.id]?.name ?? product.id}
-                      pathname={pathname}
-                      onNavigate={handleClose}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div
-              className={cn(
-                'flex flex-col gap-0.5 px-1.5',
-                hasProducts && 'mt-0.5 border-t border-[var(--border)]/50 pt-1.5',
-              )}
-            >
-              {!hasProducts ? (
-                <p className="px-1.5 pb-1 pt-1 text-[10px] font-semibold tracking-wide text-[var(--muted-foreground)]">
-                  {labels.more}
-                </p>
-              ) : null}
-              <Link
-                href={catalogItem.href}
-                onClick={handleClose}
-                className={drawerRowClass(catalogActive)}
-              >
-                <DrawerIcon icon={Plus} active={catalogActive} />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
-                  {t.products.addProduct}
-                </span>
-              </Link>
-              <Link
-                href="/apps"
-                onClick={handleClose}
-                className={drawerRowClass(pathname === '/apps')}
-              >
-                <DrawerIcon
-                  icon={LayoutGrid}
-                  active={pathname === '/apps'}
-                />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--foreground)]">
-                  {t.topbar.myApps}
-                </span>
-              </Link>
-            </div>
-
-            <div className="mt-0.5 border-t border-[var(--border)]/50 px-1.5 pb-0.5 pt-1.5">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => void handleLogout()}
-                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-[var(--danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
-              >
-                <DrawerIcon icon={LogOut} danger />
-                <span className="text-[13px] font-medium">{labels.logout}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <MobileDockShell>
-        <MobileDockPill
-          aria-label={t.mobile.mainNav}
-          dir={isRtl ? 'rtl' : 'ltr'}
-        >
-          {dockItems.map(({ href, icon, label, exact }) => (
-            <MobileDockItem
-              key={href}
-              href={href}
-              icon={icon}
-              label={resolveNavItemLabel(label, labels)}
-              isActive={isNavItemActive(pathname, href, exact)}
+    <MobileDockShell>
+      <MobileDockPill aria-label={t.mobile.mainNav}>
+        {dockItems.map((item) => {
+          const label = resolveNavItemLabel(item.label, labels);
+          const active = isNavItemActive(pathname, item.href, item.exact);
+          return (
+            <MobileDockNavLink
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={label}
+              isActive={active}
             />
-          ))}
-          <MobileDockItem
-            icon={open ? X : MoreHorizontal}
-            label={labels.more}
-            isActive={open}
-            showLabel={false}
-            onClick={() => setOpen((value) => !value)}
-          />
-        </MobileDockPill>
+          );
+        })}
+      </MobileDockPill>
 
-        <MobileDockFab
-          href={catalogItem.href}
-          label={t.products.addProduct}
-          icon={Plus}
-        />
-      </MobileDockShell>
-    </>
+      <Dropdown isOpen={open} onOpenChange={setOpen}>
+        <Dropdown.Trigger
+          aria-label={open ? t.mobile.closeMoreSections : t.mobile.openMoreSections}
+          className={cn(
+            mobileDockSideButtonClass,
+            open || activeMoreKey
+              ? 'bg-[var(--foreground)] text-[var(--background)] hover:text-[var(--background)]'
+              : undefined,
+          )}
+        >
+          {open ? (
+            <X size={19} strokeWidth={2.2} aria-hidden />
+          ) : (
+            <Plus size={20} strokeWidth={2.1} aria-hidden />
+          )}
+        </Dropdown.Trigger>
+        <Dropdown.Popover
+          placement="top"
+          className="min-w-[16rem] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--field-background)]"
+        >
+          <Dropdown.Menu
+            selectedKeys={activeMoreKey ? new Set([activeMoreKey]) : new Set()}
+            selectionMode="single"
+            onAction={(key) => {
+              const id = String(key);
+              if (id === 'logout') {
+                void handleLogout();
+                return;
+              }
+              if (!moreKeys.has(id)) return;
+
+              const product = productEntries.find((entry) => entry.id === id);
+              if (product) {
+                setOpen(false);
+                if (product.external) {
+                  window.open(product.href, '_blank', 'noopener,noreferrer');
+                  return;
+                }
+                router.push(product.href);
+                return;
+              }
+
+              const nav = appMenuItems.find((item) => item.href === id);
+              if (nav) {
+                setOpen(false);
+                router.push(nav.href);
+              }
+            }}
+          >
+            {productEntries.length > 0 ? (
+              <Dropdown.Section>
+                <Header>{t.products.mobileDrawerProducts}</Header>
+                {productEntries.map((entry) => (
+                  <ProductMenuItem
+                    key={entry.id}
+                    id={entry.id}
+                    href={entry.href}
+                    label={entry.label}
+                    icon={entry.icon}
+                    external={entry.external}
+                  />
+                ))}
+              </Dropdown.Section>
+            ) : null}
+            <Dropdown.Section>
+              {appMenuItems.map((item) => (
+                <MoreMenuItem
+                  key={item.href}
+                  item={item}
+                  label={resolveNavItemLabel(item.label, labels)}
+                />
+              ))}
+            </Dropdown.Section>
+            <Dropdown.Section>
+              <Dropdown.Item id="logout" textValue={labels.logout} variant="danger">
+                <LogOut
+                  size={16}
+                  strokeWidth={1.9}
+                  className="shrink-0"
+                  aria-hidden
+                />
+                <Label>{labels.logout}</Label>
+              </Dropdown.Item>
+            </Dropdown.Section>
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
+    </MobileDockShell>
   );
 }

@@ -482,6 +482,9 @@
     "createKey": "Create key",
     "tryTitle": "Try it",
     "tryDesc": "Try it is disabled because WhatsApp has no safe sandbox here. Send from your server with an rk_live_ key after connection and wallet setup.",
+    "liveSendTitle": "Send from your project",
+    "liveSendDesc": "Real sending happens from your backend with an rk_live_ key and debits the app wallet.",
+    "liveSendCta": "Open send examples",
     "tryApiKey": "Test API key",
     "tryApiKeyPlaceholder": "Select a test key…",
     "tryApiKeyHint": "Only rk_test_ keys linked to this app. The secret never enters the browser.",
@@ -825,6 +828,10 @@
     "more": "More",
     "moreMenu": "More menu",
     "closeMenu": "Close menu",
+    "openMoreSections": "More sections",
+    "closeMoreSections": "Close more sections",
+    "backToMenu": "Back to menu",
+    "sectionApp": "App",
     "navigation": "Navigation"
   },
   "wallet": {

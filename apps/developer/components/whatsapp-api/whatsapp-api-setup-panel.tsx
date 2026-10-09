@@ -115,12 +115,9 @@ export function WhatsappApiSetupPanel() {
     action: string;
   }>;
 
-  const completed = steps.filter((step) => step.state === 'done').length;
-
   return (
     <section className={waApiPanel}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div>
           <div className="flex items-center gap-2">
             <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--surface-secondary)]">
               <Link2 className="size-4 text-[var(--foreground)]" aria-hidden />
@@ -134,10 +131,6 @@ export function WhatsappApiSetupPanel() {
               ? 'أكمل الخطوات بالترتيب. لن نسمح بالإرسال حتى يكون الربط والرقم والمفتاح والرصيد جاهزين.'
               : 'Complete these steps in order. Sending stays blocked until the connection, phone, key, and wallet are ready.'}
           </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-[var(--surface-secondary)] px-3 py-1 text-[12px] font-medium text-[var(--foreground)]">
-          {loading ? '…' : `${completed}/${steps.length}`}
-        </span>
       </div>
 
       <div className="mt-5 grid gap-2.5 lg:grid-cols-2">

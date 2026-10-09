@@ -4,16 +4,21 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** Floating glass mobile dock shell — fade + safe area */
+export const mobileDockSideButtonClass =
+  'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--field-background)] text-[var(--muted-foreground)] outline-none transition-colors hover:text-[var(--foreground)]';
+
+/** Bottom shell — aligned with apps/mail `MailMobileDock` */
 export function MobileDockShell({
   children,
   className,
   hiddenAbove = 'sm',
+  wide = false,
 }: {
   children: React.ReactNode;
   className?: string;
-  /** Tailwind breakpoint class prefix for hiding (sm | lg) */
   hiddenAbove?: 'sm' | 'lg';
+  /** Room for back + pill + more (product consoles) */
+  wide?: boolean;
 }) {
   const hideClass = hiddenAbove === 'lg' ? 'lg:hidden' : 'sm:hidden';
 
@@ -34,8 +39,12 @@ export function MobileDockShell({
         }}
       />
       <div
-        dir="ltr"
-        className="pointer-events-auto relative mx-auto flex w-full max-w-[27rem] items-center justify-center gap-2 px-3"
+        className={cn(
+          'pointer-events-auto relative mx-auto flex w-full items-center gap-2 px-3',
+          wide
+            ? 'max-w-[min(100%,36rem)]'
+            : 'max-w-[27rem] justify-center',
+        )}
       >
         {children}
       </div>
@@ -43,132 +52,91 @@ export function MobileDockShell({
   );
 }
 
-/** Frosted glass pill container */
+/** Scrollable pill — `bg-[var(--field-background)]` like mail */
 export function MobileDockPill({
   children,
   className,
   'aria-label': ariaLabel,
-  dir = 'rtl',
+  distribute = false,
 }: {
   children: React.ReactNode;
   className?: string;
   'aria-label'?: string;
-  dir?: 'rtl' | 'ltr';
+  /** Even spacing for icon-only product tabs */
+  distribute?: boolean;
 }) {
   return (
     <nav
-      dir={dir}
       aria-label={ariaLabel}
       className={cn(
-        'min-w-0 max-w-full rounded-full border border-[var(--border)] bg-[var(--surface)]/90 p-1.5 shadow-[var(--card-shadow)] backdrop-blur-2xl dark:border-[var(--border)] dark:bg-[var(--surface)]/95',
+        'flex min-w-0 max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-[var(--border)] bg-[var(--field-background)] p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        distribute && 'justify-between sm:justify-evenly',
         className,
       )}
     >
-      <div className="flex items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {children}
-      </div>
+      {children}
     </nav>
   );
 }
 
-export function MobileDockItem({
+export function MobileDockNavLink({
   icon: Icon,
   label,
   isActive,
   href,
   onClick,
-  showLabel = true,
+  compact = false,
 }: {
   icon: LucideIcon;
   label: string;
   isActive: boolean;
-  href?: string;
+  href: string;
   onClick?: () => void;
-  /** When false, never expand with text (e.g. «المزيد») */
-  showLabel?: boolean;
+  /** Icon-only tabs (fixed 44px) — for product docks with back/more buttons */
+  compact?: boolean;
 }) {
-  const withLabel = isActive && showLabel;
-
-  const inner = (
-    <div
-      className={cn(
-        'relative flex h-11 min-w-11 items-center justify-center rounded-full transition-all duration-300 ease-out',
-        withLabel
-          ? 'gap-1.5 bg-[var(--foreground)] px-4 text-[var(--background)] shadow-md'
-          : isActive
-            ? 'bg-[var(--surface-secondary)] text-[var(--foreground)]'
-            : 'px-2.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
-      )}
-    >
-      <Icon
-        size={withLabel || isActive ? 19 : 21}
-        strokeWidth={isActive ? 2.2 : 1.7}
-        className="shrink-0"
-        aria-hidden
-      />
-      {withLabel ? (
-        <span className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold tracking-tight">
-          {label}
-        </span>
-      ) : null}
-    </div>
-  );
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        aria-label={label}
-        aria-current={isActive ? 'page' : undefined}
-        className="flex shrink-0"
-        onClick={onClick}
-      >
-        {inner}
-      </Link>
-    );
-  }
+  const iconSize = compact ? 19 : isActive ? 18 : 20;
+  const iconStroke = isActive ? 2.2 : 1.7;
 
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
+      prefetch
       aria-label={label}
-      aria-pressed={isActive}
+      aria-current={isActive ? 'page' : undefined}
+      className="flex shrink-0"
       onClick={onClick}
-      className="flex shrink-0 bg-transparent p-0"
     >
-      {inner}
-    </button>
-  );
-}
-
-/** Circular primary action — matches pill height */
-export function MobileDockFab({
-  href,
-  label,
-  icon: Icon,
-  onClick,
-}: {
-  href?: string;
-  label: string;
-  icon: LucideIcon;
-  onClick?: () => void;
-}) {
-  const className =
-    'flex size-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] transition-transform duration-200 active:scale-95';
-
-  const content = <Icon size={21} strokeWidth={2.25} aria-hidden />;
-
-  if (href) {
-    return (
-      <Link href={href} aria-label={label} className={className} onClick={onClick}>
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <button type="button" aria-label={label} onClick={onClick} className={className}>
-      {content}
-    </button>
+      <div
+        className={cn(
+          'relative flex items-center justify-center rounded-full transition-all duration-300 ease-out',
+          compact
+            ? cn(
+                'size-11 shrink-0',
+                isActive
+                  ? 'bg-[var(--foreground)] text-[var(--background)]'
+                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+              )
+            : cn(
+                'h-11 min-w-11',
+                isActive
+                  ? 'gap-1.5 bg-[var(--foreground)] px-3.5 text-[var(--background)]'
+                  : 'px-2.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+              ),
+        )}
+      >
+        <Icon
+          size={iconSize}
+          strokeWidth={iconStroke}
+          className="shrink-0"
+          aria-hidden
+        />
+        {!compact && isActive ? (
+          <span className="max-w-[5.5rem] truncate text-[12px] font-semibold tracking-tight">
+            {label}
+          </span>
+        ) : null}
+      </div>
+    </Link>
   );
 }

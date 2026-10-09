@@ -13,7 +13,6 @@ import {
   listWhatsappTemplates,
   refreshWhatsappAccount,
   registerPhoneNumber,
-  sendTestMessage,
   syncWhatsappTemplates,
   updatePhoneProfile,
   uploadPhoneProfilePicture,
@@ -130,11 +129,6 @@ export function useWhatsappMutations(appId: string) {
     onSuccess: invalidate,
   });
 
-  const testMessageMutation = useMutation({
-    mutationFn: ({ phoneId, to }: { phoneId: string; to: string }) =>
-      sendTestMessage(appId, phoneId, to),
-  });
-
   const syncTemplatesMutation = useMutation({
     mutationFn: (accountId?: string) => syncWhatsappTemplates(appId, accountId),
     onSuccess: invalidate,
@@ -158,7 +152,6 @@ export function useWhatsappMutations(appId: string) {
     registerMutation,
     profileMutation,
     profilePictureMutation,
-    testMessageMutation,
     syncTemplatesMutation,
     createTemplateMutation,
     deleteTemplateMutation,

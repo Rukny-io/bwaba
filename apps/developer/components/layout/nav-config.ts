@@ -13,6 +13,8 @@ import {
   appProducts,
   appAnalytics,
   appWallet,
+  appDashboard,
+  appApiKeys,
 } from '@/lib/app-routes';
 
 export type NavItem = {
@@ -54,12 +56,32 @@ export function getAllNavItems(appId: string): NavItem[] {
   ];
 }
 
-/** Items shown in the floating mobile dock (4 slots + More). */
+/** Primary pill items (matches apps/mail mobile dock — 4 slots + More). */
+export function getMobileDockBarItems(appId: string): NavItem[] {
+  const all = getPrimaryNavItems(appId);
+  const prefer = [
+    appDashboard(appId),
+    appAnalytics(appId),
+    appApiKeys(appId),
+    appWallet(appId),
+  ];
+  return prefer
+    .map((href) => all.find((item) => item.href === href))
+    .filter((item): item is NavItem => Boolean(item));
+}
+
+/** Primary nav entries shown in the More dropdown (e.g. app settings). */
+export function getMobileDockOverflowNavItems(appId: string): NavItem[] {
+  const bar = new Set(getMobileDockBarItems(appId).map((item) => item.href));
+  return getPrimaryNavItems(appId).filter((item) => !bar.has(item.href));
+}
+
+/** @deprecated Use getMobileDockBarItems */
 export function getMobileDockItems(appId: string): NavItem[] {
   return getPrimaryNavItems(appId);
 }
 
-/** كتالوج المنتجات — يُفتح من زر + في الشريط السفلي */
+/** كتالوج المنتجات — يُفتح من قائمة «المزيد» في الشريط السفلي */
 export function getProductsCatalogNavItem(appId: string): NavItem {
   return { href: appProducts(appId), icon: Package, label: 'المنتجات' };
 }

@@ -33,6 +33,8 @@ import { ProfilesService } from './profiles.service';
 import { CreateProfileDto, UpdateProfileDto } from './dto';
 import { StorageService } from '../storage/storage.service';
 
+const USERNAME_RE = /^[a-z0-9_-]{1,30}$/;
+
 @ApiTags('Profiles')
 @Controller('profiles')
 export class ProfilesController {
@@ -71,6 +73,11 @@ export class ProfilesController {
   @ApiParam({ name: 'username', description: 'Username to check availability' })
   @ApiResponse({ status: 200, description: 'Username availability checked' })
   checkUsername(@Param('username') username: string) {
+    if (!USERNAME_RE.test(username)) {
+      throw new BadRequestException(
+        'Username can only contain lowercase letters, numbers, hyphens, and underscores',
+      );
+    }
     return this.profilesService.checkUsernameAvailability(username);
   }
 
@@ -82,6 +89,11 @@ export class ProfilesController {
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
   findOne(@Param('username') username: string, @Request() req) {
+    if (!USERNAME_RE.test(username)) {
+      throw new BadRequestException(
+        'Username can only contain lowercase letters, numbers, hyphens, and underscores',
+      );
+    }
     const requesterId = req.user?.id;
     return this.profilesService.findByUsername(username, requesterId);
   }

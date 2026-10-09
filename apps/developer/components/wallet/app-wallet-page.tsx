@@ -204,7 +204,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <section className={walletPanelClass}>
           <WalletSectionHeader
             icon={ArrowRightLeft}

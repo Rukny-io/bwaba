@@ -4,7 +4,7 @@ Package: `@rukny/email`
 
 ## Prerequisites
 
-1. A [Rukny developer account](https://developers.rukny.io)
+1. A [Rukny developer account](https://dev.rukny.io)
 2. Email API installed on your app
 3. A verified domain and authorized sender (Domains UI in the portal)
 4. An API key with `email:send` (add `email:read` to check status)
@@ -63,6 +63,6 @@ Idempotency uses the email `Message-ID` header when present. One recipient per m
 
 ## Links
 
-- Documentation: https://developers.rukny.io/documentation/email-api
-- Sending examples: https://developers.rukny.io/documentation/email-api/send
-- Portal: https://developers.rukny.io
+- Documentation: https://dev.rukny.io/documentation/email-api
+- Sending examples: https://dev.rukny.io/documentation/email-api/send
+- Portal: https://dev.rukny.io

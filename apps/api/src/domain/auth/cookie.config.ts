@@ -442,6 +442,7 @@ export function validateCsrfToken(
         `https://accounts.rukny.io`,
         `https://business.rukny.io`,
         `https://forms.rukny.io`,
+        `https://dev.rukny.io`,
         `https://developers.rukny.io`,
         `https://hq.rukny.io`,
         `https://admin.rukny.io`,

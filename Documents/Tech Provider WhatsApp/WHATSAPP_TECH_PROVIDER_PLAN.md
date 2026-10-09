@@ -34,7 +34,7 @@
 Rukny.io كـ **WhatsApp Technology Provider** (مزوّد تقنية معتمد من Meta) يتيح للمطوّرين والشركات:
 
 ```
-1. إنشاء حساب مطوّر على developers.rukny.io
+1. إنشاء حساب مطوّر على dev.rukny.io
 2. إنشاء API Key للوصول إلى الـ API
 3. ربط رقم WhatsApp Business عبر Meta Embedded Signup
 4. إرسال واستقبال رسائل WhatsApp عبر REST API
@@ -113,7 +113,7 @@ Rukny.io كـ **WhatsApp Technology Provider** (مزوّد تقنية معتمد
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                     developers.rukny.io                          │
+│                     dev.rukny.io                          │
 │                   (Next.js 16 — Port 3004)                       │
 │                                                                  │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐           │

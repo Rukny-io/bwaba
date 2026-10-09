@@ -246,7 +246,7 @@ function ConfirmLinkStep({
 function EmptyTargetsState() {
   const developersUrl =
     process.env.NEXT_PUBLIC_DEVELOPERS_URL?.replace(/\/$/, '') ||
-    'https://developers.rukny.io';
+    'https://dev.rukny.io';
 
   return (
     <section className={cn(formDetailCardSurfaceClass, 'space-y-4 border-dashed bg-[var(--surface-secondary)]/20 text-center')}>

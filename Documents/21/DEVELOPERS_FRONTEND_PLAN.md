@@ -1,4 +1,4 @@
-# 🖥️ خطة عمل Frontend — بوابة المطوّرين (developers.rukny.io)
+# 🖥️ خطة عمل Frontend — بوابة المطوّرين (dev.rukny.io)
 
 > خطة تنفيذية تفصيلية لتحويل بوابة المطوّرين من واجهة ثابتة (Static Demo) إلى منصة ديناميكية كاملة لإدارة WhatsApp Business API
 

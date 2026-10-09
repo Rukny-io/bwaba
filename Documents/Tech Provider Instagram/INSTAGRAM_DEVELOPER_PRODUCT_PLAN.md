@@ -44,7 +44,7 @@
 ### الرؤية كمنتج مطوّر
 
 ```
-1. المطوّر ينشئ تطبيقاً على developers.rukny.io
+1. المطوّر ينشئ تطبيقاً على dev.rukny.io
 2. يثبّت منتج Instagram من صفحة المنتجات
 3. يربط حساب Instagram Professional (Business/Creator) عبر OAuth
 4. يفتح Inbox داخل التطبيق ويرد على Direct

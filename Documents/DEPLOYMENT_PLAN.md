@@ -21,7 +21,7 @@ This plan describes a full production deployment of the Rukny.io platform on a s
 | `accounts` | Next.js | 3005 | `accounts.rukny.io` |
 | `hq` | Next.js | 3002 | `hq.rukny.io` |
 | `public` | Next.js | 3006 | `rukny.io`, `www.rukny.io` |
-| `developers` | Next.js | 3007 | `developers.rukny.io` |
+| `developers` | Next.js | 3007 | `dev.rukny.io` |
 | `forms` | Next.js | 3008 | `forms.rukny.io` |
 | `pgadmin` | Admin UI | — | `db.rukny.io` (optional) |
 | `nginx` | Reverse proxy | 80/443 | — |
@@ -214,7 +214,7 @@ Check each domain in the browser:
 - https://app.rukny.io
 - https://api.rukny.io
 - https://hq.rukny.io
-- https://developers.rukny.io
+- https://dev.rukny.io
 - https://forms.rukny.io
 
 ---

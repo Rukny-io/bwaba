@@ -91,7 +91,7 @@ services:
       MAIL_FRONTEND_URL: ${MAIL_FRONTEND_URL:-https://mail.rukny.io}
       CHECKOUT_FRONTEND_URL: ${CHECKOUT_FRONTEND_URL:-https://checkout.rukny.io}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.rukny.io}
-      DEVELOPERS_FRONTEND_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      DEVELOPERS_FRONTEND_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       BUSINESS_FRONTEND_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
@@ -234,7 +234,7 @@ services:
         - NEXT_PUBLIC_PUBLIC_SITE_URL=${NEXT_PUBLIC_PUBLIC_SITE_URL:-https://rukny.io}
         - NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
-        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
+        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         - NEXT_PUBLIC_MAIL_URL=${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
@@ -275,7 +275,7 @@ services:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
         - NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
-        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
+        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         - NEXT_PUBLIC_MAIL_URL=${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         - NEXT_PUBLIC_HQ_URL=${NEXT_PUBLIC_HQ_URL:-https://hq.rukny.io}
@@ -297,7 +297,7 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
       NEXT_PUBLIC_ACCOUNTS_URL: ${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
       NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_HQ_URL: ${NEXT_PUBLIC_HQ_URL:-https://hq.rukny.io}
@@ -316,7 +316,7 @@ services:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
         - NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
-        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
+        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
     container_name: rukny_hq
@@ -345,7 +345,7 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
         NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
         NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-        NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+        NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
         NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
@@ -369,7 +369,7 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
       NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
       NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
@@ -392,7 +392,7 @@ services:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
         - NEXT_PUBLIC_ACCOUNTS_URL=${NEXT_PUBLIC_ACCOUNTS_URL:-https://accounts.rukny.io}
         - NEXT_PUBLIC_BUSINESS_URL=${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}
-        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}
+        - NEXT_PUBLIC_DEVELOPERS_URL=${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}
         - NEXT_PUBLIC_FORMS_URL=${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         - NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
         - NEXT_PUBLIC_PUBLIC_SITE_URL=${FORM_PUBLIC_BASE_URL:-https://rukny.io}
@@ -425,7 +425,7 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
         NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
         NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-        NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+        NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
         NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
         NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
         NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
@@ -448,12 +448,12 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.rukny.io}
       NEXT_PUBLIC_ACCOUNTS_URL: https://${ACCOUNTS_DOMAIN:-accounts.rukny.io}
       NEXT_PUBLIC_BUSINESS_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      NEXT_PUBLIC_DEVELOPERS_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       NEXT_PUBLIC_FORMS_URL: ${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}
       NEXT_PUBLIC_MAIL_URL: ${NEXT_PUBLIC_MAIL_URL:-https://mail.rukny.io}
       NEXT_PUBLIC_PUBLIC_SITE_URL: ${FORM_PUBLIC_BASE_URL:-https://rukny.io}
       NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}
-      NEXT_PUBLIC_DEV_URL: https://${DEVELOPERS_DOMAIN:-developers.rukny.io}
+      NEXT_PUBLIC_DEV_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       JWT_SECRET: ${JWT_SECRET}
       RUKNY_PREVIEW_ACCESS_KEY: ${RUKNY_PREVIEW_ACCESS_KEY:-}
     networks:

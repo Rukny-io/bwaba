@@ -950,7 +950,7 @@ export function CheckoutFlow() {
   if (developerExpired) {
     const developersHome =
       process.env.NEXT_PUBLIC_DEVELOPERS_URL?.replace(/\/$/, '') ||
-      'https://developers.rukny.io';
+      'https://dev.rukny.io';
     return (
       <CheckoutShell
         title={t('developerSessionExpiredTitle')}

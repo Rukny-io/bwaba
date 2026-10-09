@@ -272,7 +272,7 @@ export class QasehPaymentController {
       'https://mail.rukny.io';
     const developersUrl = (
       this.config.get<string>('DEVELOPERS_FRONTEND_URL') ||
-      'https://developers.rukny.io'
+      'https://dev.rukny.io'
     ).replace(/\/$/, '');
 
     this.logger.log(

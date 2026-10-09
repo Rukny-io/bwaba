@@ -4,7 +4,7 @@ const PUBLIC_SITE_BASE =
 
 const DEVELOPERS_BASE =
   process.env.NEXT_PUBLIC_DEVELOPERS_URL?.replace(/\/$/, '') ||
-  'https://developers.rukny.io';
+  'https://dev.rukny.io';
 
 export function getPublicFormUrl(slug: string, embed = false): string {
   const url = `${PUBLIC_SITE_BASE}/f/${encodeURIComponent(slug)}`;

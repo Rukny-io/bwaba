@@ -36,7 +36,7 @@ def update_compose(file_path, is_prod=True):
                 service['build']['args']['NEXT_PUBLIC_APP_URL'] = '${NEXT_PUBLIC_APP_URL:-https://rukny.io}'
                 service['build']['args']['NEXT_PUBLIC_ACCOUNTS_URL'] = '${AUTH_FRONTEND_URL:-https://accounts.rukny.io}'
                 service['build']['args']['NEXT_PUBLIC_BUSINESS_URL'] = '${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}'
-                service['build']['args']['NEXT_PUBLIC_DEVELOPERS_URL'] = '${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}'
+                service['build']['args']['NEXT_PUBLIC_DEVELOPERS_URL'] = '${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}'
                 service['build']['args']['NEXT_PUBLIC_FORMS_URL'] = '${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}'
                 service['build']['args']['NEXT_PUBLIC_ROOT_DOMAIN'] = '${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}'
                 
@@ -50,7 +50,7 @@ def update_compose(file_path, is_prod=True):
                 service['environment']['NEXT_PUBLIC_APP_URL'] = '${NEXT_PUBLIC_APP_URL:-https://rukny.io}'
                 service['environment']['NEXT_PUBLIC_ACCOUNTS_URL'] = '${AUTH_FRONTEND_URL:-https://accounts.rukny.io}'
                 service['environment']['NEXT_PUBLIC_BUSINESS_URL'] = '${NEXT_PUBLIC_BUSINESS_URL:-https://business.rukny.io}'
-                service['environment']['NEXT_PUBLIC_DEVELOPERS_URL'] = '${NEXT_PUBLIC_DEVELOPERS_URL:-https://developers.rukny.io}'
+                service['environment']['NEXT_PUBLIC_DEVELOPERS_URL'] = '${NEXT_PUBLIC_DEVELOPERS_URL:-https://dev.rukny.io}'
                 service['environment']['NEXT_PUBLIC_FORMS_URL'] = '${NEXT_PUBLIC_FORMS_URL:-https://forms.rukny.io}'
                 service['environment']['NEXT_PUBLIC_ROOT_DOMAIN'] = '${NEXT_PUBLIC_ROOT_DOMAIN:-rukny.io}'
                 

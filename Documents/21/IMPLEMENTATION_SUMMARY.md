@@ -6,7 +6,7 @@ Complete implementation of a shared authentication system for Rukny platform wit
 - `accounts.rukny.io` - Authentication provider
 - `business.rukny.io` - Business dashboard
 - `forms.rukny.io` - Forms app
-- `developers.rukny.io` - Developer portal
+- `dev.rukny.io` - Developer portal
 
 ---
 
@@ -83,7 +83,7 @@ APP_URLS = {
   accounts: 'https://accounts.rukny.io',
   business: 'https://business.rukny.io',
   forms: 'https://forms.rukny.io',
-  developers: 'https://developers.rukny.io',
+  developers: 'https://dev.rukny.io',
 }
 ```
 

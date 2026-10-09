@@ -256,6 +256,7 @@ async function bootstrap() {
     'https://app.rukny.io',
     'https://accounts.rukny.io',
     'https://business.rukny.io',
+    'https://dev.rukny.io',
     'https://developers.rukny.io',
     'https://forms.rukny.io',
     'https://hq.rukny.io',

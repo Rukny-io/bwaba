@@ -70,7 +70,7 @@ Copy-Item .env.example .env
 | `api.rukny.io` | `http://nginx:80` | API |
 | `accounts.rukny.io` | `http://nginx:80` | تسجيل الدخول |
 | `rukny.io` | `http://nginx:80` | النماذج العامة `/f/...` |
-| `developers.rukny.io` | `http://nginx:80` | بوابة المطوّرين |
+| `dev.rukny.io` | `http://nginx:80` | بوابة المطوّرين |
 | `forms.rukny.io` | `http://nginx:80` | لوحة النماذج |
 
 4. في **Domains** ببوابة المطوّرين: `websiteUrl` = `https://rukny.work` (يجب أن يطابق نطاق التضمين).

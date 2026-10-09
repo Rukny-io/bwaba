@@ -48,7 +48,7 @@ export function ProductConsoleMock({ locale = 'ar' }: { locale?: LandingLocale }
             <span className="size-2.5 rounded-full bg-[#f59e0b]" />
             <span className="size-2.5 rounded-full bg-[#10b981]" />
             <span className="ms-3 text-xs text-[var(--muted-foreground)]">
-              developers.rukny.io
+              dev.rukny.io
             </span>
           </div>
           <div className="grid min-[720px]:grid-cols-[200px_1fr]">

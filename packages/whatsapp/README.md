@@ -7,7 +7,7 @@ Official **server-side** Node.js client for the [Rukny WhatsApp API](https://api
 | Link | URL |
 |------|-----|
 | npm | https://www.npmjs.com/package/@rukny/whatsapp |
-| Developer portal | https://developers.rukny.io |
+| Developer portal | https://dev.rukny.io |
 | REST API | https://api.rukny.io/api/v1 |
 
 ## Install

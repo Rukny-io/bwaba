@@ -42,7 +42,7 @@ Rukny.io/
 │   ├── app/          → تطبيق الويب الرئيسي (Next.js 15) — rukny.io
 │   ├── admin/        → لوحة تحكم المسؤولين (Next.js 15) — admin.rukny.io
 │   ├── accounts/     → إدارة الحسابات والمصادقة (Next.js 15) — accounts.rukny.io
-│   ├── developers/   → بوابة المطورين (Next.js 15) — developers.rukny.io
+│   ├── developers/   → بوابة المطورين (Next.js 15) — dev.rukny.io
 │   └── forms/        → بناء النماذج (Next.js 15 + HeroUI) — forms.rukny.io
 ├── packages/
 │   ├── auth/         → مكتبة المصادقة المشتركة
@@ -1116,7 +1116,7 @@ const state = useOverlayState();
 ## 20. بوابة المطورين (Developers)
 
 ### الوصف
-تطبيق مستقل لبوابة المطورين — `apps/developers` — يعمل على النطاق `developers.rukny.io`.
+تطبيق مستقل لبوابة المطورين — `apps/developers` — يعمل على النطاق `dev.rukny.io`.
 يوفر توثيق API ومفاتيح الوصول للمطورين.
 
 ### الميزات

@@ -5,7 +5,7 @@ Official step-by-step guide for the [`@rukny/whatsapp`](https://www.npmjs.com/pa
 | Resource | Link |
 |----------|------|
 | **npm package** | https://www.npmjs.com/package/@rukny/whatsapp |
-| **Developer portal** | https://developers.rukny.io |
+| **Developer portal** | https://dev.rukny.io |
 | **REST API base URL** | https://api.rukny.io/api/v1 |
 | **OpenAPI spec (in package)** | `node_modules/@rukny/whatsapp/openapi/public-v1.yaml` |
 | **Rukny website** | https://rukny.io |
@@ -34,7 +34,7 @@ Official step-by-step guide for the [`@rukny/whatsapp`](https://www.npmjs.com/pa
 ## 1. Prerequisites
 
 - **Node.js 18+** on your server (not in the browser)
-- A [Rukny developer account](https://developers.rukny.io)
+- A [Rukny developer account](https://dev.rukny.io)
 - A **developer app** with the WhatsApp product enabled
 - Wallet balance for outbound messages (billing is usage-based)
 
@@ -60,7 +60,7 @@ After install, you will find:
 
 ## 3. Create an app and API key
 
-1. Open the [developer portal](https://developers.rukny.io) and sign in.
+1. Open the [developer portal](https://dev.rukny.io) and sign in.
 2. Create or select an **app**.
 3. Go to **API Keys** → **Create key**.
 4. For development, choose **Test** (`rk_test_…`).
@@ -77,8 +77,8 @@ RUKNY_API_KEY=rk_test_your_key_here
 
 Portal path (replace `{appId}` with your 16-digit public app id):
 
-- API keys: `https://developers.rukny.io/apps/{appId}/api-keys`
-- WhatsApp API docs: `https://developers.rukny.io/apps/{appId}/whatsapp-api`
+- API keys: `https://dev.rukny.io/apps/{appId}/api-keys`
+- WhatsApp API docs: `https://dev.rukny.io/apps/{appId}/whatsapp-api`
 
 ---
 
@@ -92,8 +92,8 @@ Before sending messages, link a WhatsApp Business Account (WABA) to your app:
 
 Portal path:
 
-- Overview: `https://developers.rukny.io/apps/{appId}/whatsapp`
-- Phone numbers: `https://developers.rukny.io/apps/{appId}/whatsapp/phone-numbers`
+- Overview: `https://dev.rukny.io/apps/{appId}/whatsapp`
+- Phone numbers: `https://dev.rukny.io/apps/{appId}/whatsapp/phone-numbers`
 
 ---
 
@@ -109,7 +109,7 @@ Template messages (including OTP) **must** be created in the portal and **approv
 
 Portal path:
 
-- Templates: `https://developers.rukny.io/apps/{appId}/whatsapp/templates`
+- Templates: `https://dev.rukny.io/apps/{appId}/whatsapp/templates`
 
 The API rejects sends if the template is missing or not approved for your app.
 
@@ -222,7 +222,7 @@ The SDK does **not** open a server for you. You register an HTTPS URL in the por
 
 Portal path:
 
-- Webhooks: `https://developers.rukny.io/apps/{appId}/whatsapp/webhooks`
+- Webhooks: `https://dev.rukny.io/apps/{appId}/whatsapp/webhooks`
 
 ### 10.2 Verify events in your handler
 
@@ -305,9 +305,9 @@ const wa = new RuknyWhatsApp({
 
 Docs in portal:
 
-- Auth & scopes: `https://developers.rukny.io/apps/{appId}/whatsapp-api/auth`
-- Webhooks: `https://developers.rukny.io/apps/{appId}/whatsapp-api/webhooks`
-- SDKs: `https://developers.rukny.io/apps/{appId}/whatsapp-api/sdks`
+- Auth & scopes: `https://dev.rukny.io/apps/{appId}/whatsapp-api/auth`
+- Webhooks: `https://dev.rukny.io/apps/{appId}/whatsapp-api/webhooks`
+- SDKs: `https://dev.rukny.io/apps/{appId}/whatsapp-api/sdks`
 
 ---
 
@@ -370,14 +370,14 @@ Failed API calls throw `RuknyWhatsAppError` with:
 
 For interactive testing without exposing live keys, use **Try it** in the portal (test keys only):
 
-`https://developers.rukny.io/apps/{appId}/whatsapp-api/try`
+`https://dev.rukny.io/apps/{appId}/whatsapp-api/try`
 
 ---
 
 ## Quick links
 
 - [Install on npm](https://www.npmjs.com/package/@rukny/whatsapp)
-- [Developer portal](https://developers.rukny.io)
+- [Developer portal](https://dev.rukny.io)
 - [API base](https://api.rukny.io/api/v1)
 - [Rukny](https://rukny.io)
 

@@ -117,7 +117,7 @@ Write-Host "   🔐 Auth:       https://accounts.rukny.io" -ForegroundColor Whit
 Write-Host "   ⚡ API:        https://api.rukny.io" -ForegroundColor White
 Write-Host "   🛠️  Admin:      https://admin.rukny.io" -ForegroundColor White
 Write-Host "   💼 Business:   https://business.rukny.io" -ForegroundColor White
-Write-Host "   👨‍💻 Developers: https://developers.rukny.io" -ForegroundColor White
+Write-Host "   👨‍💻 Developers: https://dev.rukny.io" -ForegroundColor White
 Write-Host "   📊 DB Admin:   https://db.rukny.io" -ForegroundColor White
 Write-Host ""
 Write-Host "🖥️  Local URLs:" -ForegroundColor Cyan

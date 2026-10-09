@@ -26,7 +26,7 @@ export const PRODUCTION_SERVICE_URLS = {
   app: 'https://app.rukny.io',
   hq: 'https://hq.rukny.io',
   business: 'https://business.rukny.io',
-  developer: 'https://developers.rukny.io',
+  developer: 'https://dev.rukny.io',
   forms: 'https://forms.rukny.io',
   mail: 'https://mail.rukny.io',
   checkout: 'https://checkout.rukny.io',

@@ -442,4 +442,4 @@ npm run cleanup:sessions  # تنظيف الجلسات المنتهية
 ---
 
 > [!IMPORTANT]
-> هذا الـ API يخدم عدة تطبيقات أمامية: `app.rukny.io`، `accounts.rukny.io`، `business.rukny.io`، `developers.rukny.io`، و `admin` — جميعها تتصل بنفس الـ API على المنفذ 3001.
+> هذا الـ API يخدم عدة تطبيقات أمامية: `app.rukny.io`، `accounts.rukny.io`، `business.rukny.io`، `dev.rukny.io`، و `admin` — جميعها تتصل بنفس الـ API على المنفذ 3001.

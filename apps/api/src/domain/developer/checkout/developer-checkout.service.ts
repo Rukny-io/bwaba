@@ -729,7 +729,7 @@ export class DeveloperCheckoutService {
     const base = (
       this.config.get<string>('DEVELOPERS_FRONTEND_URL') ||
       this.config.get<string>('NEXT_PUBLIC_DEVELOPERS_URL') ||
-      'https://developers.rukny.io'
+      'https://dev.rukny.io'
     ).replace(/\/$/, '');
     return `${base}${path.startsWith('/') ? path : `/${path}`}`;
   }

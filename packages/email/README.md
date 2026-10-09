@@ -1,6 +1,6 @@
 # @rukny/email
 
-Official Node.js client for the [Rukny Email API](https://developers.rukny.io/documentation/email-api).
+Official Node.js client for the [Rukny Email API](https://dev.rukny.io/documentation/email-api).
 
 **Server-side only** — never use this package in a browser or expose your API key to clients.
 
@@ -40,9 +40,9 @@ console.log(result.id, result.status);
 | `messages.send(input, { idempotencyKey })` | Send one transactional email |
 | `messages.getStatus(id)` | Read delivery status |
 
-Verify domains and authorize senders in the [developer portal](https://developers.rukny.io) before sending.
+Verify domains and authorize senders in the [developer portal](https://dev.rukny.io) before sending.
 
 ## Docs
 
-- Public documentation: https://developers.rukny.io/documentation/email-api
-- Developer portal: https://developers.rukny.io
+- Public documentation: https://dev.rukny.io/documentation/email-api
+- Developer portal: https://dev.rukny.io

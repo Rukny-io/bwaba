@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface DashboardMetricCardProps {
   icon: LucideIcon;
@@ -19,9 +21,15 @@ export function DashboardMetricCard({
   comparisonSecondary,
   trend,
   trendPositive = true,
+  href,
 }: DashboardMetricCardProps) {
-  return (
-    <article className="dashboard-card flex min-h-[7.25rem] flex-col gap-2 rounded-2xl p-3 sm:min-h-0 sm:gap-4 sm:p-5">
+  const cardClass = cn(
+    'dashboard-card flex min-h-[7.25rem] flex-col gap-2 rounded-2xl p-3 sm:min-h-0 sm:gap-4 sm:p-5',
+    href && 'dashboard-card-interactive transition-opacity hover:opacity-95',
+  );
+
+  const inner = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--primary)] sm:size-10 sm:rounded-xl">
           <Icon className="size-[18px] sm:size-5" strokeWidth={1.6} />
@@ -72,6 +80,16 @@ export function DashboardMetricCard({
           {comparisonPrimary}
         </p>
       </div>
-    </article>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClass}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return <article className={cardClass}>{inner}</article>;
 }

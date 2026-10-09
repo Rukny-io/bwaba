@@ -71,6 +71,7 @@ import { ContactsApiController } from './contacts/contacts-api.controller';
     TokenEncryptionService,
     QuotaService,
     MessagingService,
+    WabaService,
   ],
 })
 export class WhatsAppProviderModule {}

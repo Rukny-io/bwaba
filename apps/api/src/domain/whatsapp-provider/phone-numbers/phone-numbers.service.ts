@@ -12,6 +12,7 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { AppsUploadService } from '../../developer/apps/apps-upload.service';
 import { S3Service } from '../../../shared/services/s3.service';
 import { MetaApiService } from '../shared/meta-api.service';
+import { WabaService } from '../accounts/waba.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
 import {
   RegisterPhoneDto,
@@ -30,6 +31,7 @@ export class PhoneNumbersService {
   constructor(
     private prisma: PrismaService,
     private metaApi: MetaApiService,
+    private wabaService: WabaService,
     private tokenEncryption: TokenEncryptionService,
     private appsUpload: AppsUploadService,
     private s3Service: S3Service,
@@ -79,6 +81,14 @@ export class PhoneNumbersService {
    */
   async findAll(userId: string, appId: string) {
     const developerAppId = await this.resolveDeveloperAppId(userId, appId);
+
+    try {
+      await this.wabaService.syncPhonesForApp(userId, appId);
+    } catch (error) {
+      this.logger.warn(
+        `Phone list sync skipped for app ${appId}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
 
     return this.prisma.developerPhoneNumber.findMany({
       where: {

@@ -40,11 +40,15 @@ export function PhoneStatusBadge({ status }: { status: string }) {
 export function PhoneStatBox({
   label,
   value,
+  hint,
   dir,
+  valueClassName,
 }: {
   label: string;
   value: ReactNode;
+  hint?: string;
   dir?: 'ltr' | 'rtl';
+  valueClassName?: string;
 }) {
   return (
     <div className="rounded-xl bg-[var(--surface-secondary)] px-3.5 py-3">
@@ -52,11 +56,19 @@ export function PhoneStatBox({
         {label}
       </dt>
       <dd
-        className="mt-1 truncate text-sm font-semibold text-[var(--foreground)]"
+        className={cn(
+          'mt-1 truncate text-sm font-semibold text-[var(--foreground)]',
+          valueClassName,
+        )}
         dir={dir}
       >
         {value}
       </dd>
+      {hint ? (
+        <p className="mt-1.5 text-[10px] leading-snug text-[var(--muted-foreground)]">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -102,7 +114,7 @@ export function WhatsappEmptyState({
 }: {
   icon: LucideIcon;
   title: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
 }) {
   return (
@@ -116,9 +128,9 @@ export function WhatsappEmptyState({
             <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
           </div>
           {description ? (
-            <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+            <div className="mt-2 max-w-lg text-[13px] leading-relaxed text-[var(--muted-foreground)]">
               {description}
-            </p>
+            </div>
           ) : null}
         </div>
         {action ? <div className="shrink-0 sm:ms-auto">{action}</div> : null}

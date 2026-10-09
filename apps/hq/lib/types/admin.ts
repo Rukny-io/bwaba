@@ -92,6 +92,7 @@ export interface HqDashboardData {
   verification: VerificationStats;
   health: SystemHealth | null;
   commerce: CommerceAnalytics | null;
+  recentActivity: ActivityItem[];
 }
 
 export type CommerceRange = '7d' | '30d' | '90d';

@@ -7,8 +7,8 @@ import { useWhatsappMutations } from '@/hooks/use-whatsapp';
 import { useWhatsappPhone } from '@/components/whatsapp/whatsapp-phone-context';
 
 export function WhatsappPhoneDetailPanel() {
-  const { phone, appId } = useWhatsappPhone();
-  const { registerMutation } = useWhatsappMutations(appId);
+  const { phone, appId, accountId } = useWhatsappPhone();
+  const { registerMutation, refreshMutation } = useWhatsappMutations(appId);
 
   const [registerId, setRegisterId] = useState<string | null>(null);
   const [pin, setPin] = useState('');
@@ -25,11 +25,13 @@ export function WhatsappPhoneDetailPanel() {
     <PhoneCard
       appId={appId}
       phone={phone}
+      accountId={accountId ?? phone.account?.id}
       registerId={registerId}
       pin={pin}
       setRegisterId={setRegisterId}
       setPin={setPin}
       registerMutation={registerMutation}
+      refreshMutation={refreshMutation}
     />
   );
 }

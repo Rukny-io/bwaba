@@ -19,7 +19,7 @@ export type EmbeddedSignupMode = 'connect' | 'add-phone';
 
 const FB_ORIGINS = new Set(['https://www.facebook.com', 'https://web.facebook.com']);
 /** Wait briefly for WA_EMBEDDED_SIGNUP FINISH before exchanging the code. */
-const SIGNUP_META_WAIT_MS = 2500;
+const SIGNUP_META_WAIT_MS = 5000;
 const SIGNUP_META_POLL_MS = 50;
 const SDK_READY_WAIT_MS = 12_000;
 const SDK_READY_POLL_MS = 100;
@@ -64,6 +64,49 @@ function buildSignupExtras(
     featureType: '',
     sessionInfoVersion: 3,
   };
+}
+
+function notifyConnectSuccess(
+  account: WhatsappAccountSummary,
+  isAddPhone: boolean,
+  w: {
+    connected: string;
+    addPhoneSuccess: string;
+    addPhoneLinked: string;
+    addPhoneLinkedDesc: string;
+    addPhoneSyncPending: string;
+    addPhoneSyncPendingDesc: string;
+    pinGeneratedTitle: string;
+    pinGeneratedDesc: string;
+    paymentRequiredTitle: string;
+    paymentRequiredToast: string;
+  },
+) {
+  const phoneCount = account.phoneNumbers?.length ?? 0;
+  const pendingRegister = (account.registrationPins ?? []).some(
+    (p) => !p.registered && !p.alreadyRegistered,
+  );
+
+  if (isAddPhone) {
+    if (phoneCount === 0) {
+      appToast.info(w.addPhoneSyncPending, {
+        description: w.addPhoneSyncPendingDesc.replace(
+          '{wabaId}',
+          account.wabaId ?? '—',
+        ),
+      });
+    } else if (pendingRegister) {
+      appToast.success(w.addPhoneLinked, {
+        description: w.addPhoneLinkedDesc,
+      });
+    } else {
+      appToast.success(w.addPhoneSuccess);
+    }
+  } else {
+    appToast.success(w.connected);
+  }
+
+  notifyOnboarding(account, w);
 }
 
 function notifyOnboarding(
@@ -352,8 +395,7 @@ export function EmbeddedSignupButton({
             },
             {
               onSuccess: (account) => {
-                appToast.success(isAddPhone ? w.addPhoneSuccess : w.connected);
-                notifyOnboarding(account, w);
+                notifyConnectSuccess(account, isAddPhone, w);
                 setLaunching(false);
               },
               onError: (err) => {

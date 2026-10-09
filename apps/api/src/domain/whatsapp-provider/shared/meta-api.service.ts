@@ -214,13 +214,23 @@ export class MetaApiService {
   /**
    * جلب أرقام الهاتف لـ WABA
    */
+  private readonly phoneNumberFields =
+    'id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,status,name_status,code_verification_status,platform_type,is_official_business_account';
+
   async getPhoneNumbers(wabaId: string, accessToken: string) {
     const client = this.createClient(accessToken);
     const response = await client.get(`/${wabaId}/phone_numbers`, {
       params: {
-        fields:
-          'id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,status,name_status,code_verification_status,platform_type,is_official_business_account',
+        fields: this.phoneNumberFields,
       },
+    });
+    return response.data;
+  }
+
+  async getPhoneNumberById(phoneNumberId: string, accessToken: string) {
+    const client = this.createClient(accessToken);
+    const response = await client.get(`/${phoneNumberId}`, {
+      params: { fields: this.phoneNumberFields },
     });
     return response.data;
   }

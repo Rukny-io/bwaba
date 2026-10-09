@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CircleCheck, Clock, Loader2, Phone, RefreshCw, UserRound } from 'lucide-react';
+import {
+  CircleCheck,
+  Clock,
+  Loader2,
+  Phone,
+  RefreshCw,
+  UserRound,
+} from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
@@ -21,6 +28,12 @@ import type { WhatsappPhoneSummary } from '@/lib/api/types';
 import { appWhatsappPhoneHref } from '@/lib/whatsapp-phone-routes';
 import { appWhatsappApiHref } from '@/lib/whatsapp-api-routes';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
+import {
+  formatMessagingLimitTier,
+  formatQualityRatingLabel,
+  isUnknownQualityRating,
+  qualityRatingBadgeClass,
+} from '@/lib/whatsapp-phone-format';
 import { cn } from '@/lib/utils';
 
 const inputClass = whatsappInputClass;
@@ -69,30 +82,90 @@ function PhonePickerCard({ appId, phone }: { appId: string; phone: WhatsappPhone
 export function PhoneCard({
   appId,
   phone,
+  accountId,
   registerId,
   pin,
   setRegisterId,
   setPin,
   registerMutation,
+  refreshMutation,
 }: {
   appId: string;
   phone: WhatsappPhoneSummary;
+  accountId?: string;
   registerId: string | null;
   pin: string;
   setRegisterId: (id: string | null) => void;
   setPin: (pin: string) => void;
   registerMutation: ReturnType<typeof useWhatsappMutations>['registerMutation'];
+  refreshMutation?: ReturnType<typeof useWhatsappMutations>['refreshMutation'];
 }) {
   const w = useTranslations().whatsapp;
   const api = useTranslations().whatsappApi;
   const isPending = phone.status === 'PENDING';
 
+  const qualityUnknown = isUnknownQualityRating(phone.qualityRating);
+  const qualityLabel = formatQualityRatingLabel(phone.qualityRating, {
+    unknown: w.qualityUnknown,
+  });
+  const messagingFormatted = formatMessagingLimitTier(phone.messagingLimit, {
+    perDay: w.messagingLimitPerDay,
+    unlimited: w.messagingLimitUnlimited,
+  });
+  const messagingUnset = !messagingFormatted;
+
   return (
     <article className="dashboard-panel space-y-4 p-4 sm:space-y-5 sm:p-5">
+      {accountId && refreshMutation ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[12px] leading-relaxed text-[var(--muted-foreground)]">
+            {w.refreshMetaStatsHint}
+          </p>
+          <button
+            type="button"
+            disabled={refreshMutation.isPending}
+            onClick={() =>
+              refreshMutation.mutate(accountId, {
+                onSuccess: () => appToast.success(w.refresh),
+                onError: (e) => appToast.error(getApiErrorMessage(e)),
+              })
+            }
+            className={cn(whatsappBtnSecondary, 'shrink-0')}
+          >
+            <RefreshCw
+              className={cn('size-3.5', refreshMutation.isPending && 'animate-spin')}
+            />
+            {w.refreshMetaStats}
+          </button>
+        </div>
+      ) : null}
+
       <dl className="grid gap-2.5 sm:grid-cols-3">
-        <PhoneStatBox label={w.quality} value={phone.qualityRating || '—'} />
-        <PhoneStatBox label={w.messagingLimit} value={phone.messagingLimit || '—'} />
-        <PhoneStatBox label={w.phoneNumberId} value={phone.phoneNumberId} dir="ltr" />
+        <PhoneStatBox
+          label={w.quality}
+          value={
+            <span
+              className={cn(
+                'inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
+                qualityRatingBadgeClass(phone.qualityRating),
+              )}
+            >
+              {qualityLabel}
+            </span>
+          }
+          hint={qualityUnknown ? w.qualityUnknownHint : undefined}
+        />
+        <PhoneStatBox
+          label={w.messagingLimit}
+          value={messagingUnset ? w.messagingLimitUnset : messagingFormatted}
+          hint={messagingUnset ? w.messagingLimitUnsetHint : undefined}
+          dir={messagingUnset ? undefined : 'ltr'}
+        />
+        <PhoneStatBox
+          label={w.phoneMetaApiId}
+          value={phone.phoneNumberId}
+          dir="ltr"
+        />
       </dl>
 
       {isPending ? (
@@ -202,7 +275,16 @@ export function WhatsappPhonesPanel({ appId }: { appId: string }) {
       <WhatsappEmptyState
         icon={Phone}
         title={w.noPhones}
-        description={w.noPhonesDesc}
+        description={
+          <>
+            <p>{w.noPhonesDesc}</p>
+            {linkedWabaId ? (
+              <p className="mt-2 font-mono text-[11px] text-[var(--muted-foreground)]" dir="ltr">
+                {w.noPhonesWabaHint.replace('{wabaId}', linkedWabaId)}
+              </p>
+            ) : null}
+          </>
+        }
         action={emptyAction}
       />
     );

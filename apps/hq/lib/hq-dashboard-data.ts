@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { getServerAuthHeaders } from '@rukny/auth/server';
 import type {
+  ActivityItem,
   CommerceAnalytics,
   HqDashboardData,
   OrdersStats,
@@ -36,7 +37,7 @@ export async function getHqDashboardData(): Promise<HqDashboardData> {
   const cookieStore = await cookies();
   const cookieHeader = buildCookieHeader(cookieStore.getAll());
 
-  const [platform, users, orders, verification, health, commerce] =
+  const [platform, users, orders, verification, health, commerce, recentActivity] =
     await Promise.all([
       fetchAdmin<PlatformStats>('/admin/stats', cookieHeader),
       fetchAdmin<UsersStats>('/admin/users/stats', cookieHeader),
@@ -47,6 +48,7 @@ export async function getHqDashboardData(): Promise<HqDashboardData> {
         '/admin/analytics/commerce?range=30d&limit=5',
         cookieHeader,
       ),
+      fetchAdmin<ActivityItem[]>('/admin/recent-activity?limit=8', cookieHeader),
     ]);
 
   return {
@@ -90,5 +92,6 @@ export async function getHqDashboardData(): Promise<HqDashboardData> {
     },
     health,
     commerce,
+    recentActivity: recentActivity ?? [],
   };
 }

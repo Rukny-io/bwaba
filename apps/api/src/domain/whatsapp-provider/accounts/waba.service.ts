@@ -20,6 +20,25 @@ const PAYMENT_HELP_URL =
   'https://www.facebook.com/business/help/488291839463771';
 const WHATSAPP_MANAGER_URL = 'https://business.facebook.com/wa/manage/home/';
 
+const PHONE_SYNC_RETRY_MS = 2500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type MetaPhoneRow = {
+  id: string;
+  display_phone_number?: string;
+  verified_name?: string;
+  quality_rating?: string;
+  messaging_limit_tier?: string;
+  status?: string;
+  name_status?: string;
+  is_official_business_account?: boolean;
+  platform_type?: string;
+  code_verification_status?: string;
+};
+
 export type PhoneRegistrationResult = {
   phoneNumberId: string;
   phoneId?: string;
@@ -223,7 +242,9 @@ export class WabaService {
       });
     }
 
-    await this.syncPhoneNumbers(accountId, wabaId, accessToken, userId);
+    await this.syncPhoneNumbers(accountId, wabaId, accessToken, userId, {
+      preferredPhoneNumberId,
+    });
 
     let webhookSubscribed = false;
     try {
@@ -244,6 +265,10 @@ export class WabaService {
       accessToken,
       preferredPhoneNumberId,
       pin,
+    });
+
+    await this.syncPhoneNumbers(accountId, wabaId, accessToken, userId, {
+      preferredPhoneNumberId,
     });
 
     const ycloudBind = await this.attachPartnerCreditLine(
@@ -505,6 +530,8 @@ export class WabaService {
       throw new NotFoundException('App not found');
     }
 
+    await this.syncPhonesForApp(userId, appId);
+
     const accounts = await this.prisma.developerWhatsappAccount.findMany({
       where: {
         userId,
@@ -666,6 +693,43 @@ export class WabaService {
     });
   }
 
+  /**
+   * Pull phone numbers from Meta for every active WABA linked to this app.
+   */
+  async syncPhonesForApp(userId: string, appId: string): Promise<void> {
+    const app = await this.prisma.developerApp.findFirst({
+      where: { appId, userId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    if (!app) {
+      return;
+    }
+
+    const accounts = await this.prisma.developerWhatsappAccount.findMany({
+      where: {
+        userId,
+        developerAppId: app.id,
+        status: 'ACTIVE',
+        accessTokenEncrypted: { not: null },
+      },
+      select: { id: true, wabaId: true, accessTokenEncrypted: true },
+    });
+
+    for (const account of accounts) {
+      if (!account.accessTokenEncrypted) continue;
+      const accessToken = this.tokenEncryption.decrypt(
+        account.accessTokenEncrypted,
+      );
+      await this.syncPhoneNumbers(
+        account.id,
+        account.wabaId,
+        accessToken,
+        userId,
+      );
+    }
+  }
+
   private async generateUniquePhoneId(): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt++) {
       const phoneId = generateNumericPublicId();
@@ -678,67 +742,126 @@ export class WabaService {
     throw new BadRequestException('Failed to generate phone id');
   }
 
+  private async upsertPhoneFromMeta(
+    accountId: string,
+    userId: string,
+    phone: MetaPhoneRow,
+  ) {
+    const existingPhone = await this.prisma.developerPhoneNumber.findUnique({
+      where: { phoneNumberId: phone.id },
+      select: { id: true, phoneId: true },
+    });
+
+    if (!existingPhone) {
+      await this.quotaService.enforceQuota(userId, 'phoneNumbers');
+    }
+
+    const phoneId =
+      existingPhone?.phoneId ?? (await this.generateUniquePhoneId());
+
+    await this.prisma.developerPhoneNumber.upsert({
+      where: { phoneNumberId: phone.id },
+      update: {
+        accountId,
+        phoneNumber: phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
+        displayPhoneNumber: phone.display_phone_number,
+        verifiedName: phone.verified_name,
+        qualityRating: this.mapQualityRating(phone.quality_rating),
+        messagingLimit: phone.messaging_limit_tier,
+        ...(phone.status === 'BANNED' || phone.status === 'DISABLED'
+          ? { status: 'DISABLED' as const }
+          : {}),
+        nameStatus: phone.name_status,
+        isOfficialBusinessAccount: phone.is_official_business_account || false,
+        platformType: phone.platform_type,
+        codeVerificationStatus: phone.code_verification_status,
+        ...(existingPhone?.phoneId ? {} : { phoneId }),
+      },
+      create: {
+        phoneId,
+        accountId,
+        phoneNumber: phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
+        displayPhoneNumber: phone.display_phone_number,
+        verifiedName: phone.verified_name,
+        phoneNumberId: phone.id,
+        qualityRating: this.mapQualityRating(phone.quality_rating),
+        messagingLimit: phone.messaging_limit_tier,
+        status: 'PENDING',
+        nameStatus: phone.name_status,
+        isOfficialBusinessAccount: phone.is_official_business_account || false,
+        platformType: phone.platform_type,
+        codeVerificationStatus: phone.code_verification_status,
+      },
+    });
+  }
+
+  private async ingestPhoneRows(
+    accountId: string,
+    userId: string,
+    rows: MetaPhoneRow[],
+    syncedIds: Set<string>,
+  ) {
+    for (const phone of rows) {
+      if (!phone?.id) continue;
+      await this.upsertPhoneFromMeta(accountId, userId, phone);
+      syncedIds.add(phone.id);
+    }
+  }
+
   private async syncPhoneNumbers(
     accountId: string,
     wabaId: string,
     accessToken: string,
     userId: string,
+    options: { preferredPhoneNumberId?: string } = {},
   ) {
+    const preferred = options.preferredPhoneNumberId?.trim();
+    const syncedIds = new Set<string>();
+
     try {
       const phoneData = await this.metaApi.getPhoneNumbers(wabaId, accessToken);
+      await this.ingestPhoneRows(
+        accountId,
+        userId,
+        phoneData.data || [],
+        syncedIds,
+      );
 
-      for (const phone of phoneData.data || []) {
-        const existingPhone = await this.prisma.developerPhoneNumber.findUnique({
-          where: { phoneNumberId: phone.id },
-          select: { id: true, phoneId: true },
-        });
-
-        if (!existingPhone) {
-          await this.quotaService.enforceQuota(userId, 'phoneNumbers');
+      if (preferred && !syncedIds.has(preferred)) {
+        try {
+          const direct = await this.metaApi.getPhoneNumberById(
+            preferred,
+            accessToken,
+          );
+          if (direct?.id) {
+            await this.upsertPhoneFromMeta(accountId, userId, direct);
+            syncedIds.add(direct.id);
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Direct fetch for phone ${preferred} on WABA ${wabaId}: ${error.message}`,
+          );
         }
+      }
 
-        const phoneId =
-          existingPhone?.phoneId ?? (await this.generateUniquePhoneId());
+      if (preferred && !syncedIds.has(preferred)) {
+        await sleep(PHONE_SYNC_RETRY_MS);
+        const retryData = await this.metaApi.getPhoneNumbers(
+          wabaId,
+          accessToken,
+        );
+        await this.ingestPhoneRows(
+          accountId,
+          userId,
+          retryData.data || [],
+          syncedIds,
+        );
+      }
 
-        await this.prisma.developerPhoneNumber.upsert({
-          where: { phoneNumberId: phone.id },
-          update: {
-            accountId,
-            phoneNumber:
-              phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
-            displayPhoneNumber: phone.display_phone_number,
-            verifiedName: phone.verified_name,
-            qualityRating: this.mapQualityRating(phone.quality_rating),
-            messagingLimit: phone.messaging_limit_tier,
-            // Do not treat Meta "CONNECTED" as Cloud API registered — register() sets ACTIVE.
-            ...(phone.status === 'BANNED' || phone.status === 'DISABLED'
-              ? { status: 'DISABLED' as const }
-              : {}),
-            nameStatus: phone.name_status,
-            isOfficialBusinessAccount:
-              phone.is_official_business_account || false,
-            platformType: phone.platform_type,
-            codeVerificationStatus: phone.code_verification_status,
-            ...(existingPhone?.phoneId ? {} : { phoneId }),
-          },
-          create: {
-            phoneId,
-            accountId,
-            phoneNumber:
-              phone.display_phone_number?.replace(/[\s\-]/g, '') || '',
-            displayPhoneNumber: phone.display_phone_number,
-            verifiedName: phone.verified_name,
-            phoneNumberId: phone.id,
-            qualityRating: this.mapQualityRating(phone.quality_rating),
-            messagingLimit: phone.messaging_limit_tier,
-            status: 'PENDING',
-            nameStatus: phone.name_status,
-            isOfficialBusinessAccount:
-              phone.is_official_business_account || false,
-            platformType: phone.platform_type,
-            codeVerificationStatus: phone.code_verification_status,
-          },
-        });
+      if (preferred && !syncedIds.has(preferred)) {
+        this.logger.warn(
+          `Phone ${preferred} not returned by Meta for WABA ${wabaId} after sync retries`,
+        );
       }
     } catch (error) {
       if (error instanceof ForbiddenException) {

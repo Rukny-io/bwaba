@@ -15,6 +15,10 @@ import { WabaService } from './waba.service';
 import { ConnectWabaDto } from './dto/connect-waba.dto';
 import { TemplatesService } from '../templates/templates.service';
 import { CreateTemplateDto } from '../templates/dto/template.dto';
+import {
+  CreateTemplateFromLibraryDto,
+  TemplateLibraryQueryDto,
+} from '../templates/dto/template-library.dto';
 
 @ApiTags('Developer - WhatsApp Accounts')
 @ApiBearerAuth()
@@ -84,6 +88,27 @@ export class WabaController {
     @Body() dto: CreateTemplateDto,
   ) {
     return this.templatesService.create(userId, appId, dto);
+  }
+
+  @Get('template-library')
+  @ApiOperation({ summary: 'مكتبة قوالب Meta الجاهزة' })
+  getTemplateLibrary(
+    @CurrentUser('id') userId: string,
+    @Query('appId') appId: string,
+    @Query() query: TemplateLibraryQueryDto,
+    @Query('accountId') accountId?: string,
+  ) {
+    return this.templatesService.browseLibrary(userId, appId, query, accountId);
+  }
+
+  @Post('templates/from-library')
+  @ApiOperation({ summary: 'إنشاء قالب من مكتبة Meta' })
+  createTemplateFromLibrary(
+    @CurrentUser('id') userId: string,
+    @Query('appId') appId: string,
+    @Body() dto: CreateTemplateFromLibraryDto,
+  ) {
+    return this.templatesService.createFromLibrary(userId, appId, dto);
   }
 
   @Post('templates/sync')

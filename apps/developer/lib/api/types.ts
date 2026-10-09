@@ -305,6 +305,37 @@ export interface WhatsappTemplate {
   lastSyncedAt?: string | null;
 }
 
+export interface WhatsappLibraryTemplateButton {
+  type: string;
+  text?: string;
+  url?: string;
+  phone_number?: string;
+}
+
+export interface WhatsappLibraryTemplate {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  topic?: string;
+  usecase?: string;
+  industry?: string[];
+  header?: string;
+  body?: string;
+  footer?: string;
+  body_params?: string[];
+  body_param_types?: string[];
+  buttons?: WhatsappLibraryTemplateButton[];
+}
+
+export interface WhatsappTemplateLibraryPage {
+  data: WhatsappLibraryTemplate[];
+  paging: {
+    cursors?: { before?: string; after?: string };
+    next?: string;
+  } | null;
+}
+
 export interface EmbeddedSignupConfig {
   appId: string;
   configId: string;

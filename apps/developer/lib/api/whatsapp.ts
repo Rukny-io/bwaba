@@ -2,8 +2,10 @@ import { api } from '@/lib/api-client';
 import type {
   EmbeddedSignupConfig,
   WhatsappAccountSummary,
+  WhatsappLibraryTemplate,
   WhatsappPhoneSummary,
   WhatsappTemplate,
+  WhatsappTemplateLibraryPage,
 } from '@/lib/api/types';
 
 function appParams(appId: string) {
@@ -197,6 +199,55 @@ export async function deleteWhatsappTemplate(
 ): Promise<{ success: boolean }> {
   const { data } = await api.delete<{ success: boolean }>(
     `/developer/whatsapp/templates/${encodeURIComponent(name)}`,
+    appParams(appId),
+  );
+  return data;
+}
+
+export interface TemplateLibraryQuery {
+  accountId?: string;
+  search?: string;
+  topic?: string;
+  usecase?: string;
+  industry?: string;
+  language?: string;
+  name?: string;
+  after?: string;
+  limit?: number;
+}
+
+export async function listWhatsappTemplateLibrary(
+  appId: string,
+  query: TemplateLibraryQuery = {},
+): Promise<WhatsappTemplateLibraryPage> {
+  const { accountId, ...rest } = query;
+  const { data } = await api.get<WhatsappTemplateLibraryPage>(
+    '/developer/whatsapp/template-library',
+    { appId, accountId, ...rest },
+  );
+  return {
+    data: Array.isArray(data?.data) ? data.data : [],
+    paging: data?.paging ?? null,
+  };
+}
+
+export interface CreateFromLibraryPayload {
+  accountId?: string;
+  name: string;
+  language: string;
+  category: string;
+  libraryTemplateName: string;
+  libraryTemplateButtonInputs?: unknown[];
+  libraryTemplateBodyInputs?: Record<string, unknown>;
+}
+
+export async function createWhatsappTemplateFromLibrary(
+  appId: string,
+  payload: CreateFromLibraryPayload,
+): Promise<WhatsappTemplate> {
+  const { data } = await api.post<WhatsappTemplate>(
+    '/developer/whatsapp/templates/from-library',
+    payload,
     appParams(appId),
   );
   return data;

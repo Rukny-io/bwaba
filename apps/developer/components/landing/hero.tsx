@@ -9,11 +9,9 @@ export function LandingHero({ copy }: { copy: LandingCopy }) {
       aria-labelledby="landing-hero-title"
     >
       <div className="mx-auto flex max-w-[820px] flex-col items-center px-5 pb-24 pt-14 text-center sm:px-8 sm:pb-32 sm:pt-16">
-        <p className={`${agLayout.eyebrow} home-hero-enter`}>{copy.heroEyebrow}</p>
-
         <h1
           id="landing-hero-title"
-          className={`${agLayout.heroTitle} home-hero-enter mt-5`}
+          className={`${agLayout.heroTitle} home-hero-enter`}
         >
           <span className="block text-pretty">{copy.headline}</span>
           <span className="mt-1.5 block text-pretty text-[#9CA3AF] sm:mt-2">
@@ -33,16 +31,16 @@ export function LandingHero({ copy }: { copy: LandingCopy }) {
             {copy.startFree}
           </Link>
           <Link
-            href="/pricing"
+            href="#pricing"
             className={`${agLayout.btnSecondary} w-full sm:w-auto`}
           >
             {copy.pricing}
           </Link>
           <Link
-            href="/documentation"
+            href="#products"
             className={`${agLayout.btnGhost} w-full sm:w-auto`}
           >
-            {copy.docs}
+            {copy.products}
           </Link>
         </div>
       </div>

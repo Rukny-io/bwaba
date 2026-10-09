@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { CircleCheck, Clock, Loader2, Plus, RefreshCw, ScrollText, XCircle } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
-import { WhatsappTemplatesDataTable } from '@/components/whatsapp/whatsapp-templates-data-table';
+import { WhatsappTemplateLibraryPanel } from '@/components/whatsapp/whatsapp-template-library-panel';
+import { WhatsappTemplatesCards } from '@/components/whatsapp/whatsapp-templates-cards';
 import {
   WhatsappEmptyState,
   whatsappBtnPrimary,
@@ -38,6 +40,7 @@ export function WhatsappTemplatesPanel({
   const { syncTemplatesMutation, deleteTemplateMutation } = useWhatsappMutations(appId);
 
   const createHref = appWhatsappPhoneCreateTemplateHref(appId, phoneId);
+  const [tab, setTab] = useState<'mine' | 'library'>('mine');
 
   const approvedCount =
     templates?.filter((t) => t.status.toUpperCase() === 'APPROVED').length ?? 0;
@@ -48,45 +51,83 @@ export function WhatsappTemplatesPanel({
 
   return (
     <div className="dashboard-section-stack">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[var(--muted-foreground)]">
-          {w.templatesPhoneScopeHint}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {accountId ? (
-            <Link href={createHref} className={whatsappBtnPrimary}>
-              <Plus className="size-3.5" />
-              {w.createTemplate}
-            </Link>
-          ) : (
-            <button type="button" disabled className={whatsappBtnPrimary}>
-              <Plus className="size-3.5" />
-              {w.createTemplate}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className="flex gap-1 rounded-xl bg-[var(--surface-secondary)] p-1"
+          role="tablist"
+          aria-label={w.templatesTabsAria}
+        >
+          {(
+            [
+              { id: 'mine' as const, label: w.templatesTabMine },
+              { id: 'library' as const, label: w.templatesTabLibrary },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
+              className={cn(
+                'rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors',
+                tab === item.id
+                  ? 'bg-[var(--foreground)] text-[var(--background)]'
+                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+              )}
+            >
+              {item.label}
             </button>
-          )}
-          <button
-            type="button"
-            disabled={!accountId || syncTemplatesMutation.isPending}
-            onClick={() =>
-              syncTemplatesMutation.mutate(accountId, {
-                onSuccess: () => appToast.success(w.syncTemplatesDone),
-                onError: (e) => appToast.error(getApiErrorMessage(e)),
-              })
-            }
-            className={whatsappBtnSecondary}
-          >
-            <RefreshCw
-              className={cn('size-3.5', syncTemplatesMutation.isPending && 'animate-spin')}
-            />
-            {w.syncTemplates}
-          </button>
+          ))}
         </div>
+        {tab === 'mine' ? (
+          <div className="flex flex-wrap gap-2">
+            {accountId ? (
+              <Link href={createHref} className={whatsappBtnPrimary}>
+                <Plus className="size-3.5" />
+                {w.createTemplate}
+              </Link>
+            ) : (
+              <button type="button" disabled className={whatsappBtnPrimary}>
+                <Plus className="size-3.5" />
+                {w.createTemplate}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!accountId || syncTemplatesMutation.isPending}
+              onClick={() =>
+                syncTemplatesMutation.mutate(accountId, {
+                  onSuccess: () => appToast.success(w.syncTemplatesDone),
+                  onError: (e) => appToast.error(getApiErrorMessage(e)),
+                })
+              }
+              className={whatsappBtnSecondary}
+            >
+              <RefreshCw
+                className={cn('size-3.5', syncTemplatesMutation.isPending && 'animate-spin')}
+              />
+              {w.syncTemplates}
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {!accountId ? (
+      {tab === 'library' ? (
+        <WhatsappTemplateLibraryPanel
+          appId={appId}
+          accountId={accountId}
+          onAdded={() => setTab('mine')}
+        />
+      ) : null}
+
+      {tab === 'mine' && !accountId ? (
         <WhatsappEmptyState icon={ScrollText} title={w.templatesNeedAccount} />
-      ) : (
+      ) : tab === 'mine' ? (
         <>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {w.templatesPhoneScopeHint}
+          </p>
           <DashboardGrid>
             <DashboardMetricCard
               icon={ScrollText}
@@ -131,7 +172,7 @@ export function WhatsappTemplatesPanel({
               }
             />
           ) : (
-            <WhatsappTemplatesDataTable
+            <WhatsappTemplatesCards
               data={templates}
               deletingName={
                 deleteTemplateMutation.isPending
@@ -148,7 +189,7 @@ export function WhatsappTemplatesPanel({
             />
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

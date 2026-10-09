@@ -11,6 +11,8 @@ import {
   listPhoneNumbers,
   listWhatsappAccounts,
   listWhatsappTemplates,
+  listWhatsappTemplateLibrary,
+  createWhatsappTemplateFromLibrary,
   refreshWhatsappAccount,
   registerPhoneNumber,
   syncWhatsappTemplates,
@@ -26,6 +28,17 @@ export const whatsappKeys = {
     [...whatsappKeys.phones(appId), phoneId] as const,
   templates: (appId: string, accountId?: string) =>
     [...whatsappKeys.all(appId), 'templates', accountId ?? 'all'] as const,
+  templateLibrary: (
+    appId: string,
+    accountId?: string,
+    query?: Parameters<typeof listWhatsappTemplateLibrary>[1],
+  ) =>
+    [
+      ...whatsappKeys.all(appId),
+      'template-library',
+      accountId ?? 'none',
+      query ?? {},
+    ] as const,
   signupConfig: () => ['whatsapp', 'signup-config'] as const,
 };
 
@@ -66,6 +79,20 @@ export function useWhatsappTemplates(appId: string, accountId?: string) {
     queryKey: whatsappKeys.templates(appId, accountId),
     queryFn: () => listWhatsappTemplates(appId, accountId),
     enabled: Boolean(appId),
+  });
+}
+
+export function useWhatsappTemplateLibrary(
+  appId: string,
+  accountId?: string,
+  query: Parameters<typeof listWhatsappTemplateLibrary>[1] = {},
+) {
+  return useQuery({
+    queryKey: whatsappKeys.templateLibrary(appId, accountId, query),
+    queryFn: () =>
+      listWhatsappTemplateLibrary(appId, { accountId, ...query }),
+    enabled: Boolean(appId && accountId),
+    staleTime: 60_000,
   });
 }
 
@@ -145,6 +172,12 @@ export function useWhatsappMutations(appId: string) {
     onSuccess: invalidate,
   });
 
+  const createFromLibraryMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof createWhatsappTemplateFromLibrary>[1]) =>
+      createWhatsappTemplateFromLibrary(appId, payload),
+    onSuccess: invalidate,
+  });
+
   return {
     connectMutation,
     disconnectMutation,
@@ -155,5 +188,6 @@ export function useWhatsappMutations(appId: string) {
     syncTemplatesMutation,
     createTemplateMutation,
     deleteTemplateMutation,
+    createFromLibraryMutation,
   };
 }

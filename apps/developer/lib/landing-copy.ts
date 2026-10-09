@@ -40,6 +40,25 @@ export type LandingCopy = {
   ctaTitle: string;
   ctaSupport: string;
   backToTop: string;
+  introEyebrow: string;
+  introHeadline: string;
+  introLead: string;
+  pricingPageEyebrow: string;
+  pricingPageTitle: string;
+  pricingPageTitleMuted: string;
+  pricingPageLead: string;
+  pricingBandEyebrow: string;
+  pricingBandTitle: string;
+  pricingBandTitleMuted: string;
+  pricingBandViewAll: string;
+  billingMonthly: string;
+  billingYearly: string;
+  billingSave: string;
+  billingAria: string;
+  openMenu: string;
+  closeMenu: string;
+  viewAllProducts: string;
+  mobileMenuAria: string;
 };
 
 export const LANDING_COPY: Record<LandingLocale, LandingCopy> = {
@@ -120,6 +139,27 @@ export const LANDING_COPY: Record<LandingLocale, LandingCopy> = {
     ctaTitle: 'ابنِ على رُكني اليوم',
     ctaSupport: 'أنشئ تطبيقاً مجاناً وابدأ الإرسال أو نشر النماذج.',
     backToTop: 'للأعلى',
+    introEyebrow: 'لماذا رُكني',
+    introHeadline: 'منصة مطوّرين عراقية — واتساب، بريد، ونماذج من مكان واحد.',
+    introLead:
+      'مفاتيح API، محفظة بالدينار، وتوثيق واضح. اربط منتجك الحقيقي بدون تشتيت بين لوحات متفرقة.',
+    pricingPageEyebrow: 'الأسعار',
+    pricingPageTitle: 'ابنِ بثقة',
+    pricingPageTitleMuted: ' بدون مفاجآت',
+    pricingPageLead:
+      'ابدأ مجاناً بحدود واضحة. ترقّ إلى Pro للإنتاج. الرسائل تُخصم من محفظة التطبيق حسب الاستخدام.',
+    pricingBandEyebrow: 'الأسعار',
+    pricingBandTitle: 'خطط بسيطة',
+    pricingBandTitleMuted: ' للمطوّرين',
+    pricingBandViewAll: 'كل الأسعار',
+    billingMonthly: 'شهري',
+    billingYearly: 'سنوي',
+    billingSave: 'وفر {percent}%',
+    billingAria: 'فترة الفوترة',
+    openMenu: 'فتح القائمة',
+    closeMenu: 'إغلاق القائمة',
+    viewAllProducts: 'عرض كل المنتجات',
+    mobileMenuAria: 'قائمة الجوال',
   },
   en: {
     docs: 'Docs',
@@ -199,5 +239,26 @@ export const LANDING_COPY: Record<LandingLocale, LandingCopy> = {
     ctaTitle: 'Build on Rukny today',
     ctaSupport: 'Create a free app and start sending or publishing forms.',
     backToTop: 'Back to top',
+    introEyebrow: 'Why Rukny',
+    introHeadline: 'An Iraqi developer platform — WhatsApp, email, and forms in one portal.',
+    introLead:
+      'API keys, IQD wallet, and clear docs. Ship your product without juggling separate dashboards.',
+    pricingPageEyebrow: 'Pricing',
+    pricingPageTitle: 'Build with confidence',
+    pricingPageTitleMuted: ' without surprises',
+    pricingPageLead:
+      'Start free with clear limits. Upgrade to Pro for production. Messages bill from your app wallet by usage.',
+    pricingBandEyebrow: 'Pricing',
+    pricingBandTitle: 'Simple plans',
+    pricingBandTitleMuted: ' for developers',
+    pricingBandViewAll: 'Full pricing',
+    billingMonthly: 'Monthly',
+    billingYearly: 'Yearly',
+    billingSave: 'Save {percent}%',
+    billingAria: 'Billing period',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    viewAllProducts: 'View all products',
+    mobileMenuAria: 'Mobile menu',
   },
 };

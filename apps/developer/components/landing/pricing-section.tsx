@@ -24,9 +24,23 @@ import {
   type PlanId,
   type PricingPlan,
 } from '@/lib/pricing-plans';
+import type { LandingCopy } from '@/lib/landing-copy';
+import { agLayout } from '@/lib/ag-theme';
 import { cn } from '@/lib/utils';
 import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
 import { appToast } from '@/lib/app-toast';
+
+export type PricingPageHeader = Pick<
+  LandingCopy,
+  | 'pricingPageEyebrow'
+  | 'pricingPageTitle'
+  | 'pricingPageTitleMuted'
+  | 'pricingPageLead'
+  | 'billingMonthly'
+  | 'billingYearly'
+  | 'billingSave'
+  | 'billingAria'
+>;
 
 const PLAN_HREF: Record<PlanId, string> = {
   free: '/apps',
@@ -66,11 +80,25 @@ function SectionHeader({
   eyebrow,
   title,
   subtitle,
+  marketing,
 }: {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  marketing?: boolean;
 }) {
+  if (marketing) {
+    return (
+      <header className="mx-auto max-w-2xl text-center">
+        {eyebrow ? <p className={agLayout.eyebrow}>{eyebrow}</p> : null}
+        <h2 className={cn(agLayout.sectionTitle, eyebrow && 'mt-4')}>{title}</h2>
+        {subtitle ? (
+          <p className={`${agLayout.lead} mx-auto mt-4 max-w-xl sm:mt-5`}>{subtitle}</p>
+        ) : null}
+      </header>
+    );
+  }
+
   return (
     <header className="mx-auto max-w-2xl text-center">
       {eyebrow ? (
@@ -146,12 +174,75 @@ function BillingToggle({
   );
 }
 
-function PlanCard({
+export function MarketingBillingToggle({
+  period,
+  onChange,
+  copy,
+}: {
+  period: BillingPeriod;
+  onChange: (p: BillingPeriod) => void;
+  copy: Pick<
+    LandingCopy,
+    'billingMonthly' | 'billingYearly' | 'billingSave' | 'billingAria'
+  >;
+}) {
+  const saveLabel = copy.billingSave.replace(
+    '{percent}',
+    String(YEARLY_DISCOUNT_PERCENT),
+  );
+
+  return (
+    <div
+      className="inline-flex max-w-full rounded-full bg-[#F5F5F5] p-1"
+      role="group"
+      aria-label={copy.billingAria}
+    >
+      <button
+        type="button"
+        onClick={() => onChange('monthly')}
+        className={cn(
+          'min-h-9 rounded-full px-5 py-2 text-[13px] font-medium transition-colors duration-300',
+          period === 'monthly'
+            ? 'bg-[#1D1D1D] text-white'
+            : 'text-[#6B6F76] hover:text-[#1D1D1D]',
+        )}
+      >
+        {copy.billingMonthly}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('yearly')}
+        className={cn(
+          'flex min-h-9 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-300 sm:px-5',
+          period === 'yearly'
+            ? 'bg-[#1D1D1D] text-white'
+            : 'text-[#6B6F76] hover:text-[#1D1D1D]',
+        )}
+      >
+        {copy.billingYearly}
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+            period === 'yearly'
+              ? 'bg-white/15 text-white'
+              : 'bg-[#EBEBEB] text-[#6B6F76]',
+          )}
+        >
+          {saveLabel}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+export function PlanCard({
   plan,
   period,
+  marketing,
 }: {
   plan: PricingPlan;
   period: BillingPeriod;
+  marketing?: boolean;
 }) {
   const isFree = plan.priceMonthly === 0;
   const [busy, setBusy] = useState(false);
@@ -185,7 +276,10 @@ function PlanCard({
   return (
     <div
       className={cn(
-        'relative flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-6 sm:p-7',
+        'relative flex h-full flex-col p-6 sm:p-7',
+        marketing
+          ? 'rounded-[1.5rem] bg-[#FAFAFA]'
+          : 'rounded-2xl bg-[var(--surface-secondary)]',
       )}
     >
       <div className="flex min-h-[26px] items-center">
@@ -292,22 +386,45 @@ function PlanCard({
   );
 }
 
-function FaqItem({ question, answer }: { question: string; answer: string }) {
+function FaqItem({
+  question,
+  answer,
+  marketing,
+}: {
+  question: string;
+  answer: string;
+  marketing?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-[var(--border)]">
+    <div
+      className={cn(
+        'border-b last:border-b-0',
+        marketing ? 'border-[#EBEBEB]' : 'border-[var(--border)]',
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 py-5 text-start"
+        className={cn(
+          'flex w-full items-center justify-between gap-4 text-start',
+          marketing ? 'py-4 sm:py-5' : 'py-5',
+        )}
       >
-        <span className="text-[15px] font-semibold text-[var(--foreground)]">
+        <span
+          className={cn(
+            marketing
+              ? 'text-[14px] font-medium text-[#1D1D1D] sm:text-[15px]'
+              : 'text-[15px] font-semibold text-[var(--foreground)]',
+          )}
+        >
           {question}
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 text-[var(--muted-foreground)] transition-transform duration-200',
+            'size-4 shrink-0 transition-transform duration-200',
+            marketing ? 'text-[#9CA3AF]' : 'text-[var(--muted-foreground)]',
             open && 'rotate-180',
           )}
         />
@@ -328,30 +445,58 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-export function PricingSection() {
+export function PricingSection({ header }: { header?: PricingPageHeader }) {
   const [period, setPeriod] = useState<BillingPeriod>('monthly');
+  const marketing = Boolean(header);
+
+  const shellClass = marketing
+    ? cn(agLayout.container, 'pb-14 sm:pb-16')
+    : 'mx-auto w-full max-w-6xl px-5 py-14 sm:px-6 sm:py-20';
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
-          Pricing
-        </p>
-        <h1 className="mt-3 text-[2.25rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl sm:leading-[1.1]">
-          Build without pricing surprises
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[var(--muted-foreground)] sm:text-[17px] sm:leading-8">
-          Start free with clear limits. Upgrade to Pro for production scale.
-          Messages bill from your app wallet by real usage.
-        </p>
-        <div className="mt-8 flex justify-center">
-          <BillingToggle period={period} onChange={setPeriod} />
+    <main className={shellClass}>
+      {marketing && header ? (
+        <header className="pt-8 text-center sm:pt-12 md:pt-14">
+          <p className={agLayout.eyebrow}>{header.pricingPageEyebrow}</p>
+          <h1
+            className={`${agLayout.sectionTitle} mt-3 text-[clamp(1.75rem,5vw,2.75rem)]`}
+          >
+            {header.pricingPageTitle}
+            <span className="text-[#9CA3AF]">{header.pricingPageTitleMuted}</span>
+          </h1>
+          <p className={`${agLayout.lead} mx-auto mt-4 max-w-xl text-[15px] sm:mt-5`}>
+            {header.pricingPageLead}
+          </p>
+          <div className="mt-6 flex justify-center sm:mt-7">
+            <MarketingBillingToggle period={period} onChange={setPeriod} copy={header} />
+          </div>
+        </header>
+      ) : (
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-[13px] font-medium text-[var(--muted-foreground)]">
+            Pricing
+          </p>
+          <h1 className="mt-3 text-[2.25rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl sm:leading-[1.1]">
+            Build without pricing surprises
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[var(--muted-foreground)] sm:text-[17px] sm:leading-8">
+            Start free with clear limits. Upgrade to Pro for production scale.
+            Messages bill from your app wallet by real usage.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <BillingToggle period={period} onChange={setPeriod} />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-5">
+      <div
+        className={cn(
+          'mx-auto grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-5',
+          marketing ? 'mt-6 sm:mt-8' : 'mt-12',
+        )}
+      >
         {PRICING_PLANS.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} period={period} />
+          <PlanCard key={plan.id} plan={plan} period={period} marketing={marketing} />
         ))}
       </div>
 
@@ -361,13 +506,19 @@ export function PricingSection() {
           eyebrow={USAGE_SECTION_COPY.eyebrow}
           title={USAGE_SECTION_COPY.title}
           subtitle={USAGE_SECTION_COPY.subtitle}
+          marketing={marketing}
         />
 
         <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {USAGE_RATES.map((rate) => (
             <div
               key={rate.id}
-              className="flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-5"
+              className={cn(
+                'flex h-full flex-col p-5',
+                marketing
+                  ? 'rounded-[1.5rem] bg-[#FAFAFA]'
+                  : 'rounded-2xl bg-[var(--surface-secondary)]',
+              )}
             >
               <p className="text-[13px] font-semibold text-[var(--foreground)]">
                 {rate.label}
@@ -414,13 +565,19 @@ export function PricingSection() {
           eyebrow={EMAIL_SECTION_COPY.eyebrow}
           title={EMAIL_SECTION_COPY.title}
           subtitle={EMAIL_SECTION_COPY.subtitle}
+          marketing={marketing}
         />
 
         <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {EMAIL_PRODUCT_PLANS.map((plan) => (
             <div
               key={plan.id}
-              className="flex h-full flex-col rounded-2xl bg-[var(--surface-secondary)] p-6"
+              className={cn(
+                'flex h-full flex-col p-6',
+                marketing
+                  ? 'rounded-[1.5rem] bg-[#FAFAFA]'
+                  : 'rounded-2xl bg-[var(--surface-secondary)]',
+              )}
             >
               <p className="text-[13px] font-semibold text-[var(--foreground)]">
                 {plan.name}
@@ -460,7 +617,14 @@ export function PricingSection() {
           ))}
         </div>
 
-        <div className="mx-auto mt-10 max-w-4xl overflow-x-auto rounded-2xl bg-[var(--surface-secondary)] p-4 sm:p-6">
+        <div
+          className={cn(
+            'mx-auto mt-10 max-w-4xl overflow-x-auto p-4 sm:p-6',
+            marketing
+              ? 'rounded-[1.5rem] bg-[#FAFAFA]'
+              : 'rounded-2xl bg-[var(--surface-secondary)]',
+          )}
+        >
           <h3 className="text-[15px] font-semibold text-[var(--foreground)]">
             Transactional tiers
           </h3>
@@ -517,6 +681,7 @@ export function PricingSection() {
         <SectionHeader
           title="Compare plans"
           subtitle="Free vs Pro side by side."
+          marketing={marketing}
         />
 
         <div className="mx-auto mt-10 max-w-4xl space-y-10 overflow-x-auto">
@@ -585,10 +750,15 @@ export function PricingSection() {
 
       {/* FAQ */}
       <section className="mx-auto mt-20 max-w-2xl sm:mt-24">
-        <SectionHeader title="FAQ" />
-        <div className="mt-6">
+        <SectionHeader title="FAQ" marketing={marketing} />
+        <div
+          className={cn(
+            'mt-6',
+            marketing && 'overflow-hidden rounded-[1.5rem] bg-[#FAFAFA] px-4 sm:px-6',
+          )}
+        >
           {PRICING_FAQS.map((faq) => (
-            <FaqItem key={faq.question} {...faq} />
+            <FaqItem key={faq.question} {...faq} marketing={marketing} />
           ))}
         </div>
       </section>

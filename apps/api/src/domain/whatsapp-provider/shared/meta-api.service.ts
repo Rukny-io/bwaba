@@ -111,6 +111,53 @@ export class MetaApiService {
   }
 
   /**
+   * Meta Template Library (pre-built utility / authentication templates).
+   * @see https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates/template-library/
+   */
+  async listTemplateLibrary(
+    accessToken: string,
+    params?: {
+      search?: string;
+      topic?: string;
+      usecase?: string;
+      industry?: string;
+      language?: string;
+      name?: string;
+      after?: string;
+      limit?: number;
+    },
+  ) {
+    const client = this.createClient(accessToken);
+    const response = await client.get('/message_template_library', {
+      params: {
+        limit: params?.limit ?? 50,
+        ...params,
+      },
+    });
+    return response.data;
+  }
+
+  async createTemplateFromLibrary(
+    wabaId: string,
+    accessToken: string,
+    payload: {
+      name: string;
+      language: string;
+      category: string;
+      library_template_name: string;
+      library_template_button_inputs?: unknown[];
+      library_template_body_inputs?: Record<string, unknown>;
+    },
+  ) {
+    const client = this.createClient(accessToken);
+    const response = await client.post(
+      `/${wabaId}/message_templates`,
+      payload,
+    );
+    return response.data;
+  }
+
+  /**
    * حذف قالب
    */
   async deleteTemplate(

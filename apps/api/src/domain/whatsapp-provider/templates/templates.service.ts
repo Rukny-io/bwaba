@@ -8,6 +8,10 @@ import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { MetaApiService } from '../shared/meta-api.service';
 import { TokenEncryptionService } from '../shared/token-encryption.service';
 import { CreateTemplateDto } from './dto/template.dto';
+import {
+  CreateTemplateFromLibraryDto,
+  TemplateLibraryQueryDto,
+} from './dto/template-library.dto';
 
 @Injectable()
 export class TemplatesService {
@@ -172,6 +176,126 @@ export class TemplatesService {
     });
 
     return { success: true };
+  }
+
+  /**
+   * Browse Meta Template Library (pre-built templates).
+   */
+  async browseLibrary(
+    userId: string,
+    appId: string,
+    query: TemplateLibraryQueryDto,
+    accountId?: string,
+  ) {
+    const account = await this.getActiveAccount(userId, appId, accountId);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
+
+    try {
+      const result = await this.metaApi.listTemplateLibrary(accessToken, {
+        search: query.search,
+        topic: query.topic,
+        usecase: query.usecase,
+        industry: query.industry,
+        language: query.language,
+        name: query.name,
+        after: query.after,
+        limit: query.limit,
+      });
+
+      const data = Array.isArray(result?.data)
+        ? result.data
+        : Array.isArray(result)
+          ? result
+          : [];
+
+      return {
+        data,
+        paging: result?.paging ?? null,
+      };
+    } catch (error) {
+      const errorData = error.response?.data?.error || {};
+      throw new BadRequestException({
+        message: 'Failed to load template library',
+        error: errorData.message || error.message,
+        code: errorData.code,
+      });
+    }
+  }
+
+  /**
+   * Create a WABA template from a Meta library template.
+   */
+  async createFromLibrary(
+    userId: string,
+    appId: string,
+    dto: CreateTemplateFromLibraryDto,
+  ) {
+    const account = await this.getActiveAccount(userId, appId, dto.accountId);
+    const accessToken = this.tokenEncryption.decrypt(
+      account.accessTokenEncrypted,
+    );
+
+    try {
+      const result = await this.metaApi.createTemplateFromLibrary(
+        account.wabaId,
+        accessToken,
+        {
+          name: dto.name,
+          language: dto.language,
+          category: dto.category,
+          library_template_name: dto.libraryTemplateName,
+          ...(dto.libraryTemplateButtonInputs?.length
+            ? {
+                library_template_button_inputs: dto.libraryTemplateButtonInputs,
+              }
+            : {}),
+          ...(dto.libraryTemplateBodyInputs
+            ? {
+                library_template_body_inputs: dto.libraryTemplateBodyInputs,
+              }
+            : {}),
+        },
+      );
+
+      const status = this.mapTemplateStatus(result.status || 'PENDING');
+
+      const template = await this.prisma.developerWhatsappTemplate.upsert({
+        where: {
+          accountId_name_language: {
+            accountId: account.id,
+            name: dto.name,
+            language: dto.language,
+          },
+        },
+        update: {
+          metaTemplateId: result.id,
+          status,
+          category: dto.category as any,
+          lastSyncedAt: new Date(),
+        },
+        create: {
+          accountId: account.id,
+          metaTemplateId: result.id,
+          name: dto.name,
+          language: dto.language,
+          category: dto.category as any,
+          status,
+          components: [],
+          lastSyncedAt: new Date(),
+        },
+      });
+
+      return template;
+    } catch (error) {
+      const errorData = error.response?.data?.error || {};
+      throw new BadRequestException({
+        message: 'Failed to create template from library',
+        error: errorData.message || error.message,
+        code: errorData.code,
+      });
+    }
   }
 
   /**

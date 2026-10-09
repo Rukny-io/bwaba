@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowUp, Globe, Menu, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, Globe, Menu, X } from 'lucide-react';
 import { setLocaleAction } from '@/actions/set-locale';
 import type { LandingCopy } from '@/lib/landing-copy';
 import { agLayout } from '@/lib/ag-theme';
@@ -16,12 +17,20 @@ export function LandingHeader({
   copy: LandingCopy;
   locale: 'ar' | 'en';
 }) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const isEn = locale === 'en';
+
+  const closeMenus = () => {
+    setMobileOpen(false);
+    setMobileProductsOpen(false);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -33,6 +42,18 @@ export function LandingHeader({
     };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    closeMenus();
+  }, [pathname]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   const headerActive = scrolled || mobileOpen;
 
   return (
@@ -42,11 +63,11 @@ export function LandingHeader({
           'pointer-events-none fixed inset-x-0 top-0 z-50 transition-[background-color] duration-300',
           headerActive
             ? 'bg-white md:bg-white/92 md:backdrop-blur-xl'
-            : 'bg-transparent md:bg-white/75 md:backdrop-blur-md',
+            : 'bg-white md:bg-white/75 md:backdrop-blur-md',
         )}
       >
         <div className="pointer-events-auto">
-          <div className={`${agLayout.container} flex h-14 items-center gap-3 sm:gap-6`}>
+          <div className={`${agLayout.container} flex h-14 items-center gap-4 sm:gap-6`}>
             <Link href="/" className="group flex shrink-0 items-center gap-2">
               <Image
                 src="/rukny-logo.svg"
@@ -105,15 +126,12 @@ export function LandingHeader({
               >
                 {copy.login}
               </Link>
-              <Link
-                href="/login?next=/apps"
-                className="inline-flex h-9 items-center rounded-full bg-[#1D1D1D] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[#0A0A0A]"
-              >
-                {copy.start}
+              <Link href="/login?next=/apps" className={cn(agLayout.btnPrimary, 'h-9 px-4 text-[13px]')}>
+                {copy.startFree}
               </Link>
             </nav>
 
-            <div className="ms-auto flex items-center gap-1 md:hidden">
+            <div className="ms-auto flex items-center gap-2 md:hidden">
               <button
                 type="button"
                 onClick={() => {
@@ -121,15 +139,15 @@ export function LandingHeader({
                     window.location.reload();
                   });
                 }}
-                className="inline-flex size-10 items-center justify-center rounded-full text-[#1D1D1D]"
+                className="inline-flex size-10 items-center justify-center rounded-full bg-[#F5F5F5] text-[#1D1D1D] transition-colors hover:bg-[#EBEBEB]"
                 aria-label={copy.switchLang}
               >
                 <Globe className="size-4" />
               </button>
               <button
                 type="button"
-                className="inline-flex size-10 items-center justify-center rounded-full bg-[#F5F5F5] text-[#1D1D1D]"
-                aria-label={mobileOpen ? 'Close' : 'Menu'}
+                className="inline-flex size-10 items-center justify-center rounded-full bg-[#F5F5F5] text-[#1D1D1D] transition-colors hover:bg-[#EBEBEB]"
+                aria-label={mobileOpen ? copy.closeMenu : copy.openMenu}
                 aria-expanded={mobileOpen}
                 onClick={() => setMobileOpen((v) => !v)}
               >
@@ -145,34 +163,81 @@ export function LandingHeader({
           <button
             type="button"
             className="absolute inset-0 bg-[#1D1D1D]/20"
-            aria-label="Close"
-            onClick={() => setMobileOpen(false)}
+            aria-label={copy.closeMenu}
+            onClick={closeMenus}
           />
           <div className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto bg-white">
             <div className="px-5 py-5">
               <Link
                 href="/login?next=/apps"
                 className={`${agLayout.btnPrimary} w-full`}
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMenus}
               >
-                {copy.start}
+                {copy.startFree}
               </Link>
             </div>
-            <nav className="px-3 py-2">
-              {[
-                { href: '/documentation', label: copy.docs },
-                { href: '/pricing', label: copy.pricing },
-                { href: '/login', label: copy.login },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex h-11 items-center rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
+
+            <nav className="px-3 py-2" aria-label={copy.mobileMenuAria}>
+              <button
+                type="button"
+                className="flex h-11 w-full items-center justify-between rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
+                aria-expanded={mobileProductsOpen}
+                onClick={() => setMobileProductsOpen((v) => !v)}
+              >
+                {copy.products}
+                <ChevronDown
+                  className={cn(
+                    'size-4 opacity-50 transition-transform duration-200',
+                    mobileProductsOpen && 'rotate-180',
+                  )}
+                  aria-hidden
+                />
+              </button>
+
+              {mobileProductsOpen ? (
+                <div className="mb-2 mt-1 space-y-0.5 pe-2">
+                  {copy.bands.map((band) => (
+                    <Link
+                      key={band.href}
+                      href={band.href}
+                      className="flex h-10 items-center rounded-xl px-4 text-[14px] text-[#6B6F76] transition-colors hover:bg-[#FAFAFA] hover:text-[#1D1D1D]"
+                      onClick={closeMenus}
+                    >
+                      {band.title}
+                    </Link>
+                  ))}
+                  <Link
+                    href="/#products"
+                    className="flex h-10 items-center rounded-xl px-4 text-[14px] font-medium text-[#1D1D1D] transition-colors hover:bg-[#FAFAFA]"
+                    onClick={closeMenus}
+                  >
+                    {copy.viewAllProducts}
+                  </Link>
+                </div>
+              ) : null}
+
+              <Link
+                href="/documentation"
+                className="flex h-11 items-center rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
+                onClick={closeMenus}
+              >
+                {copy.docs}
+              </Link>
+              <Link
+                href="/pricing"
+                className="flex h-11 items-center rounded-2xl px-3 text-[15px] font-medium text-[#1D1D1D] hover:bg-[#FAFAFA]"
+                onClick={closeMenus}
+              >
+                {copy.pricing}
+              </Link>
+
+              <Link
+                href="/login"
+                className="flex h-11 items-center rounded-2xl px-3 text-[15px] font-medium text-[#6B6F76] hover:bg-[#FAFAFA] hover:text-[#1D1D1D]"
+                onClick={closeMenus}
+              >
+                {copy.login}
+              </Link>
             </nav>
           </div>
         </div>

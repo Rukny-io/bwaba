@@ -6,7 +6,10 @@ import { agLayout, productTints } from '@/lib/ag-theme';
 
 export function CapabilityBands({ copy }: { copy: LandingCopy }) {
   return (
-    <section className={`${agLayout.sectionMuted} py-20 sm:py-24 md:py-28`}>
+    <section
+      id="products"
+      className={`${agLayout.sectionWhite} py-20 sm:py-24 md:py-28`}
+    >
       <div className={agLayout.container}>
         <DevReveal>
           <p className={agLayout.eyebrow}>{copy.productsEyebrow}</p>

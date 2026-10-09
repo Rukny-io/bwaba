@@ -148,13 +148,13 @@ In Cloudflare DNS for `rukny.io`, create **A records** (all proxied — orange c
 | A | `accounts` | `<reserved_ip>` | ✅ |
 | A | `api` | `<reserved_ip>` | ✅ |
 | A | `hq` | `<reserved_ip>` | ✅ |
-| A | `developers` | `<reserved_ip>` | ✅ |
+| A | `dev` | `<reserved_ip>` | ✅ |
 | A | `forms` | `<reserved_ip>` | ✅ |
 | A | `db` | `<reserved_ip>` | ✅ (or Zero Trust access) |
 
 **SSL/TLS mode:** Full (Strict). Enable **Always Use HTTPS** + **HSTS**.
 
-> If using the `cloudflared` service in compose, create a Cloudflare Tunnel in the Zero Trust dashboard, put the token in `CLOUDFLARE_TUNNEL_TOKEN`, and DNS records become CNAMEs to the tunnel instead of A records.
+> If using the `cloudflared` service in compose, create a Cloudflare Tunnel in the Zero Trust dashboard, put the token in `CLOUDFLARE_TUNNEL_TOKEN`, and DNS records become CNAMEs to the tunnel instead of A records. **Each public hostname** (e.g. `dev.rukny.io`, `forms.rukny.io`) must be added under the tunnel’s **Public Hostname** rules pointing to `http://nginx:80` — DNS alone is not enough.
 
 ### Phase 7 — SSL Certificates
 

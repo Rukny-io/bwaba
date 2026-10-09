@@ -19,8 +19,15 @@ export const agLayout = {
     'text-balance text-[clamp(2.25rem,6vw,4.25rem)] font-medium leading-[1.08] tracking-[-0.03em] text-[#1D1D1D]',
   sectionTitle:
     'text-balance text-[clamp(1.875rem,4.5vw,2.75rem)] font-medium leading-[1.1] tracking-[-0.03em] text-[#1D1D1D]',
+  introTitle:
+    'text-balance text-[clamp(1.75rem,4vw,2.5rem)] font-medium leading-[1.35] tracking-[-0.025em] text-[#1D1D1D]',
+  introLead:
+    'max-w-2xl text-[17px] font-normal leading-[1.85] text-[#6B6F76] sm:text-[18px] sm:leading-[1.9]',
   lead: 'text-[1rem] font-normal leading-[1.7] text-[#6B6F76]',
   eyebrow: 'text-[12px] font-medium tracking-[0.16em] text-[#9CA3AF]',
+  textStack: 'flex flex-col gap-5 text-start sm:gap-7',
+  pill:
+    'inline-flex items-center rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[11px] font-medium text-[#6B6F76]',
   btnPrimary:
     'relative z-10 inline-flex h-11 touch-manipulation items-center justify-center rounded-full bg-[#1D1D1D] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#0A0A0A]',
   btnSecondary:

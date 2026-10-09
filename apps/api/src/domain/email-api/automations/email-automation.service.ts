@@ -75,26 +75,30 @@ export class EmailAutomationService {
     if (reservation === 'overage') {
       const wallet = await this.wallet.getWallet(userId);
       const price = EMAIL_API_AUTOMATION.overagePriceIqdPerRun;
-      if (wallet.balance < price) {
-        throw new BadRequestException(
-          'Insufficient wallet balance for automation overage.',
-        );
-      }
       await this.prisma.$transaction(async (tx) => {
-        await tx.developerWallet.update({
-          where: { id: wallet.id },
+        const debited = await tx.developerWallet.updateMany({
+          where: { id: wallet.id, balance: { gte: price } },
           data: {
             balance: { decrement: price },
             totalSpent: { increment: price },
           },
+        });
+        if (debited.count !== 1) {
+          throw new BadRequestException(
+            'Insufficient wallet balance for automation overage.',
+          );
+        }
+        const updatedWallet = await tx.developerWallet.findUniqueOrThrow({
+          where: { id: wallet.id },
+          select: { balance: true },
         });
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
             type: 'EMAIL_AUTOMATION_RUN',
             amount: price,
-            balanceBefore: wallet.balance,
-            balanceAfter: wallet.balance - price,
+            balanceBefore: updatedWallet.balance + price,
+            balanceAfter: updatedWallet.balance,
             status: 'COMPLETED',
             description: `Email automation overage run`,
             referenceId: automation.id,

@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  GoneException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { fromBuffer } from 'file-type';
@@ -385,83 +386,9 @@ export class PhoneNumbersService {
     appId: string,
     phoneId: string,
     dto: SendTestMessageDto,
-  ) {
-    const developerAppId = await this.resolveDeveloperAppId(userId, appId);
-    const phone = await this.prisma.developerPhoneNumber.findFirst({
-      where: this.phoneWhere(phoneId, userId, developerAppId),
-      include: { account: true },
-    });
-
-    if (!phone) throw new NotFoundException('Phone number not found');
-    if (phone.status !== 'ACTIVE') {
-      throw new BadRequestException(
-        'Phone number must be active/registered before sending test messages',
-      );
-    }
-    if (!phone.account.accessTokenEncrypted) {
-      throw new BadRequestException('WABA account token not available');
-    }
-
-    const accessToken = this.tokenEncryption.decrypt(
-      phone.account.accessTokenEncrypted,
+  ): Promise<never> {
+    throw new GoneException(
+      'Test sending is disabled because WhatsApp test keys are not sandboxed. Use the paid WhatsApp API with an rk_live_ key.',
     );
-    const to = dto.to.replace(/[\s\-\(\)\+]/g, '');
-
-    // Find an approved template for this WABA account
-    const approvedTemplate =
-      await this.prisma.developerWhatsappTemplate.findFirst({
-        where: {
-          accountId: phone.accountId,
-          status: 'APPROVED',
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-    if (!approvedTemplate) {
-      throw new BadRequestException(
-        'لا توجد قوالب معتمدة. يرجى مزامنة القوالب أولاً من صفحة القوالب، أو إنشاء قالب جديد والانتظار حتى تتم الموافقة عليه من Meta.',
-      );
-    }
-
-    try {
-      const result = await this.metaApi.sendMessage(
-        phone.phoneNumberId,
-        accessToken,
-        {
-          messaging_product: 'whatsapp',
-          to,
-          type: 'template',
-          template: {
-            name: approvedTemplate.name,
-            language: { code: approvedTemplate.language },
-          },
-        },
-      );
-
-      this.logger.log(
-        `Test message sent from ${phone.phoneNumber} to ${to} using template "${approvedTemplate.name}"`,
-      );
-
-      return {
-        success: true,
-        messageId: result.messages?.[0]?.id || null,
-        to,
-        from: phone.displayPhoneNumber || phone.phoneNumber,
-        template: approvedTemplate.name,
-      };
-    } catch (error) {
-      const errorData = error.response?.data?.error || {};
-      this.logger.error(
-        `Failed to send test message from ${phone.phoneNumber} to ${to}: ` +
-          `code=${errorData.code} subcode=${errorData.error_subcode} ` +
-          `message=${errorData.message || error.message}`,
-      );
-      throw new BadRequestException({
-        message: 'Failed to send test message',
-        error: errorData.message || error.message,
-        code: errorData.code,
-        subcode: errorData.error_subcode,
-      });
-    }
   }
 }

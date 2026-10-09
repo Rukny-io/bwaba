@@ -44,7 +44,7 @@ export class ApiKeyAuthGuard implements CanActivate {
     }
 
     // التحقق من صيغة المفتاح
-    if (!apiKey.startsWith('rk_live_') && !apiKey.startsWith('rk_test_')) {
+    if (!apiKey.startsWith('rk_live_')) {
       throw new UnauthorizedException('Invalid API key format.');
     }
 
@@ -53,6 +53,11 @@ export class ApiKeyAuthGuard implements CanActivate {
 
     if (!keyData) {
       throw new UnauthorizedException('Invalid or expired API key.');
+    }
+    if (keyData.environment !== 'live') {
+      throw new UnauthorizedException(
+        'Test API keys are disabled. Create a live API key.',
+      );
     }
 
     // التحقق من IP allowlist

@@ -48,7 +48,7 @@ async function authFetch<T>(
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
-  try {
+  const attempt = async (): Promise<AuthUser | null> => {
     const data = await authFetch<AuthUser | { user: AuthUser }>('me');
     const user =
       data && typeof data === 'object' && 'user' in data
@@ -58,7 +58,23 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
       ...user,
       avatar: resolveMediaUrl(user.avatar) ?? undefined,
     };
-  } catch {
+  };
+
+  try {
+    return await attempt();
+  } catch (err: unknown) {
+    const status =
+      err && typeof err === 'object' && 'status' in err
+        ? (err as { status: number }).status
+        : 0;
+    if (status === 429) {
+      await new Promise((r) => setTimeout(r, 400));
+      try {
+        return await attempt();
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }

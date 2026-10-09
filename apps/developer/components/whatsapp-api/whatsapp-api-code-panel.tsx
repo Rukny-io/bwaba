@@ -11,7 +11,7 @@ import {
   type CodeSampleRecipe,
 } from '@/lib/whatsapp-api-code-samples';
 import type { WhatsappApiEndpoint } from '@/lib/whatsapp-api-catalog';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { waApiCodeBlock } from '@/components/whatsapp-api/whatsapp-api-shared';
 
 const LANGUAGES: { id: CodeSampleLanguage; label: string }[] = [
@@ -34,7 +34,7 @@ export function WhatsappApiCodePanel({
   copyLabel,
   className,
 }: WhatsappApiCodePanelProps) {
-  const d = WHATSAPP_API_COPY;
+  const d = useTranslations().whatsappApi;
   const recipeLabels = d as Record<string, string>;
   const [language, setLanguage] = useState<CodeSampleLanguage>('curl');
   const [recipeId, setRecipeId] = useState(recipes?.[0]?.id ?? 'default');

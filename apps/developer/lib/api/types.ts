@@ -188,6 +188,48 @@ export interface AllocateWalletResult {
   appBalance: number;
 }
 
+export type WalletTransactionType =
+  | 'TOP_UP'
+  | 'MESSAGE_CHARGE'
+  | 'EMAIL_OVERAGE_PACK'
+  | 'EMAIL_AUTOMATION_RUN'
+  | 'REFUND'
+  | 'AUTO_RECHARGE'
+  | 'ADJUSTMENT'
+  | 'APP_ALLOCATION';
+
+export type WalletTransactionStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'REFUNDED';
+
+export interface WalletTransaction {
+  id: string;
+  walletId: string;
+  type: WalletTransactionType;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  status: WalletTransactionStatus;
+  description?: string | null;
+  referenceId?: string | null;
+  referenceType?: string | null;
+  paymentMethod?: string | null;
+  externalId?: string | null;
+  createdAt: string;
+}
+
+export interface WalletTransactionsResponse {
+  data: WalletTransaction[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface WhatsappAccountOnboarding {
   webhookSubscribed?: boolean;
   paymentMethodRequired?: boolean;
@@ -322,4 +364,31 @@ export interface DeveloperContact {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type SupportTicketCategory =
+  | 'ACCOUNT'
+  | 'BILLING'
+  | 'TECHNICAL'
+  | 'FEATURE_REQUEST'
+  | 'OTHER';
+
+export interface CreateSupportTicketPayload {
+  subject: string;
+  description: string;
+  category: SupportTicketCategory;
+  context?: Record<string, unknown>;
+}
+
+export interface SupportTicketSummary {
+  id: string;
+  number: string;
+  subject: string;
+  category: SupportTicketCategory;
+  status: string;
+  priority: string;
+  assignedTo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
 }

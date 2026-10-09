@@ -5,23 +5,24 @@ import Link from 'next/link';
 import { ExternalLink, KeyRound } from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { DashboardPageHeader } from '@/components/app/dashboard-page-header';
-import { WhatsappApiNav } from '@/components/whatsapp-api/whatsapp-api-nav';
+import { WhatsappApiIslandNav } from '@/components/whatsapp-api/whatsapp-api-island-nav';
 import {
   waApiBtnPrimary,
   waApiBtnSecondary,
 } from '@/components/whatsapp-api/whatsapp-api-shared';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { appApiKeysNew, appWhatsapp } from '@/lib/app-routes';
 import { cn } from '@/lib/utils';
 
 export function WhatsappApiChrome({ children }: { children: ReactNode }) {
-  const d = WHATSAPP_API_COPY;
+  const t = useTranslations();
+  const d = t.whatsappApi;
   const { app } = useCurrentApp();
 
   return (
-    <div className="dashboard-section-stack text-start" dir="ltr" lang="en">
+    <div className="dashboard-section-stack pb-28 text-start">
       <DashboardPageHeader
-        className="mb-5 pt-2 sm:mb-6 sm:pt-3"
+        className="mb-5 pt-2 sm:mb-6 sm:pt-0"
         title={d.title}
         description={<p className="max-w-2xl leading-relaxed">{d.subtitle}</p>}
         actions={
@@ -37,15 +38,14 @@ export function WhatsappApiChrome({ children }: { children: ReactNode }) {
               href={appWhatsapp(app.appId)}
               className={cn(waApiBtnSecondary, 'flex-1 sm:flex-none')}
             >
-              WhatsApp Business
+              {t.whatsapp.title}
               <ExternalLink className="size-3.5 opacity-60" />
             </Link>
           </div>
         }
-      >
-        <WhatsappApiNav />
-      </DashboardPageHeader>
+      />
       <div className="space-y-5 sm:space-y-6">{children}</div>
+      <WhatsappApiIslandNav />
     </div>
   );
 }

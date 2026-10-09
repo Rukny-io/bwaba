@@ -45,10 +45,6 @@ export class CreateApiKeyDto {
   scopes?: string[];
 
   @IsOptional()
-  @IsIn(['live', 'test'])
-  environment?: string;
-
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @IsIpv4AddressArray()

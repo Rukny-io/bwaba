@@ -1,3 +1,9 @@
+/** WhatsApp Business product console (`/apps/:id/whatsapp`), not WhatsApp API docs. */
+export function isWhatsappProductPath(pathname: string): boolean {
+  if (pathname.includes('/whatsapp-api')) return false;
+  return /\/apps\/\d{16}\/whatsapp(\/|$)/.test(pathname);
+}
+
 export const WHATSAPP_TABS = [
   { segment: 'overview', slug: '' },
   { segment: 'phones', slug: 'phone-numbers' },

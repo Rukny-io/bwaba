@@ -1,10 +1,15 @@
-import { getWhatsappApiErrorCopy, waApiPanelFlush } from '@/components/whatsapp-api/whatsapp-api-shared';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+'use client';
+
+import {
+  whatsappApiErrorCopyFrom,
+  waApiPanelFlush,
+} from '@/components/whatsapp-api/whatsapp-api-shared';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { COMMON_ERRORS } from '@/lib/whatsapp-api-catalog';
 
 export function WhatsappApiErrors() {
-  const d = WHATSAPP_API_COPY;
-  const errorCopy = getWhatsappApiErrorCopy();
+  const d = useTranslations().whatsappApi;
+  const errorCopy = whatsappApiErrorCopyFrom(d);
 
   return (
     <section className={waApiPanelFlush}>

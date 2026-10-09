@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
-import en from '@/dictionaries/en.json';
 import { useCurrentApp } from '@/components/providers/app-context';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { CodeSnippetCard } from '@/components/forms/code-snippet-card';
 import {
   waApiBtnSecondary,
   waApiPanel,
 } from '@/components/whatsapp-api/whatsapp-api-shared';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { WHATSAPP_API_PUBLIC_BASE } from '@/lib/whatsapp-api-catalog';
 import { appApiKeysNew, appWallet } from '@/lib/app-routes';
 import { appWhatsappApiHref } from '@/lib/whatsapp-api-routes';
@@ -32,15 +31,15 @@ const FORMS_SCOPES = [
   'forms:webhooks',
 ] as const;
 
-const scopeLabels = en.apiKeys.scopeLabels as Record<string, string>;
-
 const authExample = `curl -X POST '${WHATSAPP_API_PUBLIC_BASE}/whatsapp/messages' \\
   -H "X-API-Key: rk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"to":"+9647XXXXXXXXX","type":"text","text":{"body":"Hello"}}'`;
 
 export function WhatsappApiAuth() {
-  const d = WHATSAPP_API_COPY;
+  const t = useTranslations();
+  const d = t.whatsappApi;
+  const scopeLabels = t.apiKeys.scopeLabels as Record<string, string>;
   const { app } = useCurrentApp();
   const [copied, setCopied] = useState(false);
 

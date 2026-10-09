@@ -1,5 +1,10 @@
-import { WhatsappApiTemplates } from '@/components/whatsapp-api/whatsapp-api-templates';
+import { redirect } from 'next/navigation';
 
-export default function WhatsappApiTemplatesPage() {
-  return <WhatsappApiTemplates />;
+export default async function WhatsappApiTemplatesRedirectPage({
+  params,
+}: {
+  params: Promise<{ appId: string }>;
+}) {
+  const { appId } = await params;
+  redirect(`/apps/${appId}/whatsapp/templates`);
 }

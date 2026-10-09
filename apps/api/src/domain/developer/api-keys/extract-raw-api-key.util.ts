@@ -1,6 +1,6 @@
 /**
  * Extract a Rukny developer API key from common integration headers.
- * Supports X-API-Key, Bearer rk_* tokens, and raw Authorization: rk_* (no Bearer prefix).
+ * Supports X-API-Key, Bearer rk_live_ tokens, and raw Authorization: rk_live_ (no Bearer prefix).
  */
 export function extractRawApiKey(request: {
   headers: Record<string, string | string[] | undefined>;
@@ -24,10 +24,7 @@ export function extractRawApiKey(request: {
     ? trimmed.slice(7).trim()
     : trimmed;
 
-  if (
-    token.startsWith('rk_live_') ||
-    token.startsWith('rk_test_')
-  ) {
+  if (token.startsWith('rk_live_')) {
     return token;
   }
 

@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { WhatsappApiEndpointCard } from '@/components/whatsapp-api/whatsapp-api-endpoint-card';
 import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
+import { useTranslations } from '@/components/providers/translations-provider';
 import {
-  getWhatsappApiSummaries,
+  whatsappApiSummariesFrom,
   waApiPanel,
 } from '@/components/whatsapp-api/whatsapp-api-shared';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import { SEND_MESSAGE_RECIPES } from '@/lib/whatsapp-api-code-samples';
 import {
   MESSAGE_ENDPOINTS,
@@ -16,9 +16,13 @@ import {
 } from '@/lib/whatsapp-api-catalog';
 import { appWhatsappApiHref } from '@/lib/whatsapp-api-routes';
 
+function appWhatsappTemplatesHref(appId: string): string {
+  return `/apps/${appId}/whatsapp/templates`;
+}
+
 export function WhatsappApiMessages() {
-  const d = WHATSAPP_API_COPY;
-  const summaries = getWhatsappApiSummaries();
+  const d = useTranslations().whatsappApi;
+  const summaries = whatsappApiSummariesFrom(d);
   const { app } = useCurrentApp();
 
   function tryHref(endpointId: WhatsappApiEndpointId) {
@@ -43,10 +47,10 @@ export function WhatsappApiMessages() {
           <li>{d.templatesGuideStep3}</li>
         </ol>
         <Link
-          href={appWhatsappApiHref(app.appId, 'templates')}
+          href={appWhatsappTemplatesHref(app.appId)}
           className="mt-4 inline-flex text-[13px] font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
         >
-          {d.navTemplates}
+          {d.templatesGuideCta}
         </Link>
       </section>
 

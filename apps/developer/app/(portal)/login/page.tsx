@@ -76,6 +76,10 @@ function LoginContent() {
       return;
     }
 
+    if (sessionFlag === 'invalid' || sessionFlag === 'expired') {
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       const user = await fetchCurrentUser();
@@ -87,7 +91,7 @@ function LoginContent() {
     return () => {
       cancelled = true;
     };
-  }, [router, searchParams, nextPath]);
+  }, [router, searchParams, nextPath, sessionFlag]);
 
   const sessionMessage =
     sessionFlag === 'expired'

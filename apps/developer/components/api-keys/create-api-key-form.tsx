@@ -7,7 +7,6 @@ import { TextField, Label, Input, Button } from '@heroui/react';
 import {
   Key,
   Globe,
-  FlaskConical,
   Shield,
   Lock,
   Copy,
@@ -45,7 +44,6 @@ import {
   hasWriteScopes,
   type ApiKeyExpirationPreset,
 } from '@/lib/api/scopes';
-import type { ApiKeyEnvironment } from '@/lib/api/types';
 import { appApiKeys } from '@/lib/app-routes';
 import { appToast, getApiErrorMessage } from '@/lib/app-toast';
 import {
@@ -88,7 +86,6 @@ export function CreateApiKeyForm() {
   };
 
   const [name, setName] = useState('');
-  const [environment, setEnvironment] = useState<ApiKeyEnvironment>('live');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([
     ...DEFAULT_API_KEY_SCOPES,
   ]);
@@ -100,8 +97,7 @@ export function CreateApiKeyForm() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const showLiveWarning =
-    environment === 'live' && hasWriteScopes(selectedScopes);
+  const showLiveWarning = hasWriteScopes(selectedScopes);
 
   const clearErrors = useCallback(() => {
     setFormError(null);
@@ -159,7 +155,6 @@ export function CreateApiKeyForm() {
         name: name.trim(),
         developerAppId: app.id,
         scopes: selectedScopes,
-        environment,
         ipAllowlist: ipList.length > 0 ? ipList : undefined,
         expiresAt: computeExpiresAt(expiration),
       });
@@ -179,7 +174,6 @@ export function CreateApiKeyForm() {
     app.id,
     clearErrors,
     createMutation,
-    environment,
     expiration,
     ipList,
     isAtLimit,
@@ -304,51 +298,25 @@ export function CreateApiKeyForm() {
 
         <SettingsRow
           isStatic
-          icon={environment === 'live' ? Globe : FlaskConical}
+          icon={Globe}
           title={cp.envLabel}
-          subtitle={
-            environment === 'live' ? cp.envLiveDesc : cp.envTestDesc
-          }
+          subtitle={cp.envLiveDesc}
         />
 
         <SettingsRowDivider />
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
-          {(['live', 'test'] as const).map((env) => {
-            const selected = environment === env;
-            const EnvIcon = env === 'live' ? Globe : FlaskConical;
-            return (
-              <button
-                key={env}
-                type="button"
-                disabled={isAtLimit}
-                onClick={() => setEnvironment(env)}
-                className={cn(
-                  'flex items-start gap-3 rounded-xl border px-3.5 py-3.5 text-start transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-                  selected
-                    ? 'border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))]'
-                    : 'border-[var(--border)] bg-[var(--background)] hover:bg-[var(--surface-secondary)]/50',
-                )}
-              >
-                <EnvIcon
-                  className={cn(
-                    'mt-0.5 size-4 shrink-0',
-                    env === 'live'
-                      ? 'text-[var(--success)]'
-                      : 'text-[var(--warning)]',
-                  )}
-                />
-                <span>
-                  <span className="block text-[13px] font-medium text-[var(--foreground)]">
-                    {env === 'live' ? s.live : s.test}
-                  </span>
-                  <span className="mt-0.5 block text-[12px] text-[var(--muted-foreground)]">
-                    {env === 'live' ? cp.envLiveDesc : cp.envTestDesc}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))] px-3.5 py-3.5">
+            <Globe className="mt-0.5 size-4 shrink-0 text-[var(--success)]" />
+            <span>
+              <span className="block text-[13px] font-medium text-[var(--foreground)]">
+                {s.live}
+              </span>
+              <span className="mt-0.5 block text-[12px] text-[var(--muted-foreground)]">
+                {cp.envLiveDesc}
+              </span>
+            </span>
+          </div>
         </div>
       </AppSettingsSection>
 

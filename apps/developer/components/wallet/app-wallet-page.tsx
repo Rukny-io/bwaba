@@ -12,6 +12,8 @@ import {
   PiggyBank,
   ChevronRight,
   ChevronLeft,
+  CreditCard,
+  Receipt,
 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/translations-provider';
 import {
@@ -23,16 +25,24 @@ import { DashboardGrid } from '@/components/dashboard/dashboard-ui';
 import { DashboardMetricCard } from '@/components/dashboard/dashboard-metric-card';
 import {
   WalletSectionHeader,
+  WalletSummaryGrid,
   WalletSummaryRow,
 } from '@/components/wallet/wallet-section';
 import { formatIqd } from '@/lib/wallet-format';
-import { appWhatsapp } from '@/lib/app-routes';
+import {
+  appWalletInvoices,
+  appWalletTopUp,
+  appWhatsapp,
+} from '@/lib/app-routes';
 import { appToast } from '@/lib/app-toast';
 import { useIsWorkspaceOwner } from '@/components/workspace/workspace-role-provider';
-import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
+import {
+  ownerNoticeClass,
+  walletPanelClass,
+  walletQuickLinkClass,
+} from '@/components/wallet/wallet-ui';
 
 const SUGGESTED_AMOUNTS = [5000, 10000, 25000];
-const TOP_UP_AMOUNTS = [5000, 10000, 25000, 50000];
 
 interface AppWalletPageProps {
   publicAppId: string;
@@ -40,7 +50,7 @@ interface AppWalletPageProps {
 
 function MetricSkeleton() {
   return (
-    <div className="dashboard-card h-[7.25rem] animate-pulse rounded-2xl sm:rounded-3xl" />
+    <div className="dashboard-card h-[7.25rem] animate-pulse" />
   );
 }
 
@@ -56,7 +66,6 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
   const isOwner = useIsWorkspaceOwner();
 
   const [amount, setAmount] = useState('');
-  const [topUpBusy, setTopUpBusy] = useState(false);
 
   const numericAmount = useMemo(
     () => Number(amount.replace(/[^\d]/g, '')),
@@ -89,24 +98,6 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
     }
   }, [allocateMutation, masterWallet?.balance, numericAmount, w]);
 
-  const handleTopUp = useCallback(
-    async (topUpAmount: number) => {
-      if (!isOwner || topUpBusy) return;
-      setTopUpBusy(true);
-      try {
-        await redirectToDeveloperCheckout({
-          kind: 'WALLET_TOPUP',
-          amount: topUpAmount,
-          appId: publicAppId,
-        });
-      } catch (error) {
-        appToast.fromError(error, 'Could not continue to Checkout');
-        setTopUpBusy(false);
-      }
-    },
-    [isOwner, publicAppId, topUpBusy],
-  );
-
   const canTransfer =
     isOwner &&
     !allocateMutation.isPending &&
@@ -122,10 +113,10 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
           <MetricSkeleton />
           <MetricSkeleton />
         </DashboardGrid>
-        <div className="dashboard-card h-40 animate-pulse rounded-2xl sm:rounded-3xl" />
+        <div className="dashboard-card h-40 animate-pulse" />
         <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="dashboard-card h-80 animate-pulse rounded-2xl sm:rounded-3xl" />
-          <div className="dashboard-card h-80 animate-pulse rounded-2xl sm:rounded-3xl" />
+          <div className="dashboard-card h-80 animate-pulse" />
+          <div className="dashboard-card h-80 animate-pulse" />
         </div>
       </div>
     );
@@ -168,42 +159,14 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
         />
       </DashboardGrid>
 
-      <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
-        <WalletSectionHeader
-          icon={Plus}
-          title="Top up wallet"
-          description="Continue to Checkout to add balance with card payment."
-        />
-        <div className="mt-4 flex flex-wrap gap-2">
-          {TOP_UP_AMOUNTS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              disabled={!isOwner || topUpBusy}
-              onClick={() => void handleTopUp(value)}
-              className="rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-1.5 text-xs font-medium tabular-nums transition-colors hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))] disabled:cursor-not-allowed disabled:opacity-40"
-              dir="ltr"
-              lang="en"
-            >
-              Checkout · {formatIqd(value, currency)}
-            </button>
-          ))}
-        </div>
-        {!isOwner ? (
-          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-            شحن الرصيد يقتصر على مالك الحساب.
-          </p>
-        ) : null}
-      </section>
-
-      <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+      <section className={walletPanelClass}>
         <WalletSectionHeader
           icon={TrendingUp}
           title={w.distributionTitle}
           description={w.distributionDesc}
         />
 
-        <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <div className="h-2.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
               <div
@@ -229,7 +192,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
             </div>
           </div>
           <p
-            className="w-full rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-center text-xs font-medium text-[var(--muted-foreground)] sm:w-auto sm:shrink-0 sm:text-start"
+            className="w-full rounded-full border border-[color-mix(in_srgb,var(--border)_50%,transparent)] bg-[var(--background)] px-3 py-1.5 text-center text-xs font-medium text-[var(--muted-foreground)] sm:w-auto sm:shrink-0 sm:text-end"
             dir="ltr"
             lang="en"
           >
@@ -241,8 +204,8 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className={walletPanelClass}>
           <WalletSectionHeader
             icon={ArrowRightLeft}
             title={w.transferTitle}
@@ -274,7 +237,7 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
                   setAmount(event.target.value.replace(/[^\d]/g, ''));
                 }}
                 placeholder="5000"
-                className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 font-mono text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]"
+                className="h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 font-mono text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]"
               />
             </div>
 
@@ -303,16 +266,14 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
             </div>
 
             {!isOwner && (
-              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                تحويل الرصيد يقتصر على مالك الحساب.
-              </p>
+              <p className={ownerNoticeClass}>{w.ownerOnlyTransfer}</p>
             )}
 
             <button
               type="button"
               onClick={() => void handleAllocate()}
               disabled={!canTransfer}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
             >
               <Plus className="size-4" />
               {allocateMutation.isPending ? w.transferring : w.transfer}
@@ -320,48 +281,72 @@ export function AppWalletPage({ publicAppId }: AppWalletPageProps) {
           </div>
         </section>
 
-        <section className="dashboard-card rounded-2xl p-5 sm:rounded-3xl sm:p-6">
+        <section className={walletPanelClass}>
           <WalletSectionHeader
             icon={MessageSquare}
             title={w.quickLinks}
             description={w.quickLinksDesc}
           />
 
-          <div className="space-y-2">
+          <div className="mb-5 space-y-2">
             <Link
-              href={appWhatsapp(publicAppId)}
-              className="dashboard-card group flex items-center gap-3 rounded-xl p-3 transition-colors"
+              href={appWalletTopUp(publicAppId)}
+              className={walletQuickLinkClass}
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--primary)] group-hover:bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)] transition-colors group-hover:bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
+                <CreditCard className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                {w.topUpLink}
+              </span>
+              <Chevron className="size-4 shrink-0 text-[var(--muted-foreground)] opacity-60 transition-opacity group-hover:opacity-100" />
+            </Link>
+            <Link
+              href={appWalletInvoices(publicAppId)}
+              className={walletQuickLinkClass}
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)] transition-colors group-hover:bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
+                <Receipt className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                {w.invoicesLink}
+              </span>
+              <Chevron className="size-4 shrink-0 text-[var(--muted-foreground)] opacity-60 transition-opacity group-hover:opacity-100" />
+            </Link>
+            <Link href={appWhatsapp(publicAppId)} className={walletQuickLinkClass}>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)] transition-colors group-hover:bg-[color-mix(in_srgb,var(--primary)_12%,var(--background))]">
                 <MessageSquare className="size-4" />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
-                  {w.whatsappSetup}
-                </span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                {w.whatsappSetup}
               </span>
-              <Chevron className="size-4 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100" />
+              <Chevron className="size-4 shrink-0 text-[var(--muted-foreground)] opacity-60 transition-opacity group-hover:opacity-100" />
             </Link>
-
-            <div className="mt-4 space-y-2">
-              <WalletSummaryRow
-                label={w.mainBalance}
-                value={formatIqd(masterWallet.balance, currency)}
-              />
-              <WalletSummaryRow
-                label={w.appBalance}
-                value={formatIqd(appWallet.balance, currency)}
-              />
-              <WalletSummaryRow
-                label={w.allocatedTotal}
-                value={formatIqd(appWallet.totalAllocated, currency)}
-              />
-              <WalletSummaryRow
-                label={w.spentTotal}
-                value={formatIqd(appWallet.totalSpent, currency)}
-              />
-            </div>
           </div>
+
+          <p className="eyebrow-label mb-3">{w.summaryTitle}</p>
+          <WalletSummaryGrid>
+            <WalletSummaryRow
+              icon={Landmark}
+              label={w.mainBalance}
+              value={formatIqd(masterWallet.balance, currency)}
+            />
+            <WalletSummaryRow
+              icon={Wallet}
+              label={w.appBalance}
+              value={formatIqd(appWallet.balance, currency)}
+            />
+            <WalletSummaryRow
+              icon={PiggyBank}
+              label={w.allocatedTotal}
+              value={formatIqd(appWallet.totalAllocated, currency)}
+            />
+            <WalletSummaryRow
+              icon={Receipt}
+              label={w.spentTotal}
+              value={formatIqd(appWallet.totalSpent, currency)}
+            />
+          </WalletSummaryGrid>
         </section>
       </div>
     </div>

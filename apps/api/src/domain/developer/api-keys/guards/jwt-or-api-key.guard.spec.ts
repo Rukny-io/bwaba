@@ -47,6 +47,7 @@ describe('JwtOrApiKeyGuard', () => {
       userId: 'user-1',
       scopes: ['forms:read'],
       ipAllowlist: [],
+      environment: 'live',
     });
     (reflector.get as jest.Mock).mockReturnValue(['forms:read']);
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -80,11 +81,12 @@ describe('JwtOrApiKeyGuard', () => {
       userId: 'user-1',
       scopes: ['forms:read'],
       ipAllowlist: [],
+      environment: 'live',
     });
     (reflector.get as jest.Mock).mockReturnValue(['forms:write']);
 
     const context = createContext({
-      'x-api-key': 'rk_test_secret',
+      'x-api-key': 'rk_live_secret',
     });
 
     await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
@@ -109,6 +111,7 @@ describe('JwtOrApiKeyGuard', () => {
       userId: 'user-1',
       scopes: ['forms:read'],
       ipAllowlist: [],
+      environment: 'live',
     });
     (reflector.get as jest.Mock).mockReturnValue(['forms:read']);
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({

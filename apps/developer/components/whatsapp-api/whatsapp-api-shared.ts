@@ -1,11 +1,11 @@
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
 import type { WhatsappApiSummaryKey } from '@/lib/whatsapp-api-catalog';
 
-export function getWhatsappApiSummaries(): Record<
-  WhatsappApiSummaryKey,
-  string
-> {
-  const d = WHATSAPP_API_COPY;
+type WhatsappApiDictionary =
+  typeof import('@/dictionaries/en.json')['whatsappApi'];
+
+export function whatsappApiSummariesFrom(
+  d: WhatsappApiDictionary,
+): Record<WhatsappApiSummaryKey, string> {
   return {
     epSendMessage: d.epSendMessage,
     epGetMessage: d.epGetMessage,
@@ -17,8 +17,9 @@ export function getWhatsappApiSummaries(): Record<
   };
 }
 
-export function getWhatsappApiErrorCopy(): Record<string, string> {
-  const d = WHATSAPP_API_COPY;
+export function whatsappApiErrorCopyFrom(
+  d: WhatsappApiDictionary,
+): Record<string, string> {
   return {
     errorUnauthorized: d.errorUnauthorized,
     errorForbidden: d.errorForbidden,

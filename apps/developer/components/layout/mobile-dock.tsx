@@ -24,6 +24,7 @@ import {
 } from '@/lib/developer-products';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
+import { usesBottomIslandNav } from '@/lib/portal-island-nav';
 
 interface MobileDockProps {
   appId: string;
@@ -120,6 +121,10 @@ export function MobileDock({ appId }: MobileDockProps) {
   const handleClose = useCallback(() => setOpen(false), []);
 
   if (/\/apps\/\d{16}\/settings(?:\/|$)/.test(pathname)) {
+    return null;
+  }
+
+  if (usesBottomIslandNav(pathname)) {
     return null;
   }
 

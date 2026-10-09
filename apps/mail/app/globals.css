@@ -70,8 +70,8 @@
   --surface-shadow: var(--card-shadow);
   --overlay-shadow: var(--card-shadow-hover);
 
-  --radius: 1.25rem;
-  --field-radius: 1.25rem;
+  --radius: 1.125rem;
+  --field-radius: 1.125rem;
   --radius-2xl: calc(var(--radius) * 1.5);
   --radius-3xl: calc(var(--radius) * 3);
   --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;

@@ -8,13 +8,13 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  GoneException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { WalletService } from './wallet.service';
 import {
   AllocateAppBalanceDto,
-  TopUpWalletDto,
   UpdateAutoRechargeDto,
   UpdateLowBalanceAlertDto,
 } from './dto/wallet.dto';
@@ -64,6 +64,7 @@ export class WalletController {
     @Param('appId') appId: string,
     @Body() dto: AllocateAppBalanceDto,
   ) {
+    assertOwner(ws);
     return this.walletService.allocateToApp(ws.ownerId, appId, dto.amount);
   }
 
@@ -71,20 +72,28 @@ export class WalletController {
   @ApiOperation({ summary: 'شحن الرصيد (مالك الحساب فقط)' })
   topUp(
     @ActiveWorkspace() ws: WorkspaceContext,
-    @Body() dto: TopUpWalletDto,
   ) {
     assertOwner(ws);
-    return this.walletService.topUp(ws.ownerId, dto);
+    // A pending ledger record must never be creditable by a browser request.
+    // All wallet top-ups now start at the authenticated checkout-session route.
+    throw new GoneException({
+      code: 'WALLET_TOPUP_LEGACY_ENDPOINT_DISABLED',
+      message: 'Use POST /developer/checkout-session to start a wallet top-up.',
+    });
   }
 
   @Post('top-up/:transactionId/verify')
   @ApiOperation({ summary: 'تأكيد الشحن بعد الدفع (مالك الحساب فقط)' })
   verifyTopUp(
     @ActiveWorkspace() ws: WorkspaceContext,
-    @Param('transactionId') transactionId: string,
   ) {
     assertOwner(ws);
-    return this.walletService.verifyTopUp(ws.ownerId, transactionId);
+    // Credit is performed only by the Qaseh webhook/callback after an
+    // authoritative gateway status and amount check.
+    throw new GoneException({
+      code: 'WALLET_TOPUP_BROWSER_VERIFICATION_DISABLED',
+      message: 'Wallet top-ups are verified by the payment gateway.',
+    });
   }
 
   @Get('transactions')

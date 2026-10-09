@@ -7,19 +7,15 @@ import {
   Receipt,
   ChevronDown,
   PlusCircle,
-  ShieldCheck,
-  Activity,
-  Bug,
-  Users,
-  AlertTriangle,
-  HelpCircle,
   BookOpen,
   ClipboardList,
   Mail,
   MessageCircle,
   Wallet,
   Check,
+  LifeBuoy,
 } from 'lucide-react';
+import { SupportCreateTicketDialog } from '@/components/support/support-create-ticket-dialog';
 import { Dropdown } from '@heroui/react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { useTranslations } from '@/components/providers/translations-provider';
@@ -32,12 +28,14 @@ import {
 } from '@/components/app/nav-glass';
 import { useMasterWallet } from '@/hooks/use-wallet';
 import { formatIqd } from '@/lib/wallet-format';
-import { redirectToDeveloperCheckout } from '@/lib/developer-checkout';
-import { appToast } from '@/lib/app-toast';
-import { appTools, appWallet } from '@/lib/app-routes';
+import {
+  appTools,
+  appWallet,
+  appWalletInvoices,
+  appWalletTopUp,
+} from '@/lib/app-routes';
 import { DOCUMENTATION_BASE } from '@/lib/documentation-nav';
-
-const DEFAULT_TOP_UP_AMOUNT = 10_000;
+import { usesBottomIslandNav } from '@/lib/portal-island-nav';
 
 export function HeaderTopBar({
   workspaces,
@@ -53,6 +51,8 @@ export function HeaderTopBar({
   const router = useRouter();
   const { appId } = useCurrentApp();
   const walletHref = appWallet(appId);
+  const walletTopUpHref = appWalletTopUp(appId);
+  const walletInvoicesHref = appWalletInvoices(appId);
   const toolsHref = appTools(appId);
   const appsActive =
     pathname === '/apps' ||
@@ -63,25 +63,16 @@ export function HeaderTopBar({
   const walletActive =
     pathname === walletHref || pathname.startsWith(`${walletHref}/`);
   const { data: wallet } = useMasterWallet();
-  const [topUpBusy, setTopUpBusy] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [supportMenuOpen, setSupportMenuOpen] = useState(false);
+  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
 
   const balanceLabel = formatIqd(wallet?.balance ?? 0, t.dashboard.iqd);
 
   const chipTriggerClass = cn(dashboardTopTabsChipClass, 'gap-1 outline-none');
 
-  async function handleTopUp() {
-    if (topUpBusy) return;
-    setTopUpBusy(true);
-    try {
-      await redirectToDeveloperCheckout({
-        kind: 'WALLET_TOPUP',
-        amount: DEFAULT_TOP_UP_AMOUNT,
-      });
-    } catch (error) {
-      appToast.fromError(error, t.topbar.topUp);
-      setTopUpBusy(false);
-    }
+  if (usesBottomIslandNav(pathname)) {
+    return null;
   }
 
   return (
@@ -177,7 +168,7 @@ export function HeaderTopBar({
           </Dropdown.Popover>
         </Dropdown>
 
-        <Dropdown>
+        <Dropdown isOpen={supportMenuOpen} onOpenChange={setSupportMenuOpen}>
           <Dropdown.Trigger className={cn(chipTriggerClass, 'hidden lg:inline-flex')}>
             {t.topbar.support}
             <ChevronDown size={14} className="opacity-70" />
@@ -187,39 +178,51 @@ export function HeaderTopBar({
             offset={8}
             className="dashboard-top-tabs-popover min-w-[14rem]"
           >
-            <Dropdown.Menu>
-              <Dropdown.Item id="status" textValue={t.topbar.platformStatus} className="gap-2">
-                <Activity className="size-4 shrink-0" />
-                {t.topbar.platformStatus}
-              </Dropdown.Item>
-              <Dropdown.Item id="bug" textValue={t.topbar.reportBug} className="gap-2">
-                <Bug className="size-4 shrink-0" />
-                {t.topbar.reportBug}
-              </Dropdown.Item>
-              <Dropdown.Item id="community" textValue={t.topbar.askCommunity} className="gap-2">
-                <Users className="size-4 shrink-0" />
-                {t.topbar.askCommunity}
-              </Dropdown.Item>
-              <Dropdown.Item id="incident" textValue={t.topbar.reportIncident} className="gap-2">
-                <AlertTriangle className="size-4 shrink-0" />
-                {t.topbar.reportIncident}
-              </Dropdown.Item>
-              <Dropdown.Item id="support-all" textValue={t.topbar.allSupport} className="gap-2">
-                <HelpCircle className="size-4 shrink-0" />
-                {t.topbar.allSupport}
+            <Dropdown.Menu
+              onAction={(key) => {
+                if (key === 'create-ticket') {
+                  setSupportMenuOpen(false);
+                  setSupportDialogOpen(true);
+                }
+              }}
+            >
+              <Dropdown.Item
+                id="create-ticket"
+                textValue={t.topbar.createSupportTicket}
+                className="gap-2"
+              >
+                <LifeBuoy className="size-4 shrink-0" />
+                {t.topbar.createSupportTicket}
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>
 
+        <SupportCreateTicketDialog
+          open={supportDialogOpen}
+          onOpenChange={setSupportDialogOpen}
+          appId={appId}
+        />
+
         <Dropdown isOpen={walletMenuOpen} onOpenChange={setWalletMenuOpen}>
           <Dropdown.Trigger
-            className={cn(chipTriggerClass, 'max-w-[11rem] truncate sm:max-w-none')}
+            className={cn(chipTriggerClass, 'max-w-[11rem] sm:max-w-none')}
           >
-            <span className="truncate" dir="ltr" lang="en">
-              <span className="sm:hidden">{balanceLabel}</span>
-              <span className="hidden sm:inline">
-                {`${t.topbar.walletBalance}: ${balanceLabel}`}
+            <span
+              className="truncate sm:hidden"
+              dir="ltr"
+              lang="en"
+            >
+              {balanceLabel}
+            </span>
+            <span className="hidden min-w-0 max-w-full items-center gap-1 truncate sm:inline-flex">
+              <span className="truncate">{t.topbar.walletBalance}:</span>
+              <span
+                className="shrink-0 whitespace-nowrap tabular-nums [unicode-bidi:isolate]"
+                dir="ltr"
+                lang="en"
+              >
+                {balanceLabel}
               </span>
             </span>
             <ChevronDown size={14} className="shrink-0 opacity-70" />
@@ -238,7 +241,10 @@ export function HeaderTopBar({
                   }
                   return;
                 }
-                if (key === 'top-up') void handleTopUp();
+                if (key === 'top-up') {
+                  setWalletMenuOpen(false);
+                  router.push(walletTopUpHref);
+                }
               }}
             >
               <Dropdown.Item
@@ -258,28 +264,18 @@ export function HeaderTopBar({
                 id="top-up"
                 textValue={t.topbar.topUp}
                 className="gap-2"
-                isDisabled={topUpBusy}
               >
                 <PlusCircle className="size-4 shrink-0" />
-                {topUpBusy ? '…' : t.topbar.topUp}
+                {t.topbar.topUp}
               </Dropdown.Item>
               <Dropdown.Item
                 id="invoices"
                 textValue={t.topbar.viewInvoices}
-                href="/settings/platform"
+                href={walletInvoicesHref}
                 className="gap-2"
               >
                 <Receipt className="size-4 shrink-0" />
                 {t.topbar.viewInvoices}
-              </Dropdown.Item>
-              <Dropdown.Item
-                id="licensing"
-                textValue={t.topbar.licensing}
-                href="/settings/platform"
-                className="gap-2"
-              >
-                <ShieldCheck className="size-4 shrink-0" />
-                {t.topbar.licensing}
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>

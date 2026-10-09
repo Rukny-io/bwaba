@@ -31,7 +31,7 @@
     --cursor-disabled: not-allowed;
 
     /* Radius */
-    --radius: 1.25rem;
+    --radius: 1.125rem;
     --field-radius: calc(var(--radius) * 1.5);
 
     /* == Light Theme Variables == */

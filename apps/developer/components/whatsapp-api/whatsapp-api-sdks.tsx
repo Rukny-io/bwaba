@@ -1,6 +1,6 @@
 'use client';
 
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+import { useTranslations } from '@/components/providers/translations-provider';
 import { SEND_MESSAGE_RECIPES } from '@/lib/whatsapp-api-code-samples';
 import { WhatsappApiCodePanel } from '@/components/whatsapp-api/whatsapp-api-code-panel';
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/components/whatsapp-api/whatsapp-api-shared';
 
 export function WhatsappApiSdks() {
-  const d = WHATSAPP_API_COPY;
+  const d = useTranslations().whatsappApi;
 
   return (
     <>
@@ -59,14 +59,14 @@ await wa.messages.sendOtp({
   language: 'ar',
 });
 
-// List approved templates
-const templates = await wa.templates.list();
-
 // Verify inbound webhook (Node.js)
 import { verifyWebhookSignature } from '@rukny/whatsapp';`}</code>
         </pre>
         <p className="mt-3 text-[12.5px] text-[var(--muted-foreground)]">
           {d.sdksOtpEnvHint}
+        </p>
+        <p className="mt-2 text-[12.5px] text-[var(--muted-foreground)]">
+          {d.sdksTemplatesPortalHint}
         </p>
       </section>
 
@@ -84,12 +84,6 @@ import { verifyWebhookSignature } from '@rukny/whatsapp';`}</code>
           </li>
           <li>
             <code className="text-[var(--foreground)]">messages.getStatus()</code>
-          </li>
-          <li>
-            <code className="text-[var(--foreground)]">templates.list()</code>
-          </li>
-          <li>
-            <code className="text-[var(--foreground)]">templates.get(name)</code>
           </li>
           <li>
             <code className="text-[var(--foreground)]">verifyWebhookSignature()</code>

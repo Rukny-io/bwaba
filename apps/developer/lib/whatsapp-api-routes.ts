@@ -2,6 +2,12 @@ import { WHATSAPP_API_SECTIONS, type WhatsappApiSectionId } from '@/lib/whatsapp
 
 export { WHATSAPP_API_SECTIONS, type WhatsappApiSectionId };
 
+/** In-app WhatsApp API console (`/apps/:id/whatsapp-api`), not public docs. */
+export function isWhatsappApiProductPath(pathname: string): boolean {
+  if (pathname.includes('/documentation/')) return false;
+  return /\/apps\/\d{16}\/whatsapp-api(\/|$)/.test(pathname);
+}
+
 export function appWhatsappApiHref(
   appId: string,
   section?: WhatsappApiSectionId,

@@ -5,11 +5,14 @@ import {
   allocateToApp,
   getAppWallet,
   getMasterWallet,
+  getWalletTransactions,
 } from '@/lib/api/wallet';
 
 export const walletKeys = {
   master: ['developer', 'wallet', 'master'] as const,
   app: (appId: string) => ['developer', 'wallet', 'app', appId] as const,
+  transactions: (page: number) =>
+    ['developer', 'wallet', 'transactions', page] as const,
 };
 
 export function useMasterWallet() {
@@ -24,6 +27,13 @@ export function useAppWallet(publicAppId: string) {
     queryKey: walletKeys.app(publicAppId),
     queryFn: () => getAppWallet(publicAppId),
     enabled: Boolean(publicAppId),
+  });
+}
+
+export function useWalletTransactions(page = 1, limit = 20) {
+  return useQuery({
+    queryKey: walletKeys.transactions(page),
+    queryFn: () => getWalletTransactions({ page, limit }),
   });
 }
 

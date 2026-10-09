@@ -31,8 +31,8 @@
     --cursor-disabled: not-allowed;
 
     /* Radius — aligned with forms/app (overridden by app globals) */
-    --radius: 1.25rem;
-    --field-radius: 1.25rem;
+    --radius: 1.125rem;
+    --field-radius: 1.125rem;
 
     /* == Light Theme Variables == */
 

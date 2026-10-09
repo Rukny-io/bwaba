@@ -55,6 +55,14 @@ export function appWallet(appId: string): string {
   return `${appBase(appId)}/wallet`;
 }
 
+export function appWalletTopUp(appId: string): string {
+  return `${appWallet(appId)}/top-up`;
+}
+
+export function appWalletInvoices(appId: string): string {
+  return `${appWallet(appId)}/invoices`;
+}
+
 export function appAnalytics(appId: string): string {
   return `${appBase(appId)}/analytics`;
 }

@@ -54,7 +54,7 @@ export function DashboardMetricCard({
   );
 
   return (
-    <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col rounded-2xl p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
+    <article className="dashboard-metric-tile flex min-h-[7.25rem] flex-col p-4 sm:min-h-[7.75rem] sm:p-[1.125rem]">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[13px] font-medium leading-snug text-[var(--muted-foreground)]">
           {label}

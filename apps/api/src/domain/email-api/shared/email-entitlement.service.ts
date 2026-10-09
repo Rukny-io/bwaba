@@ -425,19 +425,30 @@ export class EmailEntitlementService {
         HttpStatus.PAYMENT_REQUIRED,
       );
     }
-    if (row.aiCreditsUsed >= row.aiCreditsMonthly) {
-      throw new HttpException(
-        {
-          code: 'ai_credits_exhausted',
-          message: 'Monthly AI credits exhausted.',
-        },
-        HttpStatus.PAYMENT_REQUIRED,
-      );
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const current = await this.prisma.developerEmailEntitlement.findUnique({
+        where: { developerAppId },
+        select: { id: true, aiCreditsUsed: true, aiCreditsMonthly: true },
+      });
+      if (!current || current.aiCreditsUsed >= current.aiCreditsMonthly) {
+        throw new HttpException(
+          {
+            code: 'ai_credits_exhausted',
+            message: 'Monthly AI credits exhausted.',
+          },
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
+      const claimed = await this.prisma.developerEmailEntitlement.updateMany({
+        where: { id: current.id, aiCreditsUsed: current.aiCreditsUsed },
+        data: { aiCreditsUsed: { increment: 1 } },
+      });
+      if (claimed.count === 1) return;
     }
-    await this.prisma.developerEmailEntitlement.update({
-      where: { developerAppId },
-      data: { aiCreditsUsed: { increment: 1 } },
-    });
+    throw new HttpException(
+      { code: 'quota_busy', message: 'Could not reserve an AI credit. Try again.' },
+      HttpStatus.CONFLICT,
+    );
   }
 
   activateStarter(
@@ -491,17 +502,14 @@ export class EmailEntitlementService {
     const appId =
       developerAppId ?? (await this.resolveDefaultDeveloperAppId(userId));
     await this.ensureEntitlement(userId, appId);
-    const current = await this.prisma.developerEmailEntitlement.findUnique({
-      where: { developerAppId: appId },
+    const reserved = await this.prisma.developerEmailEntitlement.updateMany({
+      where: {
+        developerAppId: appId,
+        automationRunsUsed: { lt: EMAIL_API_AUTOMATION.includedRunsPerMonth },
+      },
+      data: { automationRunsUsed: { increment: 1 } },
     });
-    if (!current) {
-      throw new HttpException('Entitlement not found.', HttpStatus.NOT_FOUND);
-    }
-    if (current.automationRunsUsed < current.automationRunsIncluded) {
-      await this.prisma.developerEmailEntitlement.update({
-        where: { developerAppId: appId },
-        data: { automationRunsUsed: { increment: 1 } },
-      });
+    if (reserved.count === 1) {
       return 'included';
     }
     return 'overage';

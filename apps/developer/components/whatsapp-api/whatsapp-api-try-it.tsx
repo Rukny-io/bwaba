@@ -15,17 +15,15 @@ import { useApiKeys } from '@/hooks/use-api-keys';
 import { executeWhatsappApiTry } from '@/lib/api/whatsapp-api-try';
 import {
   MESSAGE_ENDPOINTS,
-  TEMPLATE_ENDPOINTS,
   type WhatsappApiEndpoint,
   type WhatsappApiEndpointId,
 } from '@/lib/whatsapp-api-catalog';
 import { appApiKeysNew } from '@/lib/app-routes';
 import { cn } from '@/lib/utils';
 
-const ALL_TRYABLE: WhatsappApiEndpoint[] = [
-  ...MESSAGE_ENDPOINTS,
-  ...TEMPLATE_ENDPOINTS,
-].filter((ep) => ep.tryPath && ep.tryMethod);
+const ALL_TRYABLE: WhatsappApiEndpoint[] = MESSAGE_ENDPOINTS.filter(
+  (ep) => ep.tryPath && ep.tryMethod,
+);
 
 const E164_RE = /^\+[1-9]\d{7,14}$/;
 
@@ -95,16 +93,7 @@ interface WhatsappApiTryItProps {
   };
   initialEndpointId?: WhatsappApiEndpointId;
   initialBody?: string;
-  summaries: Record<
-    | 'epSendMessage'
-    | 'epGetMessage'
-    | 'epListTemplates'
-    | 'epGetTemplate'
-    | 'epCreateTemplate'
-    | 'epDeleteTemplate'
-    | 'epSyncTemplates',
-    string
-  >;
+  summaries: Record<string, string>;
 }
 
 export function WhatsappApiTryIt({

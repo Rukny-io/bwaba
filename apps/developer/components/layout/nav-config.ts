@@ -149,6 +149,8 @@ export function resolvePageLabel(pathname: string): string {
     analytics: 'التحليلات',
     'api-keys': 'مفاتيح API',
     wallet: 'المحفظة',
+    'top-up': 'تعبئة الرصيد',
+    invoices: 'الفواتير',
     products: 'المنتجات',
     forms: 'النماذج',
     whatsapp: 'WhatsApp Business',

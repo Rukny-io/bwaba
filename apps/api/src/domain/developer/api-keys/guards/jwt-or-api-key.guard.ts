@@ -13,7 +13,7 @@ import { PrismaService } from '../../../../core/database/prisma/prisma.service';
 import { getClientIp } from '../../../../core/common/utils/client-ip.util';
 
 /**
- * Accepts JWT (Bearer access token / cookie) or Developer API key (rk_live_/rk_test_).
+ * Accepts JWT (Bearer access token / cookie) or live Developer API keys (rk_live_).
  * Scope checks via @RequireScopes apply only when authenticating with an API key.
  */
 @Injectable()
@@ -34,6 +34,11 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') {
       const keyData = await this.apiKeysService.validateKey(rawKey);
       if (!keyData) {
         throw new UnauthorizedException('Invalid or expired API key.');
+      }
+      if (keyData.environment !== 'live' || !rawKey.startsWith('rk_live_')) {
+        throw new UnauthorizedException(
+          'Test API keys are disabled. Create a live API key.',
+        );
       }
 
       if (keyData.ipAllowlist.length > 0) {

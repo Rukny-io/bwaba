@@ -82,18 +82,10 @@ export const WHATSAPP_API_SECTIONS: {
   { id: 'sdks', slug: 'sdks', labelKey: 'navSdks' },
 ];
 
-/** Primary docs tabs — Auth and Errors stay reachable from Overview. */
+/** Bottom island nav — connect path: overview → messages → try → SDKs. */
 export const WHATSAPP_API_NAV_SECTIONS = WHATSAPP_API_SECTIONS.filter((section) =>
-  (
-    ['overview', 'messages', 'templates', 'webhooks', 'try', 'sdks'] as const
-  ).includes(
-    section.id as
-      | 'overview'
-      | 'messages'
-      | 'templates'
-      | 'webhooks'
-      | 'try'
-      | 'sdks',
+  (['overview', 'messages', 'try', 'sdks'] as const).includes(
+    section.id as 'overview' | 'messages' | 'try' | 'sdks',
   ),
 );
 

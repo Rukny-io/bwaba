@@ -494,8 +494,9 @@ export class DeveloperCheckoutService {
         : found.payment.amount;
 
     if (
-      Number.isFinite(qasehAmount) &&
-      Math.trunc(qasehAmount) !== Math.trunc(expected)
+      !Number.isFinite(qasehAmount) ||
+      Math.trunc(qasehAmount) !== Math.trunc(expected) ||
+      context.currency !== 'IQD'
     ) {
       this.logger.error(
         `Developer payment amount mismatch ${qasehPaymentId}: qaseh=${qasehAmount} expected=${expected}`,
@@ -531,6 +532,7 @@ export class DeveloperCheckoutService {
         await this.wallet.verifyTopUp(
           found.walletTx.wallet.userId,
           found.walletTx.id,
+          qasehPaymentId,
         );
         return {
           handled: true,
@@ -576,22 +578,38 @@ export class DeveloperCheckoutService {
 
         const now = new Date();
         const periodEnd = addOneEmailBillingMonth(now);
-        await this.prisma.$transaction([
-          this.prisma.developerPayment.update({
-            where: { id: found.payment.id },
-            data: {
-              status: PaymentStatus.COMPLETED,
-              paidAt: now,
-              paymentMethod: found.payment.paymentMethod || 'card',
-            },
-          }),
-        ]);
-        await this.emailBilling.activatePlan(
-          found.payment.subscription.userId,
-          developerAppId,
-          emailApiPlanId as DeveloperEmailPlan,
-          periodEnd,
-        );
+        const claimed = await this.prisma.developerPayment.updateMany({
+          where: { id: found.payment.id, status: PaymentStatus.PENDING },
+          data: {
+            status: PaymentStatus.COMPLETED,
+            paidAt: now,
+            paymentMethod: found.payment.paymentMethod || 'card',
+          },
+        });
+        if (claimed.count !== 1) {
+          return {
+            handled: true,
+            status: 'already_completed',
+            kind: found.kind,
+            returnUrl: paymentReturnUrl,
+          };
+        }
+        try {
+          await this.emailBilling.activatePlan(
+            found.payment.subscription.userId,
+            developerAppId,
+            emailApiPlanId as DeveloperEmailPlan,
+            periodEnd,
+          );
+        } catch (error) {
+          // Do not strand a payment as completed if entitlement activation
+          // failed; a retrying webhook can safely claim it again.
+          await this.prisma.developerPayment.updateMany({
+            where: { id: found.payment.id, status: PaymentStatus.COMPLETED },
+            data: { status: PaymentStatus.PENDING, paidAt: null },
+          });
+          throw error;
+        }
         return {
           handled: true,
           status: 'completed',

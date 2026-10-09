@@ -52,6 +52,22 @@ export function getFacebookOAuthUrl(nextPath = '/apps'): string {
   return `${resolveApiBaseUrl()}/auth/facebook?${params.toString()}`;
 }
 
+function sanitizeNextPath(path: string, fallback: string): string {
+  try {
+    const url = new URL(path, getDevOrigin());
+    if (url.pathname === '/login' || url.pathname === '/callback') {
+      const inner = url.searchParams.get('next');
+      if (inner) return resolveClientNext(inner, fallback);
+      return fallback;
+    }
+    url.searchParams.delete('session');
+    const qs = url.searchParams.toString();
+    return url.pathname + (qs ? `?${qs}` : '');
+  } catch {
+    return path.startsWith('/') ? path : fallback;
+  }
+}
+
 export function resolveClientNext(
   nextParam: string | null,
   fallback = '/apps',
@@ -63,7 +79,7 @@ export function resolveClientNext(
         const inner = new URL(nextParam, getDevOrigin()).searchParams.get('next');
         if (inner) return resolveClientNext(inner, fallback);
       }
-      return nextParam;
+      return sanitizeNextPath(nextParam, fallback);
     }
     const url = new URL(nextParam);
     if (isAllowedRedirectHost(url.hostname)) {
@@ -72,7 +88,7 @@ export function resolveClientNext(
         if (inner) return resolveClientNext(inner, fallback);
         return fallback;
       }
-      return url.pathname + url.search;
+      return sanitizeNextPath(url.pathname + url.search, fallback);
     }
   } catch {
     /* ignore */

@@ -78,11 +78,13 @@ export class MessagingService {
 
     const apiKey = await this.prisma.developerApiKey.findFirst({
       where: { id: apiKeyId, userId, status: 'ACTIVE' },
-      select: { developerAppId: true },
+      select: { developerAppId: true, environment: true },
     });
 
-    if (!apiKey?.developerAppId) {
-      throw new ForbiddenException('API key is not linked to an app');
+    if (!apiKey?.developerAppId || apiKey.environment !== 'live') {
+      throw new ForbiddenException(
+        'Only active live API keys linked to an app can send WhatsApp messages',
+      );
     }
 
     const developerAppId = apiKey.developerAppId;
@@ -166,6 +168,34 @@ export class MessagingService {
       },
     });
 
+    const walletCategory = approvedTemplate
+      ? this.messagingSecurity.walletCategoryForTemplate(
+          approvedTemplate.category,
+        )
+      : 'UTILITY';
+    // Reserve the application balance before the irreversible provider call.
+    // A conditional debit in WalletService prevents concurrent sends from
+    // exceeding the app balance.
+    const charge = await this.walletService.chargeMessage(
+      userId,
+      developerAppId,
+      messageLog.id,
+      walletCategory,
+    );
+    if (!charge.success) {
+      await this.prisma.whatsappMessageLog.update({
+        where: { id: messageLog.id },
+        data: {
+          status: 'FAILED',
+          errorCode: 'INSUFFICIENT_APP_BALANCE',
+          errorMessage: 'Insufficient app wallet balance',
+          failedAt: new Date(),
+        },
+      });
+      throw new BadRequestException('Insufficient app wallet balance');
+    }
+
+    let providerAccepted = false;
     try {
       const metaPayload = this.buildMetaPayload(dto);
       const result = await this.metaApi.sendMessage(
@@ -175,6 +205,7 @@ export class MessagingService {
       );
 
       const metaMessageId = result.messages?.[0]?.id;
+      providerAccepted = true;
 
       await this.prisma.whatsappMessageLog.update({
         where: { id: messageLog.id },
@@ -186,19 +217,6 @@ export class MessagingService {
       });
 
       await this.quotaService.incrementMessageCount(userId);
-
-      const walletCategory = approvedTemplate
-        ? this.messagingSecurity.walletCategoryForTemplate(
-            approvedTemplate.category,
-          )
-        : 'UTILITY';
-
-      await this.walletService.chargeMessage(
-        userId,
-        developerAppId,
-        messageLog.id,
-        walletCategory,
-      );
 
       await this.webhookDelivery.dispatchEvent(
         userId,
@@ -222,6 +240,16 @@ export class MessagingService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
+      if (!providerAccepted && charge.newBalance >= 0) {
+        try {
+          await this.walletService.refundMessageCharge(userId, messageLog.id);
+        } catch (refundError) {
+          this.logger.error(
+            `Failed to refund message reservation ${messageLog.id}`,
+            refundError,
+          );
+        }
+      }
       const errorData = error.response?.data?.error || {};
       await this.prisma.whatsappMessageLog.update({
         where: { id: messageLog.id },

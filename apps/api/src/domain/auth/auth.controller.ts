@@ -45,7 +45,7 @@ import { WebSocketTokenService } from './websocket-token.service';
 import { SecurityLogService } from '../../infrastructure/security/log.service';
 import { PendingTwoFactorService } from './pending-two-factor.service';
 import { AccountLinkingService } from './account-linking.service';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
 import {
   setAccessTokenCookie,
@@ -137,7 +137,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 60, ttl: 60000 } }) // 60 requests per minute
+  @SkipThrottle()
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user' })
   @ApiResponse({ status: 200, description: 'Current user retrieved' })

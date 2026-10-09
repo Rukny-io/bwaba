@@ -164,25 +164,30 @@ export class EmailBillingService {
     const emails = n * EMAIL_API_OVERAGE_PACK.emails;
 
     const wallet = await this.wallet.getWallet(userId);
-    if (wallet.balance < totalIqd) {
-      throw new BadRequestException('Insufficient wallet balance for overage pack.');
-    }
-
     await this.prisma.$transaction(async (tx) => {
-      await tx.developerWallet.update({
-        where: { id: wallet.id },
+      // The conditional debit is the authoritative balance check. It prevents
+      // concurrent pack purchases from overdrawing the main wallet.
+      const debited = await tx.developerWallet.updateMany({
+        where: { id: wallet.id, balance: { gte: totalIqd } },
         data: {
           balance: { decrement: totalIqd },
           totalSpent: { increment: totalIqd },
         },
+      });
+      if (debited.count !== 1) {
+        throw new BadRequestException('Insufficient wallet balance for overage pack.');
+      }
+      const updatedWallet = await tx.developerWallet.findUniqueOrThrow({
+        where: { id: wallet.id },
+        select: { balance: true },
       });
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
           type: 'EMAIL_OVERAGE_PACK',
           amount: totalIqd,
-          balanceBefore: wallet.balance,
-          balanceAfter: wallet.balance - totalIqd,
+          balanceBefore: updatedWallet.balance + totalIqd,
+          balanceAfter: updatedWallet.balance,
           status: 'COMPLETED',
           description: `Email API overage ${emails.toLocaleString('en-IQ')} messages`,
           referenceType: 'email_api_overage',
@@ -195,9 +200,20 @@ export class EmailBillingService {
           },
         },
       });
+      // The entitlement credit belongs to the financial debit. Keeping both
+      // mutations in one transaction prevents charging a customer without
+      // delivering the purchased quota.
+      await tx.developerEmailEntitlement.upsert({
+        where: { developerAppId: app.id },
+        create: {
+          userId,
+          developerAppId: app.id,
+          overagePackCredits: emails,
+        },
+        update: { overagePackCredits: { increment: emails } },
+      });
     });
 
-    await this.entitlements.creditOveragePack(userId, app.id, emails);
     return this.getSummary(userId, publicAppId);
   }
 

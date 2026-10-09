@@ -6,21 +6,22 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/database/prisma/prisma.service';
 import { RedisService } from '../../../core/cache/redis.service';
-import {
-  TopUpWalletDto,
-  UpdateAutoRechargeDto,
-  UpdateLowBalanceAlertDto,
-} from './dto/wallet.dto';
+import { UpdateAutoRechargeDto, UpdateLowBalanceAlertDto } from './dto/wallet.dto';
 
 /**
- * تسعير الرسائل حسب فئة المحادثة (IQD)
- * أسعار Meta + هامش Rukny (~20%)
+ * تسعير الرسائل حسب فئة المحادثة (IQD) — العراق
+ * التكلفة ≈ سعر Meta عبر YCloud (بدون markup) × ~1500 IQD/$
+ * البيع = تكلفة + هامش Rukny
+ *
+ * AUTH/UTILITY Meta ≈ $0.0079 (~12 IQD) → بيع 20
+ * MARKETING Meta ≈ $0.0341 (~51 IQD) → بيع 70
+ * SERVICE: أول 1000/رقم/شهر مجاناً من Meta
  */
 export const MESSAGE_PRICING: Record<string, number> = {
-  AUTHENTICATION: 12, // ~$0.008
-  UTILITY: 15, // ~$0.01
-  MARKETING: 60, // ~$0.04
-  SERVICE: 0, // مجاني (أول 1000/شهر)
+  AUTHENTICATION: 20,
+  UTILITY: 20,
+  MARKETING: 70,
+  SERVICE: 0,
   REFERRAL_CONVERSION: 0,
 };
 
@@ -37,17 +38,11 @@ export class WalletService {
    * الحصول على/إنشاء محفظة المطوّر
    */
   async getWallet(userId: string) {
-    let wallet = await this.prisma.developerWallet.findUnique({
+    return this.prisma.developerWallet.upsert({
       where: { userId },
+      create: { userId },
+      update: {},
     });
-
-    if (!wallet) {
-      wallet = await this.prisma.developerWallet.create({
-        data: { userId },
-      });
-    }
-
-    return wallet;
   }
 
   async getAppWallet(userId: string, appId: string) {
@@ -60,15 +55,11 @@ export class WalletService {
       throw new NotFoundException('App not found');
     }
 
-    let wallet = await this.prisma.developerAppWallet.findUnique({
+    const wallet = await this.prisma.developerAppWallet.upsert({
       where: { developerAppId: app.id },
+      create: { developerAppId: app.id },
+      update: {},
     });
-
-    if (!wallet) {
-      wallet = await this.prisma.developerAppWallet.create({
-        data: { developerAppId: app.id },
-      });
-    }
 
     return {
       id: wallet.id,
@@ -93,27 +84,31 @@ export class WalletService {
       this.getAppWallet(userId, appId),
     ]);
 
-    if (masterWallet.balance < amount) {
-      throw new BadRequestException('Insufficient main wallet balance');
-    }
-
     const updated = await this.prisma.$transaction(async (tx) => {
-      const nextMasterBalance = masterWallet.balance - amount;
-
-      await tx.developerWallet.update({
-        where: { id: masterWallet.id },
+      // Conditional debit is the balance check.  Do not split a stale read
+      // from the debit: concurrent allocations must not overdraw the wallet.
+      const debited = await tx.developerWallet.updateMany({
+        where: { id: masterWallet.id, balance: { gte: amount } },
         data: {
           balance: { decrement: amount },
         },
       });
+      if (debited.count !== 1) {
+        throw new BadRequestException('Insufficient main wallet balance');
+      }
+      const debitedWallet = await tx.developerWallet.findUniqueOrThrow({
+        where: { id: masterWallet.id },
+        select: { balance: true },
+      });
+      const balanceBefore = debitedWallet.balance + amount;
 
       await tx.walletTransaction.create({
         data: {
           walletId: masterWallet.id,
           type: 'APP_ALLOCATION',
           amount,
-          balanceBefore: masterWallet.balance,
-          balanceAfter: nextMasterBalance,
+          balanceBefore,
+          balanceAfter: debitedWallet.balance,
           status: 'COMPLETED',
           description: `Transfer to app ${appWallet.appName}`,
           referenceId: appWallet.id,
@@ -134,7 +129,7 @@ export class WalletService {
       });
 
       return {
-        masterBalance: nextMasterBalance,
+        masterBalance: debitedWallet.balance,
         appBalance: updatedAppWallet.balance,
       };
     });
@@ -151,43 +146,13 @@ export class WalletService {
   }
 
   /**
-   * شحن الرصيد
-   */
-  async topUp(userId: string, dto: TopUpWalletDto) {
-    const wallet = await this.getWallet(userId);
-
-    // إنشاء معاملة شحن (حالة PENDING حتى تأكيد الدفع)
-    const transaction = await this.prisma.walletTransaction.create({
-      data: {
-        walletId: wallet.id,
-        type: 'TOP_UP',
-        amount: dto.amount,
-        balanceBefore: wallet.balance,
-        balanceAfter: wallet.balance + dto.amount,
-        status: 'PENDING',
-        paymentMethod: dto.paymentMethod,
-        description: `شحن رصيد - ${dto.paymentMethod}`,
-      },
-    });
-
-    // Prefer DeveloperCheckoutService.createCheckoutSession(WALLET_TOPUP).
-    // This endpoint only creates a PENDING ledger row; credit happens via
-    // verifyTopUp after Al-Qaseh webhook/callback.
-
-    return {
-      transactionId: transaction.id,
-      amount: dto.amount,
-      paymentMethod: dto.paymentMethod,
-      status: 'PENDING',
-      message:
-        'Use POST /developer/checkout-session with kind=WALLET_TOPUP to pay via Checkout.',
-    };
-  }
-
-  /**
    * تأكيد الشحن بعد نجاح الدفع
    */
-  async verifyTopUp(userId: string, transactionId: string) {
+  async verifyTopUp(
+    userId: string,
+    transactionId: string,
+    verifiedExternalId: string,
+  ) {
     const wallet = await this.getWallet(userId);
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -201,6 +166,10 @@ export class WalletService {
 
       if (!transaction) {
         throw new NotFoundException('Transaction not found');
+      }
+
+      if (!transaction.externalId || transaction.externalId !== verifiedExternalId) {
+        throw new BadRequestException('Payment verification does not match this top-up');
       }
 
       if (transaction.status === 'COMPLETED') {
@@ -221,7 +190,6 @@ export class WalletService {
         where: { id: transactionId, status: 'PENDING' },
         data: {
           status: 'COMPLETED',
-          balanceAfter: wallet.balance + transaction.amount,
         },
       });
 
@@ -249,8 +217,12 @@ export class WalletService {
         },
       });
 
-      const updatedTransaction = await tx.walletTransaction.findUnique({
+      const updatedTransaction = await tx.walletTransaction.update({
         where: { id: transactionId },
+        data: {
+          balanceBefore: updatedWallet.balance - transaction.amount,
+          balanceAfter: updatedWallet.balance,
+        },
       });
 
       return {
@@ -295,27 +267,29 @@ export class WalletService {
     if (!appWallet || appWallet.developerApp.userId !== userId) {
       throw new NotFoundException('App wallet not found');
     }
+    const masterWallet = await this.getWallet(userId);
 
-    if (appWallet.balance < price) {
-      return { success: false, newBalance: appWallet.balance };
-    }
-
-    // خصم في transaction
-    const [updatedWallet] = await this.prisma.$transaction([
-      this.prisma.developerAppWallet.update({
-        where: { id: appWallet.id },
+    const updatedWallet = await this.prisma.$transaction(async (tx) => {
+      const debited = await tx.developerAppWallet.updateMany({
+        where: { id: appWallet.id, balance: { gte: price } },
         data: {
           balance: { decrement: price },
           totalSpent: { increment: price },
         },
-      }),
-      this.prisma.walletTransaction.create({
+      });
+      if (debited.count !== 1) return null;
+
+      const current = await tx.developerAppWallet.findUniqueOrThrow({
+        where: { id: appWallet.id },
+        select: { balance: true },
+      });
+      await tx.walletTransaction.create({
         data: {
-          walletId: (await this.getWallet(userId)).id,
+          walletId: masterWallet.id,
           type: 'MESSAGE_CHARGE',
           amount: price,
-          balanceBefore: appWallet.balance,
-          balanceAfter: appWallet.balance - price,
+          balanceBefore: current.balance + price,
+          balanceAfter: current.balance,
           status: 'COMPLETED',
           referenceId: messageLogId,
           referenceType: 'message',
@@ -325,10 +299,74 @@ export class WalletService {
             developerAppId,
           },
         },
-      }),
-    ]);
+      });
+      return current;
+    });
+
+    if (!updatedWallet) {
+      const current = await this.prisma.developerAppWallet.findUnique({
+        where: { id: appWallet.id },
+        select: { balance: true },
+      });
+      return { success: false, newBalance: current?.balance ?? 0 };
+    }
 
     return { success: true, newBalance: updatedWallet.balance };
+  }
+
+  /** Refund a reservation when the provider call fails before acceptance. */
+  async refundMessageCharge(userId: string, messageLogId: string): Promise<void> {
+    const masterWallet = await this.getWallet(userId);
+    await this.prisma.$transaction(async (tx) => {
+      const original = await tx.walletTransaction.findFirst({
+        where: {
+          walletId: masterWallet.id,
+          referenceId: messageLogId,
+          referenceType: 'message',
+          type: 'MESSAGE_CHARGE',
+          status: 'COMPLETED',
+        },
+      });
+      if (!original) return;
+
+      const metadata = (original.metadata ?? {}) as Record<string, unknown>;
+      const appWalletId = metadata.appWalletId;
+      if (typeof appWalletId !== 'string') {
+        throw new BadRequestException('Message charge is missing app wallet metadata');
+      }
+      const claimed = await tx.walletTransaction.updateMany({
+        where: { id: original.id, status: 'COMPLETED' },
+        data: { status: 'REFUNDED' },
+      });
+      if (claimed.count !== 1) return;
+
+      const appWallet = await tx.developerAppWallet.update({
+        where: { id: appWalletId },
+        data: {
+          balance: { increment: original.amount },
+          totalSpent: { decrement: original.amount },
+        },
+        select: { balance: true },
+      });
+      const developerAppId =
+        typeof metadata.developerAppId === 'string'
+          ? metadata.developerAppId
+          : undefined;
+      await tx.walletTransaction.create({
+        data: {
+          walletId: masterWallet.id,
+          type: 'REFUND',
+          amount: original.amount,
+          balanceBefore: appWallet.balance - original.amount,
+          balanceAfter: appWallet.balance,
+          status: 'COMPLETED',
+          referenceId: messageLogId,
+          referenceType: 'message_refund',
+          description: 'Refund for provider-rejected message',
+          metadata: { appWalletId, ...(developerAppId ? { developerAppId } : {}) },
+        },
+      });
+    });
   }
 
   /**

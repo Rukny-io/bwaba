@@ -12,6 +12,7 @@ import { UpdateAppDto } from './dto/update-app.dto';
 import { SendAppOtpDto } from './dto/app-otp.dto';
 import { buildAppVerificationSummary } from './app-verification.util';
 import { DevSubscriptionsService } from '../subscriptions/dev-subscriptions.service';
+import { DeveloperRateLimitService } from '../shared/developer-rate-limit.service';
 import {
   WhatsAppBusinessService,
   WhatsAppBusinessError,
@@ -59,6 +60,7 @@ export class AppsService {
     private whatsappBusiness: WhatsAppBusinessService,
     private configService: ConfigService,
     private devSubscriptions: DevSubscriptionsService,
+    private developerRateLimit: DeveloperRateLimitService,
   ) {}
 
   private isDevOtpBypass(): boolean {
@@ -115,6 +117,8 @@ export class AppsService {
     if (!phoneNumber || phoneNumber.length < 10) {
       throw new BadRequestException('رقم الهاتف غير صالح.');
     }
+
+    await this.developerRateLimit.enforceOtpRateLimit(userId, phoneNumber);
 
     // Rate limiting: check cooldown
     const recent = await this.prisma.whatsappOtp.findFirst({

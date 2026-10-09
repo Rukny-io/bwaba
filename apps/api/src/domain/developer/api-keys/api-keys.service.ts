@@ -107,8 +107,10 @@ export class ApiKeysService {
     // التحقق من حدود الخطة
     await this.checkApiKeyLimit(userId);
 
-    const environment = dto.environment || 'live';
-    const prefix = environment === 'live' ? 'rk_live_' : 'rk_test_';
+    // There is no isolated WhatsApp sandbox in this deployment. Every key
+    // reaches real Meta WABAs and real billing, so test keys are forbidden.
+    const environment = 'live';
+    const prefix = 'rk_live_';
 
     // توليد المفتاح
     const rawKey = prefix + randomBytes(32).toString('hex');
@@ -163,7 +165,11 @@ export class ApiKeysService {
    */
   async findAll(userId: string, developerAppId?: string) {
     const keys = await this.prisma.developerApiKey.findMany({
-      where: { userId, ...(developerAppId ? { developerAppId } : {}) },
+      where: {
+        userId,
+        environment: 'live',
+        ...(developerAppId ? { developerAppId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

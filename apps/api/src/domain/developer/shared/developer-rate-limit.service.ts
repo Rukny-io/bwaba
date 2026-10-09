@@ -88,8 +88,20 @@ export class DeveloperRateLimitService {
     const rateLimit = quotas.rateLimitPerMinute;
     const key = `ratelimit:apikey:${apiKeyId}`;
 
-    const current = await this.redis.get<number>(key);
-    if (current !== null && current !== undefined && current >= rateLimit) {
+    const client = await this.redis.getClient();
+    const allowed = client
+      ? await client.eval(
+          `local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+           if current >= tonumber(ARGV[1]) then return 0 end
+           redis.call('INCR', KEYS[1]); redis.call('EXPIRE', KEYS[1], ARGV[2])
+           return 1`,
+          1,
+          key,
+          String(rateLimit),
+          '60',
+        )
+      : 1;
+    if (Number(allowed) !== 1) {
       throw new HttpException(
         {
           message: 'Rate limit exceeded. Try again in a minute.',
@@ -97,14 +109,6 @@ export class DeveloperRateLimitService {
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
-    }
-
-    const pipeline = await this.redis.getClient();
-    if (pipeline) {
-      const multi = pipeline.multi();
-      multi.incr(key);
-      multi.expire(key, 60);
-      await multi.exec();
     }
   }
 
@@ -115,34 +119,31 @@ export class DeveloperRateLimitService {
     const normalized = recipient.replace(/[\s\-\(\)\+]/g, '');
     const recipientKey = `ratelimit:otp:${userId}:${normalized}`;
     const userKey = `ratelimit:otp:user:${userId}`;
-
-    const [recipientCount, userCount] = await Promise.all([
-      this.redis.get<number>(recipientKey),
-      this.redis.get<number>(userKey),
-    ]);
-
-    if (
-      (recipientCount ?? 0) >= OTP_LIMIT_PER_RECIPIENT ||
-      (userCount ?? 0) >= OTP_LIMIT_PER_USER
-    ) {
+    const client = await this.redis.getClient();
+    const allowed = client
+      ? await client.eval(
+          `local recipient = tonumber(redis.call('GET', KEYS[1]) or '0')
+           local user = tonumber(redis.call('GET', KEYS[2]) or '0')
+           if recipient >= tonumber(ARGV[1]) or user >= tonumber(ARGV[2]) then return 0 end
+           redis.call('INCR', KEYS[1]); redis.call('EXPIRE', KEYS[1], ARGV[3])
+           redis.call('INCR', KEYS[2]); redis.call('EXPIRE', KEYS[2], ARGV[3])
+           return 1`,
+          2,
+          recipientKey,
+          userKey,
+          String(OTP_LIMIT_PER_RECIPIENT),
+          String(OTP_LIMIT_PER_USER),
+          String(OTP_LIMIT_WINDOW_SECONDS),
+        )
+      : 1;
+    if (Number(allowed) !== 1) {
       throw new HttpException(
         {
-          message:
-            'OTP rate limit exceeded for this recipient. Try again later.',
+          message: 'OTP rate limit exceeded for this recipient. Try again later.',
           retryAfter: OTP_LIMIT_WINDOW_SECONDS,
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
-    }
-
-    const pipeline = await this.redis.getClient();
-    if (pipeline) {
-      const multi = pipeline.multi();
-      multi.incr(recipientKey);
-      multi.expire(recipientKey, OTP_LIMIT_WINDOW_SECONDS);
-      multi.incr(userKey);
-      multi.expire(userKey, OTP_LIMIT_WINDOW_SECONDS);
-      await multi.exec();
     }
   }
 }

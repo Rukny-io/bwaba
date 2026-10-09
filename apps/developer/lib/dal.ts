@@ -32,10 +32,15 @@ export async function getDashboardUser(): Promise<DashboardUser> {
     redirectToLogin();
   }
 
-  const user = await fetchCurrentUser(cookieHeader);
-  if (!user) {
+  const meResult = await fetchCurrentUser(cookieHeader);
+  if (meResult.kind === 'rate_limited') {
+    redirect('/unavailable');
+  }
+  if (!meResult.user) {
     redirectToLogin(accessToken || refreshToken ? 'invalid' : undefined);
   }
+
+  const user = meResult.user!;
 
   return user;
 }
@@ -44,9 +49,24 @@ function buildCookieHeader(items: { name: string; value: string }[]): string {
   return items.map((c) => `${c.name}=${c.value}`).join('; ');
 }
 
+type FetchCurrentUserResult =
+  | { kind: 'ok'; user: DashboardUser }
+  | { kind: 'unauthorized'; user: null }
+  | { kind: 'rate_limited'; user: null };
+
+async function fetchMeOnce(
+  meUrl: string,
+  cookieHeader: string,
+): Promise<Response> {
+  return fetch(meUrl, {
+    headers: await getServerAuthHeaders(cookieHeader),
+    cache: 'no-store',
+  });
+}
+
 async function fetchCurrentUser(
   cookieHeader: string,
-): Promise<DashboardUser | null> {
+): Promise<FetchCurrentUserResult> {
   const backendUrl =
     process.env.API_BACKEND_URL ||
     process.env.API_URL ||
@@ -54,10 +74,7 @@ async function fetchCurrentUser(
   const meUrl = `${backendUrl}/api/v1/auth/me`;
 
   try {
-    let res = await fetch(meUrl, {
-      headers: await getServerAuthHeaders(cookieHeader),
-      cache: 'no-store',
-    });
+    let res = await fetchMeOnce(meUrl, cookieHeader);
 
     if (res.status === 401) {
       const refreshRes = await fetch(`${backendUrl}/api/v1/auth/refresh`, {
@@ -73,25 +90,33 @@ async function fetchCurrentUser(
             : [];
         await persistAuthSetCookies(setCookies);
         const merged = mergeAuthSetCookies(cookieHeader, setCookies);
-        res = await fetch(meUrl, {
-          headers: await getServerAuthHeaders(merged),
-          cache: 'no-store',
-        });
+        res = await fetchMeOnce(meUrl, merged);
       }
     }
 
-    if (!res.ok) return null;
+    if (res.status === 429) {
+      await new Promise((r) => setTimeout(r, 400));
+      res = await fetchMeOnce(meUrl, cookieHeader);
+      if (res.status === 429) {
+        return { kind: 'rate_limited', user: null };
+      }
+    }
+
+    if (!res.ok) return { kind: 'unauthorized', user: null };
     const data = await res.json();
     const user =
       data && typeof data === 'object' && 'user' in data
         ? (data as { user: DashboardUser }).user
         : (data as DashboardUser);
     return {
-      ...user,
-      avatar: resolveMediaUrl(user.avatar) ?? undefined,
+      kind: 'ok',
+      user: {
+        ...user,
+        avatar: resolveMediaUrl(user.avatar) ?? undefined,
+      },
     };
   } catch {
-    return null;
+    return { kind: 'unauthorized', user: null };
   }
 }
 

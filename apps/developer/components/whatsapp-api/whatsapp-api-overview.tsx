@@ -1,18 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  Code2,
-  KeyRound,
-  MessageSquare,
-  Play,
-  Webhook,
-} from 'lucide-react';
+import { AlertTriangle, Code2, KeyRound, MessageSquare } from 'lucide-react';
 import { useCurrentApp } from '@/components/providers/app-context';
 import { DashboardQuickAction } from '@/components/dashboard/dashboard-quick-action';
 import { waApiPanel } from '@/components/whatsapp-api/whatsapp-api-shared';
-import { WHATSAPP_API_COPY } from '@/lib/whatsapp-api-copy';
+import { useTranslations } from '@/components/providers/translations-provider';
 import {
   appApiKeysNew,
   appWallet,
@@ -20,9 +13,13 @@ import {
 } from '@/lib/app-routes';
 import { appWhatsappApiHref } from '@/lib/whatsapp-api-routes';
 import { appWhatsappHref } from '@/lib/whatsapp-routes';
+import { WhatsappApiOnboardingPanel } from '@/components/whatsapp-api/whatsapp-api-onboarding-panel';
+import { WhatsappApiSetupPanel } from '@/components/whatsapp-api/whatsapp-api-setup-panel';
 
 export function WhatsappApiOverview() {
-  const d = WHATSAPP_API_COPY;
+  const t = useTranslations();
+  const d = t.whatsappApi;
+  const isRtl = t.common.switchLang === 'English';
   const { app } = useCurrentApp();
 
   const cards = [
@@ -37,18 +34,6 @@ export function WhatsappApiOverview() {
       desc: d.cardMessagesDesc,
       href: appWhatsappApiHref(app.appId, 'messages'),
       icon: MessageSquare,
-    },
-    {
-      title: d.cardWebhooksTitle,
-      desc: d.cardWebhooksDesc,
-      href: appWhatsappApiHref(app.appId, 'webhooks'),
-      icon: Webhook,
-    },
-    {
-      title: d.cardTryTitle,
-      desc: d.cardTryDesc,
-      href: appWhatsappApiHref(app.appId, 'try'),
-      icon: Play,
     },
     {
       title: d.cardSdksTitle,
@@ -123,7 +108,7 @@ export function WhatsappApiOverview() {
       content: (
         <>
           <Link
-            href={appWhatsappApiHref(app.appId, 'try', { endpoint: 'sendMessage' })}
+            href={appWhatsappApiHref(app.appId, 'messages')}
             className="font-medium text-[var(--foreground)] underline-offset-2 hover:underline"
           >
             {d.quickstartStep4Link}
@@ -150,6 +135,9 @@ export function WhatsappApiOverview() {
 
   return (
     <>
+      <WhatsappApiSetupPanel />
+      <WhatsappApiOnboardingPanel />
+
       <section className={waApiPanel}>
         <h2 className="text-base font-semibold text-[var(--foreground)]">
           {d.quickstartTitle}
@@ -184,7 +172,7 @@ export function WhatsappApiOverview() {
               title={card.title}
               description={card.desc}
               icon={card.icon}
-              isRtl={false}
+              isRtl={isRtl}
               className="rounded-[1.25rem] sm:rounded-[1.25rem]"
             />
           ))}

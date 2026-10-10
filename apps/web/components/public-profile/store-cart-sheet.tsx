@@ -226,7 +226,7 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
           <motion.button
             type="button"
             aria-label={t('cart.close')}
-            className="fixed inset-0 z-[144] bg-black/30"
+            className="profile-store-cart-backdrop fixed inset-0 z-[144] min-h-dvh !h-dvh bg-black/30"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -241,7 +241,8 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
           'profile-store-cart-anchor profile-store-chrome fixed z-[150]',
           themeClass,
           'inset-x-0 mx-auto',
-          'bottom-[max(0.75rem,env(safe-area-inset-bottom))] mb-2',
+          'md:inset-x-auto md:right-6 md:mx-0',
+          'bottom-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.5rem))]',
           'flex w-[min(22rem,calc(100%-1.5rem))] flex-col items-stretch px-0',
         )}
       >
@@ -261,16 +262,13 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
               style={{ transformOrigin: 'bottom center' }}
               className={cn(
                 storeCartPanelGlassClass,
-                'pointer-events-auto mb-2 flex max-h-[min(62dvh,540px)] flex-col overflow-hidden',
+                'pointer-events-auto mb-2 flex flex-col overflow-hidden',
+                'max-h-[min(62dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-7.5rem))]',
               )}
             >
-              <div className="flex justify-center pt-2.5">
-                <span className="h-1 w-9 rounded-full bg-[var(--border)]" aria-hidden />
-              </div>
-
-              <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+              <div className="flex items-center gap-3 px-4 pb-3 pt-3.5">
                 <span
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--foreground)]"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)]"
                   aria-hidden
                 >
                   <ShoppingBag className="size-4" strokeWidth={2} />
@@ -290,7 +288,7 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
                   type="button"
                   aria-label={t('cart.close')}
                   onClick={closeCart}
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-2xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                 >
                   <X className="size-4" strokeWidth={2} aria-hidden />
                 </button>
@@ -318,7 +316,7 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
                         <ProductThumbnail
                           imageUrl={item.imageUrl ?? null}
                           alt=""
-                          className="size-[4.25rem] shrink-0 rounded-xl"
+                          className="size-[4.25rem] shrink-0 rounded-2xl"
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-2">
                           <div className="flex items-start justify-between gap-2">
@@ -383,7 +381,7 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
               </div>
 
               <div className="p-3 pt-1">
-                <div className="rounded-2xl bg-[var(--surface-secondary)]/75 p-3">
+                <div className="rounded-2xl bg-[var(--surface-secondary)] p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <span className="text-[12px] font-medium text-[var(--muted-foreground)]">
                       {t('cart.subtotal')}
@@ -394,8 +392,8 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
                     href={checkoutUrl}
                     aria-label={t('cart.checkoutAria', { count: itemCount })}
                     className={cn(
-                      'inline-flex h-12 w-full items-center justify-center rounded-full',
-                      'bg-[var(--foreground)] text-[14px] font-semibold text-[var(--background)] no-underline',
+                      'inline-flex h-11 w-full items-center justify-center rounded-2xl',
+                      'bg-[var(--foreground)] text-[14px] font-semibold text-[var(--surface)] no-underline',
                       'transition-opacity hover:opacity-90 active:scale-[0.99]',
                     )}
                   >
@@ -412,42 +410,41 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
           onClick={() => (isCartOpen ? closeCart() : openCart())}
           aria-label={t('cart.openAria', { count: itemCount })}
           aria-expanded={isCartOpen}
-          whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.98 }}
           transition={buttonTransition}
           className={cn(
             storeCartBarGlassClass,
             'pointer-events-auto flex h-14 w-full touch-manipulation items-center gap-3 py-2 ps-2 pe-2',
-            'rounded-[1.75rem]',
+            'rounded-3xl',
           )}
         >
           <span
-            className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[var(--foreground)]"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--foreground)]"
             aria-hidden
           >
             <ShoppingBag className="size-4" strokeWidth={2} />
             <span
               className={cn(
-                'absolute -end-0.5 -top-0.5 flex min-w-5 items-center justify-center rounded-full px-1',
-                'bg-[var(--foreground)] text-[10px] font-bold tabular-nums leading-none text-[var(--background)]',
-                'h-5',
+                'absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1',
+                'bg-[var(--foreground)] text-[10px] font-bold tabular-nums leading-none text-[var(--surface)]',
               )}
             >
               {itemCount}
             </span>
           </span>
 
-          <div className="min-w-0 flex-1 text-start">
-            <span className="block text-[10px] font-medium leading-none text-[var(--muted-foreground)]">
+          <div className="min-w-0 flex-1 px-0.5 text-start">
+            <span className="block text-[11px] font-medium leading-none text-[var(--muted-foreground)]">
               {t('product.dialog.cartTotal')}
             </span>
             <span
               dir="ltr"
-              className="mt-1 inline-flex max-w-full items-baseline gap-1 whitespace-nowrap"
+              className="mt-1.5 inline-flex max-w-full items-baseline gap-1 whitespace-nowrap"
             >
-              <span className="text-[15px] font-bold leading-none tabular-nums tracking-tight text-[var(--foreground)]">
+              <span className="text-[15px] font-semibold leading-none tabular-nums tracking-tight text-[var(--foreground)]">
                 {formatProfilePriceAmount(subtotal)}
               </span>
-              <span className="text-[11px] font-semibold leading-none text-[var(--muted-foreground)]">
+              <span className="text-[11px] font-medium leading-none text-[var(--muted-foreground)]">
                 {currencyShort}
               </span>
             </span>
@@ -456,13 +453,13 @@ export function StoreCartFloating({ storeSlug, products, themeKey }: StoreCartFl
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={isCartOpen ? 'close' : 'open'}
-              initial={reduceMotion ? false : { opacity: 0, y: 3 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 2 }}
               animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-              exit={reduceMotion ? undefined : { opacity: 0, y: -3 }}
-              transition={{ duration: reduceMotion ? 0 : 0.22, ease: EASE_OUT }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -2 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: EASE_OUT }}
               className={cn(
-                'inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5',
-                'bg-[var(--foreground)] text-[12px] font-semibold text-[var(--background)]',
+                'ms-1 inline-flex h-10 shrink-0 items-center justify-center rounded-2xl px-4',
+                'bg-[var(--foreground)] text-[12px] font-semibold text-[var(--surface)]',
               )}
             >
               {isCartOpen ? t('cart.close') : t('cart.open')}

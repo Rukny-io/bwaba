@@ -31,8 +31,8 @@ export function CheckoutShell({
   const { locale, toggleLocale, t } = useLocale();
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-foreground">
-      <header className="animate-in fade-in-0 slide-in-from-top-1 px-4 pt-5 duration-300 fill-mode-both sm:px-6">
+    <div className="flex min-h-dvh flex-col bg-white text-foreground pb-[env(safe-area-inset-bottom)]">
+      <header className="animate-in fade-in-0 slide-in-from-top-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] duration-300 fill-mode-both sm:px-6">
         {/* Always LTR so brand stays left and language stays right */}
         <div
           dir="ltr"

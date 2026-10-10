@@ -537,14 +537,16 @@ export function InvoiceSummary({ cart, className }: InvoiceSummaryProps) {
               </Button>
               <AlertDialog.Backdrop
                 className={cn(
+                  // Cover iOS Safari bottom gap under the browser chrome
+                  'min-h-dvh !h-dvh',
                   'data-[entering]:animate-in data-[entering]:fade-in-0 data-[entering]:duration-200',
                   'data-[exiting]:animate-out data-[exiting]:fade-out-0 data-[exiting]:duration-150',
                 )}
               >
-                <AlertDialog.Container>
+                <AlertDialog.Container className="min-h-dvh !h-dvh">
                   <AlertDialog.Dialog
                     className={cn(
-                      'max-h-[85vh] w-[min(100%,420px)] overflow-hidden text-zinc-900',
+                      'max-h-[min(85dvh,85vh)] w-[min(100%,420px)] overflow-hidden text-zinc-900',
                       'data-[entering]:animate-in data-[entering]:fade-in-0 data-[entering]:zoom-in-95 data-[entering]:duration-250',
                       'data-[exiting]:animate-out data-[exiting]:fade-out-0 data-[exiting]:zoom-out-95 data-[exiting]:duration-150',
                     )}

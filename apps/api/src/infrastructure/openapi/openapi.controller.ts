@@ -1,5 +1,6 @@
 import {
   Controller,
+  Head,
   Get,
   Header,
   NotFoundException,
@@ -22,9 +23,12 @@ function resolvePublicOpenApiPath(): string {
 }
 
 @Public()
-@Controller({ path: 'openapi', version: VERSION_NEUTRAL })
+// Keep both URLs during the API v1 transition. The canonical URL is
+// /api/openapi, while existing clients use /api/v1/openapi.
+@Controller({ path: ['openapi', 'v1/openapi'], version: VERSION_NEUTRAL })
 export class OpenApiController {
   @Get('public-v1.yaml')
+  @Head('public-v1.yaml')
   @Header('Content-Type', 'application/yaml; charset=utf-8')
   getPublicYaml(): string {
     return readFileSync(resolvePublicOpenApiPath(), 'utf8');

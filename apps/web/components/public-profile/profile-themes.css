@@ -279,13 +279,13 @@ html:has(.profile-page-public.profile-theme-minimal) body {
   --success: #16a34a;
   --warning: #d97706;
   --danger: #dc2626;
-  --store-glass-bg: rgba(255, 255, 255, 0.92);
-  --store-glass-bar-bg: rgba(255, 255, 255, 0.94);
-  --store-glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
-  --store-glass-bar-shadow: 0 10px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  --store-glass-ring: rgba(22, 24, 35, 0.1);
-  --store-glass-bar-ring: rgba(22, 24, 35, 0.1);
-  --store-glass-blur: blur(20px) saturate(180%);
+  --store-glass-bg: var(--surface);
+  --store-glass-bar-bg: var(--surface);
+  --store-glass-shadow: none;
+  --store-glass-bar-shadow: none;
+  --store-glass-ring: transparent;
+  --store-glass-bar-ring: transparent;
+  --store-glass-blur: none;
   --ease-liquid: cubic-bezier(0.32, 0.72, 0, 1);
   color: var(--foreground);
 }
@@ -302,25 +302,32 @@ html:has(.profile-page-public.profile-theme-minimal) body {
   --surface-secondary-foreground: #e5e5e5;
   --primary: #f5f5f5;
   --primary-foreground: #0a0a0a;
-  --store-glass-bg: rgba(30, 30, 30, 0.92);
-  --store-glass-bar-bg: rgba(28, 28, 28, 0.94);
-  --store-glass-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
-  --store-glass-bar-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-  --store-glass-ring: rgba(255, 255, 255, 0.12);
-  --store-glass-bar-ring: rgba(255, 255, 255, 0.12);
+  --store-glass-bg: var(--surface);
+  --store-glass-bar-bg: var(--surface);
+  --store-glass-shadow: none;
+  --store-glass-bar-shadow: none;
+  --store-glass-ring: transparent;
+  --store-glass-bar-ring: transparent;
 }
 
-/* iOS 26 Liquid Glass — store cart panel */
+/*
+ * iOS Safari: cover the full visual screen so the dimmer doesn't leave a
+ * light band above the browser chrome (same issue as checkout modals).
+ */
+.profile-store-cart-backdrop {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* Store cart panel — flat surface, no elevation */
 .profile-store-glass {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   background-color: var(--store-glass-bg);
-  -webkit-backdrop-filter: var(--store-glass-blur);
-  backdrop-filter: var(--store-glass-blur);
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-  box-shadow: var(--store-glass-shadow);
-  transition: background-color 0.45s var(--ease-liquid);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: background-color 0.45s var(--ease-liquid), border-color 0.45s var(--ease-liquid);
 }
 
 .profile-store-glass > * {
@@ -328,38 +335,26 @@ html:has(.profile-page-public.profile-theme-minimal) body {
   z-index: 1;
 }
 
-/* Floating cart bar — light surface chrome (matches profile rows) */
+/* Floating cart bar — flat pill, no glass/shadow */
 .profile-store-glass-bar {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   background-color: var(--store-glass-bar-bg);
-  -webkit-backdrop-filter: var(--store-glass-blur);
-  backdrop-filter: var(--store-glass-blur);
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-  box-shadow: var(--store-glass-bar-shadow);
+  border: 1px solid var(--border);
+  box-shadow: none;
   color: var(--foreground);
   transition:
-    background-color 0.45s var(--ease-liquid),
-    box-shadow 0.45s var(--ease-liquid),
-    border-color 0.45s var(--ease-liquid);
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.profile-store-glass-bar:active {
+  background-color: var(--surface-secondary);
 }
 
 .profile-store-glass-bar > * {
   position: relative;
   z-index: 1;
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .profile-store-glass {
-    background-color: var(--surface);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .profile-store-glass-bar {
-    background-color: var(--surface);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
 }

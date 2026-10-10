@@ -89,6 +89,7 @@
 html,
 body {
   min-height: 100%;
+  min-height: 100dvh;
   background: var(--background);
 }
 
@@ -96,6 +97,17 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * iOS Safari: HeroUI backdrops use --visual-viewport-height, which can fall short
+ * of the visible screen and leave a white band above the browser chrome.
+ */
+.alert-dialog__backdrop,
+.modal__backdrop,
+.drawer__backdrop {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
 }
 
 /* English UI uses Inter; Arabic keeps Thmanyah */

@@ -30,10 +30,9 @@ export function formatTrendPercent(
   };
 }
 
-export function formatNumber(value: number, locale?: AppLocale): string {
-  return new Intl.NumberFormat(
-    locale ? toIntlLocale(locale) : NUMBER_LOCALE,
-  ).format(value);
+/** Always Western digits (0-9) across the dashboard — locale only affects copy. */
+export function formatNumber(value: number, _locale?: AppLocale): string {
+  return new Intl.NumberFormat(NUMBER_LOCALE).format(value);
 }
 
 export function formatPercent(value: number): string {
@@ -53,9 +52,9 @@ export function formatCurrency(
   const resolved = resolveLocale(locale);
   if (currency === 'IQD') {
     const suffix = getMessages(resolved).common.currencyIqd;
-    return `${formatNumber(Math.round(value), resolved)} ${suffix}`;
+    return `${formatNumber(Math.round(value))} ${suffix}`;
   }
-  return new Intl.NumberFormat(toIntlLocale(resolved), {
+  return new Intl.NumberFormat(NUMBER_LOCALE, {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,

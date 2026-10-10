@@ -21,7 +21,7 @@ export class RequestTrackingOtpDto {
 
   @ApiPropertyOptional({
     description: 'رقم الطلب (اختياري - للتحقق من وجوده)',
-    example: 'ORD-20260114-7845',
+    example: '3E3154',
   })
   @IsOptional()
   @IsString()
@@ -65,7 +65,7 @@ export class VerifyTrackingOtpDto {
 export class QuickTrackDto {
   @ApiProperty({
     description: 'رقم الطلب',
-    example: 'ORD-20260114-7845',
+    example: '3E3154',
   })
   @IsString()
   orderNumber: string;
@@ -115,7 +115,7 @@ export class TrackingSessionResponse {
  * ملخص الطلب
  */
 export class OrderSummaryDto {
-  @ApiProperty({ example: 'ORD-20260114-7845' })
+  @ApiProperty({ example: '3E3154' })
   orderNumber: string;
 
   @ApiProperty({ example: 'SHIPPED' })
@@ -241,7 +241,7 @@ class DatesInfoDto {
  * تفاصيل الطلب الكاملة
  */
 export class OrderDetailsDto {
-  @ApiProperty({ example: 'ORD-20260114-7845' })
+  @ApiProperty({ example: '3E3154' })
   orderNumber: string;
 
   @ApiProperty({ example: 'SHIPPED' })

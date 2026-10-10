@@ -68,7 +68,7 @@ function ProductCardComponent({
     >
       <div
         className={cn(
-          'relative aspect-square overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]',
+          'relative aspect-square overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)]',
           onOpenDetails && 'cursor-pointer',
         )}
         onClick={openDetails}
@@ -76,19 +76,19 @@ function ProductCardComponent({
         <ProductThumbnail
           imageUrl={imageUrl}
           alt={title}
-          className="size-full rounded-xl"
+          className="size-full rounded-lg"
           imageClassName="transition-opacity duration-200 group-hover/card:opacity-[0.96]"
         />
 
-        <div className="absolute start-2 top-2 z-[1] flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-0.5">
+        <div className="absolute start-1.5 top-1.5 z-[1] flex max-w-[calc(100%-2.5rem)] flex-col items-start gap-0.5">
           {isHidden ? (
-            <span className="rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground)]">
+            <span className="rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[9px] font-medium text-[var(--foreground)]">
               {t('products.hidden')}
             </span>
           ) : null}
           {discount ? (
             <span
-              className="rounded-md bg-[var(--primary)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--primary-foreground)]"
+              className="rounded-md bg-[var(--primary)] px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-[var(--primary-foreground)]"
               dir="ltr"
             >
               -{discount}%
@@ -97,13 +97,13 @@ function ProductCardComponent({
         </div>
 
         {stock.variant === 'low' ? (
-          <span className="absolute inset-x-2 bottom-2 z-[1] w-fit max-w-[calc(100%-1rem)] truncate rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[9px] font-medium text-[var(--foreground)]">
+          <span className="absolute inset-x-1.5 bottom-1.5 z-[1] w-fit max-w-[calc(100%-0.75rem)] truncate rounded-md bg-[var(--surface)]/90 px-1.5 py-0.5 text-[9px] font-medium text-[var(--foreground)]">
             {stock.label}
           </span>
         ) : null}
 
         <div
-          className="absolute end-2 top-2 z-10"
+          className="absolute end-1.5 top-1.5 z-10"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
@@ -115,9 +115,9 @@ function ProductCardComponent({
               variant="ghost"
               aria-label={t('products.options')}
               isDisabled={isBusy}
-              className="size-7 rounded-full border border-[var(--border)] !bg-[var(--surface)] !text-[var(--foreground)] !shadow-none hover:!bg-[var(--surface-secondary)]"
+              className="size-6 rounded-full border border-[var(--border)] !bg-[var(--surface)] !text-[var(--foreground)] !shadow-none hover:!bg-[var(--surface-secondary)]"
             >
-              <MoreVertical className="size-3.5" />
+              <MoreVertical className="size-3" />
             </Button>
             <Dropdown.Popover placement="bottom end">
               <Dropdown.Menu
@@ -173,28 +173,28 @@ function ProductCardComponent({
 
       <div
         className={cn(
-          'mt-2 flex min-w-0 flex-col gap-1 px-0.5',
+          'mt-1.5 flex min-w-0 flex-col gap-0.5 px-0.5',
           onOpenDetails && 'cursor-pointer',
         )}
         onClick={openDetails}
       >
         <h3
           dir="auto"
-          className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--foreground)] sm:text-[14px]"
+          className="line-clamp-2 text-[12px] font-medium leading-snug text-[var(--foreground)] sm:text-[13px]"
           title={title}
         >
           {title}
         </h3>
 
-        <div className="flex min-w-0 items-end justify-between gap-1.5">
+        <div className="flex min-w-0 items-end justify-between gap-1">
           <ProductPriceDisplay
             price={product.price}
             salePrice={product.salePrice}
             layout="stack"
-            size="md"
+            size="sm"
           />
           {stock.variant === 'default' || stock.variant === 'unlimited' ? (
-            <span className="mb-px shrink-0 text-[11px] font-medium text-[var(--muted-foreground)]">
+            <span className="mb-px shrink-0 text-[10px] font-medium text-[var(--muted-foreground)]">
               {stock.label}
             </span>
           ) : null}
@@ -207,10 +207,10 @@ function ProductCardComponent({
 export function ProductCardSkeleton() {
   return (
     <div className="flex animate-pulse flex-col">
-      <div className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/70" />
-      <div className="mt-2 space-y-1.5 px-0.5">
-        <div className="h-3 w-[88%] rounded-md bg-[var(--surface-secondary)]/70" />
-        <div className="h-3 w-[42%] rounded-md bg-[var(--surface-secondary)]/60" />
+      <div className="aspect-square rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)]/70" />
+      <div className="mt-1.5 space-y-1 px-0.5">
+        <div className="h-2.5 w-[88%] rounded-md bg-[var(--surface-secondary)]/70" />
+        <div className="h-2.5 w-[42%] rounded-md bg-[var(--surface-secondary)]/60" />
       </div>
     </div>
   );

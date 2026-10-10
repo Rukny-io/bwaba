@@ -20,11 +20,11 @@ import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
 import { resolveAvatarUrl } from '@/lib/media-url';
 import {
   formatOrderPlacedAtDateTime,
-  getOrderCustomerContact,
   getOrderCustomerInitials,
   getOrderCustomerName,
   getOrderDisplayId,
   getOrderDisplayNumber,
+  getOrderPhoneNumber,
   getOrderStatusStyle,
 } from '@/lib/orders/order-display';
 import { getOrderPaymentMethodLabel } from '@/lib/orders/order-payment-display';
@@ -422,7 +422,12 @@ export function OrderDetailContent({
 }) {
   const { t, locale } = useTranslations();
   const customerName = getOrderCustomerName(order);
-  const customerContact = getOrderCustomerContact(order);
+  const phoneNumber = getOrderPhoneNumber(order);
+  const customerEmail = order.customer?.email?.trim();
+  const showCustomerEmail =
+    Boolean(customerEmail) &&
+    !customerEmail!.toLowerCase().endsWith('@guest.rukny.io') &&
+    customerEmail !== phoneNumber;
   const avatarUrl = resolveAvatarUrl(order.customer?.avatar ?? null);
   const items = order.items ?? [];
   const address = order.address;
@@ -455,16 +460,21 @@ export function OrderDetailContent({
               <p className="truncate text-[14px] font-semibold leading-snug text-[var(--foreground)]">
                 {customerName}
               </p>
-              {customerContact ? (
+              {showCustomerEmail ? (
                 <p className="truncate text-[12px] leading-snug text-[var(--muted-foreground)]">
                   <bdi dir="ltr" className="block truncate">
-                    {customerContact}
+                    {customerEmail}
                   </bdi>
                 </p>
               ) : null}
             </div>
           </div>
           <dl className="space-y-1 border-t border-[var(--border)] pt-3">
+            <MetaRow
+              label={t('orders.detail.phone')}
+              value={phoneNumber || t('orders.detail.none')}
+              ltr={Boolean(phoneNumber)}
+            />
             <MetaRow
               label={t('orders.detail.paymentMethod')}
               value={resolvedPaymentMethodLabel}

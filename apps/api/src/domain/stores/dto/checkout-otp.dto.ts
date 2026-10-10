@@ -170,10 +170,10 @@ export class ResendCheckoutOtpDto {
 export class TrackOrderDto {
   @ApiProperty({
     description: 'رقم الطلب',
-    example: 'ORD-20260113-7845',
+    example: '3E3154',
   })
   @IsString()
-  @Matches(/^ORD-[A-Z0-9]+-[A-Z0-9]+$/, {
+  @Matches(/^(ORD-[A-Z0-9]+-[A-Z0-9]+|[A-Z0-9]{6})$/, {
     message: 'صيغة رقم الطلب غير صحيحة',
   })
   orderNumber: string;
@@ -247,7 +247,7 @@ export class OtpVerifyResponse {
  * Response لتتبع الطلب
  */
 export class TrackOrderResponse {
-  @ApiProperty({ example: 'ORD-20260113-7845' })
+  @ApiProperty({ example: '3E3154' })
   orderNumber: string;
 
   @ApiProperty({

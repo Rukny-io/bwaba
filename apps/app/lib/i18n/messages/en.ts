@@ -154,6 +154,7 @@ const en: AppMessages = {
       na: 'N/A',
       total: 'Total',
       customer: 'Customer',
+      phone: 'Phone (payment & verification)',
       paymentMethod: 'Payment method',
       products: 'Items ({n})',
       noProducts: 'No item details available.',

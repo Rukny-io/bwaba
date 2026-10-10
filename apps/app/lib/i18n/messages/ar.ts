@@ -152,6 +152,7 @@ const ar = {
       na: 'م/غ',
       total: 'الإجمالي',
       customer: 'العميل',
+      phone: 'رقم الهاتف (الدفع والتأكيد)',
       paymentMethod: 'طريقة الدفع',
       products: 'المنتجات ({n})',
       noProducts: 'لا توجد تفاصيل للمنتجات.',

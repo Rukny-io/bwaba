@@ -167,15 +167,29 @@ export function getOrderCustomerName(order: {
   return name || 'عميل';
 }
 
+/** Phone used for checkout OTP / payment confirmation (falls back to address). */
+export function getOrderPhoneNumber(order: {
+  phoneNumber?: string | null;
+  address?: { phoneNumber?: string | null } | null;
+}): string | null {
+  const phone =
+    order.phoneNumber?.trim() || order.address?.phoneNumber?.trim() || '';
+  return phone || null;
+}
+
 export function getOrderCustomerContact(order: {
   phoneNumber?: string | null;
+  address?: { phoneNumber?: string | null } | null;
   customer?: { email?: string | null } | null;
 }): string | null {
-  const phone = order.phoneNumber?.trim();
+  const phone = getOrderPhoneNumber(order);
   if (phone) return phone;
 
   const email = order.customer?.email?.trim();
-  if (email) return email;
+  // Guest checkout emails are internal identifiers — don't surface them in UI.
+  if (email && !email.toLowerCase().endsWith('@guest.rukny.io')) {
+    return email;
+  }
 
   return null;
 }

@@ -315,8 +315,8 @@ function ProductsGrid({
   return (
     <div
       className={cn(
-        'product-grid-dnd grid gap-x-3 gap-y-4 sm:gap-x-3.5 sm:gap-y-5',
-        'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
+        'product-grid-dnd grid gap-x-2.5 gap-y-3 sm:gap-x-3 sm:gap-y-4',
+        'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
       )}
       aria-label={gridLabel}
       data-sort={sortBy}

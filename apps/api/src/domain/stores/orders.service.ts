@@ -20,6 +20,7 @@ import {
   OrderStatus,
   OrderFiltersDto,
 } from './dto/order.dto';
+import { randomBytes } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import {
   renderStoreOrderInvoicePdf,
@@ -38,12 +39,29 @@ export class OrdersService {
   ) {}
 
   /**
-   * Generate unique order number
+   * Short public order code, e.g. `3E3154` (6 alphanumeric chars).
    */
   private generateOrderNumber(): string {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `ORD-${timestamp}-${random}`;
+    const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const bytes = randomBytes(6);
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += alphabet[bytes[i]! % 36];
+    }
+    return code;
+  }
+
+  /** Allocate a unique short order number (retries on rare collisions). */
+  private async allocateOrderNumber(maxAttempts = 8): Promise<string> {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const orderNumber = this.generateOrderNumber();
+      const existing = await this.prisma.orders.findUnique({
+        where: { orderNumber },
+        select: { id: true },
+      });
+      if (!existing) return orderNumber;
+    }
+    throw new BadRequestException('تعذر إنشاء رقم طلب فريد');
   }
 
   /**
@@ -155,12 +173,13 @@ export class OrdersService {
       }
 
       const total = Math.max(0, storeData.subtotal - orderDiscount);
+      const orderNumber = await this.allocateOrderNumber();
 
       // Create order
       const order = await this.prisma.orders.create({
         data: {
           id: uuidv4(),
-          orderNumber: this.generateOrderNumber(),
+          orderNumber,
           userId,
           storeId,
           addressId,
@@ -397,12 +416,13 @@ export class OrdersService {
     }
 
     const total = Math.max(0, subtotal - discount);
+    const orderNumber = await this.allocateOrderNumber();
 
     // Create order
     const order = await this.prisma.orders.create({
       data: {
         id: uuidv4(),
-        orderNumber: this.generateOrderNumber(),
+        orderNumber,
         userId,
         storeId: product.storeId,
         ...(address ? { addressId: address.id } : {}),
@@ -650,16 +670,18 @@ export class OrdersService {
 
     const orderSubtotal = resolvedItems.reduce((sum, i) => sum + i.subtotal, 0);
     const total = Math.max(0, orderSubtotal);
+    const orderNumber = await this.allocateOrderNumber();
 
     // Create single order
     const order = await this.prisma.orders.create({
       data: {
         id: uuidv4(),
-        orderNumber: this.generateOrderNumber(),
+        orderNumber,
         userId,
         storeId: storeId,
         ...(address ? { addressId: address.id } : {}),
-        phoneNumber: address?.phoneNumber || '',
+        // Prefer OTP/session phone (payment + verification), then address phone.
+        phoneNumber: dtoPhone || address?.phoneNumber || '',
         subtotal: orderSubtotal,
         discount: 0,
         total,
@@ -907,6 +929,7 @@ export class OrdersService {
           select: {
             id: true,
             email: true,
+            phoneNumber: true,
             profile: {
               select: { name: true, avatar: true },
             },
@@ -1011,6 +1034,7 @@ export class OrdersService {
           select: {
             id: true,
             email: true,
+            phoneNumber: true,
             profile: {
               select: { name: true, avatar: true },
             },
@@ -1060,6 +1084,7 @@ export class OrdersService {
         users: {
           select: {
             email: true,
+            phoneNumber: true,
             profile: { select: { name: true } },
           },
         },
@@ -1174,7 +1199,13 @@ export class OrdersService {
       issuedAt: order.createdAt,
       storeName: order.stores?.name?.trim() || 'المتجر',
       customerName,
-      customerPhone: order.phoneNumber || order.addresses?.phoneNumber || null,
+      customerPhone:
+        (typeof order.phoneNumber === 'string' && order.phoneNumber.trim()) ||
+        (typeof order.addresses?.phoneNumber === 'string' &&
+          order.addresses.phoneNumber.trim()) ||
+        (typeof order.users?.phoneNumber === 'string' &&
+          order.users.phoneNumber.trim()) ||
+        null,
       customerEmail: order.users?.email || null,
       paymentMethodLabel: this.mapPaymentMethodLabel(order.paymentMethod),
       paymentStatusLabel: this.mapPaymentStatusLabel(order.paymentStatus),
@@ -1682,7 +1713,15 @@ export class OrdersService {
           name: customerName,
         };
       }
-      formatted.phoneNumber = order.phoneNumber;
+      // Order phone (OTP/payment) → address phone → linked user phone
+      const resolvedPhone =
+        (typeof order.phoneNumber === 'string' && order.phoneNumber.trim()) ||
+        (typeof order.addresses?.phoneNumber === 'string' &&
+          order.addresses.phoneNumber.trim()) ||
+        (typeof order.users?.phoneNumber === 'string' &&
+          order.users.phoneNumber.trim()) ||
+        null;
+      formatted.phoneNumber = resolvedPhone;
     }
 
     if (order.coupons) {

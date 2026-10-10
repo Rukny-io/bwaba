@@ -43,8 +43,6 @@ export function OrderCustomerCell({
               {customerContact}
             </bdi>
           </p>
-        ) : !showOrderNumber ? (
-          <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">—</p>
         ) : null}
       </div>
 

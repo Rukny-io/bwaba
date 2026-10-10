@@ -1131,7 +1131,11 @@ export class OrdersService {
     status: string;
     phoneNumber: string | null;
     stores: { name: string } | null;
-    users: { email: string; profile: { name: string | null } | null } | null;
+    users: {
+      email: string;
+      phoneNumber: string | null;
+      profile: { name: string | null } | null;
+    } | null;
     addresses: {
       fullName: string | null;
       phoneNumber: string | null;

@@ -265,8 +265,7 @@ export class QasehPaymentController {
   ) {
     const checkoutUrl =
       this.config.get<string>('CHECKOUT_FRONTEND_URL') ||
-      this.config.get<string>('FRONTEND_URL') ||
-      'http://localhost:3010';
+      'https://checkout.rukny.io';
     const mailUrl =
       this.config.get<string>('MAIL_FRONTEND_URL') ||
       'https://mail.rukny.io';

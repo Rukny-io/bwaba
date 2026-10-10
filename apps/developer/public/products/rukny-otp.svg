@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="surface" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#24205A"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="20" y1="13" x2="47" y2="51" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="0.52" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <filter id="glow" x="9" y="8" width="46" height="50" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#surface)"/>
+  <path d="M32 10L50 17V29.5C50 40.8 42.5 50.6 32 54C21.5 50.6 14 40.8 14 29.5V17L32 10Z" fill="#6366F1" opacity="0.24" filter="url(#glow)"/>
+  <path d="M32 11L48 17.3V29.4C48 39.6 41.6 48.6 32 51.8C22.4 48.6 16 39.6 16 29.4V17.3L32 11Z" fill="url(#mark)"/>
+  <path d="M32 16.5L43 20.8V29.1C43 36.8 38.5 43.5 32 46C25.5 43.5 21 36.8 21 29.1V20.8L32 16.5Z" fill="#111827" opacity="0.28"/>
+  <rect x="23" y="29" width="18" height="13" rx="4" fill="white"/>
+  <path d="M28 29V26.8C28 24.6 29.8 22.8 32 22.8C34.2 22.8 36 24.6 36 26.8V29" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="28.5" cy="35.5" r="1.25" fill="#4F46E5"/>
+  <circle cx="32" cy="35.5" r="1.25" fill="#4F46E5"/>
+  <circle cx="35.5" cy="35.5" r="1.25" fill="#4F46E5"/>
+  <path d="M42.5 44.5L45 47L49 42.5" stroke="#A5F3FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

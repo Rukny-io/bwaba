@@ -48,10 +48,7 @@ export async function startDeveloperCheckoutSession(input: {
 
     return {
       ...data,
-      checkoutUrl: buildSafeDeveloperCheckoutUrl(
-        data.sessionId,
-        data.checkoutUrl,
-      ),
+      checkoutUrl: buildSafeDeveloperCheckoutUrl(data.sessionId),
     };
   } catch (error) {
     if (error instanceof ApiException) {
@@ -76,17 +73,9 @@ export async function redirectToDeveloperCheckout(input: {
 /** Only product + session may appear in the checkout entry URL. */
 function buildSafeDeveloperCheckoutUrl(
   sessionId: string,
-  fallbackUrl?: string,
 ): string {
-  let base = resolveDeveloperCheckoutBaseUrl();
-  if (fallbackUrl) {
-    try {
-      const parsed = new URL(fallbackUrl);
-      base = parsed.origin;
-    } catch {
-      // keep resolveDeveloperCheckoutBaseUrl()
-    }
-  }
+  // Never derive a redirect destination from an API response.
+  const base = resolveDeveloperCheckoutBaseUrl();
   return `${base}/?product=developer&session=${encodeURIComponent(sessionId)}`;
 }
 

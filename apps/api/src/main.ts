@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { AppModule } from './app.module';
@@ -315,6 +316,7 @@ async function bootstrap() {
       'Cache-Control',
       'X-CSRF-Token',
       'Idempotency-Key',
+      'X-API-Key',
       'X-Rukny-Skip-View-Track',
     ],
   });
@@ -399,6 +401,22 @@ async function bootstrap() {
     });
   }
 
+  const enableApiReference = process.env.ENABLE_API_REFERENCE !== 'false';
+  if (enableApiReference) {
+    app.use(
+      '/api/reference',
+      apiReference({
+        theme: 'default',
+        spec: {
+          url: '/api/openapi/public-v1.yaml',
+        },
+        metaData: {
+          title: 'Rukny API Reference',
+        },
+      }),
+    );
+  }
+
   const port = process.env.PORT || 3001;
   const host = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
   await app.listen(port, host);
@@ -407,6 +425,9 @@ async function bootstrap() {
   console.log(`   - Local:    http://localhost:${port}`);
   console.log(`   - Network:  http://0.0.0.0:${port}`);
   console.log(`\n📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  if (enableApiReference) {
+    console.log(`📖 Scalar API reference: http://localhost:${port}/api/reference`);
+  }
   console.log(`🔗 API endpoint: http://localhost:${port}/api\n`);
 }
 bootstrap().catch((err) => {

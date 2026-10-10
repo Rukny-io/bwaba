@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     if (result.verified && sync.needsCheckout && sync.checkoutSessionId) {
       const checkoutBase =
         process.env.NEXT_PUBLIC_CHECKOUT_URL?.replace(/\/$/, "") ||
-        "http://localhost:3010";
+        "https://checkout.rukny.io";
       const checkoutUrl = `${checkoutBase}/?product=mail&session=${encodeURIComponent(sync.checkoutSessionId)}`;
       return NextResponse.json({
         ...result,

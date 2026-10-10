@@ -5,6 +5,7 @@ export const DEVELOPER_PRODUCT_IDS = [
   'instagram',
   'messenger',
   'emailApi',
+  'ruknyOtp',
 ] as const;
 
 export type DeveloperProductId = (typeof DEVELOPER_PRODUCT_IDS)[number];
@@ -21,6 +22,7 @@ export const DEVELOPER_PRODUCT_CATALOG: Record<
   instagram: { status: 'coming_soon' },
   messenger: { status: 'coming_soon' },
   emailApi: { status: 'available' },
+  ruknyOtp: { status: 'available' },
 };
 
 const PRODUCT_ID_PATTERN = /^[a-z][a-zA-Z0-9]*$/;

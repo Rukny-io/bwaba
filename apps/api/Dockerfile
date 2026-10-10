@@ -72,6 +72,7 @@ RUN apk add --no-cache openssl ffmpeg \
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/node_modules ./node_modules
 COPY --from=builder /app/apps/api/prisma ./prisma
+COPY --from=builder /app/apps/api/openapi ./openapi
 COPY --from=builder /app/apps/api/package*.json ./
 
 # Regenerate prisma client + clean all caches

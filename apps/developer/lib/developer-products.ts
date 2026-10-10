@@ -6,8 +6,10 @@ import {
   Instagram,
   Facebook,
   Radio,
+  ShieldCheck,
 } from "lucide-react";
 import {
+  appBase,
   appEmailApi,
   appForms,
   appWhatsapp,
@@ -22,7 +24,8 @@ export type DeveloperProductId =
   | "whatsapp"
   | "instagram"
   | "messenger"
-  | "emailApi";
+  | "emailApi"
+  | "ruknyOtp";
 
 export interface DeveloperProduct {
   id: DeveloperProductId;
@@ -68,6 +71,12 @@ export const DEVELOPER_PRODUCTS: DeveloperProduct[] = [
     icon: Mail,
     status: "available",
     resolveHref: (appId) => appEmailApi(appId),
+  },
+  {
+    id: "ruknyOtp",
+    icon: ShieldCheck,
+    status: "available",
+    resolveHref: (appId) => `${appBase(appId)}/rukny-otp`,
   },
 ];
 

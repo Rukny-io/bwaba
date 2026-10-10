@@ -53,8 +53,30 @@
       "emailApi": {
         "name": "Email API",
         "desc": "Send transactional email through a simple HTTP API."
+      },
+      "ruknyOtp": {
+        "name": "Rukny OTP",
+        "desc": "Send Rukny-branded verification codes from one secure API."
       }
     }
+  },
+  "ruknyOtp": {
+    "title": "Verification codes from Rukny",
+    "subtitle": "No Meta setup in your app. You prepare an API key and wallet balance, then call Rukny from your server when a user needs a code.",
+    "priceLabel": "Launch price",
+    "priceHint": "per delivered OTP in Iraq",
+    "priceAmount": "16 IQD",
+    "readyTitle": "Rukny OTP is ready",
+    "readyDesc": "No Meta connection is required for your app.",
+    "readyBadge": "Available",
+    "createKey": "Create API key",
+    "openWallet": "Open wallet",
+    "docsTitle": "Documentation",
+    "docsBlurb": "API key and wallet are configured here. Request format, curl examples, and which server files to add are in the docs (similar to an API reference).",
+    "docsScalar": "Interactive API reference (Scalar)",
+    "docsReference": "API reference — endpoints & payloads",
+    "docsIntegration": "Backend integration — .env and file paths",
+    "docsRest": "REST & curl examples"
   },
   "forms": {
     "title": "Forms",
@@ -1240,6 +1262,10 @@
       "whatsapp-api": {
         "title": "WhatsApp API",
         "description": "Send WhatsApp messages, templates, and OTPs with @rukny/whatsapp."
+      },
+      "rukny-otp": {
+        "title": "Rukny OTP",
+        "description": "WhatsApp OTP delivery from your backend with a Rukny-managed sender."
       }
     },
     "groups": {
@@ -1263,6 +1289,7 @@
       "sdk": "Node.js SDK",
       "rest": "REST & curl",
       "reference": "API reference",
+      "integration": "Backend integration",
       "smtp": "SMTP",
       "linking": "Linking forms",
       "embedding": "Embedding",

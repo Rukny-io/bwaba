@@ -67,6 +67,7 @@
     "@rukny/domain-verification": "file:../../packages/domain-verification",
     "@rukny/email-api-pricing": "file:../../packages/email-api-pricing",
     "@rukny/mail-pricing": "file:../../packages/mail-pricing",
+    "@scalar/nestjs-api-reference": "^1.2.28",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/bull": "^3.15.9",
     "@types/cheerio": "^0.22.35",

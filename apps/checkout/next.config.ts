@@ -1,54 +1,41 @@
 import type { NextConfig } from 'next';
-import fs from 'node:fs';
 import path from 'node:path';
 import { thmanyahFontResolveAliases } from '../../packages/Thmanyah-Font-Family/next-resolve-aliases';
-
-function loadRootEnv(): void {
-  const envPath = path.resolve(__dirname, '../../.env');
-  if (!fs.existsSync(envPath)) return;
-
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq < 1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = value;
-  }
-}
-
-loadRootEnv();
-
-function applyLocalDevOverrides(): void {
-  if (process.env.NODE_ENV !== 'development') return;
-  process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3001/api/v1';
-  process.env.NEXT_PUBLIC_CHECKOUT_URL = 'http://localhost:3010';
-}
-
-applyLocalDevOverrides();
 
 const monorepoAliases = {
   ...thmanyahFontResolveAliases(),
 };
 
-const DEV_PUBLIC_ENV =
-  process.env.NODE_ENV === 'development'
-    ? {
-        NEXT_PUBLIC_API_URL: 'http://localhost:3001/api/v1',
-        NEXT_PUBLIC_CHECKOUT_URL: 'http://localhost:3010',
-      }
-    : undefined;
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=()',
+  },
+];
+
+if (process.env.NODE_ENV === 'production') {
+  securityHeaders.push(
+    {
+      key: 'Strict-Transport-Security',
+      value: 'max-age=63072000; includeSubDomains; preload',
+    },
+    {
+      key: 'Content-Security-Policy',
+      value:
+        "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.rukny.io",
+    },
+  );
+}
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  ...(DEV_PUBLIC_ENV ? { env: DEV_PUBLIC_ENV } : {}),
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
   transpilePackages: ['@heroui/react', '@heroui/styles', '@rukny/thmanyah-font'],
   turbopack: {
     root: path.resolve(__dirname),

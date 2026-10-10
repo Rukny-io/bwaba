@@ -721,7 +721,7 @@ export class DeveloperCheckoutService {
   private checkoutFrontendUrl(): string {
     return (
       this.config.get<string>('CHECKOUT_FRONTEND_URL') ||
-      'http://localhost:3010'
+      'https://checkout.rukny.io'
     ).replace(/\/$/, '');
   }
 

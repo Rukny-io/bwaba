@@ -53,8 +53,30 @@
       "emailApi": {
         "name": "Email API",
         "desc": "إرسال رسائل بريد إلكتروني معاملاتية عبر API."
+      },
+      "ruknyOtp": {
+        "name": "Rukny OTP",
+        "desc": "إرسال رموز التحقق باسم Rukny عبر API آمن."
       }
     }
+  },
+  "ruknyOtp": {
+    "title": "رموز التحقق من Rukny",
+    "subtitle": "بدون ربط Meta في تطبيقك: جهّز API key ورصيد المحفظة، ومن خادمك استدعِ Rukny عندما يحتاج المستخدم رمزاً.",
+    "priceLabel": "سعر الإطلاق",
+    "priceHint": "لكل OTP مُسلّمة داخل العراق",
+    "priceAmount": "16 دينار",
+    "readyTitle": "Rukny OTP جاهز",
+    "readyDesc": "لا تحتاج إلى ربط Meta داخل تطبيقك.",
+    "readyBadge": "متاح",
+    "createKey": "إنشاء API key",
+    "openWallet": "فتح المحفظة",
+    "docsTitle": "التوثيق",
+    "docsBlurb": "مفتاح API والمحفظة من هذه اللوحة. شكل الطلب، أمثلة curl، وأين تضيف الملفات في مشروعك — في التوثيق (مثل مرجع API).",
+    "docsScalar": "مرجع API تفاعلي (Scalar)",
+    "docsReference": "مرجع API — النقاط والحقول",
+    "docsIntegration": "ربط الخادم — .env ومسارات الملفات",
+    "docsRest": "REST و أمثلة curl"
   },
   "forms": {
     "title": "النماذج",
@@ -1237,6 +1259,10 @@
       "whatsapp-api": {
         "title": "WhatsApp API",
         "description": "أرسل رسائل واتساب والقوالب ورموز OTP عبر @rukny/whatsapp."
+      },
+      "rukny-otp": {
+        "title": "Rukny OTP",
+        "description": "تسليم OTP عبر WhatsApp من خادمك مع رقم مُدار من Rukny."
       }
     },
     "groups": {
@@ -1260,6 +1286,7 @@
       "sdk": "Node.js SDK",
       "rest": "REST و curl",
       "reference": "مرجع API",
+      "integration": "ربط الخادم",
       "smtp": "SMTP",
       "linking": "ربط النماذج",
       "embedding": "التضمين",

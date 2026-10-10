@@ -58,7 +58,8 @@ services:
         && npx prisma migrate deploy --config prisma/prisma.config.ts
         && node dist/main
     ports:
-      - "0.0.0.0:3001:3001"
+      # The API is reached through nginx (or the Docker network) only.
+      - "127.0.0.1:3001:3001"
     depends_on:
       postgres:
         condition: service_healthy

@@ -5,7 +5,7 @@ import type {
 import type { StoreCartItem } from '@/lib/store-cart';
 
 const CHECKOUT_URL = (
-  process.env.NEXT_PUBLIC_CHECKOUT_URL || 'http://localhost:3010'
+  process.env.NEXT_PUBLIC_CHECKOUT_URL || 'https://checkout.rukny.io'
 ).replace(/\/$/, '');
 
 function variantLabel(variant: PublicProfileProductVariant): string {

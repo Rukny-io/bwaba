@@ -13,12 +13,12 @@ import { UpdateAutoRechargeDto, UpdateLowBalanceAlertDto } from './dto/wallet.dt
  * التكلفة ≈ سعر Meta عبر YCloud (بدون markup) × ~1500 IQD/$
  * البيع = تكلفة + هامش Rukny
  *
- * AUTH/UTILITY Meta ≈ $0.0079 (~12 IQD) → بيع 20
+ * AUTH/UTILITY Meta ≈ $0.0079 (~12 IQD) → بيع 16 (Rukny OTP launch price)
  * MARKETING Meta ≈ $0.0341 (~51 IQD) → بيع 70
  * SERVICE: أول 1000/رقم/شهر مجاناً من Meta
  */
 export const MESSAGE_PRICING: Record<string, number> = {
-  AUTHENTICATION: 20,
+  AUTHENTICATION: 16,
   UTILITY: 20,
   MARKETING: 70,
   SERVICE: 0,

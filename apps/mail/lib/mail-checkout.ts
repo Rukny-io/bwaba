@@ -74,7 +74,7 @@ export async function startMailCheckoutSession(
   // even if an older API build still embeds them in checkoutUrl.
   return {
     ...(data as MailCheckoutSessionResponse),
-    checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId, data.checkoutUrl),
+    checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId),
   };
 }
 
@@ -119,16 +119,10 @@ export async function startMailOutboundPackCheckout(
 }
 
 /** Only product + session may appear in the checkout entry URL. */
-function buildSafeMailCheckoutUrl(sessionId: string, fallbackUrl?: string): string {
-  let base = resolveMailCheckoutBaseUrl();
-  if (fallbackUrl) {
-    try {
-      const parsed = new URL(fallbackUrl);
-      base = `${parsed.origin}`;
-    } catch {
-      // keep resolveMailCheckoutBaseUrl()
-    }
-  }
+function buildSafeMailCheckoutUrl(sessionId: string): string {
+  // The API response is data, not an authorization to redirect.  Use the
+  // configured Checkout origin exclusively to avoid an open redirect.
+  const base = resolveMailCheckoutBaseUrl();
   return `${base}/?product=mail&session=${encodeURIComponent(sessionId)}`;
 }
 

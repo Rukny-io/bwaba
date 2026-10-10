@@ -1,0 +1,117 @@
+openapi: 3.1.0
+info:
+  title: Rukny Public API
+  version: 1.0.0
+  description: |
+    Server-to-server APIs for Rukny developer products.
+
+    Authenticate every request with a **live** API key (`X-API-Key: rk_live_…`) created for an app that has the product installed.
+
+    Interactive docs are served at `/api/reference` on the API host.
+servers:
+  - url: https://api.rukny.io/api/v1
+    description: Production
+  - url: http://localhost:3001/api/v1
+    description: Local development
+tags:
+  - name: Rukny OTP
+    description: WhatsApp OTP delivery using the Rukny-managed sender.
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Live API key (rk_live_…) linked to your developer app.
+  schemas:
+    SendRuknyOtpRequest:
+      type: object
+      required: [to, code]
+      properties:
+        to:
+          type: string
+          description: Recipient phone in E.164 format.
+          example: '+964771234567'
+        code:
+          type: string
+          description: One-time code your backend generated for this attempt.
+          minLength: 4
+          maxLength: 32
+          example: '482913'
+    SendRuknyOtpResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Internal delivery reference for logging.
+        status:
+          type: string
+          example: sent
+        to:
+          type: string
+          example: '+964771234567'
+    ApiError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+paths:
+  /otp/send:
+    post:
+      tags: [Rukny OTP]
+      summary: Send OTP on WhatsApp
+      description: |
+        Delivers your code to the recipient on WhatsApp using Rukny's managed authentication template.
+
+        Your server must generate and later verify the code. Rukny does not store login sessions.
+
+        Requires **Rukny OTP** installed on the app tied to the API key, and sufficient app wallet balance (billed per delivered message).
+      operationId: sendRuknyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendRuknyOtpRequest'
+      responses:
+        '200':
+          description: Message accepted for delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendRuknyOtpResponse'
+        '400':
+          description: Invalid payload or insufficient wallet balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Product not installed or key not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'

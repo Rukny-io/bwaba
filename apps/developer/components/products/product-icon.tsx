@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 const PLATFORM_SVG: Partial<Record<DeveloperProductId, string>> = {
   whatsappApi: '/products/whatsapp-api.svg',
   whatsapp: '/products/whatsapp.svg',
+  ruknyOtp: '/products/rukny-otp.svg',
   instagram: '/products/instagram.svg',
   messenger: '/products/messenger.svg',
 };

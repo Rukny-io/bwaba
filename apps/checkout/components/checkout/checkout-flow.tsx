@@ -43,6 +43,7 @@ import {
   getCheckoutPaymentOptions,
   getDeveloperCheckoutSession,
   getMailCheckoutSession,
+  isTrustedPaymentUrl,
   getStoreBySlug,
   listAddresses,
   payDeveloperCheckoutSession,
@@ -780,7 +781,7 @@ export function CheckoutFlow() {
       setPayError(null);
       try {
         const result = await payMailCheckoutSession(cart.mail.sessionId);
-        if (result.paymentUrl) {
+        if (result.paymentUrl && isTrustedPaymentUrl(result.paymentUrl)) {
           window.location.href = result.paymentUrl;
           return;
         }
@@ -814,7 +815,7 @@ export function CheckoutFlow() {
         const result = await payDeveloperCheckoutSession(
           cart.developer.sessionId,
         );
-        if (result.paymentUrl) {
+        if (result.paymentUrl && isTrustedPaymentUrl(result.paymentUrl)) {
           window.location.href = result.paymentUrl;
           return;
         }
@@ -881,7 +882,7 @@ export function CheckoutFlow() {
       }
 
       const paymentUrl = result.payment?.paymentUrl;
-      if (paymentUrl) {
+      if (paymentUrl && isTrustedPaymentUrl(paymentUrl)) {
         window.location.href = paymentUrl;
         return;
       }

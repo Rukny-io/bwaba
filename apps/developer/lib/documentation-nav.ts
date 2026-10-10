@@ -4,7 +4,11 @@ import { SEND_EXAMPLE_NAV_ITEMS } from '@/lib/email-api-send-catalog';
 
 export const DOCUMENTATION_BASE = '/documentation';
 
-export type DocumentationProductId = 'email-api' | 'forms' | 'whatsapp-api';
+export type DocumentationProductId =
+  | 'email-api'
+  | 'forms'
+  | 'whatsapp-api'
+  | 'rukny-otp';
 
 export interface DocumentationNavItem {
   slug: string;
@@ -194,6 +198,41 @@ export const WHATSAPP_API_DOC_NAV_GROUPS: DocumentationNavGroup[] = [
 export const WHATSAPP_API_DOC_NAV: DocumentationNavItem[] =
   WHATSAPP_API_DOC_NAV_GROUPS.flatMap((group) => group.items);
 
+const ruknyOtpBase = `${DOCUMENTATION_BASE}/rukny-otp`;
+
+export const RUKNY_OTP_DOC_NAV_GROUPS: DocumentationNavGroup[] = [
+  {
+    label: 'Guides',
+    items: [
+      { slug: '', label: 'Overview', href: ruknyOtpBase },
+      {
+        slug: 'authentication',
+        label: 'Authentication',
+        href: `${ruknyOtpBase}/authentication`,
+      },
+      {
+        slug: 'integration',
+        label: 'Backend integration',
+        href: `${ruknyOtpBase}/integration`,
+      },
+    ],
+  },
+  {
+    label: 'Build',
+    items: [
+      {
+        slug: 'reference',
+        label: 'API reference',
+        href: `${ruknyOtpBase}/reference`,
+      },
+      { slug: 'rest', label: 'REST & curl', href: `${ruknyOtpBase}/rest` },
+    ],
+  },
+];
+
+export const RUKNY_OTP_DOC_NAV: DocumentationNavItem[] =
+  RUKNY_OTP_DOC_NAV_GROUPS.flatMap((group) => group.items);
+
 export const DOCUMENTATION_PRODUCTS: DocumentationProduct[] = [
   {
     id: 'email-api',
@@ -225,6 +264,16 @@ export const DOCUMENTATION_PRODUCTS: DocumentationProduct[] = [
     nav: WHATSAPP_API_DOC_NAV,
     navGroups: WHATSAPP_API_DOC_NAV_GROUPS,
   },
+  {
+    id: 'rukny-otp',
+    title: 'Rukny OTP',
+    description:
+      'WhatsApp OTP delivery from your backend with a Rukny-managed sender.',
+    href: ruknyOtpBase,
+    available: true,
+    nav: RUKNY_OTP_DOC_NAV,
+    navGroups: RUKNY_OTP_DOC_NAV_GROUPS,
+  },
 ];
 
 export function getDocumentationProduct(
@@ -240,6 +289,7 @@ export function isDocNavActive(pathname: string, href: string): boolean {
     `${DOCUMENTATION_BASE}/whatsapp-api`,
     `${DOCUMENTATION_BASE}/email-api/send`,
     `${DOCUMENTATION_BASE}/whatsapp-api/send`,
+    `${DOCUMENTATION_BASE}/rukny-otp`,
   ];
   if (roots.includes(href)) {
     return pathname === href || pathname === `${href}/`;

@@ -1,7 +1,25 @@
 import { getCheckoutSession } from '@/lib/session';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3001/api/v1'
+    : 'https://api.rukny.io/api/v1');
+
+/** Qaseh is the only hosted page to which Checkout may send a customer. */
+export function isTrustedPaymentUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      (url.hostname === 'pay.alqaseh.com' ||
+        url.hostname === 'pay-test.alqaseh.com') &&
+      url.pathname.startsWith('/pay/')
+    );
+  } catch {
+    return false;
+  }
+}
 
 export class CheckoutApiError extends Error {
   status: number;

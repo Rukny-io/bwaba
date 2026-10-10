@@ -114,7 +114,7 @@ export async function startMailOutboundPackCheckout(
 
   return {
     ...(data as MailCheckoutSessionResponse),
-    checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId, data.checkoutUrl),
+    checkoutUrl: buildSafeMailCheckoutUrl(data.sessionId),
   };
 }
 

@@ -15,6 +15,7 @@ import {
   analyticsHeadClass,
   analyticsTableChrome,
 } from '@/components/analytics/analytics-table-config';
+import { DashboardSection } from '@/components/app/dashboard-section';
 import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
 import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -69,18 +70,19 @@ function TableShell({
   children: ReactNode;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-xl bg-[var(--surface)] p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-semibold text-[var(--foreground)]">{title}</h3>
+    <DashboardSection
+      title={title}
+      action={
         <Link
           href={href}
-          className="text-[12px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          className="text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
         >
           {linkLabel}
         </Link>
-      </div>
+      }
+    >
       <div className={analyticsTableChrome.shell}>{children}</div>
-    </section>
+    </DashboardSection>
   );
 }
 

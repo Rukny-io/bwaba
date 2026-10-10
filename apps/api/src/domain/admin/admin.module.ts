@@ -19,6 +19,7 @@ import { AdminMailController } from './mail/admin-mail.controller';
 import { AdminMailService } from './mail/admin-mail.service';
 import { AnalyticsController } from './analytics/analytics.controller';
 import { AnalyticsService } from './analytics/analytics.service';
+import { AdminMetaPortfolioController } from './meta-portfolio/admin-meta-portfolio.controller';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../../integrations/email/email.module';
@@ -26,6 +27,7 @@ import { WhatsappModule } from '../../integrations/whatsapp/whatsapp.module';
 import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/whatsapp-business.module';
 import { SecurityModule } from '../../infrastructure/security/security.module';
 import { MailModule } from '../mail/mail.module';
+import { DeveloperModule } from '../developer/developer.module';
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { MailModule } from '../mail/mail.module';
     WhatsAppBusinessModule,
     SecurityModule,
     MailModule,
+    DeveloperModule,
   ],
   controllers: [
     DashboardController,
@@ -49,6 +52,7 @@ import { MailModule } from '../mail/mail.module';
     AdminFormsController,
     AdminMailController,
     AnalyticsController,
+    AdminMetaPortfolioController,
   ],
   providers: [
     DashboardService,

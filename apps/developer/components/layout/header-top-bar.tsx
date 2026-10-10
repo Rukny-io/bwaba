@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { SupportCreateTicketDialog } from '@/components/support/support-create-ticket-dialog';
 import { Dropdown } from '@heroui/react';
-import { useCurrentApp } from '@/components/providers/app-context';
+import { useOptionalCurrentApp } from '@/components/providers/app-context';
 import { useTranslations } from '@/components/providers/translations-provider';
 import { cn } from '@/lib/utils';
 import { WorkspaceSwitcher } from '@/components/workspace/workspace-switcher';
@@ -49,17 +49,21 @@ export function HeaderTopBar({
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
-  const { appId } = useCurrentApp();
-  const walletHref = appWallet(appId);
-  const walletTopUpHref = appWalletTopUp(appId);
-  const walletInvoicesHref = appWalletInvoices(appId);
-  const toolsHref = appTools(appId);
+  const currentApp = useOptionalCurrentApp();
+  const appId = currentApp?.appId ?? null;
+  const walletHref = appId ? appWallet(appId) : '/apps';
+  const walletTopUpHref = appId ? appWalletTopUp(appId) : '/apps';
+  const walletInvoicesHref = appId ? appWalletInvoices(appId) : '/apps';
+  const toolsHref = appId ? appTools(appId) : '/apps';
+  const settingsHref = '/settings';
   const appsActive =
     pathname === '/apps' ||
     pathname === '/apps/creation' ||
     pathname.startsWith('/apps/creation/');
   const toolsActive =
     pathname === toolsHref || pathname.startsWith(`${toolsHref}/`);
+  const settingsActive =
+    pathname === settingsHref || pathname.startsWith(`${settingsHref}/`);
   const walletActive =
     pathname === walletHref || pathname.startsWith(`${walletHref}/`);
   const { data: wallet } = useMasterWallet();
@@ -110,11 +114,11 @@ export function HeaderTopBar({
         </Link>
 
         <Link
-          href={walletHref}
-          aria-current={walletActive ? 'page' : undefined}
+          href={settingsHref}
+          aria-current={settingsActive ? 'page' : undefined}
           className={cn(dashboardTopTabsChipClass, 'hidden sm:inline-flex')}
         >
-          {t.topbar.wallet}
+          {t.topbar.settings}
         </Link>
 
         <Dropdown>
@@ -201,7 +205,7 @@ export function HeaderTopBar({
         <SupportCreateTicketDialog
           open={supportDialogOpen}
           onOpenChange={setSupportDialogOpen}
-          appId={appId}
+          appId={appId ?? undefined}
         />
 
         <Dropdown isOpen={walletMenuOpen} onOpenChange={setWalletMenuOpen}>

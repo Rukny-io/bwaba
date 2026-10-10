@@ -60,6 +60,10 @@ import { DevProductsController } from './products/dev-products.controller';
 import { DevProductsService } from './products/dev-products.service';
 import { EmailApiModule } from '../email-api/email-api.module';
 
+// Meta Business Portfolio (Pro perk)
+import { MetaPortfolioController } from './meta-portfolio/meta-portfolio.controller';
+import { MetaPortfolioService } from './meta-portfolio/meta-portfolio.service';
+
 @Module({
   imports: [
     PrismaModule,
@@ -109,6 +113,7 @@ import { EmailApiModule } from '../email-api/email-api.module';
     UsageController,
     DevFormsController,
     DevProductsController,
+    MetaPortfolioController,
   ],
   providers: [
     CheckoutSessionGuard,
@@ -129,6 +134,7 @@ import { EmailApiModule } from '../email-api/email-api.module';
     ContactsService,
     UsageService,
     DeveloperRateLimitService,
+    MetaPortfolioService,
   ],
   exports: [
     AppsService,
@@ -146,6 +152,7 @@ import { EmailApiModule } from '../email-api/email-api.module';
     DevProductsService,
     DeveloperRateLimitService,
     ContactsService,
+    MetaPortfolioService,
   ],
 })
 export class DeveloperModule {}

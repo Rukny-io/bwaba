@@ -81,6 +81,8 @@ export function MobileDock({ appId }: MobileDockProps) {
 
   const hideDock =
     /\/apps\/\d{16}\/settings(?:\/|$)/.test(pathname) ||
+    pathname === '/settings' ||
+    pathname.startsWith('/settings/') ||
     usesBottomIslandNav(pathname);
 
   const labels = {

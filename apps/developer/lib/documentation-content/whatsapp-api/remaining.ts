@@ -325,7 +325,7 @@ export const whatsappGetStartedCopy: Localized<DocMeta & {
     ],
     beforeItems: [
       'A Rukny developer account',
-      'A Meta Business portfolio you can authorize',
+      'A Meta Business portfolio you can authorize — or request one via Developer Pro (Settings → Meta portfolio; review may take more than 5 days; portfolio stays owned by Rukny)',
       'A server environment where you can keep API keys private',
     ],
     setupTitle: 'Setup',
@@ -367,7 +367,7 @@ export const whatsappGetStartedCopy: Localized<DocMeta & {
     ],
     beforeItems: [
       'حساب مطوّر في رُكني',
-      'محفظة Meta Business يمكنك تفويضها',
+      'حافظة أعمال Meta يمكنك تفويضها — أو اطلب واحدة عبر Developer Pro (الإعدادات → حافظة Meta؛ قد تتجاوز المراجعة 5 أيام؛ الملكية تبقى لرُكني)',
       'بيئة خادم يمكنك فيها إبقاء مفاتيح API خاصة',
     ],
     setupTitle: 'الإعداد',

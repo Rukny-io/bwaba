@@ -138,6 +138,7 @@ model User {
   developerApiRequestLogs      ApiRequestLog[]
   developerSubscription        DeveloperSubscription?        @relation("developer_subscription")
   developerWallet              DeveloperWallet?              @relation("developer_wallet")
+  metaBusinessPortfolioRequests MetaBusinessPortfolioRequest[]
   formTeamWorkspaceMembers     FormTeamMember[]              @relation("form_team_workspace")
   formTeamMemberships          FormTeamMember[]              @relation("form_team_member")
   formTeamInvitationsSent      FormTeamMember[]              @relation("form_team_inviter")
@@ -2635,11 +2636,41 @@ model DeveloperApp {
   emailEntitlement  DeveloperEmailEntitlement?
   emailDomains      DeveloperEmailDomain[]
   linkedMailApps    MailApp[]                  @relation("mail_linked_developer_app")
+  metaPortfolioRequests MetaBusinessPortfolioRequest[]
 
   @@index([userId])
   @@index([appId])
   @@index([status])
   @@map("developer_apps")
+}
+
+/// طلب حافظة أعمال Meta (ميزة Pro) — الملكية تبقى لـ Rukny
+model MetaBusinessPortfolioRequest {
+  id                  String   @id @default(uuid())
+  userId              String
+  developerAppId      String
+  businessName        String
+  domain              String
+  businessEmail       String
+  websiteUrl          String
+  businessDescription String
+  status              String   @default("pending") // pending | approved | rejected | fulfilled
+  rejectionReason     String?
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  metaBusinessId      String?
+  submittedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([developerAppId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("meta_business_portfolio_requests")
 }
 
 /// منتج منصة مثبّت على تطبيق المطوّر (دائم — لا يُحذف إلا بحذف التطبيق)

@@ -25,8 +25,9 @@ export function AlertsSettingsPanel() {
       <SettingsSection
         title={s.notificationsTitle}
         description={s.notificationsDesc}
+        flush
       >
-        <div className="divide-y divide-[var(--border)]">
+        <div className="divide-y divide-[var(--border)]/70">
           <ToggleRow
             label={s.notifSecurity}
             description={s.notifSecurityDesc}
@@ -59,10 +60,10 @@ export function AlertsSettingsPanel() {
             onChange={(v) => setNotification('productUpdates', v)}
           />
         </div>
-        <p className="text-[11px] text-[var(--muted-foreground)]">
-          {s.notificationsNote}
-        </p>
       </SettingsSection>
+      <p className="-mt-3 px-0.5 text-[11px] text-[var(--muted-foreground)]">
+        {s.notificationsNote}
+      </p>
 
       <SettingsSection title={s.securityTitle} description={s.securityDesc}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

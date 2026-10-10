@@ -1,11 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { AnalyticsCommerceTables } from '@/components/analytics/analytics-commerce-tables';
 import { AnalyticsSalesChart } from '@/components/analytics/analytics-sales-chart';
+import {
+  DashboardNotice,
+  DashboardSection,
+} from '@/components/app/dashboard-section';
 import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
 import { useTranslations } from '@/lib/i18n';
 import type { WeeklySalesDay } from '@/lib/commerce/types';
-import { cn } from '@/lib/utils';
 
 interface AnalyticsCommerceSectionProps {
   weeklySales: WeeklySalesDay[];
@@ -38,25 +42,25 @@ interface AnalyticsCommerceSectionProps {
   isLoading?: boolean;
 }
 
-function Card({
-  title,
-  children,
-  className,
+function InventoryStatRow({
+  label,
+  value,
+  valueClassName,
 }: {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
+  label: string;
+  value: string;
+  valueClassName?: string;
 }) {
   return (
-    <section
-      className={cn(
-        'flex min-w-0 flex-col gap-3 rounded-xl bg-[var(--surface)] p-4 sm:p-5',
-        className,
-      )}
-    >
-      <h3 className="text-[13px] font-semibold text-[var(--foreground)]">{title}</h3>
-      {children}
-    </section>
+    <li className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5 text-sm">
+      <span className="text-[var(--muted-foreground)]">{label}</span>
+      <span
+        className={valueClassName ?? 'font-semibold tabular-nums text-[var(--foreground)]'}
+        dir="ltr"
+      >
+        {value}
+      </span>
+    </li>
   );
 }
 
@@ -72,44 +76,34 @@ export function AnalyticsCommerceSection({
   const { t } = useTranslations();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 sm:gap-5">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card title={t('analytics.weeklySales')} className="xl:col-span-2">
+        <DashboardSection title={t('analytics.weeklySales')} className="xl:col-span-2">
           <AnalyticsSalesChart days={weeklySales} height={220} />
-        </Card>
+        </DashboardSection>
 
-        <Card title={t('analytics.inventoryStatus')}>
-          <ul className="space-y-2 text-sm">
-            <li className="flex justify-between rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
-              <span className="text-[var(--muted-foreground)]">{t('analytics.lowStock')}</span>
-              <span className="font-semibold tabular-nums text-[var(--warning)]" dir="ltr">
-                {formatNumber(productStats.lowStock)}
-              </span>
-            </li>
-            <li className="flex justify-between rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
-              <span className="text-[var(--muted-foreground)]">{t('analytics.outOfStock')}</span>
-              <span className="font-semibold tabular-nums text-[var(--danger)]" dir="ltr">
-                {formatNumber(productStats.outOfStock)}
-              </span>
-            </li>
-            <li className="flex justify-between rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
-              <span className="text-[var(--muted-foreground)]">
-                {t('analytics.pendingOrders')}
-              </span>
-              <span className="font-semibold tabular-nums" dir="ltr">
-                {formatNumber(orderStats.pendingOrders)}
-              </span>
-            </li>
-            <li className="flex justify-between rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
-              <span className="text-[var(--muted-foreground)]">
-                {t('analytics.totalRevenue')}
-              </span>
-              <span className="font-semibold tabular-nums" dir="ltr">
-                {formatCurrency(orderStats.totalRevenue)}
-              </span>
-            </li>
+        <DashboardSection title={t('analytics.inventoryStatus')}>
+          <ul className="space-y-2">
+            <InventoryStatRow
+              label={t('analytics.lowStock')}
+              value={formatNumber(productStats.lowStock)}
+              valueClassName="font-semibold tabular-nums text-[var(--warning)]"
+            />
+            <InventoryStatRow
+              label={t('analytics.outOfStock')}
+              value={formatNumber(productStats.outOfStock)}
+              valueClassName="font-semibold tabular-nums text-[var(--danger)]"
+            />
+            <InventoryStatRow
+              label={t('analytics.pendingOrders')}
+              value={formatNumber(orderStats.pendingOrders)}
+            />
+            <InventoryStatRow
+              label={t('analytics.totalRevenue')}
+              value={formatCurrency(orderStats.totalRevenue)}
+            />
           </ul>
-        </Card>
+        </DashboardSection>
       </div>
 
       <AnalyticsCommerceTables
@@ -119,15 +113,27 @@ export function AnalyticsCommerceSection({
       />
 
       {lowStockProducts.length > 0 ? (
-        <Card
+        <DashboardSection
           title={t('analytics.lowStockProducts')}
-          className="border border-[color-mix(in_oklab,var(--warning)_35%,transparent)]"
+          action={
+            <Link
+              href="/app/products"
+              className="text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+            >
+              {t('analytics.manageProducts')}
+            </Link>
+          }
         >
-          <ul className="flex flex-wrap gap-2">
+          <DashboardNotice
+            tone="warning"
+            title={t('analytics.lowStockNoticeTitle')}
+            description={t('analytics.lowStockNoticeDesc')}
+          />
+          <ul className="mt-1 flex flex-wrap gap-2">
             {lowStockProducts.map((product) => (
               <li
                 key={product.id}
-                className="rounded-full border border-[color-mix(in_oklab,var(--warning)_30%,transparent)] bg-[color-mix(in_oklab,var(--warning)_8%,transparent)] px-3 py-1.5 text-xs"
+                className="rounded-lg border border-[color-mix(in_oklab,var(--warning)_30%,transparent)] bg-[color-mix(in_oklab,var(--warning)_8%,transparent)] px-3 py-1.5 text-xs"
               >
                 <span className="font-medium text-[var(--foreground)]">{product.name}</span>
                 <span className="ms-1.5 tabular-nums text-[var(--warning)]" dir="ltr">
@@ -136,7 +142,7 @@ export function AnalyticsCommerceSection({
               </li>
             ))}
           </ul>
-        </Card>
+        </DashboardSection>
       ) : null}
     </div>
   );

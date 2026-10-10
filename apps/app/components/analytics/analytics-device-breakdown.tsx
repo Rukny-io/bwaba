@@ -19,7 +19,7 @@ export function AnalyticsDeviceBreakdown({
 
   if (sorted.length === 0) {
     return (
-      <p className="text-sm italic text-[var(--muted-foreground)]">
+      <p className="text-sm text-[var(--muted-foreground)]">
         {t('analytics.noDevicesYet')}
       </p>
     );

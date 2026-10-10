@@ -56,7 +56,7 @@ export const whatsappOverviewCopy: Localized<WhatsappOverviewCopy> = {
       beforeKey:
         'Each app installs WhatsApp API, connects a WhatsApp Business Account (WABA) through Meta Embedded Signup, then calls the API with an',
       afterKey:
-        '. Outbound live traffic debits the app wallet. Templates must be approved in Meta before you can send them outside the customer care window.',
+        '. Outbound live traffic debits the app wallet. Templates must be approved in Meta before you can send them outside the customer care window. If you do not already have a Meta Business Portfolio, Developer Pro can request one (Settings → Meta portfolio); review may take more than 5 days and the portfolio stays owned by Rukny while you link and send messages.',
     },
     recommendedTitle: 'Recommended',
     recommendedBefore: 'Use the official Node package',
@@ -163,7 +163,7 @@ export const whatsappOverviewCopy: Localized<WhatsappOverviewCopy> = {
       beforeKey:
         'يثبّت كل تطبيق WhatsApp API، ويربط حساب WhatsApp Business (WABA) عبر Meta Embedded Signup، ثم يستدعي الـ API بمفتاح',
       afterKey:
-        '. الحركة الصادرة الحية تُخصم من محفظة التطبيق. يجب اعتماد القوالب في Meta قبل إرسالها خارج نافذة رعاية العملاء.',
+        '. الحركة الصادرة الحية تُخصم من محفظة التطبيق. يجب اعتماد القوالب في Meta قبل إرسالها خارج نافذة رعاية العملاء. إن لم تكن لديك حافظة أعمال Meta، يمكن لـ Developer Pro طلب واحدة (الإعدادات → حافظة Meta)؛ قد تتجاوز المراجعة 5 أيام وتبقى الملكية لرُكني مع تمكين الربط والمراسلة.',
     },
     recommendedTitle: 'موصى به',
     recommendedBefore: 'استخدم حزمة Node الرسمية',

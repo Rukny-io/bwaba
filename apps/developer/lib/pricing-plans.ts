@@ -72,6 +72,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       '365-day log retention',
       '300 API requests / minute',
       'Priority support and template sync',
+      'Meta Business Portfolio request — review may take more than 5 days',
       'Built to run Email + WhatsApp together',
     ],
   },
@@ -233,6 +234,11 @@ export const FEATURE_SECTIONS: FeatureSection[] = [
       },
       {
         label: 'Priority support',
+        values: { free: false, pro: true },
+      },
+      {
+        label: 'Meta Business Portfolio request',
+        hint: 'Review may take more than 5 days · portfolio owned by Rukny',
         values: { free: false, pro: true },
       },
     ],

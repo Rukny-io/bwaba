@@ -15,6 +15,7 @@ import {
   UserCog,
   Crown,
   CircleDot,
+  BriefcaseBusiness,
 } from 'lucide-react';
 
 export const APP_BASE = '/app';
@@ -46,6 +47,12 @@ export const bottomNavItems: NavItem[] = [
   { href: `${APP_BASE}/forms`, icon: FileText, label: 'Forms' },
   { href: `${APP_BASE}/support-tickets`, icon: LifeBuoy, label: 'Support' },
   { href: `${APP_BASE}/mail`, icon: Mail, label: 'Mail', mobileLabel: 'البريد' },
+  {
+    href: `${APP_BASE}/meta-portfolio`,
+    icon: BriefcaseBusiness,
+    label: 'Meta portfolio',
+    mobileLabel: 'حافظة Meta',
+  },
   { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'Wallpapers' },
 ];
 
@@ -69,7 +76,8 @@ export const mobileDrawerItems: NavItem[] = [
   { ...primaryNavItems[3]!, mobileLabel: 'المنتجات' },
   { ...primaryNavItems[4]!, mobileLabel: 'الطلبات' },
   { ...primaryNavItems[7]!, mobileLabel: 'البريد' },
-  { ...primaryNavItems[8]!, mobileLabel: 'الخلفيات' },
+  { ...primaryNavItems[8]!, mobileLabel: 'حافظة Meta' },
+  { ...primaryNavItems[9]!, mobileLabel: 'الخلفيات' },
 ];
 
 export function isNavItemActive(
@@ -149,6 +157,11 @@ export const headerMenus: HeaderMenu[] = [
         exact: true,
       },
       { href: `${APP_BASE}/forms`, icon: FileText, label: 'Forms' },
+      {
+        href: `${APP_BASE}/meta-portfolio`,
+        icon: BriefcaseBusiness,
+        label: 'Meta portfolio',
+      },
       { href: `${APP_BASE}/wallpapers`, icon: ImageIcon, label: 'Wallpapers' },
     ],
   },

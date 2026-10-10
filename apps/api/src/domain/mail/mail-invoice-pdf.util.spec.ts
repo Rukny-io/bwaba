@@ -25,7 +25,7 @@ describe('mailInvoiceTotals', () => {
 });
 
 describe('renderMailInvoicePdf', () => {
-  it('generates a non-empty Arabic-style PDF buffer', async () => {
+  it('generates a non-empty English PDF buffer', async () => {
     const buffer = await renderMailInvoicePdf({
       invoiceNumber: 'RM-202509-TEST1234',
       issuedAt: new Date('2026-09-01T00:00:00Z'),

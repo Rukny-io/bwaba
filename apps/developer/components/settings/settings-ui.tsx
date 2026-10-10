@@ -1,29 +1,35 @@
 'use client';
 
 import { Description, Label, Switch } from '@heroui/react';
+import { AppSettingsSection } from '@/components/settings/app-settings-section';
 import { cn } from '@/lib/utils';
 
+/** Developer settings section — same surface as App settings */
 export function SettingsSection({
   title,
   description,
   children,
+  footer,
+  flush = false,
+  className,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
+  flush?: boolean;
+  className?: string;
 }) {
   return (
-    <section className="space-y-4 rounded-2xl bg-[var(--surface)] p-5 shadow-none sm:p-6">
-      <div>
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
-        {description ? (
-          <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-            {description}
-          </p>
-        ) : null}
-      </div>
+    <AppSettingsSection
+      title={title}
+      description={description}
+      footer={footer}
+      flush={flush}
+      className={className}
+    >
       {children}
-    </section>
+    </AppSettingsSection>
   );
 }
 
@@ -72,7 +78,7 @@ export function ToggleRow({
       isDisabled={disabled}
       onChange={onChange}
       className={cn(
-        'flex w-full items-start justify-between gap-4 py-3',
+        'flex w-full items-start justify-between gap-4 px-4 py-3.5 sm:px-5 sm:py-4',
         disabled && 'opacity-70',
       )}
     >

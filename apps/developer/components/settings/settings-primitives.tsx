@@ -34,7 +34,7 @@ export function SettingsPanel({
       {plain ? (
         children
       ) : (
-        <div className="settings-surface overflow-hidden rounded-2xl bg-[var(--surface)]">
+        <div className="settings-surface overflow-clip rounded-2xl bg-[var(--surface)]">
           {children}
         </div>
       )}

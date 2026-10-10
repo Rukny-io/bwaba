@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import type { WeeklySalesDay } from '@/lib/commerce/types';
 import { formatCurrency, formatNumber } from '@/lib/dashboard-format';
+import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function AnalyticsSalesChart({
@@ -23,6 +24,7 @@ export function AnalyticsSalesChart({
   className?: string;
   height?: number;
 }) {
+  const { t } = useTranslations();
   const chartData = useMemo(
     () =>
       days.map((d) => ({
@@ -34,8 +36,8 @@ export function AnalyticsSalesChart({
 
   if (days.length === 0) {
     return (
-      <p className="text-sm italic text-[var(--muted-foreground)]">
-        لا توجد مبيعات في الأسبوع الحالي
+      <p className="text-sm text-[var(--muted-foreground)]">
+        {t('analytics.weeklySalesEmpty')}
       </p>
     );
   }
@@ -71,8 +73,9 @@ export function AnalyticsSalesChart({
               return (
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs shadow-lg">
                   <p className="font-semibold text-[var(--foreground)]">{row.day}</p>
-                  <p className="mt-1 text-[var(--muted-foreground)]">
-                    {formatCurrency(row.sales)} · {formatNumber(row.orders)} طلب
+                  <p className="mt-1 text-[var(--muted-foreground)]" dir="ltr">
+                    {formatCurrency(row.sales)} ·{' '}
+                    {t('analytics.ordersCountShort', { n: formatNumber(row.orders) })}
                   </p>
                 </div>
               );

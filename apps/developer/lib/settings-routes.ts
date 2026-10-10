@@ -2,6 +2,11 @@ export const SETTINGS_TABS = [
   { slug: '', href: '/settings', segment: 'account' },
   { slug: 'alerts', href: '/settings/alerts', segment: 'alerts' },
   { slug: 'platform', href: '/settings/platform', segment: 'platform' },
+  {
+    slug: 'meta-portfolio',
+    href: '/settings/meta-portfolio',
+    segment: 'metaPortfolio',
+  },
 ] as const;
 
 export type SettingsTabSegment = (typeof SETTINGS_TABS)[number]['segment'];

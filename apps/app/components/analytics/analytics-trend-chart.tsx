@@ -51,9 +51,11 @@ function useChartPalette() {
 function TrendTooltip({
   active,
   payload,
+  seriesLabel,
 }: {
   active?: boolean;
   payload?: { payload?: ChartRow }[];
+  seriesLabel: string;
 }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
@@ -76,9 +78,9 @@ function TrendTooltip({
       <div className="flex items-center justify-between gap-4">
         <span className="inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
           <span className="size-2 rounded-full bg-[#3b82f6]" />
-          نقرات الروابط
+          {seriesLabel}
         </span>
-        <span className="text-sm font-bold tabular-nums text-[#3b82f6]">
+        <span className="text-sm font-bold tabular-nums text-[#3b82f6]" dir="ltr">
           {formatNumber(row.clicks)}
         </span>
       </div>
@@ -136,7 +138,7 @@ export function AnalyticsTrendChart({
 
   if (data.length === 0) {
     return (
-      <p className="text-sm italic text-[var(--muted-foreground)]">
+      <p className="text-sm text-[var(--muted-foreground)]">
         {t('analytics.noClicksInPeriod')}
       </p>
     );
@@ -212,7 +214,7 @@ export function AnalyticsTrendChart({
               width={36}
             />
             <Tooltip
-              content={<TrendTooltip />}
+              content={<TrendTooltip seriesLabel={t('analytics.linkClicks')} />}
               cursor={{
                 stroke: palette.primary,
                 strokeWidth: 1,
@@ -240,7 +242,7 @@ export function AnalyticsTrendChart({
       <div className="mt-3 flex flex-wrap items-center justify-center gap-5 text-xs text-[var(--muted-foreground)]">
         <span className="inline-flex items-center gap-2">
           <span className="h-2 w-6 rounded-full bg-gradient-to-l from-[#3b82f6]/20 to-[#3b82f6]" />
-          نقرات الروابط
+          {t('analytics.linkClicks')}
         </span>
       </div>
     </div>

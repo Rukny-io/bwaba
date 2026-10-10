@@ -304,17 +304,30 @@ export function PlatformSettingsPanel({
 
           </p>
 
-          <Link
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
 
-            href="/pricing"
+              href="/pricing"
 
-            className="mt-4 inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
 
-          >
+            >
 
-            {s.viewPricing}
+              {s.viewPricing}
 
-          </Link>
+            </Link>
+
+            <Link
+              href="/settings/meta-portfolio"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--background)] px-4 text-xs font-semibold text-[var(--foreground)] transition-opacity hover:opacity-90"
+            >
+              {s.metaPortfolioCta}
+            </Link>
+          </div>
+
+          <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+            {s.metaPortfolioCtaDesc}
+          </p>
 
           {subscription && effectivePlan !== 'PRO' ? (
             <UpgradeToProButton />

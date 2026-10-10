@@ -59,7 +59,7 @@ export default async function AppScopedLayout({
       <AppProvider app={app}>
         <SidebarProductsProvider appId={appId}>
         <div
-          className={`flex h-dvh flex-col bg-[var(--background)] ${locale === 'en' ? 'dir-ltr' : 'dir-rtl'}`}
+          className={`flex h-dvh flex-col overflow-clip bg-[var(--background)] ${locale === 'en' ? 'dir-ltr' : 'dir-rtl'}`}
           dir={locale === 'en' ? 'ltr' : 'rtl'}
         >
           {activeForeign && (

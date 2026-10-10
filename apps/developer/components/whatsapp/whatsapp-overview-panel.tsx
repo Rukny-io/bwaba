@@ -163,7 +163,20 @@ export function WhatsappOverviewPanel({ appId }: { appId: string }) {
       <WhatsappEmptyState
         icon={MessageSquare}
         title={w.notConnected}
-        description={w.notConnectedDesc}
+        description={
+          <>
+            <p>{w.notConnectedDesc}</p>
+            <p className="mt-2">
+              {w.metaPortfolioHint}{' '}
+              <Link
+                href="/settings/meta-portfolio"
+                className="font-medium text-[var(--primary)] hover:underline"
+              >
+                {w.metaPortfolioLink}
+              </Link>
+            </p>
+          </>
+        }
         action={<EmbeddedSignupButton appId={appId} />}
       />
     );

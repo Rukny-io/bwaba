@@ -132,8 +132,27 @@ function formatIqdNumber(amount: number): string {
   return new Intl.NumberFormat('en-IQ').format(Math.max(0, Math.floor(amount)));
 }
 
-function formatIqdAr(amount: number): string {
-  return ar(`${formatIqdNumber(amount)} دينار عراقي`);
+function formatIqd(amount: number): string {
+  return `${formatIqdNumber(amount)} IQD`;
+}
+
+function isMostlyArabic(text: string): boolean {
+  return /[\u0600-\u06FF]/.test(text);
+}
+
+function drawNameLine(
+  doc: PDFKit.PDFDocument,
+  name: string,
+  x: number,
+  y: number,
+  width: number,
+  opts?: { size?: number; color?: string },
+) {
+  if (isMostlyArabic(name)) {
+    textRtl(doc, name, x, y, width, opts);
+    return;
+  }
+  textLtr(doc, name, x, y, width, opts);
 }
 
 function formatInvoiceDate(value: Date | null | undefined): string {
@@ -174,21 +193,6 @@ function textRtl(
     .fontSize(opts?.size ?? 10)
     .fillColor(opts?.color ?? COLORS.ink)
     .text(ar(text), x, y, { width, align: 'right', lineBreak: false });
-}
-
-function textShaped(
-  doc: PDFKit.PDFDocument,
-  shaped: string,
-  x: number,
-  y: number,
-  width: number,
-  opts?: { bold?: boolean; size?: number; color?: string },
-) {
-  setArabicFont(doc, opts?.bold ? 'bold' : 'regular');
-  doc
-    .fontSize(opts?.size ?? 10)
-    .fillColor(opts?.color ?? COLORS.ink)
-    .text(shaped, x, y, { width, align: 'right', lineBreak: false });
 }
 
 function textLtr(
@@ -245,7 +249,7 @@ export async function renderMailInvoicePdf(
       const pageWidth = doc.page.width;
       const contentWidth = pageWidth - PAGE_MARGIN * 2;
       const left = PAGE_MARGIN;
-      const right = PAGE_MARGIN + contentWidth;
+      const rightEdge = PAGE_MARGIN + contentWidth;
       let y = PAGE_MARGIN;
 
       const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(
@@ -264,71 +268,67 @@ export async function renderMailInvoicePdf(
       const invoiceShort = input.invoiceNumber.replace(/^RM-/, '');
 
       // ── Header ──
-      textRtl(doc, 'فاتورة', right - 220, y, 220, { bold: true, size: 28 });
-      textLtr(doc, 'Rukny Mail', right - 220, y + 34, 220, {
+      textLtr(doc, 'Invoice', left, y, 220, { bold: true, size: 28 });
+      textLtr(doc, 'Rukny Mail', left, y + 34, 220, {
         size: 12,
         color: COLORS.muted,
-        align: 'right',
       });
 
-      textRtl(doc, `رقم الفاتورة: #${invoiceShort}`, left, y + 6, 240, {
+      const metaW = 260;
+      textLtr(doc, `Invoice #${invoiceShort}`, rightEdge - metaW, y + 6, metaW, {
         bold: true,
         size: 11,
+        align: 'right',
       });
-      textRtl(doc, `تاريخ الإصدار: ${issued}`, left, y + 24, 240, {
+      textLtr(doc, `Issued ${issued}`, rightEdge - metaW, y + 24, metaW, {
         size: 10,
         color: COLORS.muted,
+        align: 'right',
       });
 
       y += 58;
       drawRule(doc, left, y, contentWidth);
       y += 20;
 
-      // ── المرسل / العميل ──
+      // ── From / Bill to ──
       const colW = contentWidth / 2 - 12;
-      const senderX = left + colW + 24;
-      const customerX = left;
+      const fromX = left;
+      const billToX = left + colW + 24;
 
-      textRtl(doc, 'المرسل:', senderX, y, colW, { bold: true, size: 11 });
-      textRtl(doc, 'العميل:', customerX, y, colW, { bold: true, size: 11 });
+      textLtr(doc, 'From', fromX, y, colW, { bold: true, size: 11 });
+      textLtr(doc, 'Bill to', billToX, y, colW, { bold: true, size: 11 });
       y += 18;
 
-      textLtr(doc, 'Rukny Mail', senderX, y, colW, {
-        size: 11,
-        align: 'right',
-      });
-      textRtl(doc, customer, customerX, y, colW, { size: 11 });
+      textLtr(doc, 'Rukny Mail', fromX, y, colW, { size: 11 });
+      drawNameLine(doc, customer, billToX, y, colW, { size: 11 });
       y += 16;
 
-      textRtl(doc, 'العراق، بغداد', senderX, y, colW, {
+      textLtr(doc, 'Baghdad, Iraq', fromX, y, colW, {
         size: 10,
         color: COLORS.muted,
       });
       if (input.contactEmail) {
-        textLtr(doc, input.contactEmail, customerX, y, colW, {
+        textLtr(doc, input.contactEmail, billToX, y, colW, {
           size: 10,
           color: COLORS.muted,
-          align: 'right',
         });
       }
       y += 16;
 
-      textLtr(doc, 'support@rukny.io', senderX, y, colW, {
+      textLtr(doc, 'support@rukny.io', fromX, y, colW, {
         size: 10,
         color: COLORS.muted,
-        align: 'right',
       });
       if (input.workspaceDomain) {
-        textLtr(doc, input.workspaceDomain, customerX, y, colW, {
+        textLtr(doc, input.workspaceDomain, billToX, y, colW, {
           size: 10,
           color: COLORS.muted,
-          align: 'right',
         });
       }
       y += 28;
 
-      // ── تفاصيل الطلب ──
-      textRtl(doc, 'تفاصيل الطلب', left, y, contentWidth, {
+      // ── Line items ──
+      textLtr(doc, 'Order details', left, y, contentWidth, {
         bold: true,
         size: 13,
       });
@@ -336,62 +336,63 @@ export async function renderMailInvoicePdf(
       drawRule(doc, left, y, contentWidth);
       y += 12;
 
-      // LTR coords: total | price | qty | product (product on the visual right)
-      const wTotal = Math.floor(contentWidth * 0.24);
-      const wPrice = Math.floor(contentWidth * 0.24);
+      const wProduct = Math.floor(contentWidth * 0.4);
       const wQty = Math.floor(contentWidth * 0.12);
-      const wProduct = contentWidth - wTotal - wPrice - wQty;
-      const xTotal = left;
-      const xPrice = xTotal + wTotal;
-      const xQty = xPrice + wPrice;
-      const xProduct = xQty + wQty;
+      const wPrice = Math.floor(contentWidth * 0.24);
+      const wTotal = contentWidth - wProduct - wQty - wPrice;
+      const xProduct = left;
+      const xQty = xProduct + wProduct;
+      const xPrice = xQty + wQty;
+      const xTotal = xPrice + wPrice;
 
-      textRtl(doc, 'المجموع', xTotal, y, wTotal - 4, {
+      textLtr(doc, 'Product', xProduct, y, wProduct - 4, {
         bold: true,
         size: 10,
         color: COLORS.muted,
       });
-      textRtl(doc, 'السعر', xPrice, y, wPrice - 4, {
+      textLtr(doc, 'Qty', xQty, y, wQty - 4, {
         bold: true,
         size: 10,
         color: COLORS.muted,
       });
-      textRtl(doc, 'الكمية', xQty, y, wQty - 4, {
+      textLtr(doc, 'Unit price', xPrice, y, wPrice - 4, {
         bold: true,
         size: 10,
         color: COLORS.muted,
       });
-      textRtl(doc, 'المنتج', xProduct, y, wProduct - 4, {
+      textLtr(doc, 'Line total', xTotal, y, wTotal - 4, {
         bold: true,
         size: 10,
         color: COLORS.muted,
+        align: 'right',
       });
       y += 18;
       drawRule(doc, left, y, contentWidth);
       y += 12;
 
+      const billingLabel =
+        input.billingCycle === 'YEARLY' ? 'Yearly' : 'Monthly';
       const productTitle = isPack
         ? input.packEmails && input.packEmails > 0
-          ? `حزمة ${formatIqdNumber(input.packEmails)} رسالة صادرة`
-          : 'حزمة رسائل صادرة'
-        : `باقة ${input.planName}`;
+          ? `Outbound pack · ${formatIqdNumber(input.packEmails)} emails`
+          : 'Outbound email pack'
+        : `Rukny Mail · ${input.planName} (${billingLabel})`;
       const productSub = isPack
-        ? `باقة ${input.planName}`
-        : `من ${periodStart} إلى ${periodEnd}`;
+        ? `Plan: ${input.planName}`
+        : `Billing period: ${periodStart} – ${periodEnd}`;
 
-      textRtl(doc, productTitle, xProduct, y, wProduct - 4, {
+      textLtr(doc, productTitle, xProduct, y, wProduct - 4, {
         bold: true,
         size: 11,
       });
-      textRtl(doc, String(qty), xQty, y, wQty - 4, { size: 11 });
-      textShaped(doc, formatIqdAr(unitPrice), xPrice, y, wPrice - 4, {
+      textLtr(doc, String(qty), xQty, y, wQty - 4, { size: 11 });
+      textLtr(doc, formatIqd(unitPrice), xPrice, y, wPrice - 4, { size: 10 });
+      textLtr(doc, formatIqd(subtotalIqd), xTotal, y, wTotal - 4, {
         size: 10,
-      });
-      textShaped(doc, formatIqdAr(subtotalIqd), xTotal, y, wTotal - 4, {
-        size: 10,
+        align: 'right',
       });
       y += 16;
-      textRtl(doc, productSub, xProduct, y, wProduct - 4, {
+      textLtr(doc, productSub, xProduct, y, wProduct - 4, {
         size: 9,
         color: COLORS.muted,
       });
@@ -400,41 +401,46 @@ export async function renderMailInvoicePdf(
       y += 20;
 
       // ── Totals ──
-      const totalsW = wTotal + wPrice;
-      const totalsX = left;
+      const totalsW = Math.floor(contentWidth * 0.48);
+      const totalsX = rightEdge - totalsW;
       const labelW = Math.floor(totalsW * 0.55);
       const valueW = totalsW - labelW;
 
-      textRtl(doc, 'المجموع الفرعي', totalsX + valueW, y, labelW, {
+      textLtr(doc, 'Subtotal', totalsX, y, labelW, {
         size: 10,
         color: COLORS.muted,
       });
-      textShaped(doc, formatIqdAr(subtotalIqd), totalsX, y, valueW, {
+      textLtr(doc, formatIqd(subtotalIqd), totalsX + labelW, y, valueW, {
         size: 10,
+        align: 'right',
       });
       y += 18;
 
-      textRtl(doc, 'الضريبة', totalsX + valueW, y, labelW, {
+      textLtr(doc, 'Tax', totalsX, y, labelW, {
         size: 10,
         color: COLORS.muted,
       });
-      textShaped(doc, formatIqdAr(taxIqd), totalsX, y, valueW, { size: 10 });
+      textLtr(doc, formatIqd(taxIqd), totalsX + labelW, y, valueW, {
+        size: 10,
+        align: 'right',
+      });
       y += 16;
       drawRule(doc, totalsX, y, totalsW);
       y += 12;
 
-      textRtl(doc, 'الإجمالي', totalsX + valueW, y, labelW, {
+      textLtr(doc, 'Total', totalsX, y, labelW, {
         bold: true,
         size: 13,
       });
-      textShaped(doc, formatIqdAr(totalIqd), totalsX, y, valueW, {
+      textLtr(doc, formatIqd(totalIqd), totalsX + labelW, y, valueW, {
         bold: true,
         size: 13,
+        align: 'right',
       });
       y += 36;
 
-      // ── معلومات الدفع ──
-      textRtl(doc, 'معلومات الدفع', left, y, contentWidth, {
+      // ── Payment ──
+      textLtr(doc, 'Payment', left, y, contentWidth, {
         bold: true,
         size: 13,
       });
@@ -443,57 +449,56 @@ export async function renderMailInvoicePdf(
       y += 16;
 
       const payColW = contentWidth / 2 - 12;
-      const payRightX = left + payColW + 24;
       const payLeftX = left;
+      const payRightX = left + payColW + 24;
 
-      textRtl(doc, 'طريقة الدفع: خدمات كي كارد', payRightX, y, payColW, {
+      textLtr(doc, `Order #${invoiceShort}`, payLeftX, y, payColW, {
         size: 10,
       });
-      textRtl(doc, `رقم الطلب: #${invoiceShort}`, payLeftX, y, payColW, {
+      textLtr(doc, 'Payment method: Qi Card', payRightX, y, payColW, {
         size: 10,
       });
       y += 16;
 
-      textRtl(
+      textLtr(doc, `Order date: ${issued}`, payLeftX, y, payColW, {
+        size: 10,
+      });
+      textLtr(
         doc,
-        `تاريخ تأكيد الدفع: ${paid !== '—' ? paid : issued}`,
+        `Paid on: ${paid !== '—' ? paid : issued}`,
         payRightX,
         y,
         payColW,
         { size: 10 },
       );
-      textRtl(doc, `تاريخ الطلب: ${issued}`, payLeftX, y, payColW, {
-        size: 10,
-      });
       y += 22;
 
       if (qrPng) {
-        textRtl(doc, 'إثبات الدفع (QR):', payRightX, y, payColW, {
+        textLtr(doc, 'Payment proof (QR)', payLeftX, y, payColW, {
           size: 10,
         });
         y += 14;
         const qrSize = 88;
-        doc.image(qrPng, right - qrSize, y, { width: qrSize, height: qrSize });
-        textRtl(
+        doc.image(qrPng, left, y, { width: qrSize, height: qrSize });
+        textLtr(
           doc,
-          'امسح الرمز لعرض / تحميل الفاتورة',
-          payRightX,
+          'Scan to view or download this invoice',
+          payLeftX,
           y + qrSize + 8,
           payColW,
           { size: 8, color: COLORS.faint },
         );
         y += qrSize + 28;
       } else if (input.qasehPaymentId) {
-        textLtr(doc, input.qasehPaymentId, payRightX, y, payColW, {
+        textLtr(doc, `Reference: ${input.qasehPaymentId}`, payLeftX, y, contentWidth, {
           size: 9,
           color: COLORS.muted,
-          align: 'right',
         });
         y += 18;
       }
 
       if (input.note) {
-        textRtl(doc, input.note, left, y, contentWidth, {
+        textLtr(doc, input.note, left, y, contentWidth, {
           size: 8,
           color: COLORS.muted,
         });
@@ -502,9 +507,9 @@ export async function renderMailInvoicePdf(
 
       const footerY = doc.page.height - PAGE_MARGIN - 20;
       drawRule(doc, left, footerY - 10, contentWidth);
-      textRtl(
+      textLtr(
         doc,
-        'تم إنشاء هذه الفاتورة تلقائياً بواسطة Rukny Mail. للاستفسارات: support@rukny.io',
+        'This invoice was generated automatically by Rukny Mail. Questions: support@rukny.io',
         left,
         footerY,
         contentWidth,

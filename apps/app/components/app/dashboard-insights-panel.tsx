@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DashboardSection } from '@/components/app/dashboard-section';
 import type { AppInsight } from '@/lib/analytics/insights';
 import { useTranslations } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -19,10 +20,7 @@ export function DashboardInsightsPanel({ insights }: { insights: AppInsight[] })
   if (insights.length === 0) return null;
 
   return (
-    <section className="flex min-w-0 flex-col gap-4 rounded-xl bg-[var(--surface)] p-4 sm:p-5">
-      <h2 className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
-        {t('analytics.insightsTitle')}
-      </h2>
+    <DashboardSection title={t('analytics.insightsTitle')}>
       <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {insights.map((insight) => {
           const content = (
@@ -35,7 +33,7 @@ export function DashboardInsightsPanel({ insights }: { insights: AppInsight[] })
           );
 
           const surfaceClass = cn(
-            'block rounded-2xl px-3.5 py-3 transition-colors',
+            'block rounded-xl px-3.5 py-3 transition-colors',
             severityStyles[insight.severity],
           );
 
@@ -52,6 +50,6 @@ export function DashboardInsightsPanel({ insights }: { insights: AppInsight[] })
           );
         })}
       </ul>
-    </section>
+    </DashboardSection>
   );
 }

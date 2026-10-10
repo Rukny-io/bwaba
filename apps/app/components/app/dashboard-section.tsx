@@ -8,12 +8,14 @@ export function DashboardSection({
   children,
   className,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
+  const hasHeader = Boolean(title || description || action);
+
   return (
     <section
       className={cn(
@@ -21,19 +23,23 @@ export function DashboardSection({
         className,
       )}
     >
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-medium tracking-tight text-[var(--foreground)]">
-            {title}
-          </h2>
-          {description ? (
-            <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">
-              {description}
-            </p>
-          ) : null}
+      {hasHeader ? (
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            {title ? (
+              <h2 className="text-base font-medium tracking-tight text-[var(--foreground)]">
+                {title}
+              </h2>
+            ) : null}
+            {description ? (
+              <p className="mt-1 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {action}
         </div>
-        {action}
-      </div>
+      ) : null}
       {children}
     </section>
   );

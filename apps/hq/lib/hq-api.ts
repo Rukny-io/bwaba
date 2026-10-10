@@ -475,4 +475,44 @@ export const hqApi = {
       )
       .then((r) => r.data),
 
+  getMetaPortfolioStats: () =>
+    api
+      .get<import('@/lib/types/meta-portfolio').MetaPortfolioStats>(
+        '/admin/meta-portfolio/stats',
+      )
+      .then((r) => r.data),
+
+  getMetaPortfolioRequests: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) =>
+    api
+      .get<import('@/lib/types/meta-portfolio').MetaPortfolioListResponse>(
+        '/admin/meta-portfolio',
+        params,
+      )
+      .then((r) => r.data),
+
+  approveMetaPortfolioRequest: (id: string, metaBusinessId?: string) =>
+    api
+      .patch(`/admin/meta-portfolio/${encodeURIComponent(id)}/approve`, {
+        metaBusinessId,
+      })
+      .then((r) => r.data),
+
+  rejectMetaPortfolioRequest: (id: string, reason: string) =>
+    api
+      .patch(`/admin/meta-portfolio/${encodeURIComponent(id)}/reject`, {
+        reason,
+      })
+      .then((r) => r.data),
+
+  fulfillMetaPortfolioRequest: (id: string, metaBusinessId: string) =>
+    api
+      .patch(`/admin/meta-portfolio/${encodeURIComponent(id)}/fulfill`, {
+        metaBusinessId,
+      })
+      .then((r) => r.data),
+
 };

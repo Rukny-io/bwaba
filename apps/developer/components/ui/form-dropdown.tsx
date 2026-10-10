@@ -16,6 +16,7 @@ interface FormDropdownProps {
   placeholder?: string;
   onChange: (value: string) => void;
   className?: string;
+  labelClassName?: string;
   dir?: 'ltr' | 'rtl';
 }
 
@@ -26,13 +27,21 @@ export function FormDropdown({
   placeholder,
   onChange,
   className,
+  labelClassName,
   dir,
 }: FormDropdownProps) {
   const selectedLabel = options.find((option) => option.id === value)?.label;
 
   return (
     <div className={cn('w-full', className)}>
-      <p className="mb-1.5 text-xs font-medium text-[var(--foreground)]">{label}</p>
+      <p
+        className={cn(
+          'mb-1.5 text-xs font-medium text-[var(--foreground)]',
+          labelClassName,
+        )}
+      >
+        {label}
+      </p>
       <Dropdown>
         <Dropdown.Trigger
           className={cn(

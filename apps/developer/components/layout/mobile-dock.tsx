@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutGrid, LogOut, Plus, X, type LucideIcon } from 'lucide-react';
-import { Dropdown, Header, Label } from '@heroui/react';
+import { Dropdown, Header } from '@heroui/react';
+import { SlottedLabel } from '@/components/ui/slotted-label';
 import {
   getMobileDockBarItems,
   getMobileDockOverflowNavItems,
@@ -40,7 +41,7 @@ function MoreMenuItem({ item, label }: { item: NavItem; label: string }) {
         className="shrink-0 text-[var(--muted-foreground)]"
         aria-hidden
       />
-      <Label>{label}</Label>
+      <SlottedLabel>{label}</SlottedLabel>
     </Dropdown.Item>
   );
 }
@@ -67,7 +68,7 @@ function ProductMenuItem({
         className="shrink-0 text-[var(--muted-foreground)]"
         aria-hidden
       />
-      <Label>{label}</Label>
+      <SlottedLabel>{label}</SlottedLabel>
     </Dropdown.Item>
   );
 }
@@ -269,7 +270,7 @@ export function MobileDock({ appId }: MobileDockProps) {
                   className="shrink-0"
                   aria-hidden
                 />
-                <Label>{labels.logout}</Label>
+                <SlottedLabel>{labels.logout}</SlottedLabel>
               </Dropdown.Item>
             </Dropdown.Section>
           </Dropdown.Menu>

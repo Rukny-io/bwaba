@@ -1,6 +1,7 @@
 'use client';
 
-import { Description, Label, Switch } from '@heroui/react';
+import { Description, Switch } from '@heroui/react';
+import { SlottedLabel } from '@/components/ui/slotted-label';
 import { AppSettingsSection } from '@/components/settings/app-settings-section';
 import { cn } from '@/lib/utils';
 
@@ -83,7 +84,9 @@ export function ToggleRow({
       )}
     >
       <Switch.Content className="min-w-0 flex-1">
-        <Label className="text-sm font-medium text-[var(--foreground)]">{label}</Label>
+        <SlottedLabel className="text-sm font-medium text-[var(--foreground)]">
+          {label}
+        </SlottedLabel>
         {description ? (
           <Description className="text-xs leading-relaxed">{description}</Description>
         ) : null}

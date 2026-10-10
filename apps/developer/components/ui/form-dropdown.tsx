@@ -1,7 +1,8 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { Dropdown, Label } from '@heroui/react';
+import { Dropdown } from '@heroui/react';
+import { SlottedLabel } from '@/components/ui/slotted-label';
 import { cn } from '@/lib/utils';
 
 export interface FormDropdownOption {
@@ -74,7 +75,7 @@ export function FormDropdown({
             {options.map((option) => (
               <Dropdown.Item key={option.id} id={option.id} textValue={option.label}>
                 <Dropdown.ItemIndicator />
-                <Label>{option.label}</Label>
+                <SlottedLabel>{option.label}</SlottedLabel>
               </Dropdown.Item>
             ))}
           </Dropdown.Menu>

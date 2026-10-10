@@ -17,7 +17,8 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { Dropdown, Label } from '@heroui/react';
+import { Dropdown } from '@heroui/react';
+import { SlottedLabel } from '@/components/ui/slotted-label';
 import { useCurrentApp } from '@/components/providers/app-context';
 import {
   MobileDockShell,
@@ -71,7 +72,7 @@ function MoreMenuItem({
         className="shrink-0 text-[var(--muted-foreground)]"
         aria-hidden
       />
-      <Label>{label}</Label>
+      <SlottedLabel>{label}</SlottedLabel>
     </Dropdown.Item>
   );
 }

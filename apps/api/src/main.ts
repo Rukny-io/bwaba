@@ -403,6 +403,26 @@ async function bootstrap() {
 
   const enableApiReference = process.env.ENABLE_API_REFERENCE !== 'false';
   if (enableApiReference) {
+    // Scalar loads an inline module + CDN script; production Helmet CSP blocks both.
+    app.use('/api/reference', (_req, res, next) => {
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+          "style-src 'self' 'unsafe-inline' https:",
+          "img-src 'self' data: blob: https:",
+          "font-src 'self' https: data:",
+          "connect-src 'self' https://cdn.jsdelivr.net",
+          "worker-src 'self' blob:",
+          "object-src 'none'",
+          "frame-ancestors 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
+        ].join('; '),
+      );
+      next();
+    });
     app.use(
       '/api/reference',
       apiReference({

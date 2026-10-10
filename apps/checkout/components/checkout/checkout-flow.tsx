@@ -866,7 +866,6 @@ export function CheckoutFlow() {
           variantId: item.variantId,
         })),
         couponCode: cart?.couponCode,
-        phoneNumber: toLocalIraqPhone(session.phoneNumber) || undefined,
       });
 
       const order = result.orders?.[0];

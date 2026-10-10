@@ -142,7 +142,6 @@ export type CreateOrderPayload = {
   items: { productId: string; quantity: number; variantId?: string }[];
   notes?: string;
   couponCode?: string;
-  phoneNumber?: string;
 };
 
 export type CreateOrderResponse = {

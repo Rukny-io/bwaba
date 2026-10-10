@@ -45,12 +45,16 @@ class OrderItemDto {
   productId: string;
 
   @ApiProperty()
+  @Type(() => Number)
   @IsNumber()
   quantity: number;
 
-  @ApiProperty()
+  /** Ignored — unit price is resolved server-side from the product/variant. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  price: number;
+  price?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -92,16 +96,24 @@ class CreateCheckoutOrderDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  couponCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   subtotal?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   shippingCost?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   total?: number;
 }

@@ -355,9 +355,6 @@ export class OrdersService {
       }
     }
 
-    const hasDigitalFile =
-      isDigital && product.digitalAssets && product.digitalAssets.length > 0;
-
     // Handle variant if provided
     let variant: any = null;
     if (variantId) {
@@ -432,10 +429,6 @@ export class OrdersService {
         total,
         customerNote,
         couponId: coupon?.id,
-        // المنتجات الرقمية تُسلَّم فوراً
-        ...(isDigital
-          ? { status: 'DELIVERED' as any, deliveredAt: new Date() }
-          : {}),
       },
     });
 
@@ -476,21 +469,6 @@ export class OrdersService {
           : {}),
       },
     });
-
-    // إنشاء رمز تحميل للمنتجات الرقمية (فقط إذا يوجد ملف)
-    if (hasDigitalFile) {
-      const downloadToken = uuidv4();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-      await this.prisma.download_tokens.create({
-        data: {
-          orderItemId,
-          token: downloadToken,
-          maxDownloads: 5,
-          expiresAt,
-        },
-      });
-    }
 
     // Update stock (skip for digital products)
     if (!isDigital) {
@@ -565,6 +543,16 @@ export class OrdersService {
       throw new BadRequestException('يجب إضافة منتج واحد على الأقل');
     }
 
+    for (const item of items) {
+      if (
+        !Number.isInteger(item.quantity) ||
+        item.quantity < 1 ||
+        item.quantity > 10000
+      ) {
+        throw new BadRequestException('كمية المنتج يجب أن تكون بين 1 و 10,000');
+      }
+    }
+
     // Validate all products and variants upfront
     const resolvedItems: Array<{
       product: any;
@@ -575,7 +563,6 @@ export class OrdersService {
     }> = [];
 
     let storeId: string | null = null;
-    let hasDigitalItems = false;
     let allDigital = true;
 
     for (const item of items) {
@@ -597,9 +584,7 @@ export class OrdersService {
         );
       }
 
-      if (product.isDigital) {
-        hasDigitalItems = true;
-      } else {
+      if (!product.isDigital) {
         allDigital = false;
       }
 
@@ -687,10 +672,7 @@ export class OrdersService {
         total,
         customerNote,
         ...(paymentMethod ? { paymentMethod: paymentMethod as any } : {}),
-        // Digital-only orders are delivered immediately
-        ...(allDigital
-          ? { status: 'DELIVERED' as any, deliveredAt: new Date() }
-          : {}),
+        // Digital orders remain pending until the gateway confirms payment.
       },
     });
 
@@ -735,21 +717,6 @@ export class OrdersService {
         },
       });
 
-      // Create download token for digital products (only if file exists)
-      if (isDigital && item.product.digitalAssets?.length > 0) {
-        const downloadToken = uuidv4();
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
-        await this.prisma.download_tokens.create({
-          data: {
-            orderItemId,
-            token: downloadToken,
-            maxDownloads: 5,
-            expiresAt,
-          },
-        });
-      }
-
       // Update stock (skip for digital products)
       if (!isDigital) {
         if (item.variant) {
@@ -778,26 +745,6 @@ export class OrdersService {
     }
 
     const orderData = await this.getOrder(order.id, userId);
-
-    // Include download tokens for digital items
-    if (hasDigitalItems) {
-      const tokens = await this.prisma.download_tokens.findMany({
-        where: {
-          orderItem: { orderId: order.id },
-        },
-        include: {
-          orderItem: {
-            select: { productName: true, productNameAr: true },
-          },
-        },
-      });
-      orderData.downloadTokens = tokens.map((t) => ({
-        token: t.token,
-        productName: t.orderItem.productNameAr || t.orderItem.productName,
-        maxDownloads: t.maxDownloads,
-        expiresAt: t.expiresAt,
-      }));
-    }
 
     return orderData;
   }
@@ -1297,7 +1244,9 @@ export class OrdersService {
   ) {
     const order = await this.assertStoreOrderOwnership(orderId, userId);
 
-    if (!this.validStatusTransitions[order.status]?.includes(updateDto.status)) {
+    if (
+      !this.validStatusTransitions[order.status]?.includes(updateDto.status)
+    ) {
       throw new BadRequestException(
         `لا يمكن تغيير الحالة من ${order.status} إلى ${updateDto.status}`,
       );
@@ -1359,7 +1308,10 @@ export class OrdersService {
   async bulkUpdateOrderStatus(
     userId: string,
     dto: BulkUpdateOrderStatusDto,
-  ): Promise<{ updated: string[]; failed: Array<{ id: string; reason: string }> }> {
+  ): Promise<{
+    updated: string[];
+    failed: Array<{ id: string; reason: string }>;
+  }> {
     const updated: string[] = [];
     const failed: Array<{ id: string; reason: string }> = [];
 
@@ -1370,8 +1322,7 @@ export class OrdersService {
       } catch (error) {
         failed.push({
           id: orderId,
-          reason:
-            error instanceof Error ? error.message : 'تعذّر تحديث الطلب',
+          reason: error instanceof Error ? error.message : 'تعذّر تحديث الطلب',
         });
       }
     }
@@ -1382,7 +1333,10 @@ export class OrdersService {
   async bulkUpdatePaymentStatus(
     userId: string,
     dto: BulkUpdatePaymentStatusDto,
-  ): Promise<{ updated: string[]; failed: Array<{ id: string; reason: string }> }> {
+  ): Promise<{
+    updated: string[];
+    failed: Array<{ id: string; reason: string }>;
+  }> {
     const updated: string[] = [];
     const failed: Array<{ id: string; reason: string }> = [];
 
@@ -1407,7 +1361,10 @@ export class OrdersService {
   async bulkDeleteOrders(
     userId: string,
     dto: BulkOrderIdsDto,
-  ): Promise<{ deleted: string[]; failed: Array<{ id: string; reason: string }> }> {
+  ): Promise<{
+    deleted: string[];
+    failed: Array<{ id: string; reason: string }>;
+  }> {
     const deleted: string[] = [];
     const failed: Array<{ id: string; reason: string }> = [];
 
@@ -1742,9 +1699,7 @@ export class OrdersService {
     return !product.isDigital && product.productKind === 'PHYSICAL';
   }
 
-  async resolveCheckoutPaymentOptions(
-    productIds: string[],
-  ): Promise<{
+  async resolveCheckoutPaymentOptions(productIds: string[]): Promise<{
     card: boolean;
     cashOnDelivery: boolean;
     reason?: string;
@@ -1796,8 +1751,7 @@ export class OrdersService {
     const store = products[0]?.stores;
     const allPhysical = products.every((p) => this.isPhysicalCodProduct(p));
 
-    const cashOnDelivery =
-      Boolean(store?.cashOnDeliveryEnabled) && allPhysical;
+    const cashOnDelivery = Boolean(store?.cashOnDeliveryEnabled) && allPhysical;
 
     let reason: string | undefined;
     if (!allPhysical) {

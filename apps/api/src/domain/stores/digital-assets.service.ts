@@ -327,6 +327,7 @@ export class DigitalAssetsService {
       include: {
         orderItem: {
           include: {
+            orders: { select: { paymentStatus: true } },
             products: {
               include: {
                 digitalAssets: true,
@@ -339,6 +340,10 @@ export class DigitalAssetsService {
 
     if (!downloadToken) {
       throw new NotFoundException('رمز التحميل غير صالح');
+    }
+
+    if (downloadToken.orderItem.orders.paymentStatus !== 'PAID') {
+      throw new ForbiddenException('لا يمكن تحميل الملف قبل تأكيد الدفع');
     }
 
     if (new Date() > downloadToken.expiresAt) {
@@ -424,7 +429,32 @@ export class DigitalAssetsService {
       throw new ForbiddenException('غير مصرح لك بالوصول لهذا الطلب');
     }
 
-    return order.order_items
+    if (order.paymentStatus !== 'PAID') {
+      throw new ForbiddenException(
+        'لا يمكن الوصول إلى الملفات قبل تأكيد الدفع',
+      );
+    }
+
+    // Tokens are issued lazily after payment confirmation. This prevents a
+    // pending card order from receiving a usable download credential.
+    for (const item of order.order_items) {
+      if (!item.isDigital || item.downloadTokens.length > 0) continue;
+      const asset = await this.prisma.digital_assets.findFirst({
+        where: { productId: item.productId },
+        select: { id: true },
+      });
+      if (asset) await this.createDownloadToken(item.id);
+    }
+
+    const refreshed = await this.prisma.order_items.findMany({
+      where: { orderId },
+      include: {
+        products: { select: { isDigital: true, name: true, nameAr: true } },
+        downloadTokens: true,
+      },
+    });
+
+    return refreshed
       .filter((item) => item.isDigital)
       .map((item) => ({
         orderItemId: item.id,

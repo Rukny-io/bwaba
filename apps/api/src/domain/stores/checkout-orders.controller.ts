@@ -21,6 +21,9 @@ import {
   ValidateNested,
   IsOptional,
   IsNumber,
+  IsInt,
+  Min,
+  Max,
   IsEnum,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
@@ -46,7 +49,9 @@ class OrderItemDto {
 
   @ApiProperty()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
+  @Min(1)
+  @Max(10000)
   quantity: number;
 
   /** Ignored — unit price is resolved server-side from the product/variant. */
@@ -195,10 +200,12 @@ export class CheckoutOrdersController {
           throw new ForbiddenException('العنوان غير موجود');
         }
 
+        // An unlinked address is only claimable when its verified phone
+        // belongs to this checkout session.  `userId IS NULL` alone is not
+        // an ownership proof and would allow claiming another guest's data.
         const ownsAddress =
-          (sessionPhone && address.phoneNumber === sessionPhone) ||
-          (userId && address.userId === userId) ||
-          address.userId === null;
+          (!!sessionPhone && address.phoneNumber === sessionPhone) ||
+          (!!userId && address.userId === userId);
 
         if (!ownsAddress) {
           throw new ForbiddenException('غير مصرح باستخدام هذا العنوان');
@@ -209,7 +216,7 @@ export class CheckoutOrdersController {
             where: {
               id: createOrderDto.shippingAddressId,
               userId: null,
-              ...(sessionPhone ? { phoneNumber: sessionPhone } : {}),
+              phoneNumber: sessionPhone || address.phoneNumber,
             },
             data: { userId },
           });

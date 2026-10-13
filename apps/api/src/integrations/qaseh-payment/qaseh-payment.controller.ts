@@ -212,7 +212,11 @@ export class QasehPaymentController {
         this.logger.log(
           `Mail payment webhook processed: ${paymentId} → ${mailResult.status}`,
         );
-        return { status: 'processed', product: 'mail', result: mailResult.status };
+        return {
+          status: 'processed',
+          product: 'mail',
+          result: mailResult.status,
+        };
       }
 
       const developerResult =
@@ -236,7 +240,11 @@ export class QasehPaymentController {
         paymentContext,
       );
       if (storeResult.handled) {
-        return { status: 'processed', product: 'store', result: storeResult.status };
+        return {
+          status: 'processed',
+          product: 'store',
+          result: storeResult.status,
+        };
       }
 
       this.logger.warn(`No payment target found for payment_id: ${paymentId}`);
@@ -267,8 +275,7 @@ export class QasehPaymentController {
       this.config.get<string>('CHECKOUT_FRONTEND_URL') ||
       'https://checkout.rukny.io';
     const mailUrl =
-      this.config.get<string>('MAIL_FRONTEND_URL') ||
-      'https://mail.rukny.io';
+      this.config.get<string>('MAIL_FRONTEND_URL') || 'https://mail.rukny.io';
     const developersUrl = (
       this.config.get<string>('DEVELOPERS_FRONTEND_URL') ||
       'https://dev.rukny.io'
@@ -296,8 +303,8 @@ export class QasehPaymentController {
         const appId =
           (mailPayment.subscription?.mailApp?.appId as string) ||
           String(
-            (mailPayment.metadata as Record<string, unknown> | null)?.mailAppId ||
-              '',
+            (mailPayment.metadata as Record<string, unknown> | null)
+              ?.mailAppId || '',
           );
         const returnTo = appId
           ? `${mailUrl.replace(/\/$/, '')}/apps/${encodeURIComponent(appId)}/open`
@@ -316,7 +323,10 @@ export class QasehPaymentController {
           .join('&');
 
         // All Mail payments land on checkout result pages (SF-50).
-        if (result.status === 'completed' || result.status === 'already_completed') {
+        if (
+          result.status === 'completed' ||
+          result.status === 'already_completed'
+        ) {
           return res.redirect(`${checkoutUrl}/success?${qs}&paid=1`);
         }
         if (result.status === 'pending') {
@@ -415,9 +425,10 @@ export class QasehPaymentController {
     const qasehAmount = Number(paymentContext.amount);
     const orderTotal = Number(order.total);
     if (
-      Number.isFinite(qasehAmount) &&
-      Number.isFinite(orderTotal) &&
-      Math.trunc(qasehAmount) !== Math.trunc(orderTotal)
+      !Number.isFinite(qasehAmount) ||
+      !Number.isFinite(orderTotal) ||
+      Math.trunc(qasehAmount) !== Math.trunc(orderTotal) ||
+      paymentContext.currency !== order.currency
     ) {
       this.logger.error(
         `Store payment amount mismatch for ${order.orderNumber}: qaseh=${qasehAmount} order=${orderTotal}`,
@@ -477,10 +488,7 @@ export class QasehPaymentController {
   @Get('status/:orderId')
   @UseGuards(CheckoutSessionGuard)
   @ApiOperation({ summary: 'التحقق من حالة الدفع' })
-  async checkPaymentStatus(
-    @Param('orderId') orderId: string,
-    @Req() req: any,
-  ) {
+  async checkPaymentStatus(@Param('orderId') orderId: string, @Req() req: any) {
     const order = await this.prisma.orders.findUnique({
       where: { id: orderId },
       select: {

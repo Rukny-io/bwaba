@@ -22,7 +22,6 @@ import {
   type MailSsoPolicy,
 } from './mail-app-access.service';
 import { MailMailboxSessionService } from './mail-mailbox-session.service';
-import { MailSubscriptionsService } from './mail-subscriptions.service';
 import {
   AssignMailMailboxDto,
   ChangeMailMailboxPasswordDto,
@@ -33,6 +32,7 @@ import {
   UpdateMailMailboxDto,
 } from './dto/mail-mailbox.dto';
 import { assertMailboxDisplayName } from './mail-display-name.util';
+import { MailBillingAccountService } from './mail-billing-account.service';
 
 import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
 const TOTP_ISSUER = 'Rukny Mail';
@@ -54,10 +54,10 @@ export type MailMailboxTotpSetup = {
 export class MailMailboxesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly subscriptions: MailSubscriptionsService,
     private readonly storage: StorageService,
     private readonly mailboxSessions: MailMailboxSessionService,
     private readonly access: MailAppAccessService,
+    private readonly billingAccounts: MailBillingAccountService,
   ) {}
 
   private normalizeLocalPart(raw: string) {
@@ -94,7 +94,10 @@ export class MailMailboxesService {
     return result.valid;
   }
 
-  private async totpSetupPayload(address: string, secret: string): Promise<MailMailboxTotpSetup> {
+  private async totpSetupPayload(
+    address: string,
+    secret: string,
+  ): Promise<MailMailboxTotpSetup> {
     const otpauthUrl = generateURI({
       issuer: TOTP_ISSUER,
       label: address,
@@ -278,24 +281,7 @@ export class MailMailboxesService {
     this.assertPassword(dto.password);
     const displayName = assertMailboxDisplayName(dto.displayName);
 
-    const limits = await this.subscriptions.getActiveLimitsForApp(app.id);
-    if (!limits || typeof limits.mailboxCount !== 'number') {
-      throw new BadRequestException(
-        'This workspace needs an active plan before you can create mailboxes. Starter starts after DNS is verified.',
-      );
-    }
-
-    const usedSeats = await this.prisma.mailMailbox.count({
-      where: {
-        mailAppId: app.id,
-        status: MailMailboxStatus.ACTIVE,
-      },
-    });
-    if (usedSeats >= limits.mailboxCount) {
-      throw new BadRequestException(
-        `Mailbox limit reached for this workspace (${limits.mailboxCount}). Request more seats.`,
-      );
-    }
+    await this.billingAccounts.assertMailboxCapacity(app.id);
 
     const passwordHash = await bcrypt.hash(dto.password, OTP_BCRYPT_ROUNDS);
 
@@ -330,9 +316,7 @@ export class MailMailboxesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new BadRequestException(
-          `${localPart}@${domain} already exists.`,
-        );
+        throw new BadRequestException(`${localPart}@${domain} already exists.`);
       }
       throw error;
     }
@@ -568,7 +552,10 @@ export class MailMailboxesService {
         where: { id: userId },
         select: { email: true },
       });
-      if (user && this.access.isPasswordUnlockBlocked(access, user.email, policy)) {
+      if (
+        user &&
+        this.access.isPasswordUnlockBlocked(access, user.email, policy)
+      ) {
         throw new ForbiddenException({
           statusCode: 403,
           code: 'MAILBOX_SSO_REQUIRED',
@@ -602,7 +589,11 @@ export class MailMailboxesService {
       };
     }
 
-    if (totpReady && dto.totp && !this.verifyTotp(mailbox.totpSecret!, dto.totp)) {
+    if (
+      totpReady &&
+      dto.totp &&
+      !this.verifyTotp(mailbox.totpSecret!, dto.totp)
+    ) {
       throwMailboxLoginFailed(
         'That code is incorrect. Try a new code from the app.',
       );
@@ -626,11 +617,7 @@ export class MailMailboxesService {
   async session(userId: string, appId: string, token: string | undefined) {
     const access = await this.access.requireAccess(userId, appId);
     const session = await this.mailboxSessions.read(token);
-    if (
-      !session ||
-      session.userId !== userId ||
-      session.appId !== appId
-    ) {
+    if (!session || session.userId !== userId || session.appId !== appId) {
       return { mailbox: null };
     }
     try {

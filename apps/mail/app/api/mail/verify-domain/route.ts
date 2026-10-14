@@ -8,6 +8,7 @@ import {
 } from "@/lib/mail-domain-bindings";
 import { applyDnsCheckResults, createMailDomainSetup, normalizeDomain } from "@/lib/mail-domain";
 import { requireMailAppSession } from "@/lib/require-mail-app";
+import { isSameOriginMutation } from "@/lib/request-security";
 import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import { mailCookieOptions } from "@/lib/mail-cookies";
@@ -17,9 +18,11 @@ import {
 } from "@/lib/ses";
 import { mailSetupCacheKey, redisDel, redisSetJson } from "@/lib/redis";
 import { resolveDkimTokens } from "@/lib/mail-domain-tokens";
-import { verifyDomainDns } from "@/lib/verify-dns";
 
 export async function POST(request: Request) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const session = await requireMailAppSession({ fresh: true });
   if (!session) {
     return NextResponse.json(
@@ -60,12 +63,26 @@ export async function POST(request: Request) {
     binding?.domain === normalized && binding.ownershipToken
       ? binding.ownershipToken
       : generateOwnershipToken();
-  const result = await verifyDomainDns(domain, bindingTokens, ownershipToken);
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+  const remote = await apiFetchJson<{
+    domain?: string;
+    tokens?: string[];
+    verified?: boolean;
+    waiting?: boolean;
+    results?: Array<{ id: string; status: "pending" | "checking" | "verified" | "failed" }>;
+    records?: unknown[];
+  }>(`/mail/apps/${encodeURIComponent(session.appId)}/domain/status`);
+  if (!remote.ok) {
+    return NextResponse.json({ error: remote.error }, { status: remote.status });
   }
-
-  const tokens = resolveDkimTokens(result.ses?.tokens ?? [], bindingTokens);
+  const result = {
+    ok: true as const,
+    domain: remote.data.domain ?? normalized,
+    verified: remote.data.verified === true,
+    waiting: remote.data.waiting === true,
+    results: remote.data.results ?? [],
+    records: remote.data.records ?? [],
+  };
+  const tokens = resolveDkimTokens(remote.data.tokens ?? [], bindingTokens);
   const response = NextResponse.json({ ...result, tokens });
   const checkedAt = new Date().toISOString();
 

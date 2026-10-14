@@ -47,7 +47,7 @@ export class MailSubscriptionsController {
   @UseGuards(JwtAuthGuard)
   @Get('apps/:appId/subscription')
   @ApiOperation({
-    summary: 'Mail subscription for this app only (not shared across apps)',
+    summary: 'Mail subscription and shared billing-account usage for this app',
   })
   getSubscription(
     @CurrentUser() user: AuthenticatedUser,

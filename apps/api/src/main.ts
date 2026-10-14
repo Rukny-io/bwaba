@@ -17,6 +17,7 @@ import { FORMS_MAX_SUBMIT_BODY_BYTES } from './domain/forms/forms.constants';
 import { TrustedProxyResolver } from './core/common/utils/cloudflare-ip.guard';
 
 const EMAIL_API_MAX_SEND_BODY_BYTES = 128 * 1024;
+const DEFAULT_JSON_MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 function isFormsSubmitRequest(req: Request): boolean {
   if (req.method !== 'POST') return false;
@@ -97,7 +98,9 @@ async function bootstrap() {
   });
   app.use(
     bodyParser.json({
-      limit: '25mb',
+      // Keep ordinary API requests small while allowing the explicit 5MB form
+      // submission limit below to remain available.
+      limit: '5mb',
       verify: (req, _res, buf) => {
         // 🔒 Capture raw body for webhook signature verification (Meta, Qaseh, etc.)
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
@@ -123,10 +126,22 @@ async function bootstrap() {
           err.type = 'entity.too.large';
           throw err;
         }
+        if (
+          !isFormsSubmitRequest(req as Request) &&
+          !isEmailApiSendRequest(req as Request) &&
+          buf.length > DEFAULT_JSON_MAX_BODY_BYTES
+        ) {
+          const err = new Error(
+            `Payload too large. Maximum allowed size is ${DEFAULT_JSON_MAX_BODY_BYTES} bytes.`,
+          ) as Error & { status: number; type: string };
+          err.status = 413;
+          err.type = 'entity.too.large';
+          throw err;
+        }
       },
     }),
   );
-  app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
+  app.use(bodyParser.urlencoded({ limit: '2mb', extended: true }));
 
   // Security: Cookie Parser
   app.use(cookieParser());
@@ -209,8 +224,7 @@ async function bootstrap() {
       res.set('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
       res.set('X-Content-Type-Options', 'nosniff');
       res.set('X-Frame-Options', 'DENY');
-      // Add ETag for better caching
-      res.set('ETag', `"${Date.now()}"`);
+      // Express static middleware sets a stable validator from file metadata.
     },
   });
 

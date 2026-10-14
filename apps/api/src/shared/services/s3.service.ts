@@ -435,11 +435,17 @@ export class S3Service implements OnModuleInit {
     bucket: string,
     key: string,
     expiresInSeconds = DEFAULT_PRESIGN_EXPIRES_SECONDS,
+    options?: { responseContentDisposition?: string; responseContentType?: string },
   ): Promise<string> {
     this.validateBucket(bucket);
     this.validateKey(key);
 
-    const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const cmd = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ResponseContentDisposition: options?.responseContentDisposition,
+      ResponseContentType: options?.responseContentType,
+    });
     return getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds });
   }
 

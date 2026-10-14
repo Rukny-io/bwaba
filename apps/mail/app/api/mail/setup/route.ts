@@ -10,14 +10,8 @@ import {
   getMailDomainBinding,
   upsertMailDomainBinding,
 } from "@/lib/mail-domain-bindings";
-import {
-  mailSetupCacheKey,
-  redisDel,
-  redisGetJson,
-  redisSetJson,
-} from "@/lib/redis";
+import { mailSetupCacheKey, redisSetJson } from "@/lib/redis";
 import { dkimTokensMatch } from "@/lib/mail-domain-tokens";
-import { getSesDomainStatusCached } from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { apiFetchJson } from "@/lib/server-api";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
@@ -26,7 +20,6 @@ import {
   MAIL_READY_APP_COOKIE,
   MAIL_READY_COOKIE,
 } from "@/lib/ses";
-import { verifyDomainDns } from "@/lib/verify-dns";
 
 const SETUP_CACHE_TTL_SECONDS = 60;
 const softSync = { soft: true } as const;
@@ -97,101 +90,54 @@ export async function GET() {
     );
   }
 
-  try {
-    const status = await getSesDomainStatusCached(binding.domain);
-    const cachedSetup = await redisGetJson<MailDomainSetup>(cacheKey);
-    if (
-      cachedSetup?.domain === binding.domain &&
-      cachedSetup.dkimTokens?.length &&
-      status.tokens.length > 0 &&
-      dkimTokensMatch(cachedSetup.dkimTokens, status.tokens) &&
-      cachedSetup.status !== "ACTIVE"
-    ) {
-      return withReadyCookies(
-        NextResponse.json({ setup: cachedSetup, tokensChanged: false }),
-        session.appId,
-        false,
-      );
+  // Provider/DNS status is authoritative in Nest API. The Next route only
+  // materializes the UI cache and browser cookies from that response.
+  const remote = await apiFetchJson<{
+    setup?: null;
+    ok?: boolean;
+    domain?: string;
+    verified?: boolean;
+    waiting?: boolean;
+    results?: Array<{ id: string; status: "pending" | "checking" | "verified" | "failed" }>;
+    tokens?: string[];
+    checkedAt?: string;
+  }>(`/mail/apps/${encodeURIComponent(session.appId)}/domain/status`);
+  if (remote.ok) {
+    if (!remote.data.domain || !remote.data.tokens?.length) {
+      return withReadyCookies(NextResponse.json({ setup: null }), session.appId, false);
     }
-    if (!status.found || status.tokens.length === 0) {
-      if (isOwner) {
-        await deleteMailDomainBinding(session.appId);
-        await redisDel(cacheKey);
-        await syncMailAppDomainToNest(
-          session.appId,
-          {
-            primaryDomain: null,
-            domainStatus: "NONE",
-            domainOwnershipToken: null,
-            domainOwnershipVerifiedAt: null,
-          },
-          softSync,
-        );
-      }
-      return NextResponse.json({ setup: null });
-    }
-
-    const tokens = status.tokens.length > 0 ? status.tokens : binding.dkimTokens ?? [];
-    const dnsResult = await verifyDomainDns(
-      binding.domain,
-      tokens,
-      binding.ownershipToken,
+    const tokens = remote.data.tokens;
+    const checkedAt = remote.data.checkedAt ?? new Date().toISOString();
+    const setup = applyDnsCheckResults(
+      createMailDomainSetup(
+        remote.data.domain,
+        tokens,
+        binding.ownershipToken,
+      ),
+      remote.data.results ?? [],
+      remote.data.verified === true,
+      remote.data.waiting === true,
     );
-    if (!dnsResult.ok) {
-      return NextResponse.json({ error: dnsResult.error }, { status: 400 });
-    }
-
-    const verified = dnsResult.verified;
-    let setup = createMailDomainSetup(binding.domain, tokens, binding.ownershipToken);
-    setup = applyDnsCheckResults(
-      setup,
-      dnsResult.results,
-      verified,
-      dnsResult.waiting,
-    );
-    const checkedAt = new Date().toISOString();
-    const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], status.tokens);
-    const ownershipVerifiedAt = verified ? checkedAt : binding.ownershipVerifiedAt;
-
-    if (isOwner) {
-      try {
-        await upsertMailDomainBinding(session.appId, {
-          domain: setup.domain,
-          status: setup.status,
-          dkimTokens: tokens,
-          sesCheckedAt: checkedAt,
-          ownershipToken: binding.ownershipToken,
-          ownershipVerifiedAt,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Domain conflict.";
-        return NextResponse.json({ error: message }, { status: 409 });
-      }
-
-      await redisSetJson(cacheKey, setup, SETUP_CACHE_TTL_SECONDS);
-
-      await syncMailAppDomainToNest(
-        session.appId,
-        {
-          primaryDomain: setup.domain,
-          domainStatus: setup.status,
-          domainOwnershipToken: binding.ownershipToken,
-          domainOwnershipVerifiedAt: verified ? checkedAt : null,
-        },
-        softSync,
-      );
-    }
-
+    await upsertMailDomainBinding(session.appId, {
+      domain: setup.domain,
+      status: setup.status,
+      dkimTokens: tokens,
+      sesCheckedAt: checkedAt,
+      ownershipToken: binding.ownershipToken,
+      ownershipVerifiedAt: remote.data.verified ? checkedAt : binding.ownershipVerifiedAt,
+    });
+    await redisSetJson(cacheKey, setup, SETUP_CACHE_TTL_SECONDS);
     return withReadyCookies(
-      NextResponse.json({
-        setup,
-        tokensChanged,
-      }),
+      NextResponse.json({ setup, tokensChanged: !dkimTokensMatch(binding.dkimTokens ?? [], tokens) }),
       session.appId,
-      setup.status === "ACTIVE",
+      remote.data.verified === true,
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not restore this domain.";
-    return NextResponse.json({ error: message }, { status: 502 });
   }
+
+  // The Nest API owns SES/DNS credentials and is the single source of truth.
+  // Fail closed if it is unavailable instead of executing provider calls in the BFF.
+  return NextResponse.json(
+    { error: remote.error || "Mail domain status service is unavailable." },
+    { status: 502 },
+  );
 }

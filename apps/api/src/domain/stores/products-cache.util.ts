@@ -8,10 +8,7 @@ export async function invalidateMyProductsCache(
 ): Promise<void> {
   try {
     await redisService.del(`dashboard:stats:${userId}`);
-    const keys = await redisService.keys(`products:my:${userId}:*`);
-    for (const key of keys) {
-      await redisService.del(key);
-    }
+    await redisService.delPattern(`products:my:${userId}:*`);
   } catch (err) {
     logger?.warn(
       `Redis invalidate products cache: ${(err as Error)?.message || err}`,

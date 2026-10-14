@@ -16,6 +16,8 @@ import {
   CurrentUser,
 } from '../../core/common/decorators/auth/current-user.decorator';
 import { MailAppsService } from './mail-apps.service';
+import { MailDomainProvisioningService } from './mail-domain-provisioning.service';
+import { MailDomainStatusService } from './mail-domain-status.service';
 import {
   CreateMailAppDto,
   SendMailAppOtpDto,
@@ -28,7 +30,11 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller({ path: 'mail/apps', version: '1' })
 export class MailAppsController {
-  constructor(private readonly mailApps: MailAppsService) {}
+  constructor(
+    private readonly mailApps: MailAppsService,
+    private readonly domainProvisioning: MailDomainProvisioningService,
+    private readonly domainStatus: MailDomainStatusService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List Mail apps for the signed-in user' })
@@ -81,6 +87,25 @@ export class MailAppsController {
     @Query('domain') domain?: string,
   ) {
     return this.mailApps.getDomainQuota(user.id, appId, domain);
+  }
+
+  @Post(':appId/domain/provision')
+  @ApiOperation({ summary: 'Provision SES identity for a Mail app domain' })
+  provisionDomain(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+    @Body() body: { domain?: string },
+  ) {
+    return this.domainProvisioning.provision(user.id, appId, body?.domain ?? '');
+  }
+
+  @Get(':appId/domain/status')
+  @ApiOperation({ summary: 'Check SES and DNS status for a Mail app domain' })
+  checkDomainStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('appId') appId: string,
+  ) {
+    return this.domainStatus.check(user.id, appId);
   }
 
   @Get(':appId')

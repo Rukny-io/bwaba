@@ -95,6 +95,7 @@ export type MailAppSubscriptionSnapshot = {
   unifiedPlan?: MailUnifiedPlanSnapshot | null;
   unifiedLimits?: MailUnifiedLimitsSnapshot | null;
   domainQuota?: MailDomainQuotaSnapshot | null;
+  billingAccount?: MailBillingAccountSnapshot | null;
   subscription: MailSubscriptionView | null;
   pendingRequest: MailPendingPlanRequest | null;
   needsApp: boolean;
@@ -103,6 +104,17 @@ export type MailAppSubscriptionSnapshot = {
   canManageMailboxes?: boolean;
   isOwner?: boolean;
   role?: string;
+};
+
+export type MailBillingAccountSnapshot = {
+  id: string;
+  status: string;
+  subscriptionId: string | null;
+  plan: string | null;
+  mailboxSeats: number | null;
+  mailboxUsed: number;
+  domainUsed: number;
+  apps: Array<{ appId: string; name: string; primaryDomain: string | null }>;
 };
 
 /** Single source for Mail console plan ceilings (workspace, not personal). */
@@ -279,6 +291,7 @@ export async function fetchMailSubscription(
     unifiedPlan?: MailUnifiedPlanSnapshot | null;
     unifiedLimits?: MailUnifiedLimitsSnapshot | null;
     domainQuota?: MailDomainQuotaSnapshot | null;
+    billingAccount?: MailBillingAccountSnapshot | null;
     subscription?: MailSubscriptionView | null;
     hasWorkspaceAccess?: boolean;
     pendingRequest?: MailPendingPlanRequest | null;
@@ -314,6 +327,7 @@ export async function fetchMailSubscription(
     unifiedPlan: data.unifiedPlan ?? activeLimits?.emailPlan ?? null,
     unifiedLimits: data.unifiedLimits ?? (activeLimits ?? null),
     domainQuota: data.domainQuota ?? null,
+    billingAccount: data.billingAccount ?? null,
     subscription: sub ? normalizeSubscription(sub) : null,
     hasWorkspaceAccess: Boolean(data.hasWorkspaceAccess ?? activeLimits),
     pendingRequest: data.pendingRequest ?? null,

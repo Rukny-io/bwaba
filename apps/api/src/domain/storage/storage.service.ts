@@ -785,7 +785,7 @@ export class StorageService {
       this.bucket,
       key,
       buffer,
-      file.mimetype || 'application/octet-stream',
+      'application/octet-stream',
     );
     await this.trackFile(userId, {
       key,
@@ -810,6 +810,11 @@ export class StorageService {
       this.bucket,
       key,
       expiresInSeconds,
+      {
+        // Force download + generic type so HTML/SVG never render inline in the browser.
+        responseContentDisposition: 'attachment',
+        responseContentType: 'application/octet-stream',
+      },
     );
   }
 

@@ -6,6 +6,7 @@ import { QasehPaymentController } from './qaseh-payment.controller';
 import { PrismaModule } from '../../core/database/prisma/prisma.module';
 import { MailModule } from '../../domain/mail/mail.module';
 import { DeveloperModule } from '../../domain/developer/developer.module';
+import { PaymentInitiationService } from '../../domain/checkout/application/payment-initiation.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { DeveloperModule } from '../../domain/developer/developer.module';
     }),
   ],
   controllers: [QasehPaymentController],
-  providers: [QasehPaymentService],
-  exports: [QasehPaymentService],
+  providers: [QasehPaymentService, PaymentInitiationService],
+  exports: [QasehPaymentService, PaymentInitiationService],
 })
 export class QasehPaymentModule {}

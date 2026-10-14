@@ -67,7 +67,10 @@ import {
 import { MailSsoService } from './sso/mail-sso.service';
 import { MailSsoOidcService } from './sso/mail-sso-oidc.service';
 import { MailSecurityAuditService } from './mail-security-audit.service';
+import { MailDomainProvisioningService } from './mail-domain-provisioning.service';
+import { MailDomainStatusService } from './mail-domain-status.service';
 import { AuthModule } from '../auth/auth.module';
+import { MailBillingAccountService } from './mail-billing-account.service';
 
 @Module({
   imports: [
@@ -146,6 +149,9 @@ import { AuthModule } from '../auth/auth.module';
     MailSsoService,
     MailSsoOidcService,
     MailSecurityAuditService,
+    MailDomainProvisioningService,
+    MailDomainStatusService,
+    MailBillingAccountService,
   ],
   exports: [
     MailSesModule,
@@ -177,6 +183,7 @@ import { AuthModule } from '../auth/auth.module';
     MailPlanQuotaService,
     MailAttachmentsService,
     MailScheduledSendService,
+    MailBillingAccountService,
   ],
 })
 export class MailModule {}

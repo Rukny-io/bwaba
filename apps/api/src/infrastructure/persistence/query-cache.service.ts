@@ -141,11 +141,7 @@ export class QueryCacheService implements OnModuleInit {
         ? `cache:${pattern.replace('*', `*${id}*`)}`
         : `cache:${pattern}`;
 
-      const keys = await this.redis.keys(fullPattern);
-      if (keys.length > 0) {
-        await Promise.all(keys.map((k) => this.redis.del(k)));
-        deleted += keys.length;
-      }
+      deleted += await this.redis.delPattern(fullPattern);
     }
 
     if (deleted > 0) {
@@ -337,11 +333,8 @@ export class QueryCacheService implements OnModuleInit {
    * تنظيف الـ cache بالكامل
    */
   async flush(): Promise<number> {
-    const keys = await this.redis.keys('cache:*');
-    if (keys.length > 0) {
-      await Promise.all(keys.map((k) => this.redis.del(k)));
-    }
-    this.logger.log(`Flushed ${keys.length} cache keys`);
-    return keys.length;
+    const deleted = await this.redis.delPattern('cache:*');
+    this.logger.log(`Flushed ${deleted} cache keys`);
+    return deleted;
   }
 }

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { defineConfig, env } from 'prisma/config';
+import { defineConfig } from 'prisma/config';
 
 const apiRoot = __dirname;
 
@@ -36,7 +36,14 @@ for (const envFile of [
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
+  },
+  // Dummy URL allows `prisma generate` during Docker builds (no .env mounted).
+  // Runtime always overrides via process.env.DATABASE_URL / compose env.
   datasource: {
-    url: env('DATABASE_URL'),
+    url:
+      process.env.DATABASE_URL ||
+      'postgresql://dummy:dummy@localhost:5432/dummy',
   },
 });

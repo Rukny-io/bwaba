@@ -70,6 +70,9 @@ import { WhatsAppBusinessModule } from '../../integrations/whatsapp-business/wha
 import { EmailModule } from '../../integrations/email/email.module';
 import { QasehPaymentModule } from '../../integrations/qaseh-payment/qaseh-payment.module';
 import { TrackingSessionGuard } from '../../core/common/guards/auth/tracking-session.guard';
+import { CheckoutOrderService } from '../checkout/application/checkout-order.service';
+import { CheckoutIdentityRepository } from '../checkout/infrastructure/checkout-identity.repository';
+import { CheckoutOrderRepository } from '../checkout/infrastructure/checkout-order.repository';
 
 @Module({
   imports: [
@@ -124,6 +127,9 @@ import { TrackingSessionGuard } from '../../core/common/guards/auth/tracking-ses
     DownloadsController,
   ],
   providers: [
+    CheckoutOrderService,
+    CheckoutIdentityRepository,
+    CheckoutOrderRepository,
     StoresService,
     ProductsService,
     ProductsUploadService,

@@ -22,6 +22,7 @@ import {
   UseGuards,
   Inject,
   forwardRef,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -32,19 +33,8 @@ import { CheckoutSessionGuard } from '../../core/common/guards/auth/checkout-ses
 import { Public } from '../../core/common/decorators/auth/public.decorator';
 import { MailSubscriptionsService } from '../../domain/mail/mail-subscriptions.service';
 import { DeveloperCheckoutService } from '../../domain/developer/checkout/developer-checkout.service';
+import { PaymentInitiationService } from '../../domain/checkout/application/payment-initiation.service';
 import type { QasehPaymentContextResponse } from './qaseh-payment.types';
-
-interface CheckoutSessionContext {
-  phoneNumber?: string;
-  email?: string;
-  storeId?: string;
-  sessionId?: string;
-  userId?: string;
-  type?: string;
-  /** True only for OTP-verified checkout sessions or full access tokens. */
-  verified?: boolean;
-  scope?: string;
-}
 
 @ApiTags('Payments - Qaseh')
 @Controller('payments/qaseh')
@@ -53,6 +43,7 @@ export class QasehPaymentController {
 
   constructor(
     private readonly qasehService: QasehPaymentService,
+    private readonly paymentInitiation: PaymentInitiationService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(forwardRef(() => MailSubscriptionsService))
@@ -61,36 +52,11 @@ export class QasehPaymentController {
     private readonly developerCheckout: DeveloperCheckoutService,
   ) {}
 
-  /**
-   * 🔒 F2-01 — Verify that an order belongs to the current checkout session.
-   *
-   * Ownership is decided SOLELY by the server-issued `userId` (JWT `sub`);
-   * client-supplied phone numbers are NEVER trusted for authorization.
-   *
-   * In addition, the session must be OTP-verified (or a full access token) —
-   * a non-verified quick-login "cart" session cannot pay for or read orders.
-   * Throws ForbiddenException otherwise to prevent order IDOR.
-   */
   private assertOrderOwnership(
-    order: { userId: string | null; phoneNumber?: string | null },
-    session: CheckoutSessionContext | undefined,
+    order: { userId: string | null },
+    session: { userId?: string; verified?: boolean } | undefined,
   ): void {
-    if (!session) {
-      throw new ForbiddenException('غير مصرح بالوصول لهذا الطلب');
-    }
-
-    // Reject unverified (cart-only) sessions from touching orders/payments.
-    if (!session.verified) {
-      throw new ForbiddenException({
-        message: 'يجب التحقق عبر رمز واتساب لإتمام الشراء',
-        code: 'CHECKOUT_VERIFICATION_REQUIRED',
-      });
-    }
-
-    const userMatches =
-      !!session.userId && !!order.userId && session.userId === order.userId;
-
-    if (!userMatches) {
+    if (!session?.verified || !session.userId || session.userId !== order.userId) {
       throw new ForbiddenException('غير مصرح بالوصول لهذا الطلب');
     }
   }
@@ -104,76 +70,19 @@ export class QasehPaymentController {
   @UseGuards(CheckoutSessionGuard)
   @ApiOperation({ summary: 'بدء عملية الدفع لطلب موجود' })
   @ApiResponse({ status: 200, description: 'تم إنشاء جلسة الدفع' })
-  async initiatePayment(@Param('orderId') orderId: string, @Req() req: any) {
-    const order = await this.prisma.orders.findUnique({
-      where: { id: orderId },
-      include: {
-        stores: { select: { name: true } },
-        order_items: { select: { productName: true, quantity: true } },
-      },
-    });
-
-    if (!order) {
-      throw new NotFoundException('الطلب غير موجود');
+  async initiatePayment(
+    @Param('orderId') orderId: string,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Req() req: any,
+  ) {
+    if (!idempotencyKey) {
+      throw new BadRequestException('مطلوب Idempotency-Key لبدء الدفع');
     }
-
-    // 🔒 Ensure the order belongs to the caller's checkout session
-    this.assertOrderOwnership(order, req.checkoutSession);
-
-    if (order.paymentStatus !== 'UNPAID' && order.paymentStatus !== 'FAILED') {
-      throw new BadRequestException('هذا الطلب تم دفعه بالفعل أو قيد المعالجة');
-    }
-
-    // Build description from order items
-    const itemDescriptions = order.order_items
-      .map((item) => `${item.productName} x${item.quantity}`)
-      .join(', ');
-    const description =
-      `طلب ${order.orderNumber} - ${order.stores.name}: ${itemDescriptions}`.substring(
-        0,
-        250,
-      );
-
-    try {
-      const payment = await this.qasehService.createPayment({
-        orderId: order.orderNumber,
-        amount: Number(order.total),
-        currency: order.currency,
-        description,
-        customData: {
-          rukny_order_id: order.id,
-          store_name: order.stores.name,
-        },
-      });
-
-      // Update order with payment info
-      await this.prisma.orders.update({
-        where: { id: orderId },
-        data: {
-          paymentId: payment.payment_id,
-          paymentToken: payment.token,
-          paymentStatus: 'PENDING',
-          paymentMethod: 'QASEH_CARD',
-        },
-      });
-
-      this.logger.log(
-        `Payment initiated for order ${order.orderNumber}: ${payment.payment_id}`,
-      );
-
-      return {
-        success: true,
-        paymentId: payment.payment_id,
-        paymentUrl: this.qasehService.getPaymentPageUrl(payment.token),
-        token: payment.token,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to initiate payment for order ${orderId}:`,
-        error,
-      );
-      throw new BadRequestException('فشل في إنشاء جلسة الدفع. حاول مرة أخرى.');
-    }
+    return this.paymentInitiation.execute(
+      orderId,
+      req.checkoutSession,
+      idempotencyKey,
+    );
   }
 
   /**

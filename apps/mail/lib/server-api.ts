@@ -15,6 +15,8 @@ const FORWARD_HEADERS = [
   "x-real-ip",
 ] as const;
 
+const API_TIMEOUT_MS = 15_000;
+
 export async function requireMailSession(): Promise<{ userId: string; email: string } | null> {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
@@ -35,6 +37,7 @@ export async function requireMailSession(): Promise<{ userId: string; email: str
     const res = await fetch(`${API_BACKEND_URL.replace(/\/$/, "")}/api/v1/auth/me`, {
       headers: requestHeaders,
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -74,12 +77,17 @@ export async function apiFetchJson<T>(
     const value = incoming.get(name);
     if (value) requestHeaders.set(name, value);
   }
+  for (const name of ["origin", "referer", "x-csrf-token", "x-request-id"] as const) {
+    const value = incoming.get(name);
+    if (value && !requestHeaders.has(name)) requestHeaders.set(name, value);
+  }
 
   try {
     const res = await fetch(`${API_BACKEND_URL.replace(/\/$/, "")}/api/v1${path}`, {
       ...init,
       headers: requestHeaders,
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     const data = (await res.json().catch(() => ({}))) as T & { message?: string | string[] };
     if (!res.ok) {

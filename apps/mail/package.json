@@ -13,7 +13,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.1113.0",
     "@fontsource-variable/google-sans": "^5.3.1",
     "@fontsource-variable/google-sans-flex": "^5.3.1",
     "@heroui/react": "file:./packages/react",
@@ -43,9 +42,11 @@
     "jose": "^6.2.9",
     "lenis": "^1.3.11",
     "lucide-react": "^0.575.0",
-    "next": "16.3.1",
+    "next": "16.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
     "three": "^0.186.0"
   },
   "devDependencies": {

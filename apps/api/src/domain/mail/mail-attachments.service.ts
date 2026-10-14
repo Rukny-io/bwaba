@@ -26,7 +26,26 @@ const BLOCKED_EXTENSIONS = new Set([
   '.js',
   '.jar',
   '.sh',
+  '.html',
+  '.htm',
+  '.xhtml',
+  '.svg',
+  '.xml',
 ]);
+
+/** Active / executable content that must never be served inline from mail. */
+const BLOCKED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'image/svg+xml',
+  'text/xml',
+  'application/xml',
+  'application/javascript',
+  'text/javascript',
+  'application/x-javascript',
+]);
+
+const SAFE_STORED_CONTENT_TYPE = 'application/octet-stream';
 
 @Injectable()
 export class MailAttachmentsService {
@@ -80,6 +99,20 @@ export class MailAttachmentsService {
     if (BLOCKED_EXTENSIONS.has(ext)) {
       throw new BadRequestException('This file type is not allowed.');
     }
+    const declaredMime = (file.mimetype || '').toLowerCase().split(';')[0].trim();
+    if (declaredMime && BLOCKED_MIME_TYPES.has(declaredMime)) {
+      throw new BadRequestException('This file type is not allowed.');
+    }
+    // Sniff active markup even when the client lies about Content-Type.
+    const head = file.buffer?.subarray(0, 512)?.toString('utf8').toLowerCase() ?? '';
+    if (
+      head.includes('<html') ||
+      head.includes('<!doctype html') ||
+      head.includes('<svg') ||
+      head.includes('<?xml')
+    ) {
+      throw new BadRequestException('This file type is not allowed.');
+    }
 
     await this.mailboxSessions.assertAsync(sessionToken, {
       userId,
@@ -128,7 +161,8 @@ export class MailAttachmentsService {
         mailboxId,
         userId: access.app.userId,
         filename: file.originalname || 'attachment',
-        contentType: file.mimetype || 'application/octet-stream',
+        // Never persist client-declared active MIME; downloads force octet-stream.
+        contentType: SAFE_STORED_CONTENT_TYPE,
         sizeBytes: size,
         s3Key: key,
       },
@@ -203,6 +237,15 @@ export class MailAttachmentsService {
     return rows.map((row) => this.toView(row));
   }
 
+  private safeStoredContentType(filename: string, contentType: string): string {
+    const ext = this.extension(filename);
+    const mime = contentType.toLowerCase().split(';')[0].trim();
+    if (BLOCKED_EXTENSIONS.has(ext) || BLOCKED_MIME_TYPES.has(mime)) {
+      return SAFE_STORED_CONTENT_TYPE;
+    }
+    return mime || SAFE_STORED_CONTENT_TYPE;
+  }
+
   async storeInboundParts(input: {
     userId: string;
     appId: string;
@@ -224,12 +267,17 @@ export class MailAttachmentsService {
         attachmentId,
         part.filename,
       );
+      const storedType = this.safeStoredContentType(
+        part.filename,
+        part.contentType,
+      );
       await this.storage.uploadBufferForMailAttachment(
         input.userId,
         attachmentId,
         key,
         part.content,
-        part.contentType,
+        // Always store as opaque bytes so S3 metadata cannot enable inline render.
+        SAFE_STORED_CONTENT_TYPE,
       );
       await this.prisma.mailAttachment.create({
         data: {
@@ -238,7 +286,7 @@ export class MailAttachmentsService {
           mailboxId: input.mailboxId,
           userId: input.userId,
           filename: part.filename,
-          contentType: part.contentType,
+          contentType: storedType,
           sizeBytes: part.content.length,
           s3Key: key,
         },

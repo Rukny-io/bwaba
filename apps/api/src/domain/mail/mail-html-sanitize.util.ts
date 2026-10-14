@@ -1,7 +1,7 @@
 const BLOCKED_TAGS =
-  /<\/?(?:script|style|iframe|object|embed|form|input|button|link|meta|base)[^>]*>/gi;
+  /<\/?(?:script|style|iframe|object|embed|form|input|button|link|meta|base|svg|math|template|noscript)[^>]*>/gi;
 const EVENT_HANDLERS = /\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi;
-const JAVASCRIPT_URL = /\s+(href|src|xlink:href)\s*=\s*("|')\s*javascript:[^"']*\2/gi;
+const DANGEROUS_URL = /\s+(href|src|xlink:href|action|formaction)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
 
 /**
  * Strip dangerous HTML before storing or sending mail bodies.
@@ -12,7 +12,9 @@ export function sanitizeMailHtml(html: string | undefined | null): string | unde
   let cleaned = html
     .replace(BLOCKED_TAGS, '')
     .replace(EVENT_HANDLERS, '')
-    .replace(JAVASCRIPT_URL, '');
+    .replace(DANGEROUS_URL, (attribute) => {
+      return /(?:javascript|vbscript|data):/i.test(attribute) ? '' : attribute;
+    });
   cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
   return cleaned.trim() || undefined;
 }

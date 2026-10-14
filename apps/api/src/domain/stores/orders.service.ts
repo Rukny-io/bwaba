@@ -657,8 +657,9 @@ export class OrdersService {
     const total = Math.max(0, orderSubtotal);
     const orderNumber = await this.allocateOrderNumber();
 
-    // Create single order
-    const order = await this.prisma.orders.create({
+    // The order, its items, and all stock reservations commit or roll back together.
+    const order = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.orders.create({
       data: {
         id: uuidv4(),
         orderNumber,
@@ -674,30 +675,14 @@ export class OrdersService {
         ...(paymentMethod ? { paymentMethod: paymentMethod as any } : {}),
         // Digital orders remain pending until the gateway confirms payment.
       },
-    });
-
-    // Invalidate dashboard cache for store owner
-    try {
-      const storeRec = await this.prisma.store.findUnique({
-        where: { id: storeId },
-        select: { userId: true },
       });
-      if (storeRec?.userId) {
-        await this.redisService.del(`dashboard:stats:${storeRec.userId}`);
-      }
-    } catch (err) {
-      console.warn(
-        'Redis del error (order createDirectMultiItem):',
-        err?.message || err,
-      );
-    }
 
     // Create order items, download tokens for digital, and update stock
-    for (const item of resolvedItems) {
+      for (const item of resolvedItems) {
       const isDigital = !!item.product.isDigital;
       const orderItemId = uuidv4();
 
-      await this.prisma.order_items.create({
+      await tx.order_items.create({
         data: {
           id: orderItemId,
           orderId: order.id,
@@ -720,28 +705,55 @@ export class OrdersService {
       // Update stock (skip for digital products)
       if (!isDigital) {
         if (item.variant) {
-          await this.prisma.product_variants.update({
-            where: { id: item.variant.id },
+          // Atomic guard prevents concurrent check-then-decrement overselling.
+          const changed = await tx.product_variants.updateMany({
+            where: { id: item.variant.id, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
+          if (changed.count !== 1) {
+            throw new BadRequestException('نفدت كمية خيار المنتج أثناء إتمام الطلب');
+          }
 
           // Recalculate product quantity as sum of all variant stocks
-          const allVariants = await this.prisma.product_variants.findMany({
+          const allVariants = await tx.product_variants.findMany({
             where: { productId: item.product.id, isActive: true },
             select: { stock: true },
           });
           const totalStock = allVariants.reduce((sum, v) => sum + v.stock, 0);
-          await this.prisma.products.update({
+          await tx.products.update({
             where: { id: item.product.id },
             data: { quantity: totalStock },
           });
         } else {
-          await this.prisma.products.update({
-            where: { id: item.product.id },
+          // Atomic guard prevents concurrent check-then-decrement overselling.
+          const changed = await tx.products.updateMany({
+            where: { id: item.product.id, quantity: { gte: item.quantity } },
             data: { quantity: { decrement: item.quantity } },
           });
+          if (changed.count !== 1) {
+            throw new BadRequestException('نفدت كمية المنتج أثناء إتمام الطلب');
+          }
         }
       }
+      }
+
+      return order;
+    });
+
+    // Cache invalidation is an external side effect and runs only after commit.
+    try {
+      const storeRec = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { userId: true },
+      });
+      if (storeRec?.userId) {
+        await this.redisService.del(`dashboard:stats:${storeRec.userId}`);
+      }
+    } catch (err) {
+      console.warn(
+        'Redis del error (order createDirectMultiItem):',
+        err?.message || err,
+      );
     }
 
     const orderData = await this.getOrder(order.id, userId);

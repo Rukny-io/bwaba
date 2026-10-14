@@ -61,6 +61,9 @@ export function MailPlanSettingsSection() {
   const [domainQuota, setDomainQuota] = useState<
     import("@/lib/mail-subscription-client").MailDomainQuotaSnapshot | null
   >(null);
+  const [billingAccount, setBillingAccount] = useState<
+    import("@/lib/mail-subscription-client").MailBillingAccountSnapshot | null
+  >(null);
   const [pendingRequest, setPendingRequest] = useState<MailPendingPlanRequest | null>(
     null,
   );
@@ -105,6 +108,7 @@ export function MailPlanSettingsSection() {
       current.unifiedPlan ?? workspaceActiveLimits(current)?.emailPlan ?? null,
     );
     setDomainQuota(current.domainQuota ?? null);
+    setBillingAccount(current.billingAccount ?? null);
     setPendingRequest(current.pendingRequest);
     setCanManageBilling(Boolean(current.canManageBilling));
 
@@ -270,12 +274,12 @@ export function MailPlanSettingsSection() {
       title="Subscription"
       description={
         appName
-          ? `Seats and storage apply only to ${appName}. ${
+          ? `This app uses the shared Mail billing account. Seats and storage are allocated to ${appName}. ${
               cardPayments.available
                 ? "Continue through Rukny Checkout, or request admin activation."
                 : "Card payments are temporarily unavailable."
             }`
-          : `Seats and storage apply only to the workspace you have open. ${
+          : `This app uses the shared Mail billing account. ${
               cardPayments.available
                 ? "Continue through Rukny Checkout, or request admin activation."
                 : "Card payments are temporarily unavailable."
@@ -393,6 +397,14 @@ export function MailPlanSettingsSection() {
               ? ` Domains on your account: ${domainQuota.used} / ${domainQuota.limit}.`
               : ""
           }`}
+        />
+      ) : null}
+
+      {!unifiedPlan && billingAccount ? (
+        <BillingNotice
+          tone="info"
+          title="Shared Mail billing account"
+          description={`Account usage: ${billingAccount.mailboxUsed}${billingAccount.mailboxSeats == null ? "" : ` / ${billingAccount.mailboxSeats}`} mailboxes across ${billingAccount.apps.length} app${billingAccount.apps.length === 1 ? "" : "s"} and ${billingAccount.domainUsed} domain${billingAccount.domainUsed === 1 ? "" : "s"}.`}
         />
       ) : null}
 

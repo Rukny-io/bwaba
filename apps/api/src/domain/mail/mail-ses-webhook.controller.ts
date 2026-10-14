@@ -3,7 +3,6 @@ import {
   Headers,
   HttpCode,
   Post,
-  Query,
   Req,
 } from '@nestjs/common';
 import { ApiExcludeController, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -22,10 +21,10 @@ export class MailSesWebhookController {
   @ApiOperation({ summary: 'Amazon SNS/SES inbound webhook' })
   async handle(
     @Req() req: { body?: unknown; rawBody?: Buffer },
-    @Query('token') tokenQuery?: string,
     @Headers('x-mail-webhook-token') tokenHeader?: string,
   ) {
-    this.inbound.assertWebhookToken(tokenQuery || tokenHeader);
+    // Keep the secret out of URLs, access logs, referrers, and proxy history.
+    this.inbound.assertWebhookToken(tokenHeader);
 
     // Parse from rawBody first so global SanitizePipe never mutates the signed SNS envelope.
     const payload = parseSnsPayload(req);

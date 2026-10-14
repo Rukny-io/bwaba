@@ -11,6 +11,7 @@ import { HttpExceptionFilter } from './core/common/filters/http-exception.filter
 import { ThrottlerUserGuard } from './core/common/guards/throttler-user.guard';
 import { GlobalJwtAuthGuard } from './core/common/guards/auth/global-jwt-auth.guard';
 import { PerformanceInterceptor } from './core/common/interceptors/performance.interceptor';
+import { CsrfGuard } from './core/common/guards/csrf.guard';
 
 // Core
 import { HealthModule } from './core/health/health.module';
@@ -222,6 +223,10 @@ import { SharedModule } from './shared/modules/shared.module';
       // with @Public(). Rollout controlled by GLOBAL_AUTH_MODE (report|enforce).
       provide: APP_GUARD,
       useClass: GlobalJwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
     {
       provide: APP_FILTER,

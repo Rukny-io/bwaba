@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidMailAppId } from "@/lib/mail-app-id";
+import { isSameOriginMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,9 @@ async function proxyMailboxSession(
   method: string,
   opts?: { skipBody?: boolean },
 ) {
+  if (method !== "GET" && !isSameOriginMutation(request)) {
+    return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
+  }
   if (!isValidMailAppId(appId)) {
     return NextResponse.json({ message: "Invalid workspace." }, { status: 400 });
   }

@@ -253,11 +253,9 @@ export class RateLimitingService implements OnModuleInit {
       ? `${this.PREFIX}${endpoint}:user:${userId}`
       : `${this.PREFIX}*:user:${userId}`;
 
-    const client = this.redis.getClient();
-    const keys = await client.keys(pattern);
+    const deleted = await this.redis.delPattern(pattern);
 
-    if (keys.length > 0) {
-      await client.del(...keys);
+    if (deleted > 0) {
       this.logger.log(`Reset rate limits for user ${userId}`);
     }
   }
@@ -270,11 +268,9 @@ export class RateLimitingService implements OnModuleInit {
       ? `${this.PREFIX}${endpoint}:ip:${ip}`
       : `${this.PREFIX}*:ip:${ip}`;
 
-    const client = this.redis.getClient();
-    const keys = await client.keys(pattern);
+    const deleted = await this.redis.delPattern(pattern);
 
-    if (keys.length > 0) {
-      await client.del(...keys);
+    if (deleted > 0) {
       this.logger.log(`Reset rate limits for IP ${ip.substring(0, 8)}***`);
     }
   }
@@ -287,7 +283,7 @@ export class RateLimitingService implements OnModuleInit {
   }> {
     const client = this.redis.getClient();
     const pattern = `${this.PREFIX}*:${identifier}`;
-    const keys = await client.keys(pattern);
+    const keys = await this.redis.keys(pattern);
 
     const endpoints: Record<string, RateLimitResult> = {};
 
@@ -353,7 +349,7 @@ export class RateLimitingService implements OnModuleInit {
     topLimited: { identifier: string; count: number }[];
   }> {
     const client = this.redis.getClient();
-    const keys = await client.keys(`${this.PREFIX}*`);
+    const keys = await this.redis.keys(`${this.PREFIX}*`);
 
     const stats: { identifier: string; count: number }[] = [];
 

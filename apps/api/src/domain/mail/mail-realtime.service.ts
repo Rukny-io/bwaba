@@ -14,7 +14,7 @@ export type MailStreamSubscription = {
   unsubscribe: () => void;
 };
 
-const MAX_LISTENERS_PER_APP = 500;
+const MAX_LISTENERS_PER_CHANNEL = 500;
 const MAX_CONNECTIONS_PER_USER = 3;
 const MAX_CONNECTION_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -28,27 +28,23 @@ export class MailRealtimeService {
   >();
 
   constructor() {
-    this.bus.setMaxListeners(MAX_LISTENERS_PER_APP);
+    this.bus.setMaxListeners(MAX_LISTENERS_PER_CHANNEL);
   }
 
   publish(event: MailRealtimeEvent) {
-    this.bus.emit(`app:${event.appId}`, event);
-  }
-
-  subscribe(appId: string, handler: (event: MailRealtimeEvent) => void) {
-    const channel = `app:${appId}`;
-    this.bus.on(channel, handler);
-    return () => {
-      this.bus.off(channel, handler);
-    };
+    // Isolate on mailbox channels so subscribers never receive other
+    // mailboxes' identifiers, even transiently on a shared app bus.
+    this.bus.emit(this.mailboxChannel(event.mailboxId), event);
   }
 
   /**
-   * SSE subscription with per-user connection cap and max lifetime.
+   * SSE subscription scoped to the caller's accessible mailboxes, with
+   * per-user connection cap and max lifetime.
    */
   subscribeStream(
     appId: string,
     userId: string,
+    mailboxIds: ReadonlySet<string>,
     handler: (
       event:
         | MailRealtimeEvent
@@ -56,7 +52,6 @@ export class MailRealtimeService {
     ) => void,
   ): MailStreamSubscription {
     const connectionId = `${userId}:${appId}:${Date.now()}:${Math.random()}`;
-    const userKey = `${userId}:${appId}`;
 
     const activeForUser = [...this.connections.values()].filter(
       (entry) => entry.userId === userId && entry.appId === appId,
@@ -74,13 +69,19 @@ export class MailRealtimeService {
       openedAt: Date.now(),
     });
 
-    const onEvent = (event: MailRealtimeEvent) => handler(event);
-    const channel = `app:${appId}`;
-    this.bus.on(channel, onEvent);
+    const channels = [...mailboxIds].map((id) => this.mailboxChannel(id));
+    const onEvent = (event: MailRealtimeEvent) => {
+      // Defense in depth: only forward events for mailboxes this session may see.
+      if (!mailboxIds.has(event.mailboxId) || event.appId !== appId) return;
+      handler(event);
+    };
+    for (const channel of channels) {
+      this.bus.on(channel, onEvent);
+    }
 
     const lifetimeTimer = setTimeout(() => {
       handler({ type: 'expired' });
-      this.teardown(connectionId, onEvent, channel);
+      this.teardown(connectionId, onEvent, channels);
     }, MAX_CONNECTION_LIFETIME_MS);
     lifetimeTimer.unref?.();
 
@@ -89,17 +90,23 @@ export class MailRealtimeService {
     return {
       unsubscribe: () => {
         clearTimeout(lifetimeTimer);
-        this.teardown(connectionId, onEvent, channel);
+        this.teardown(connectionId, onEvent, channels);
       },
     };
+  }
+
+  private mailboxChannel(mailboxId: string) {
+    return `mailbox:${mailboxId}`;
   }
 
   private teardown(
     connectionId: string,
     handler: (event: MailRealtimeEvent) => void,
-    channel: string,
+    channels: string[],
   ) {
     this.connections.delete(connectionId);
-    this.bus.off(channel, handler);
+    for (const channel of channels) {
+      this.bus.off(channel, handler);
+    }
   }
 }

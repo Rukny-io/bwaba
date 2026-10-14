@@ -22,6 +22,7 @@ import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import { MailRealtimeService } from './mail-realtime.service';
+import { sanitizeMailHtml } from './mail-html-sanitize.util';
 import { MailAutoReplyService } from './mail-auto-reply.service';
 import { MailForwarderService } from './mail-forwarder.service';
 import {
@@ -186,11 +187,18 @@ export class MailInboundService {
     return null;
   }
 
+  private rawListPrefix(): string | undefined {
+    const prefix = this.config.get<string>('MAIL_S3_RAW_PREFIX')?.trim();
+    return prefix || undefined;
+  }
+
   private async listRawKeys(bucket: string, maxKeys: number): Promise<string[]> {
     const response = await this.getMailS3().send(
       new ListObjectsV2Command({
         Bucket: bucket,
         MaxKeys: maxKeys,
+        // Optional shared-bucket isolation; SES receipt rules should write under this prefix.
+        ...(this.rawListPrefix() ? { Prefix: this.rawListPrefix() } : {}),
       }),
     );
     return (response.Contents ?? [])
@@ -359,16 +367,26 @@ export class MailInboundService {
   /**
    * Import raw MIME objects already stored by SES (recovery / catch-up).
    */
-  async importRawKeys(keys: string[]) {
+  async importRawKeys(keys: string[], allowedAppId?: string) {
+    if (!allowedAppId) {
+      throw new BadRequestException(
+        'Import requires an app scope; cross-app raw imports are not allowed.',
+      );
+    }
     const bucket = this.rawBucket();
     if (!bucket) {
       throw new BadRequestException('MAIL_S3_BUCKET_RAW is not configured.');
     }
+    const listPrefix = this.rawListPrefix();
 
     const results: Array<{ key: string; handled: string }> = [];
     for (const key of keys) {
       const trimmed = key.trim();
       if (!trimmed || trimmed === 'AMAZON_SES_SETUP_NOTIFICATION') {
+        continue;
+      }
+      if (listPrefix && !trimmed.startsWith(listPrefix)) {
+        results.push({ key: trimmed, handled: 'prefix_denied' });
         continue;
       }
       try {
@@ -389,6 +407,9 @@ export class MailInboundService {
             ...this.headerAddresses(parsed, 'x-original-to'),
             ...this.headerAddresses(parsed, 'envelope-to'),
           ],
+          allowedAppId,
+          // Recovery import must not re-trigger auto-replies or forwarders.
+          runSideEffects: false,
         });
         results.push({
           key: trimmed,
@@ -418,7 +439,12 @@ export class MailInboundService {
     return summary;
   }
 
-  async importRecentRaw(limit = 30) {
+  async importRecentRaw(limit = 30, allowedAppId?: string) {
+    if (!allowedAppId) {
+      throw new BadRequestException(
+        'Import requires an app scope; cross-app raw imports are not allowed.',
+      );
+    }
     const bucket = this.rawBucket();
     if (!bucket) {
       throw new BadRequestException('MAIL_S3_BUCKET_RAW is not configured.');
@@ -427,7 +453,7 @@ export class MailInboundService {
     try {
       keys = await this.listRawKeys(
         bucket,
-        Math.min(Math.max(limit, 1), 100),
+        Math.min(Math.max(limit, 1), 30),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -444,6 +470,7 @@ export class MailInboundService {
     }
     return this.importRawKeys(
       keys.filter((k) => k !== 'AMAZON_SES_SETUP_NOTIFICATION'),
+      allowedAppId,
     );
   }
 
@@ -453,6 +480,9 @@ export class MailInboundService {
     sesMessageId: string | null;
     receipt?: SesReceipt;
     destinations: string[];
+    allowedAppId?: string;
+    /** When false, skip auto-reply / forwarder (used by recovery import). */
+    runSideEffects?: boolean;
   }) {
     const toFromParsed = this.addressesFrom(input.parsed.to);
     const candidates = [
@@ -467,6 +497,9 @@ export class MailInboundService {
       this.logger.warn(
         `No active mailbox for recipients: ${uniqueCandidates.join(', ')}`,
       );
+      return null;
+    }
+    if (input.allowedAppId && mailbox.mailAppId !== input.allowedAppId) {
       return null;
     }
 
@@ -575,8 +608,9 @@ export class MailInboundService {
         : null;
     const bodyText =
       typeof input.parsed.text === 'string' ? input.parsed.text : null;
-    const bodyHtml =
-      typeof input.parsed.html === 'string' ? input.parsed.html : null;
+    const bodyHtml = sanitizeMailHtml(
+      typeof input.parsed.html === 'string' ? input.parsed.html : null,
+    ) ?? null;
 
     const encryptionEnabled = await this.bodyEncryption.isEnabledForMailApp(
       mailbox.mailAppId,
@@ -692,6 +726,7 @@ export class MailInboundService {
           });
         }
         if (
+          input.runSideEffects !== false &&
           folder !== MailMessageFolder.SPAM &&
           folder !== MailMessageFolder.QUARANTINE
         ) {

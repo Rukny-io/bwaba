@@ -36,6 +36,7 @@ import { MailUnifiedEntitlementService } from './mail-unified-entitlement.servic
 import { MailPlanQuotaService } from './mail-plan-quota.service';
 import { MailMembersService } from './mail-members.service';
 import { OTP_BCRYPT_ROUNDS } from '../../core/common/constants/crypto.constants';
+import { MailBillingAccountService } from './mail-billing-account.service';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
@@ -55,6 +56,7 @@ export class MailAppsService {
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
     private readonly planQuota: MailPlanQuotaService,
     private readonly members: MailMembersService,
+    private readonly billingAccounts: MailBillingAccountService,
   ) {}
 
   private isUnifiedBillingOnly(): boolean {
@@ -369,7 +371,10 @@ export class MailAppsService {
     let membershipRole = 'OWNER';
     if (!access.isOwner) {
       membershipRole = String(access.role);
-      const ensured = await this.members.ensureAcceptedMemberSlot(app.id, userId);
+      const ensured = await this.members.ensureAcceptedMemberSlot(
+        app.id,
+        userId,
+      );
       if (ensured != null) {
         slotIndexOverride = ensured;
       } else {
@@ -446,6 +451,7 @@ export class MailAppsService {
             status: MailAppStatus.ACTIVE,
           },
         });
+        await this.billingAccounts.ensureForApp(app.id);
         return { app: this.toView(app) };
       } catch (error) {
         if (
@@ -482,11 +488,7 @@ export class MailAppsService {
             userId,
             domain,
           )
-        : await this.planQuota.canAttachDomain(
-            access.app.id,
-            userId,
-            domain,
-          );
+        : await this.planQuota.canAttachDomain(access.app.id, userId, domain);
       return { ...quota, canAttach };
     }
     return quota;
@@ -532,7 +534,10 @@ export class MailAppsService {
       domainOwnershipVerifiedAt !== undefined
         ? domainOwnershipVerifiedAt
         : previousOwnershipVerifiedAt;
-    if (domainStatus === MailDomainStatus.ACTIVE && !effectiveOwnershipVerifiedAt) {
+    if (
+      domainStatus === MailDomainStatus.ACTIVE &&
+      !effectiveOwnershipVerifiedAt
+    ) {
       throw new BadRequestException(
         'Domain ownership must be verified before activation.',
       );
@@ -623,10 +628,11 @@ export class MailAppsService {
       domainStatus !== undefined && domainStatus !== previous.domainStatus;
 
     if (this.isUnifiedBillingOnly()) {
-      const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
-        access.app.id,
-        userId,
-      );
+      const developerAppId =
+        await this.unifiedEntitlement.ensureLinkedDeveloperApp(
+          access.app.id,
+          userId,
+        );
 
       if (domainChanged && developerAppId) {
         if (primaryDomain) {
@@ -681,9 +687,7 @@ export class MailAppsService {
           'checkoutUrl' in activation ? activation.checkoutUrl : undefined,
         checkoutSessionId:
           'sessionId' in activation ? activation.sessionId : undefined,
-        activated: Boolean(
-          'activated' in activation && activation.activated,
-        ),
+        activated: Boolean('activated' in activation && activation.activated),
       };
     }
 

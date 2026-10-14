@@ -4,6 +4,7 @@ import { requireMailAppSession } from "@/lib/require-mail-app";
 import { releaseMailDomain } from "@/lib/release-mail-domain";
 import { mailCookieClearOptions } from "@/lib/mail-cookies";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
+import { isSameOriginMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,10 @@ export const dynamic = "force-dynamic";
  * Release this workspace's domain lock and delete the SES identity.
  * Used when archiving a workspace so the domain can be claimed again safely.
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const session = await requireMailAppSession({ fresh: true });
   if (!session) {
     return NextResponse.json(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Banknote,
@@ -76,6 +76,7 @@ type PhonePhase = 'input' | 'otp' | 'verified';
 type StorePaymentMethod = 'QASEH_CARD' | 'CASH';
 
 export function CheckoutFlow() {
+  const paymentAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useLocale();
@@ -857,7 +858,7 @@ export function CheckoutFlow() {
     updateCheckoutSession({ selectedAddressId: selectedId });
 
     try {
-      const result = await createCheckoutOrder({
+      const orderPayload = {
         shippingAddressId: selectedId,
         paymentMethod,
         items: items.map((item) => ({
@@ -866,7 +867,15 @@ export function CheckoutFlow() {
           variantId: item.variantId,
         })),
         couponCode: cart?.couponCode,
-      });
+      };
+      const fingerprint = JSON.stringify(orderPayload);
+      if (paymentMethod === 'QASEH_CARD' && paymentAttempt.current?.fingerprint !== fingerprint) {
+        paymentAttempt.current = { fingerprint, key: crypto.randomUUID() };
+      }
+      const result = await createCheckoutOrder(
+        orderPayload,
+        paymentMethod === 'QASEH_CARD' ? paymentAttempt.current?.key : undefined,
+      );
 
       const order = result.orders?.[0];
 

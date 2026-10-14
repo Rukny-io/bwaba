@@ -8,7 +8,7 @@ import {
 import { getMailDomainBinding } from "@/lib/mail-domain-bindings";
 import { dkimTokensMatch } from "@/lib/mail-domain-tokens";
 import { requireMailAppSession } from "@/lib/require-mail-app";
-import { formatSesError, getSesDomainStatus } from "@/lib/ses-admin";
+import { apiFetchJson } from "@/lib/server-api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,39 +40,43 @@ export async function GET(request: Request) {
       );
     }
 
-    const ses = await getSesDomainStatus(domain);
-    if (!ses.found || ses.tokens.length === 0) {
+    const remote = await apiFetchJson<{
+      domain?: string;
+      tokens?: string[];
+      verified?: boolean;
+      results?: Array<{ id: string; status: "pending" | "checking" | "verified" | "failed" }>;
+      ses?: { dkim?: string; sending?: string };
+    }>(`/mail/apps/${encodeURIComponent(session.appId)}/domain/status`);
+    if (!remote.ok || !remote.data.tokens?.length) {
       return NextResponse.json(
-        { error: "SES identity or DKIM tokens are not ready yet. Try again shortly." },
-        { status: 409 },
+        { error: remote.ok ? "SES identity or DKIM tokens are not ready yet. Try again shortly." : remote.error },
+        { status: remote.ok ? 409 : remote.status },
       );
     }
+    const tokens = remote.data.tokens;
 
     const records = buildDnsRecords(
       domain,
-      ses.tokens,
+      tokens,
       binding.ownershipToken,
     );
-    const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], ses.tokens);
+    const tokensChanged = !dkimTokensMatch(binding.dkimTokens ?? [], tokens);
 
     return NextResponse.json(
       {
         domain,
-        tokens: ses.tokens,
+        tokens,
         tokensChanged,
         records,
         zoneFile: recordsAsZoneFile(domain, records),
         ses: {
-          dkim: ses.dkim,
-          sending: ses.sending,
+          dkim: remote.data.ses?.dkim,
+          sending: remote.data.ses?.sending,
         },
       },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    return NextResponse.json(
-      { error: formatSesError(error) },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load domain status." }, { status: 502 });
   }
 }

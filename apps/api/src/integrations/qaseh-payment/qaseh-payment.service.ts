@@ -119,11 +119,20 @@ export class QasehPaymentService {
 
     this.logger.log(`Qaseh API ${method} ${path}`);
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method,
+        headers,
+        signal: controller.signal,
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) {
       const errorBody = await res.text();

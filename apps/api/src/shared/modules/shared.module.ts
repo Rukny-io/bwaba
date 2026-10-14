@@ -4,6 +4,7 @@ import { S3Service } from '../services/s3.service';
 import { ImageProcessorService } from '../services/image-processor.service';
 import { VideoProcessorService } from '../services/video-processor.service';
 import { UploadProgressService } from '../services/upload-progress.service';
+import { IdempotencyService } from '../services/idempotency.service';
 
 /**
  * Shared Module
@@ -44,12 +45,14 @@ import { UploadProgressService } from '../services/upload-progress.service';
     ImageProcessorService,
     VideoProcessorService,
     UploadProgressService,
+    IdempotencyService,
   ],
   exports: [
     S3Service,
     ImageProcessorService,
     VideoProcessorService,
     UploadProgressService,
+    IdempotencyService,
   ],
 })
 export class SharedModule {}

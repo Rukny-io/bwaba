@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isSameOriginMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,9 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 
 /** Proxies link consumption so the mailbox session Set-Cookie lands on the Mail origin. */
 export async function POST(request: NextRequest) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
+  }
   let token = "";
   let confirm = false;
   try {

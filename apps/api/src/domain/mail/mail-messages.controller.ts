@@ -17,6 +17,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
@@ -121,12 +122,14 @@ export class MailMessagesController {
     @Param('appId') appId: string,
   ): Promise<Observable<MessageEvent>> {
     await this.messages.assertOwnedApp(user.id, appId);
+    const mailboxIds = await this.messages.accessibleMailboxIds(user.id, appId);
     return new Observable<MessageEvent>((subscriber) => {
       let streamSubscription: ReturnType<MailRealtimeService['subscribeStream']>;
       try {
         streamSubscription = this.realtime.subscribeStream(
           appId,
           user.id,
+          mailboxIds,
           (event) => {
             if (event.type === 'expired') {
               subscriber.complete();
@@ -163,6 +166,7 @@ export class MailMessagesController {
   }
 
   @Post('import-inbound')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Import recent raw SES emails from S3 into the inbox',
   })
@@ -172,8 +176,8 @@ export class MailMessagesController {
     @Param('appId') appId: string,
     @Query('take') take?: string,
   ) {
-    await this.messages.assertOwnedApp(user.id, appId);
-    return this.inbound.importRecentRaw(take ? Number(take) : 30);
+    await this.messages.assertOwnerApp(user.id, appId);
+    return this.inbound.importRecentRaw(take ? Number(take) : 30, appId);
   }
 
   @Post('attachments')

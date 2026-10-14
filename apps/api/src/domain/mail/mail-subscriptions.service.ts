@@ -48,6 +48,7 @@ import {
 import { MailOutboundUsageService } from './mail-outbound-usage.service';
 import { MailUnifiedEntitlementService } from './mail-unified-entitlement.service';
 import { MailPlanQuotaService } from './mail-plan-quota.service';
+import { MailBillingAccountService } from './mail-billing-account.service';
 import { isMailAppPublicId } from './mail-app-id.util';
 import { storageQuotaBytesForPlan } from './mail-storage.util';
 import { EMAIL_API_TRANSACTIONAL_PLANS } from '@rukny/email-api-pricing';
@@ -150,6 +151,7 @@ export class MailSubscriptionsService {
     private readonly outboundUsage: MailOutboundUsageService,
     private readonly unifiedEntitlement: MailUnifiedEntitlementService,
     private readonly planQuota: MailPlanQuotaService,
+    private readonly billingAccounts: MailBillingAccountService,
   ) {}
 
   getPlansOverview() {
@@ -228,6 +230,20 @@ export class MailSubscriptionsService {
       name: access.app.name,
       primaryDomain: access.app.primaryDomain,
     } satisfies MailAppRow;
+    const billingAccount = await this.billingAccounts.ensureForApp(app.id);
+    const [accountApps, mailboxUsed] = await Promise.all([
+      this.prisma.mailApp.findMany({
+        where: { billingAccountId: billingAccount.id, status: MailAppStatus.ACTIVE },
+        select: { appId: true, name: true, primaryDomain: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.mailMailbox.count({
+        where: {
+          mailApp: { billingAccountId: billingAccount.id },
+          status: MailMailboxStatus.ACTIVE,
+        },
+      }),
+    ]);
     // Single source of truth for plan ceilings shown in the Mail console.
     const [subscriptionResult, activeLimits, pendingRequest, domainQuota] =
       await Promise.all([
@@ -259,6 +275,16 @@ export class MailSubscriptionsService {
         : null,
       domainQuota,
       subscription,
+      billingAccount: {
+        id: billingAccount.id,
+        status: billingAccount.status,
+        subscriptionId: billingAccount.subscription?.id ?? null,
+        plan: billingAccount.subscription?.plan ?? null,
+        mailboxSeats: billingAccount.subscription?.mailboxCount ?? null,
+        mailboxUsed,
+        domainUsed: accountApps.filter((item) => Boolean(item.primaryDomain)).length,
+        apps: accountApps,
+      },
       pendingRequest,
       hasWorkspaceAccess: Boolean(activeLimitsView),
       canManageBilling: this.access.canManageBilling(access),
@@ -284,9 +310,8 @@ export class MailSubscriptionsService {
     }
 
     if (this.isUnifiedBillingOnly()) {
-      const unified = await this.unifiedEntitlement.getLimitsForMailApp(
-        mailAppUuid,
-      );
+      const unified =
+        await this.unifiedEntitlement.getLimitsForMailApp(mailAppUuid);
       if (unified) {
         const payload = {
           planId: unified.planId,
@@ -436,16 +461,12 @@ export class MailSubscriptionsService {
       throw new NotFoundException('Mail app not found.');
     }
     if (app.domainStatus !== MailDomainStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Verify domain DNS before mail can start.',
-      );
+      throw new BadRequestException('Verify domain DNS before mail can start.');
     }
 
     if (this.isUnifiedBillingOnly()) {
-      const developerAppId = await this.unifiedEntitlement.ensureLinkedDeveloperApp(
-        app.id,
-        userId,
-      );
+      const developerAppId =
+        await this.unifiedEntitlement.ensureLinkedDeveloperApp(app.id, userId);
       if (!developerAppId) {
         throw new BadRequestException('Could not link billing account.');
       }
@@ -462,9 +483,7 @@ export class MailSubscriptionsService {
       await this.ensureFreeMailSubscription(userId, app.id);
     }
 
-    await this.redis
-      .del(`${this.CACHE_PREFIX}${app.id}`)
-      .catch(() => {});
+    await this.redis.del(`${this.CACHE_PREFIX}${app.id}`).catch(() => {});
 
     return {
       activated: true as const,
@@ -472,20 +491,28 @@ export class MailSubscriptionsService {
     };
   }
 
-  private async ensureFreeMailSubscription(userId: string, mailAppUuid: string) {
+  private async ensureFreeMailSubscription(
+    userId: string,
+    mailAppUuid: string,
+  ) {
+    const billingAccount = await this.billingAccounts.ensureForApp(mailAppUuid);
     const existing = await this.prisma.mailSubscription.findUnique({
       where: { mailAppId: mailAppUuid },
     });
     if (existing?.status === SubscriptionStatus.ACTIVE) {
+      await this.billingAccounts.ensureForApp(mailAppUuid);
       return existing;
     }
 
     const now = new Date();
     const included = MAIL_PLAN_LIMITS[MailPlan.FREE].mailboxesIncluded;
-    return this.prisma.mailSubscription.upsert({
+    const subscription = await this.prisma.mailSubscription.upsert({
       where: { mailAppId: mailAppUuid },
       create: {
         mailAppId: mailAppUuid,
+        billingAccountId: billingAccount.subscription
+          ? null
+          : billingAccount.id,
         userId,
         plan: MailPlan.FREE,
         status: SubscriptionStatus.ACTIVE,
@@ -504,10 +531,15 @@ export class MailSubscriptionsService {
         cancelledAt: null,
       },
     });
+    await this.billingAccounts.ensureForApp(mailAppUuid);
+    return subscription;
   }
 
   /** @deprecated Use provisionFreeAfterDomainVerified */
-  async provisionStarterAfterDomainVerified(userId: string, publicAppId: string) {
+  async provisionStarterAfterDomainVerified(
+    userId: string,
+    publicAppId: string,
+  ) {
     if (this.isUnifiedBillingOnly()) {
       return this.provisionFreeAfterDomainVerified(userId, publicAppId);
     }
@@ -645,7 +677,10 @@ export class MailSubscriptionsService {
     return {
       sessionId: session.sessionId,
       product: 'mail' as const,
-      kind: session.kind === 'outbound_pack' ? ('outbound_pack' as const) : ('subscription' as const),
+      kind:
+        session.kind === 'outbound_pack'
+          ? ('outbound_pack' as const)
+          : ('subscription' as const),
       plan: session.plan,
       planName: session.planName,
       mailboxCount: session.seats,
@@ -1104,6 +1139,17 @@ export class MailSubscriptionsService {
     }
 
     const { app, access } = await this.requireBillingApp(userId, publicAppId);
+    const billingAccount = await this.billingAccounts.ensureForApp(app.id);
+    if (
+      billingAccount.subscription &&
+      billingAccount.subscription.mailAppId !== app.id
+    ) {
+      throw new BadRequestException({
+        code: 'MAIL_BILLING_ACCOUNT_CHECKOUT_REQUIRED',
+        message:
+          'This Mail app belongs to an account with a shared subscription. Use account billing to change seats or plan.',
+      });
+    }
     const seats = this.normalizeSeats(mailboxCount);
     await this.assertPayRateLimit(userId, app.appId);
 
@@ -1130,6 +1176,9 @@ export class MailSubscriptionsService {
       subscription = await this.prisma.mailSubscription.create({
         data: {
           mailAppId: app.id,
+          billingAccountId: billingAccount.subscription
+            ? null
+            : billingAccount.id,
           userId: app.userId,
           plan,
           status: SubscriptionStatus.EXPIRED,
@@ -1484,7 +1533,11 @@ export class MailSubscriptionsService {
     }
   }
 
-  async getCardPaymentStatus(userId: string, publicAppId: string, paymentRowId: string) {
+  async getCardPaymentStatus(
+    userId: string,
+    publicAppId: string,
+    paymentRowId: string,
+  ) {
     const { app } = await this.requireBillingApp(userId, publicAppId);
     const payment = await this.prisma.mailSubscriptionPayment.findFirst({
       where: {
@@ -1513,9 +1566,10 @@ export class MailSubscriptionsService {
             ['failed', 'declined', 'expired'].includes(ctx.payment_status))
         ) {
           await this.applyQasehPaymentResult(payment.paymentId, ctx);
-          const refreshed = await this.prisma.mailSubscriptionPayment.findUnique({
-            where: { id: payment.id },
-          });
+          const refreshed =
+            await this.prisma.mailSubscriptionPayment.findUnique({
+              where: { id: payment.id },
+            });
           return {
             paymentId: payment.id,
             status: refreshed?.status ?? payment.status,
@@ -1607,13 +1661,10 @@ export class MailSubscriptionsService {
       subscription.plan,
       subscription.mailboxCount,
     );
-    const periodStart = subscription.currentPeriodStart || subscription.createdAt;
-    const periodEnd =
-      subscription.currentPeriodEnd || addOneMonth(periodStart);
-    const invoiceNumber = this.buildInvoiceNumber(
-      subscription.id,
-      periodStart,
-    );
+    const periodStart =
+      subscription.currentPeriodStart || subscription.createdAt;
+    const periodEnd = subscription.currentPeriodEnd || addOneMonth(periodStart);
+    const invoiceNumber = this.buildInvoiceNumber(subscription.id, periodStart);
 
     const buffer = await renderMailInvoicePdf({
       invoiceNumber,
@@ -1673,8 +1724,7 @@ export class MailSubscriptionsService {
 
   private apiPublicBase(): string {
     return (
-      this.config.get<string>('API_PUBLIC_URL') ||
-      'https://api.rukny.io'
+      this.config.get<string>('API_PUBLIC_URL') || 'https://api.rukny.io'
     ).replace(/\/$/, '');
   }
 
@@ -1881,7 +1931,8 @@ export class MailSubscriptionsService {
       app.user?.email ||
       null;
     const emailTo =
-      emailToRaw && !String(emailToRaw).toLowerCase().endsWith('@guest.rukny.io')
+      emailToRaw &&
+      !String(emailToRaw).toLowerCase().endsWith('@guest.rukny.io')
         ? String(emailToRaw).trim()
         : null;
     const phone =
@@ -1926,12 +1977,15 @@ export class MailSubscriptionsService {
       } else {
         try {
           const caption = `Rukny Mail invoice ${built.invoiceNumber}\n${app.name} · ${this.formatIqd(payment.amount)}`;
-          const result = await this.whatsappBusiness.sendInvoiceDocument(phone, {
-            pdfBuffer: built.buffer,
-            filename: built.filename,
-            caption,
-            fallbackLink: downloadUrl,
-          });
+          const result = await this.whatsappBusiness.sendInvoiceDocument(
+            phone,
+            {
+              pdfBuffer: built.buffer,
+              filename: built.filename,
+              caption,
+              fallbackLink: downloadUrl,
+            },
+          );
           whatsappStatus = result.via === 'document' ? 'sent' : 'sent_link';
         } catch (err) {
           whatsappStatus = `failed:${err instanceof Error ? err.message : 'error'}`;
@@ -1958,9 +2012,7 @@ export class MailSubscriptionsService {
           invoiceDeliveredAt: new Date().toISOString(),
           invoiceEmailStatus: emailStatus,
           invoiceWhatsappStatus: whatsappStatus,
-          ...(force
-            ? { invoiceResentAt: new Date().toISOString() }
-            : {}),
+          ...(force ? { invoiceResentAt: new Date().toISOString() } : {}),
         },
       },
     });
@@ -2274,7 +2326,11 @@ export class MailSubscriptionsService {
       return { handled: true, status: 'currency_mismatch' };
     }
 
-    if (['failed', 'declined', 'expired', 'revoked'].includes(context.payment_status)) {
+    if (
+      ['failed', 'declined', 'expired', 'revoked'].includes(
+        context.payment_status,
+      )
+    ) {
       await this.prisma.mailSubscriptionPayment.updateMany({
         where: { id: payment.id, status: PaymentStatus.PENDING },
         data: {
@@ -2416,9 +2472,10 @@ export class MailSubscriptionsService {
         },
       });
       if (app?.appId) {
-        await this.provisionFreeAfterDomainVerified(app.userId, app.appId).catch(
-          () => {},
-        );
+        await this.provisionFreeAfterDomainVerified(
+          app.userId,
+          app.appId,
+        ).catch(() => {});
       }
       this.logger.warn(
         `Mail legacy plan payment ${paymentId} completed under unified billing — entitlement only`,
@@ -2642,9 +2699,7 @@ export class MailSubscriptionsService {
       throw new BadRequestException('Ticket is not a Mail plan request.');
     }
     if (context.mailAppId !== app.appId) {
-      throw new BadRequestException(
-        'Ticket is for a different Mail app.',
-      );
+      throw new BadRequestException('Ticket is for a different Mail app.');
     }
   }
 
@@ -2678,7 +2733,10 @@ export class MailSubscriptionsService {
     };
   }
 
-  private async assertPlanRequestRateLimit(userId: string, publicAppId: string) {
+  private async assertPlanRequestRateLimit(
+    userId: string,
+    publicAppId: string,
+  ) {
     const appKey = `mail:sub-request:app:${userId}:${publicAppId}`;
     const userKey = `mail:sub-request:user:${userId}`;
 
@@ -2688,10 +2746,14 @@ export class MailSubscriptionsService {
     ]);
 
     if (appCount === 1) {
-      await this.redis.expire(appKey, PLAN_REQUEST_WINDOW_SECONDS).catch(() => {});
+      await this.redis
+        .expire(appKey, PLAN_REQUEST_WINDOW_SECONDS)
+        .catch(() => {});
     }
     if (userCount === 1) {
-      await this.redis.expire(userKey, PLAN_REQUEST_WINDOW_SECONDS).catch(() => {});
+      await this.redis
+        .expire(userKey, PLAN_REQUEST_WINDOW_SECONDS)
+        .catch(() => {});
     }
 
     if (

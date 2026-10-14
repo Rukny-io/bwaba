@@ -10,11 +10,6 @@ import {
   findMailAppIdByDomain,
   upsertMailDomainBinding,
 } from "@/lib/mail-domain-bindings";
-import {
-  deleteSesDomainIdentity,
-  ensureSesDomainIdentity,
-  formatSesError,
-} from "@/lib/ses-admin";
 import { requireMailAppSession } from "@/lib/require-mail-app";
 import { apiFetchJson } from "@/lib/server-api";
 import {
@@ -25,6 +20,7 @@ import { releaseMailDomain } from "@/lib/release-mail-domain";
 import { mailCookieClearOptions } from "@/lib/mail-cookies";
 import { MAIL_READY_APP_COOKIE, MAIL_READY_COOKIE } from "@/lib/ses";
 import { mailSetupCacheKey, redisDel, redisSetJson } from "@/lib/redis";
+import { isSameOriginMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +40,7 @@ function jsonError(error: string, status: number) {
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginMutation(request)) return jsonError("Invalid request origin.", 403);
     const session = await requireMailAppSession({ fresh: true });
     if (!session) {
       return jsonError("Please login again, then open your workspace.", 401);
@@ -86,16 +83,19 @@ export async function POST(request: Request) {
       return jsonError(message, status);
     }
 
-    if (!process.env.AWS_ACCESS_KEY_ID?.trim() || !process.env.AWS_SECRET_ACCESS_KEY?.trim()) {
+    const provisioned = await apiFetchJson<{
+      ses?: { tokens?: string[] };
+    }>(`/mail/apps/${encodeURIComponent(session.appId)}/domain/provision`, {
+      method: "POST",
+      body: JSON.stringify({ domain }),
+    });
+    if (!provisioned.ok || !provisioned.data.ses?.tokens?.length) {
       return jsonError(
-        "AWS credentials are not configured for Mail. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, then restart the mail service.",
-        503,
+        provisioned.ok ? "SES did not return DKIM tokens." : provisioned.error,
+        provisioned.ok ? 502 : provisioned.status,
       );
     }
-
-    // Rotate SES identity on every new claim so stale DKIM tokens cannot be reused.
-    await deleteSesDomainIdentity(domain).catch(() => undefined);
-    const { tokens } = await ensureSesDomainIdentity(domain);
+    const tokens = provisioned.data.ses.tokens;
     const ownershipToken = generateOwnershipToken();
     const setup = createMailDomainSetup(domain, tokens, ownershipToken);
 
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    const message = formatSesError(error);
+    const message = error instanceof Error ? error.message : "Could not complete this request.";
     console.error("[mail/domains POST]", message, error);
     const status = message.includes("already connected")
       ? 409
@@ -142,6 +142,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    if (!isSameOriginMutation(request)) return jsonError("Invalid request origin.", 403);
     const session = await requireMailAppSession({ fresh: true });
     if (!session) {
       return jsonError("Please login again, then open your workspace.", 401);
@@ -168,7 +169,7 @@ export async function DELETE(request: Request) {
     response.cookies.set(MAIL_READY_APP_COOKIE, "", mailCookieClearOptions());
     return response;
   } catch (error) {
-    const message = formatSesError(error);
+    const message = error instanceof Error ? error.message : "Could not complete this request.";
     console.error("[mail/domains DELETE]", message, error);
     return jsonError(message, 502);
   }

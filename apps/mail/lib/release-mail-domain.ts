@@ -1,10 +1,8 @@
 import { deleteMailDomainBinding } from "@/lib/mail-domain-bindings";
-import { deleteSesDomainIdentity } from "@/lib/ses-admin";
 import { syncMailAppDomainToNest } from "@/lib/sync-mail-app-domain";
 import {
   mailAppOwnerKey,
   mailSetupCacheKey,
-  mailSesStatusKey,
   redisDel,
 } from "@/lib/redis";
 
@@ -14,14 +12,8 @@ export async function releaseMailDomain(
   userId?: string,
 ) {
   const normalized = domain.trim().toLowerCase();
-  if (normalized) {
-    await deleteSesDomainIdentity(normalized);
-  }
   await deleteMailDomainBinding(appId);
   const keys = [mailSetupCacheKey(appId)];
-  if (normalized) {
-    keys.push(mailSesStatusKey(normalized));
-  }
   if (userId) {
     keys.push(`${mailAppOwnerKey(appId)}:${userId}`);
   }

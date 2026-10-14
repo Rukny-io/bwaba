@@ -298,6 +298,25 @@ export class MailMessagesService {
     return access.app;
   }
 
+  async accessibleMailboxIds(userId: string, appId: string): Promise<Set<string>> {
+    const access = await this.access.requireAccess(userId, appId);
+    const rows = await this.prisma.mailMailbox.findMany({
+      where: {
+        mailAppId: access.app.id,
+        status: { not: MailMailboxStatus.DELETED },
+        ...(this.access.canManageMailboxes(access)
+          ? {}
+          : { assignedUserId: userId }),
+      },
+      select: { id: true },
+    });
+    return new Set(rows.map((row) => row.id));
+  }
+
+  async assertOwnerApp(userId: string, appId: string) {
+    return (await this.access.requireOwner(userId, appId)).app;
+  }
+
   async list(
     userId: string,
     appId: string,
@@ -831,7 +850,7 @@ export class MailMessagesService {
       (bodyHtml
         ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
         : '');
-    const outboundHtml = bodyHtml?.trim() || undefined;
+    const outboundHtml = sanitizeMailHtml(bodyHtml);
     const incomingBytes = utf8StorageBytes(plainText, outboundHtml);
     const usedBytes = Number(mailbox.storageUsedBytes ?? 0);
     if (usedBytes + incomingBytes > limits.storageQuotaBytesPerMailbox) {

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -103,7 +104,9 @@ model User {
   emailChangeRequests       EmailChangeRequest[]
   subscription              Subscription?
 
-  // Rukny Mail — one subscription per Mail app (not per user)
+  // Rukny Mail billing — canonical account-level subscription owner.
+  mailBillingAccount             MailBillingAccount?
+  // Legacy per-app subscriptions are retained during migration.
   mailSubscriptions              MailSubscription[]
   mailApps                       MailApp[]
   mailMessages                   MailMessage[]
@@ -118,35 +121,35 @@ model User {
   mailSsoAccessLinksCreated      MailSsoAccessLink[]             @relation("mail_sso_link_creator")
   mailSsoIdentities              MailSsoIdentity[]
   mailQuarantineActions          MailQuarantineActionLog[]       @relation("mail_quarantine_actor")
-  mailSecurityAuditLogs          MailSecurityAuditLog[]           @relation("mail_security_audit_actor")
+  mailSecurityAuditLogs          MailSecurityAuditLog[]          @relation("mail_security_audit_actor")
 
   // Developer Portal relations
-  developerApps                DeveloperApp[]
-  developerApiKeys             DeveloperApiKey[]
-  developerWhatsappAccounts    DeveloperWhatsappAccount[]
-  developerContacts            DeveloperContact[]
-  developerWebhooks            DeveloperWebhook[]
-  developerMessageLogs         WhatsappMessageLog[]          @relation("developer_message_logs")
-  developerEmailMessages       DeveloperEmailMessage[]
-  developerEmailDomains        DeveloperEmailDomain[]
-  developerEmailSuppression    DeveloperEmailSuppression[]
-  developerEmailEntitlements   DeveloperEmailEntitlement[]
-  developerEmailContacts       DeveloperEmailContact[]
-  developerEmailBroadcasts     DeveloperEmailBroadcast[]
-  developerEmailAutomations    DeveloperEmailAutomation[]
-  developerEmailAutomationRuns DeveloperEmailAutomationRun[]
-  developerApiRequestLogs      ApiRequestLog[]
-  developerSubscription        DeveloperSubscription?        @relation("developer_subscription")
-  developerWallet              DeveloperWallet?              @relation("developer_wallet")
+  developerApps                 DeveloperApp[]
+  developerApiKeys              DeveloperApiKey[]
+  developerWhatsappAccounts     DeveloperWhatsappAccount[]
+  developerContacts             DeveloperContact[]
+  developerWebhooks             DeveloperWebhook[]
+  developerMessageLogs          WhatsappMessageLog[]           @relation("developer_message_logs")
+  developerEmailMessages        DeveloperEmailMessage[]
+  developerEmailDomains         DeveloperEmailDomain[]
+  developerEmailSuppression     DeveloperEmailSuppression[]
+  developerEmailEntitlements    DeveloperEmailEntitlement[]
+  developerEmailContacts        DeveloperEmailContact[]
+  developerEmailBroadcasts      DeveloperEmailBroadcast[]
+  developerEmailAutomations     DeveloperEmailAutomation[]
+  developerEmailAutomationRuns  DeveloperEmailAutomationRun[]
+  developerApiRequestLogs       ApiRequestLog[]
+  developerSubscription         DeveloperSubscription?         @relation("developer_subscription")
+  developerWallet               DeveloperWallet?               @relation("developer_wallet")
   metaBusinessPortfolioRequests MetaBusinessPortfolioRequest[]
-  formTeamWorkspaceMembers     FormTeamMember[]              @relation("form_team_workspace")
-  formTeamMemberships          FormTeamMember[]              @relation("form_team_member")
-  formTeamInvitationsSent      FormTeamMember[]              @relation("form_team_inviter")
-  workspaceOwnedMembers        WorkspaceMember[]             @relation("workspace_owner")
-  workspaceMemberships         WorkspaceMember[]             @relation("workspace_member")
-  workspaceInvitationsSent     WorkspaceMember[]             @relation("workspace_inviter")
-  supportTickets               SupportTicket[]
-  businessWorkflows            BusinessWorkflow[]
+  formTeamWorkspaceMembers      FormTeamMember[]               @relation("form_team_workspace")
+  formTeamMemberships           FormTeamMember[]               @relation("form_team_member")
+  formTeamInvitationsSent       FormTeamMember[]               @relation("form_team_inviter")
+  workspaceOwnedMembers         WorkspaceMember[]              @relation("workspace_owner")
+  workspaceMemberships          WorkspaceMember[]              @relation("workspace_member")
+  workspaceInvitationsSent      WorkspaceMember[]              @relation("workspace_inviter")
+  supportTickets                SupportTicket[]
+  businessWorkflows             BusinessWorkflow[]
 
   @@index([telegramChatId])
   @@index([telegramConnectedAt])
@@ -2624,18 +2627,18 @@ model DeveloperApp {
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
-  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apiKeys           DeveloperApiKey[]
-  appWallet         DeveloperAppWallet?
-  whatsappAccounts  DeveloperWhatsappAccount[]
-  developerWebhooks DeveloperWebhook[]
-  forms             Form[]
-  installedProducts DeveloperAppProduct[]
-  emailMessages     DeveloperEmailMessage[]
-  emailSenders      DeveloperEmailSender[]
-  emailEntitlement  DeveloperEmailEntitlement?
-  emailDomains      DeveloperEmailDomain[]
-  linkedMailApps    MailApp[]                  @relation("mail_linked_developer_app")
+  user                  User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys               DeveloperApiKey[]
+  appWallet             DeveloperAppWallet?
+  whatsappAccounts      DeveloperWhatsappAccount[]
+  developerWebhooks     DeveloperWebhook[]
+  forms                 Form[]
+  installedProducts     DeveloperAppProduct[]
+  emailMessages         DeveloperEmailMessage[]
+  emailSenders          DeveloperEmailSender[]
+  emailEntitlement      DeveloperEmailEntitlement?
+  emailDomains          DeveloperEmailDomain[]
+  linkedMailApps        MailApp[]                      @relation("mail_linked_developer_app")
   metaPortfolioRequests MetaBusinessPortfolioRequest[]
 
   @@index([userId])
@@ -2646,7 +2649,7 @@ model DeveloperApp {
 
 /// طلب حافظة أعمال Meta (ميزة Pro) — الملكية تبقى لـ Rukny
 model MetaBusinessPortfolioRequest {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   userId              String
   developerAppId      String
   businessName        String
@@ -2654,14 +2657,14 @@ model MetaBusinessPortfolioRequest {
   businessEmail       String
   websiteUrl          String
   businessDescription String
-  status              String   @default("pending") // pending | approved | rejected | fulfilled
+  status              String    @default("pending") // pending | approved | rejected | fulfilled
   rejectionReason     String?
   reviewedBy          String?
   reviewedAt          DateTime?
   metaBusinessId      String?
-  submittedAt         DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  submittedAt         DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   developerApp DeveloperApp @relation(fields: [developerAppId], references: [id], onDelete: Cascade)
@@ -3753,7 +3756,7 @@ model MailApp {
   description               String?
   status                    MailAppStatus         @default(ACTIVE)
   /// Optional primary domain label cached for list UI
-  primaryDomain             String?
+  primaryDomain             String?               @unique(map: "mail_apps_primary_domain_active_idx", where: raw("((status = 'ACTIVE'::\"MailAppStatus\") AND (\"primaryDomain\" IS NOT NULL))"))
   domainStatus              MailDomainStatus      @default(NONE)
   domainCheckedAt           DateTime?
   /// Per-workspace TXT challenge token (_rukny-verify).
@@ -3768,16 +3771,20 @@ model MailApp {
   bodyEncryptionEnabled     Boolean               @default(false)
   /// Optional link to a Developer app for unified Mail + Email API billing.
   linkedDeveloperAppId      String?
+  /// Canonical shared billing owner. Nullable while legacy rows are migrated.
+  billingAccountId          String?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
 
   user                       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedDeveloperApp         DeveloperApp?                   @relation("mail_linked_developer_app", fields: [linkedDeveloperAppId], references: [id], onDelete: SetNull)
+  billingAccount             MailBillingAccount?             @relation(fields: [billingAccountId], references: [id], onDelete: SetNull)
   domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
   mailboxes                  MailMailbox[]
   members                    MailAppMember[]
   emailInvites               MailAppEmailInvite[]
   subscription               MailSubscription?
+  seatAllocation             MailAppSeatAllocation?
   catchAll                   MailCatchAll?
   autoReplies                MailAutoReply[]
   aliases                    MailAlias[]
@@ -3798,8 +3805,50 @@ model MailApp {
   @@index([domainTrustStatus])
   @@index([domainReviewedById])
   @@index([linkedDeveloperAppId])
+  @@index([billingAccountId])
   @@index([createdAt])
   @@map("mail_apps")
+}
+
+enum MailBillingAccountStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+/// Canonical commercial owner for one customer's Mail apps and subscription.
+model MailBillingAccount {
+  id          String                   @id @default(uuid())
+  ownerUserId String                   @unique
+  status      MailBillingAccountStatus @default(ACTIVE)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  owner        User                    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  apps         MailApp[]
+  subscription MailSubscription?
+  allocations  MailAppSeatAllocation[]
+
+  @@index([status])
+  @@map("mail_billing_accounts")
+}
+
+/// Explicit per-app allocation from the shared account seat/domain pool.
+model MailAppSeatAllocation {
+  id               String   @id @default(uuid())
+  billingAccountId String
+  mailAppId        String   @unique
+  mailboxSeats     Int      @default(0)
+  domainSlots      Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  billingAccount MailBillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+  mailApp        MailApp            @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+
+  @@unique([billingAccountId, mailAppId])
+  @@index([billingAccountId])
+  @@map("mail_app_seat_allocations")
 }
 
 /// Invited Rukny users who can open the Mail console / SSO into assigned mailboxes.
@@ -4443,6 +4492,8 @@ model MailSubscription {
   id                  String             @id @default(uuid())
   /// Owning Mail app — unique so each app has its own plan/seats/storage
   mailAppId           String             @unique
+  /// Canonical account-level subscription owner; nullable during migration.
+  billingAccountId    String?            @unique
   /// Owner snapshot (not unique: one user can have many Mail apps)
   userId              String
   plan                MailPlan
@@ -4460,9 +4511,10 @@ model MailSubscription {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
-  mailApp  MailApp                   @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
-  user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments MailSubscriptionPayment[]
+  mailApp        MailApp                   @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  billingAccount MailBillingAccount?       @relation(fields: [billingAccountId], references: [id], onDelete: SetNull)
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments       MailSubscriptionPayment[]
 
   @@index([userId])
   @@index([plan])

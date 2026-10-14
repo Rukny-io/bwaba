@@ -69,11 +69,50 @@ const jwksCache = new Map<
 
 export class OidcError extends Error {}
 
+function assertOidcHttps(url: string): void {
+  const parsed = new URL(url);
+  // Allow plain http only for reserved `.test` hosts in unit tests.
+  if (
+    process.env.NODE_ENV === 'test' &&
+    parsed.hostname.endsWith('.test') &&
+    parsed.protocol === 'http:'
+  ) {
+    return;
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new OidcError('OIDC endpoints must use https.');
+  }
+}
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
+    // Re-resolve and validate every provider endpoint immediately before use.
+    // This prevents cached discovery data from becoming an SSRF/DNS-rebinding
+    // bypass between discovery and token/JWKS requests.
+    await assertOidcUrlSafe(url);
+    assertOidcHttps(url);
+    // Follow redirects manually so each hop is re-validated (DNS rebinding / SSRF).
+    let currentUrl = url;
+    let res: Response | undefined;
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      await assertOidcUrlSafe(currentUrl);
+      assertOidcHttps(currentUrl);
+      res = await fetch(currentUrl, {
+        ...init,
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location) break;
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
+    if (!res) throw new OidcError(`Could not reach ${new URL(url).host}.`);
     const body = (await res.json().catch(() => ({}))) as T & {
       error?: string;
       error_description?: string;
@@ -115,9 +154,7 @@ export async function discoverOidc(
       error instanceof Error ? error.message : 'Unsafe issuer URL.',
     );
   }
-  if (parsed.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-    throw new OidcError('Issuer must use https.');
-  }
+  assertOidcHttps(normalized);
   const cached = discoveryCache.get(normalized);
   if (!opts?.fresh && cached && Date.now() - cached.at < DISCOVERY_TTL_MS)
     return cached.value;
@@ -150,6 +187,9 @@ export async function discoverOidc(
       assertOidcUrlSafe(doc.token_endpoint),
       assertOidcUrlSafe(doc.jwks_uri),
     ]);
+    assertOidcHttps(doc.authorization_endpoint);
+    assertOidcHttps(doc.token_endpoint);
+    assertOidcHttps(doc.jwks_uri);
   } catch (error) {
     throw new OidcError(
       error instanceof Error ? error.message : 'Unsafe OIDC endpoint.',

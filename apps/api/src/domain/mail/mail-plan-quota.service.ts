@@ -30,10 +30,16 @@ export class MailPlanQuotaService {
   }
 
   private async resolvePlanForApp(mailAppUuid: string): Promise<MailPlan> {
-    const sub = await this.prisma.mailSubscription.findUnique({
-      where: { mailAppId: mailAppUuid },
-      select: { plan: true, status: true },
+    const app = await this.prisma.mailApp.findUnique({
+      where: { id: mailAppUuid },
+      select: {
+        billingAccount: {
+          select: { subscription: { select: { plan: true, status: true } } },
+        },
+        subscription: { select: { plan: true, status: true } },
+      },
     });
+    const sub = app?.billingAccount?.subscription ?? app?.subscription;
     if (sub?.status === SubscriptionStatus.ACTIVE) {
       return sub.plan;
     }

@@ -230,10 +230,11 @@ export function createAddress(payload: CreateAddressPayload) {
   ).then((res) => ('address' in res ? res.address : res));
 }
 
-export function createCheckoutOrder(payload: CreateOrderPayload) {
+export function createCheckoutOrder(payload: CreateOrderPayload, idempotencyKey?: string) {
   return apiFetch<CreateOrderResponse>('/checkout/orders', {
     method: 'POST',
     auth: true,
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
     body: JSON.stringify(payload),
   });
 }

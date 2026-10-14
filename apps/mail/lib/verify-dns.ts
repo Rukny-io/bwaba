@@ -5,7 +5,6 @@ import {
 } from "@rukny/domain-verification";
 import type { DnsRecordStatus, MailDnsRecord } from "@/lib/mail-domain";
 import { buildDnsRecords, normalizeDomain, validateDomain } from "@/lib/mail-domain";
-import { getSesDomainStatus } from "@/lib/ses-admin";
 import { MAIL_SES } from "@/lib/ses";
 
 export type DnsCheckResult = {
@@ -85,7 +84,14 @@ export async function verifyDomainDns(
     dkimTokens,
     ownershipToken,
     sesConfig: sesDnsConfig,
-    getSesStatus: getSesDomainStatus,
+    // SES identity status is checked by the Nest API. The BFF performs only
+    // DNS inspection and never holds or uses AWS provider credentials.
+    getSesStatus: async () => ({
+      found: dkimTokens.length > 0,
+      sending: false,
+      dkim: "NOT_STARTED",
+      tokens: dkimTokens,
+    }),
   };
   const result = await verifyDomainDnsCore(domain, options);
   if (!result.ok) {

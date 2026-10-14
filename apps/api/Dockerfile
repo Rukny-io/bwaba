@@ -13,6 +13,7 @@ COPY packages/email-api-pricing ./packages/email-api-pricing
 COPY packages/mail-pricing ./packages/mail-pricing
 COPY packages/domain-verification ./packages/domain-verification
 COPY apps/api/package.json apps/api/package-lock.json* ./apps/api/
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY apps/api/prisma ./apps/api/prisma/
 
 WORKDIR /app/apps/api
@@ -28,7 +29,7 @@ RUN --mount=type=cache,id=npm-api,target=/root/.npm \
   && npm --prefix /app/packages/domain-verification install --no-audit --no-fund \
   && npm --prefix /app/packages/domain-verification run build \
   && for attempt in 1 2 3 4 5; do \
-       npx prisma generate --config prisma/prisma.config.ts && break; \
+       npx prisma generate --config prisma.config.ts && break; \
        if [ "$attempt" -eq 5 ]; then exit 1; fi; \
        echo "prisma generate failed (attempt $attempt), retrying..."; \
        sleep $((attempt * 5)); \
@@ -72,13 +73,14 @@ RUN apk add --no-cache openssl ffmpeg \
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/node_modules ./node_modules
 COPY --from=builder /app/apps/api/prisma ./prisma
+COPY --from=builder /app/apps/api/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/apps/api/openapi ./openapi
 COPY --from=builder /app/apps/api/package*.json ./
 
 # Regenerate prisma client + clean all caches
 RUN --mount=type=cache,id=prisma-api-runner,target=/root/.cache/prisma \
   for attempt in 1 2 3 4 5; do \
-    npx prisma generate --config prisma/prisma.config.ts && break; \
+    npx prisma generate --config prisma.config.ts && break; \
     if [ "$attempt" -eq 5 ]; then exit 1; fi; \
     echo "prisma generate failed (attempt $attempt), retrying..."; \
     sleep $((attempt * 5)); \
@@ -96,4 +98,4 @@ USER nestjs
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy --config prisma/prisma.config.ts && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.ts && node dist/main"]

@@ -10,12 +10,11 @@ export class RedisService implements OnModuleDestroy {
   constructor() {
     const redisUrl = process.env.REDIS_URL || `redis://localhost:6379`;
 
-    // ⚡ Performance: Enhanced Redis configuration with connection pooling
+    // One shared ioredis connection per service instance.
     this.client = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
       enableOfflineQueue: true,
-      // Connection pool settings
       lazyConnect: false,
       keepAlive: 30000, // Keep connection alive for 30s
       retryStrategy: (times: number) => {
@@ -38,7 +37,8 @@ export class RedisService implements OnModuleDestroy {
 
     this.client.on('connect', () => {
       this.isConnected = true;
-      this.logger.log(`✅ Connected to Redis: ${redisUrl}`);
+      // REDIS_URL may contain credentials; never write it to application logs.
+      this.logger.log('Connected to Redis');
     });
 
     this.client.on('ready', () => {
@@ -121,21 +121,24 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
-  // ⚡ Performance: Batch delete with pattern matching
+  // Scan incrementally: KEYS blocks Redis for the entire keyspace.
   async delPattern(pattern: string): Promise<number> {
     if (!this.isConnected) return 0;
 
     try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length === 0) return 0;
-
-      // Delete in batches of 100
-      const batchSize = 100;
+      let cursor = '0';
       let deleted = 0;
-      for (let i = 0; i < keys.length; i += batchSize) {
-        const batch = keys.slice(i, i + batchSize);
-        deleted += await this.client.del(...batch);
-      }
+      do {
+        const [nextCursor, keys] = await this.client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) deleted += await this.client.del(...keys);
+      } while (cursor !== '0');
       this.logger.log(`Deleted ${deleted} keys matching pattern: ${pattern}`);
       return deleted;
     } catch (error) {
@@ -350,7 +353,20 @@ export class RedisService implements OnModuleDestroy {
   async keys(pattern: string): Promise<string[]> {
     if (!this.isConnected) return [];
     try {
-      return await this.client.keys(pattern);
+      const keys = new Set<string>();
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await this.client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        for (const key of batch) keys.add(key);
+      } while (cursor !== '0');
+      return [...keys];
     } catch (error) {
       this.logger.error(`Error keys ${pattern}:`, error.message);
       return [];

@@ -104,8 +104,9 @@ export class MailAppsController {
   checkDomainStatus(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appId') appId: string,
+    @Query('domain') domain?: string,
   ) {
-    return this.domainStatus.check(user.id, appId);
+    return this.domainStatus.check(user.id, appId, domain);
   }
 
   @Get(':appId')

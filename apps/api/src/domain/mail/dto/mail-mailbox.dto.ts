@@ -12,6 +12,14 @@ const LOCAL_PART_PATTERN =
   /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/i;
 
 export class CreateMailMailboxDto {
+  @ApiPropertyOptional({
+    description: 'Domain id to place this mailbox under; defaults to the app domain.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  domainId?: string;
+
   @ApiProperty({
     description: 'Local part before @',
     example: 'info',

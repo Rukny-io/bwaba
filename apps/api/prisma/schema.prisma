@@ -3781,6 +3781,7 @@ model MailApp {
   billingAccount             MailBillingAccount?             @relation(fields: [billingAccountId], references: [id], onDelete: SetNull)
   domainReviewedBy           User?                           @relation("mail_app_domain_reviewer", fields: [domainReviewedById], references: [id], onDelete: SetNull)
   mailboxes                  MailMailbox[]
+  domains                    MailDomain[]
   members                    MailAppMember[]
   emailInvites               MailAppEmailInvite[]
   subscription               MailSubscription?
@@ -3808,6 +3809,31 @@ model MailApp {
   @@index([billingAccountId])
   @@index([createdAt])
   @@map("mail_apps")
+}
+
+/// Verified sending/receiving domain belonging to a Mail workspace.
+/// `MailApp.primaryDomain` remains a compatibility/default-domain cache while
+/// existing consumers migrate to this relation.
+model MailDomain {
+  id                  String                @id @default(uuid())
+  mailAppId           String
+  domain              String                @unique
+  status              MailDomainStatus      @default(NONE)
+  checkedAt           DateTime?
+  ownershipToken      String?
+  ownershipVerifiedAt DateTime?
+  trustStatus         MailDomainTrustStatus @default(UNVERIFIED)
+  verifiedAt          DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  mailApp   MailApp       @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailboxes MailMailbox[]
+
+  @@unique([mailAppId, domain])
+  @@index([mailAppId, status])
+  @@index([status])
+  @@map("mail_domains")
 }
 
 enum MailBillingAccountStatus {
@@ -4085,6 +4111,8 @@ enum MailMailboxStatus {
 model MailMailbox {
   id                   String            @id @default(uuid())
   mailAppId            String
+  /// Normalized domain relation; nullable only for legacy rows during migration.
+  domainId             String?
   /// Local part before @ (e.g. info)
   localPart            String
   /// Domain at creation time (usually MailApp.primaryDomain)
@@ -4108,6 +4136,7 @@ model MailMailbox {
   updatedAt            DateTime          @updatedAt
 
   mailApp        MailApp             @relation(fields: [mailAppId], references: [id], onDelete: Cascade)
+  mailDomain     MailDomain?         @relation(fields: [domainId], references: [id], onDelete: Restrict)
   assignedUser   User?               @relation("mail_mailbox_assignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
   messages       MailMessage[]
   attachments    MailAttachment[]
@@ -4121,6 +4150,7 @@ model MailMailbox {
 
   @@unique([domain, localPart])
   @@index([mailAppId])
+  @@index([domainId])
   @@index([assignedUserId])
   @@index([pendingAssigneeEmail])
   @@index([status])

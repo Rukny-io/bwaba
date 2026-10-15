@@ -51,32 +51,47 @@ export class MailDomainProvisioningService {
         await this.quota.assertCanAttachDomain(access.app.id, userId, domain);
       }
     }
-    const taken = await this.prisma.mailApp.findFirst({
-      where: { primaryDomain: domain, status: 'ACTIVE', appId: { not: appId } },
-      select: { appId: true },
+    const taken = await this.prisma.mailDomain.findUnique({
+      where: { domain },
+      select: { mailApp: { select: { appId: true } } },
     });
-    if (taken) throw new ConflictException('This domain is already connected.');
+    if (taken && taken.mailApp.appId !== appId) {
+      throw new ConflictException('This domain is already connected.');
+    }
 
     // Never delete an existing SES identity during provisioning: the current
     // domain may still serve live mail, and SES creation is idempotent.
     const identity = await this.ses.createEmailIdentity(domain);
-    const updated = await this.prisma.mailApp.update({
+    const appUpdate = await this.prisma.mailApp.update({
       where: { appId },
       data: {
-        primaryDomain: domain,
-        domainStatus: MailDomainStatus.PENDING_DNS,
-        domainCheckedAt: null,
+        // Keep the first domain as the compatibility/default domain. Additional
+        // domains are represented only by MailDomain.
+        ...(access.app.primaryDomain ? {} : {
+          primaryDomain: domain,
+          domainStatus: MailDomainStatus.PENDING_DNS,
+          domainCheckedAt: null,
+        }),
       },
-      select: {
-        appId: true,
-        primaryDomain: true,
-        domainStatus: true,
-        domainCheckedAt: true,
+      select: { id: true, appId: true, primaryDomain: true, domainStatus: true, domainCheckedAt: true },
+    });
+    const domainRow = await this.prisma.mailDomain.upsert({
+      where: { domain },
+      create: {
+        mailAppId: appUpdate.id,
+        domain,
+        status: MailDomainStatus.PENDING_DNS,
       },
+      update: {
+        status: MailDomainStatus.PENDING_DNS,
+        checkedAt: null,
+      },
+      select: { id: true, domain: true, status: true },
     });
 
     return {
-      app: updated,
+      app: appUpdate,
+      domain: domainRow,
       ses: {
         sending: identity.sending,
         dkim: identity.dkim,

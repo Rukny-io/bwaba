@@ -20,7 +20,7 @@ export class MailDomainStatusService {
     private readonly access: MailAppAccessService,
   ) {}
 
-  async check(userId: string, appId: string) {
+  async check(userId: string, appId: string, requestedDomain?: string) {
     await this.access.requireAccess(userId, appId);
     const app = await this.prisma.mailApp.findUniqueOrThrow({
       where: { appId },
@@ -31,12 +31,27 @@ export class MailDomainStatusService {
         domainOwnershipVerifiedAt: true,
       },
     });
-    if (!app.primaryDomain) return { setup: null };
+    const normalized = requestedDomain?.trim().toLowerCase().replace(/\.$/, '');
+    const domainRow = normalized
+      ? await this.prisma.mailDomain.findFirst({
+          where: { mailApp: { appId }, domain: normalized },
+          select: {
+            domain: true,
+            status: true,
+            checkedAt: true,
+            ownershipToken: true,
+            ownershipVerifiedAt: true,
+          },
+        })
+      : null;
+    const domain = domainRow?.domain ?? app.primaryDomain;
+    if (!domain) return { setup: null };
 
-    const ses = await this.ses.getEmailIdentity(app.primaryDomain);
-    const result = await verifyDomainDns(app.primaryDomain, {
+    const ses = await this.ses.getEmailIdentity(domain);
+    const result = await verifyDomainDns(domain, {
       dkimTokens: ses.tokens,
-      ownershipToken: app.domainOwnershipToken ?? undefined,
+      ownershipToken:
+        domainRow?.ownershipToken ?? app.domainOwnershipToken ?? undefined,
       sesConfig: SES_CONFIG,
       getSesStatus: async () => ses,
     });
@@ -44,12 +59,26 @@ export class MailDomainStatusService {
 
     const checkedAt = new Date();
 
+    if (domainRow) {
+      await this.prisma.mailDomain.update({
+        where: { domain: domainRow.domain },
+        data: {
+          checkedAt,
+          status: result.verified ? 'ACTIVE' : 'PENDING_DNS',
+          verifiedAt: result.verified ? checkedAt : null,
+          ownershipVerifiedAt: result.verified
+            ? domainRow.ownershipVerifiedAt ?? checkedAt
+            : null,
+        },
+      });
+    }
+
     return {
       ...result,
       checkedAt: checkedAt.toISOString(),
       tokens: ses.tokens,
       ownershipVerifiedAt: result.verified
-        ? (app.domainOwnershipVerifiedAt?.toISOString() ?? checkedAt.toISOString())
+        ? (domainRow?.ownershipVerifiedAt?.toISOString() ?? app.domainOwnershipVerifiedAt?.toISOString() ?? checkedAt.toISOString())
         : null,
     };
   }

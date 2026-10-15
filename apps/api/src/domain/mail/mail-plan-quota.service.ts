@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MailAppStatus, MailPlan, SubscriptionStatus } from '@prisma/client';
+import {
+  MailAppStatus,
+  MailDomainStatus,
+  MailPlan,
+  SubscriptionStatus,
+} from '@prisma/client';
 import { isMailUnlimited } from '@rukny/mail-pricing';
 import { PrismaService } from '../../core/database/prisma/prisma.service';
 import {
@@ -52,19 +57,16 @@ export class MailPlanQuotaService {
   }
 
   async collectUserDomains(userId: string): Promise<Set<string>> {
-    const rows = await this.prisma.mailApp.findMany({
+    const rows = await this.prisma.mailDomain.findMany({
       where: {
-        userId,
-        status: MailAppStatus.ACTIVE,
-        primaryDomain: { not: null },
+        mailApp: { userId, status: MailAppStatus.ACTIVE },
+        status: MailDomainStatus.ACTIVE,
       },
-      select: { primaryDomain: true },
+      select: { domain: true },
     });
     const domains = new Set<string>();
     for (const row of rows) {
-      if (row.primaryDomain) {
-        domains.add(this.normalizeDomain(row.primaryDomain));
-      }
+      domains.add(this.normalizeDomain(row.domain));
     }
     return domains;
   }

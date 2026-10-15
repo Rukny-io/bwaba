@@ -259,15 +259,28 @@ export class MailMailboxesService {
 
   async create(userId: string, appId: string, dto: CreateMailMailboxDto) {
     const { app } = await this.requireManageAccess(userId, appId);
-    const domain = app.primaryDomain
-      ? this.normalizeDomain(app.primaryDomain)
-      : null;
+    const selectedDomain = dto.domainId
+      ? await this.prisma.mailDomain.findFirst({
+          where: { id: dto.domainId, mailAppId: app.id },
+          select: {
+            id: true,
+            domain: true,
+            status: true,
+          },
+        })
+      : app.primaryDomain
+        ? await this.prisma.mailDomain.findFirst({
+            where: { mailAppId: app.id, domain: this.normalizeDomain(app.primaryDomain) },
+            select: { id: true, domain: true, status: true },
+          })
+        : null;
+    const domain = selectedDomain?.domain ?? null;
     if (!domain) {
       throw new BadRequestException(
         'Connect and verify a domain before creating mailboxes.',
       );
     }
-    if (app.domainStatus !== MailDomainStatus.ACTIVE) {
+    if (selectedDomain.status !== MailDomainStatus.ACTIVE) {
       throw new BadRequestException(
         'Domain must be verified before creating mailboxes.',
       );
@@ -297,6 +310,7 @@ export class MailMailboxesService {
       const created = await this.prisma.mailMailbox.create({
         data: {
           mailAppId: app.id,
+          domainId: selectedDomain.id,
           localPart,
           domain,
           displayName,

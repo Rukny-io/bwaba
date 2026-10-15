@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   MailAppStatus,
+  MailDomainStatus,
   MailMailboxStatus,
   MailPlan,
   SubscriptionStatus,
@@ -90,12 +91,12 @@ export class MailBillingAccountService {
     );
     const app = await this.prisma.mailApp.findUnique({
       where: { id: mailAppId },
-      select: { primaryDomain: true },
+      select: { primaryDomain: true, domains: { select: { domain: true } } },
     });
     if (!app) throw new NotFoundException('Mail workspace not found.');
 
     const domain = rawDomain.trim().toLowerCase().replace(/\.$/, '');
-    if (app.primaryDomain?.toLowerCase().replace(/\.$/, '') === domain) return;
+    if (app.domains.some((row) => row.domain === domain)) return;
 
     const plan =
       account.subscription?.status === SubscriptionStatus.ACTIVE
@@ -105,12 +106,10 @@ export class MailBillingAccountService {
     const limit = isMailUnlimited(configuredLimit)
       ? Number.MAX_SAFE_INTEGER
       : configuredLimit;
-    const used = await this.prisma.mailApp.count({
+    const used = await this.prisma.mailDomain.count({
       where: {
-        billingAccountId: account.id,
-        id: { not: mailAppId },
-        status: MailAppStatus.ACTIVE,
-        primaryDomain: { not: null },
+        mailApp: { billingAccountId: account.id, status: MailAppStatus.ACTIVE },
+        status: MailDomainStatus.ACTIVE,
       },
     });
     if (used >= limit) {

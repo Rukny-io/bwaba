@@ -30,6 +30,7 @@ import {
   loginWithPassword,
   registerWithPassword,
   requestMagicLink,
+  refreshSession,
   saveProfileOAuthHint,
   redirectToAppCallback,
 } from "@/lib/api"
@@ -94,6 +95,25 @@ function LoginPageContent() {
     else if (nextParam) callback.searchParams.set("next", nextParam)
     router.replace(callback.pathname + callback.search)
   }, [router, searchParams, nextParam])
+
+  // A short-lived access token commonly expires while the browser is closed.
+  // If the persistent refresh cookie is still valid, restore the session here
+  // instead of showing the login form and making the user authenticate again.
+  useEffect(() => {
+    if (sessionFlag !== "expired" && sessionFlag !== "invalid") return
+    let cancelled = false
+    void (async () => {
+      const restored = await refreshSession()
+      if (!restored || cancelled) return
+      const target = nextParam
+        ? getSafeRedirectUrl(nextParam)
+        : getRedirectUrlByRole()
+      window.location.replace(target)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sessionFlag, nextParam])
 
   useEffect(() => {
     setMode(modeParam === "password" ? "password" : "sso")

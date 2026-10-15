@@ -55,12 +55,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       }
       const response = NextResponse.next();
-      for (const name of [
-        'access_token',
-        'refresh_token',
-        '__Secure-access_token',
-        '__Secure-refresh_token',
-      ]) {
+      for (const name of ['access_token', '__Secure-access_token']) {
         response.cookies.delete(name);
       }
       return response;

@@ -101,12 +101,7 @@ export async function proxy(request: NextRequest) {
         );
       }
       const response = secureNext(request, security);
-      for (const name of [
-        'access_token',
-        'refresh_token',
-        '__Secure-access_token',
-        '__Secure-refresh_token',
-      ]) {
+      for (const name of ['access_token', '__Secure-access_token']) {
         response.cookies.delete(name);
       }
       return response;

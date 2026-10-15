@@ -106,8 +106,12 @@ export async function proxy(request: NextRequest) {
     const response = NextResponse.next();
     response.cookies.delete("__Secure-access_token");
     response.cookies.delete("access_token");
-    response.cookies.delete("__Secure-refresh_token");
-    response.cookies.delete("refresh_token");
+    // An expired access token does not mean the persistent session is dead.
+    // Keep a valid refresh cookie so the login page can silently renew it.
+    if (!getRefreshToken(request)) {
+      response.cookies.delete("__Secure-refresh_token");
+      response.cookies.delete("refresh_token");
+    }
     return response;
   }
 

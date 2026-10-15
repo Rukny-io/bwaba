@@ -106,10 +106,8 @@ export async function proxy(request: NextRequest) {
       const response = NextResponse.next();
       for (const name of [
         'access_token',
-        'refresh_token',
         'csrf_token',
         '__Secure-access_token',
-        '__Secure-refresh_token',
         '__Host-csrf_token',
       ]) {
         response.cookies.delete({ name, path: '/' });

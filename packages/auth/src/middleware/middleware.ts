@@ -464,10 +464,8 @@ export function createAuthMiddleware(config: MiddlewareConfig) {
         const domain = process.env.COOKIE_DOMAIN || '.rukny.io';
         const deleteOptions = { domain, path: '/' };
         response.cookies.delete({ name: 'access_token', ...deleteOptions });
-        response.cookies.delete({ name: 'refresh_token', ...deleteOptions });
         response.cookies.delete({ name: 'csrf_token', ...deleteOptions });
         response.cookies.delete({ name: '__Secure-access_token', ...deleteOptions });
-        response.cookies.delete({ name: '__Secure-refresh_token', ...deleteOptions });
         response.cookies.delete({ name: '__Secure-csrf_token', ...deleteOptions });
         response.cookies.delete({ name: '__Host-csrf_token', ...deleteOptions });
         return response;

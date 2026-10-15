@@ -230,6 +230,22 @@ export function MailPricingView({ signedIn }: { signedIn: boolean }) {
         ))}
       </div>
 
+      <section
+        className="mx-auto mt-5 grid max-w-3xl grid-cols-1 gap-px overflow-hidden rounded-[1.25rem] bg-[#EBEBEB] sm:grid-cols-3"
+        aria-label="Plan scope"
+      >
+        {[
+          ["One account", "One invoice across your Mail workspaces"],
+          ["Multiple domains", "Connect domains inside each workspace"],
+          ["Shared seats", "Use mailbox seats across your account"],
+        ].map(([title, description]) => (
+          <div key={title} className="bg-[#FAFAFA] px-4 py-3.5 text-center sm:px-3.5">
+            <p className="text-[12px] font-medium text-[#1D1D1D]">{title}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#6B6F76]">{description}</p>
+          </div>
+        ))}
+      </section>
+
       <div className="mt-6 sm:mt-8" data-testid="MailPricingOptions">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
           {plans.map((plan) => (

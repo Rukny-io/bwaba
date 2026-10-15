@@ -1,9 +1,7 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 import PDFDocument from 'pdfkit';
-import QRCode from 'qrcode';
-import arabicReshaper from 'arabic-persian-reshaper';
-import bidiFactory from 'bidi-js';
+import sharp from 'sharp';
 import type { BillingCycle } from '@prisma/client';
 import { MAIL_INVOICE_TAX_IQD } from './mail-plan-limits.config';
 
@@ -29,18 +27,16 @@ const COLORS = {
   muted: '#6b7280',
   faint: '#9ca3af',
   border: '#e5e7eb',
+  surface: '#f9fafb',
 };
 
 const PAGE_MARGIN = 48;
 
 const FONT = {
-  regular: 'NotoSansArabic-Regular',
-  bold: 'NotoSansArabic-Bold',
-  latin: 'IBMPlexSans-Regular',
-  latinBold: 'IBMPlexSans-SemiBold',
+  regular: 'IBMPlexSans-Regular',
+  medium: 'IBMPlexSans-Medium',
+  semibold: 'IBMPlexSans-SemiBold',
 } as const;
-
-const bidi = bidiFactory();
 
 function resolveFontPath(fileName: string): string | null {
   const candidates = [
@@ -55,51 +51,26 @@ function resolveFontPath(fileName: string): string | null {
 }
 
 function registerInvoiceFonts(doc: PDFKit.PDFDocument): void {
-  for (const name of Object.values(FONT)) {
-    const path = resolveFontPath(name);
-    if (path) doc.registerFont(name, path);
-  }
+  const regular = resolveFontPath(FONT.regular);
+  const medium = resolveFontPath(FONT.medium);
+  const semibold = resolveFontPath(FONT.semibold);
+
+  if (regular) doc.registerFont(FONT.regular, regular);
+  if (medium) doc.registerFont(FONT.medium, medium);
+  if (semibold) doc.registerFont(FONT.semibold, semibold);
 }
 
-function hasFont(name: string): boolean {
-  return Boolean(resolveFontPath(name));
-}
-
-function setArabicFont(
+function setInvoiceFont(
   doc: PDFKit.PDFDocument,
-  weight: 'regular' | 'bold' = 'regular',
+  weight: 'regular' | 'medium' | 'semibold' = 'regular',
 ): void {
-  const name = weight === 'bold' ? FONT.bold : FONT.regular;
-  if (hasFont(name)) {
+  const name = FONT[weight];
+  const path = resolveFontPath(name);
+  if (path) {
     doc.font(name);
     return;
   }
-  const latin = weight === 'bold' ? FONT.latinBold : FONT.latin;
-  if (hasFont(latin)) {
-    doc.font(latin);
-    return;
-  }
-  doc.font(weight === 'bold' ? 'Helvetica-Bold' : 'Helvetica');
-}
-
-function setLatinFont(
-  doc: PDFKit.PDFDocument,
-  weight: 'regular' | 'bold' = 'regular',
-): void {
-  const name = weight === 'bold' ? FONT.latinBold : FONT.latin;
-  if (hasFont(name)) {
-    doc.font(name);
-    return;
-  }
-  doc.font(weight === 'bold' ? 'Helvetica-Bold' : 'Helvetica');
-}
-
-/** Shape + reorder Arabic for PDFKit visual drawing. */
-function ar(text: string): string {
-  if (!text) return '';
-  const reshaped = arabicReshaper.ArabicShaper.convertArabic(text);
-  const embeddingLevels = bidi.getEmbeddingLevels(reshaped, 'rtl');
-  return bidi.getReorderedString(reshaped, embeddingLevels);
+  doc.font(weight === 'semibold' ? 'Helvetica-Bold' : 'Helvetica');
 }
 
 export interface MailInvoicePdfInput {
@@ -108,7 +79,6 @@ export interface MailInvoicePdfInput {
   workspaceName: string;
   workspaceDomain: string | null;
   contactEmail: string | null;
-  /** Display name for العميل (falls back to workspaceName). */
   customerName?: string | null;
   planName: string;
   billingCycle: BillingCycle;
@@ -119,48 +89,47 @@ export interface MailInvoicePdfInput {
   paidAt: Date | null;
   qasehPaymentId: string | null;
   paymentRowId: string | null;
+  paymentMethod?: string | null;
   status: string;
   note?: string;
-  /** Public URL encoded in QR (invoice download). */
   proofUrl?: string | null;
-  /** Outbound pack line item instead of seat subscription. */
   isPack?: boolean;
   packEmails?: number | null;
 }
 
-function formatIqdNumber(amount: number): string {
-  return new Intl.NumberFormat('en-IQ').format(Math.max(0, Math.floor(amount)));
-}
-
 function formatIqd(amount: number): string {
-  return `${formatIqdNumber(amount)} IQD`;
-}
-
-function isMostlyArabic(text: string): boolean {
-  return /[\u0600-\u06FF]/.test(text);
-}
-
-function drawNameLine(
-  doc: PDFKit.PDFDocument,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  opts?: { size?: number; color?: string },
-) {
-  if (isMostlyArabic(name)) {
-    textRtl(doc, name, x, y, width, opts);
-    return;
-  }
-  textLtr(doc, name, x, y, width, opts);
+  return `${new Intl.NumberFormat('en-IQ').format(Math.max(0, Math.floor(amount)))} IQD`;
 }
 
 function formatInvoiceDate(value: Date | null | undefined): string {
   if (!value || Number.isNaN(value.getTime())) return '—';
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, '0');
-  const d = String(value.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return value.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function resolveLogoSvgPath(): string | null {
+  const candidates = [
+    join(__dirname, '../../assets/rukny-logo.svg'),
+    join(process.cwd(), 'dist/assets/rukny-logo.svg'),
+    join(process.cwd(), 'src/assets/rukny-logo.svg'),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function loadLogoPng(): Promise<Buffer | null> {
+  const svgPath = resolveLogoSvgPath();
+  if (!svgPath) return null;
+  try {
+    return await sharp(svgPath).resize(160, 160, { fit: 'inside' }).png().toBuffer();
+  } catch {
+    return null;
+  }
 }
 
 function drawRule(
@@ -170,71 +139,67 @@ function drawRule(
   width: number,
   color = COLORS.border,
 ) {
-  doc
-    .save()
-    .strokeColor(color)
-    .lineWidth(0.8)
-    .moveTo(x, y)
-    .lineTo(x + width, y)
-    .stroke()
-    .restore();
+  doc.save().strokeColor(color).lineWidth(1).moveTo(x, y).lineTo(x + width, y).stroke().restore();
 }
 
-function textRtl(
+function drawTableHeader(
   doc: PDFKit.PDFDocument,
-  text: string,
   x: number,
   y: number,
-  width: number,
-  opts?: { bold?: boolean; size?: number; color?: string },
+  widths: number[],
+  labels: string[],
 ) {
-  setArabicFont(doc, opts?.bold ? 'bold' : 'regular');
-  doc
-    .fontSize(opts?.size ?? 10)
-    .fillColor(opts?.color ?? COLORS.ink)
-    .text(ar(text), x, y, { width, align: 'right', lineBreak: false });
-}
+  const height = 26;
+  const totalWidth = widths.reduce((sum, w) => sum + w, 0);
 
-function textLtr(
-  doc: PDFKit.PDFDocument,
-  text: string,
-  x: number,
-  y: number,
-  width: number,
-  opts?: {
-    bold?: boolean;
-    size?: number;
-    color?: string;
-    align?: 'left' | 'right' | 'center';
-  },
-) {
-  setLatinFont(doc, opts?.bold ? 'bold' : 'regular');
-  doc
-    .fontSize(opts?.size ?? 10)
-    .fillColor(opts?.color ?? COLORS.ink)
-    .text(text, x, y, {
-      width,
-      align: opts?.align ?? 'left',
-      lineBreak: false,
+  doc.save();
+  doc.fillColor(COLORS.surface).rect(x, y, totalWidth, height).fill();
+  doc.restore();
+  drawRule(doc, x, y + height, totalWidth);
+
+  let cursor = x + 10;
+  setInvoiceFont(doc, 'medium');
+  doc.fontSize(8.5).fillColor(COLORS.muted);
+  for (let i = 0; i < labels.length; i++) {
+    doc.text(labels[i], cursor, y + 8, {
+      width: widths[i] - 12,
+      align: i >= labels.length - 2 ? 'right' : 'left',
     });
+    cursor += widths[i];
+  }
+
+  return y + height;
+}
+
+function drawTableRow(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  widths: number[],
+  cells: string[],
+  rowHeight = 34,
+) {
+  const totalWidth = widths.reduce((sum, w) => sum + w, 0);
+  let cursor = x + 10;
+
+  setInvoiceFont(doc, 'regular');
+  doc.fontSize(9.5).fillColor(COLORS.ink);
+  for (let i = 0; i < cells.length; i++) {
+    doc.text(cells[i], cursor, y + 10, {
+      width: widths[i] - 12,
+      align: i >= cells.length - 2 ? 'right' : 'left',
+    });
+    cursor += widths[i];
+  }
+
+  drawRule(doc, x, y + rowHeight, totalWidth);
+  return y + rowHeight;
 }
 
 export async function renderMailInvoicePdf(
   input: MailInvoicePdfInput,
 ): Promise<Buffer> {
-  let qrPng: Buffer | null = null;
-  if (input.proofUrl) {
-    try {
-      qrPng = await QRCode.toBuffer(input.proofUrl, {
-        type: 'png',
-        width: 110,
-        margin: 1,
-        errorCorrectionLevel: 'M',
-      });
-    } catch {
-      qrPng = null;
-    }
-  }
+  const logo = await loadLogoPng();
 
   return new Promise((resolve, reject) => {
     try {
@@ -245,276 +210,225 @@ export async function renderMailInvoicePdf(
       doc.on('error', reject);
 
       registerInvoiceFonts(doc);
+      setInvoiceFont(doc, 'regular');
 
       const pageWidth = doc.page.width;
       const contentWidth = pageWidth - PAGE_MARGIN * 2;
-      const left = PAGE_MARGIN;
-      const rightEdge = PAGE_MARGIN + contentWidth;
       let y = PAGE_MARGIN;
 
-      const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(
-        input.amountIqd,
-      );
-      const seats = Math.max(1, input.mailboxCount);
-      const isPack = Boolean(input.isPack);
-      const qty = isPack ? 1 : seats;
-      const unitPrice = Math.floor(subtotalIqd / qty);
-      const periodStart = formatInvoiceDate(input.periodStart);
-      const periodEnd = formatInvoiceDate(input.periodEnd);
-      const issued = formatInvoiceDate(input.issuedAt);
-      const paid = formatInvoiceDate(input.paidAt);
-      const customer =
-        (input.customerName || input.workspaceName || '').trim() || '—';
-      const invoiceShort = input.invoiceNumber.replace(/^RM-/, '');
+      // Header
+      const logoSize = 42;
+      if (logo) {
+        doc.image(logo, PAGE_MARGIN, y, { width: logoSize, height: logoSize });
+      }
 
-      // ── Header ──
-      textLtr(doc, 'Invoice', left, y, 220, { bold: true, size: 28 });
-      textLtr(doc, 'Rukny Mail', left, y + 34, 220, {
-        size: 12,
-        color: COLORS.muted,
-      });
+      const headerTextX = logo ? PAGE_MARGIN + logoSize + 14 : PAGE_MARGIN;
+      setInvoiceFont(doc, 'semibold');
+      doc
+        .fontSize(18)
+        .fillColor(COLORS.ink)
+        .text('Rukny', headerTextX, y + 2);
+      setInvoiceFont(doc, 'regular');
+      doc
+        .fontSize(10)
+        .fillColor(COLORS.muted)
+        .text('Mail · Professional email for teams', headerTextX, y + 24);
 
-      const metaW = 260;
-      textLtr(doc, `Invoice #${invoiceShort}`, rightEdge - metaW, y + 6, metaW, {
-        bold: true,
-        size: 11,
+      const metaX = PAGE_MARGIN + contentWidth - 170;
+      setInvoiceFont(doc, 'semibold');
+      doc.fontSize(22).fillColor(COLORS.ink).text('INVOICE', metaX, y, {
+        width: 170,
         align: 'right',
       });
-      textLtr(doc, `Issued ${issued}`, rightEdge - metaW, y + 24, metaW, {
-        size: 10,
-        color: COLORS.muted,
+      setInvoiceFont(doc, 'regular');
+      doc
+        .fontSize(9)
+        .fillColor(COLORS.muted)
+        .text(`# ${input.invoiceNumber}`, metaX, y + 28, {
+          width: 170,
+          align: 'right',
+        });
+      doc.text(`Issued ${formatInvoiceDate(input.issuedAt)}`, metaX, y + 42, {
+        width: 170,
+        align: 'right',
+      });
+      doc.text(`Status ${input.status}`, metaX, y + 56, {
+        width: 170,
         align: 'right',
       });
 
-      y += 58;
-      drawRule(doc, left, y, contentWidth);
-      y += 20;
-
-      // ── From / Bill to ──
-      const colW = contentWidth / 2 - 12;
-      const fromX = left;
-      const billToX = left + colW + 24;
-
-      textLtr(doc, 'From', fromX, y, colW, { bold: true, size: 11 });
-      textLtr(doc, 'Bill to', billToX, y, colW, { bold: true, size: 11 });
+      y += logoSize + 28;
+      drawRule(doc, PAGE_MARGIN, y, contentWidth);
       y += 18;
 
-      textLtr(doc, 'Rukny Mail', fromX, y, colW, { size: 11 });
-      drawNameLine(doc, customer, billToX, y, colW, { size: 11 });
-      y += 16;
+      // Bill to + company
+      const colWidth = contentWidth / 2 - 8;
+      doc.fontSize(8).fillColor(COLORS.muted).text('BILL TO', PAGE_MARGIN, y);
+      doc
+        .fontSize(8)
+        .fillColor(COLORS.muted)
+        .text('FROM', PAGE_MARGIN + colWidth + 16, y);
 
-      textLtr(doc, 'Baghdad, Iraq', fromX, y, colW, {
-        size: 10,
-        color: COLORS.muted,
+      y += 14;
+      doc.fontSize(11).fillColor(COLORS.ink).text(input.customerName || input.workspaceName, PAGE_MARGIN, y, {
+        width: colWidth,
       });
-      if (input.contactEmail) {
-        textLtr(doc, input.contactEmail, billToX, y, colW, {
-          size: 10,
-          color: COLORS.muted,
-        });
-      }
-      y += 16;
+      doc
+        .fontSize(11)
+        .fillColor(COLORS.ink)
+        .text('Rukny', PAGE_MARGIN + colWidth + 16, y);
 
-      textLtr(doc, 'support@rukny.io', fromX, y, colW, {
-        size: 10,
-        color: COLORS.muted,
-      });
+      y += 16;
+      doc.fontSize(9).fillColor(COLORS.muted);
       if (input.workspaceDomain) {
-        textLtr(doc, input.workspaceDomain, billToX, y, colW, {
-          size: 10,
-          color: COLORS.muted,
-        });
+        doc.text(input.workspaceDomain, PAGE_MARGIN, y, { width: colWidth });
       }
+      doc.text('rukny.io', PAGE_MARGIN + colWidth + 16, y);
+      y += 14;
+
+      if (input.contactEmail) {
+        doc.text(input.contactEmail, PAGE_MARGIN, y, { width: colWidth });
+      }
+      doc.text('support@rukny.io', PAGE_MARGIN + colWidth + 16, y);
       y += 28;
 
-      // ── Line items ──
-      textLtr(doc, 'Order details', left, y, contentWidth, {
-        bold: true,
-        size: 13,
-      });
-      y += 18;
-      drawRule(doc, left, y, contentWidth);
-      y += 12;
-
-      const wProduct = Math.floor(contentWidth * 0.4);
-      const wQty = Math.floor(contentWidth * 0.12);
-      const wPrice = Math.floor(contentWidth * 0.24);
-      const wTotal = contentWidth - wProduct - wQty - wPrice;
-      const xProduct = left;
-      const xQty = xProduct + wProduct;
-      const xPrice = xQty + wQty;
-      const xTotal = xPrice + wPrice;
-
-      textLtr(doc, 'Product', xProduct, y, wProduct - 4, {
-        bold: true,
-        size: 10,
-        color: COLORS.muted,
-      });
-      textLtr(doc, 'Qty', xQty, y, wQty - 4, {
-        bold: true,
-        size: 10,
-        color: COLORS.muted,
-      });
-      textLtr(doc, 'Unit price', xPrice, y, wPrice - 4, {
-        bold: true,
-        size: 10,
-        color: COLORS.muted,
-      });
-      textLtr(doc, 'Line total', xTotal, y, wTotal - 4, {
-        bold: true,
-        size: 10,
-        color: COLORS.muted,
-        align: 'right',
-      });
-      y += 18;
-      drawRule(doc, left, y, contentWidth);
-      y += 12;
+      // Line items table
+      const colWidths = [
+        Math.floor(contentWidth * 0.36),
+        Math.floor(contentWidth * 0.24),
+        Math.floor(contentWidth * 0.1),
+        Math.floor(contentWidth * 0.15),
+        contentWidth -
+          Math.floor(contentWidth * 0.36) -
+          Math.floor(contentWidth * 0.24) -
+          Math.floor(contentWidth * 0.1) -
+          Math.floor(contentWidth * 0.15),
+      ];
 
       const billingLabel =
         input.billingCycle === 'YEARLY' ? 'Yearly' : 'Monthly';
-      const productTitle = isPack
+      const seats = Math.max(1, input.mailboxCount);
+      const unitPrice = Math.floor(input.amountIqd / seats);
+      const description = input.isPack
         ? input.packEmails && input.packEmails > 0
-          ? `Outbound pack · ${formatIqdNumber(input.packEmails)} emails`
+          ? `Outbound pack · ${input.packEmails} emails`
           : 'Outbound email pack'
-        : `Rukny Mail · ${input.planName} (${billingLabel})`;
-      const productSub = isPack
-        ? `Plan: ${input.planName}`
-        : `Billing period: ${periodStart} – ${periodEnd}`;
+        : `${input.planName} plan · ${billingLabel}`;
+      const period = `${formatInvoiceDate(input.periodStart)} – ${formatInvoiceDate(input.periodEnd)}`;
 
-      textLtr(doc, productTitle, xProduct, y, wProduct - 4, {
-        bold: true,
-        size: 11,
-      });
-      textLtr(doc, String(qty), xQty, y, wQty - 4, { size: 11 });
-      textLtr(doc, formatIqd(unitPrice), xPrice, y, wPrice - 4, { size: 10 });
-      textLtr(doc, formatIqd(subtotalIqd), xTotal, y, wTotal - 4, {
-        size: 10,
+      y = drawTableHeader(doc, PAGE_MARGIN, y, colWidths, [
+        'Description',
+        'Period',
+        'Qty',
+        'Unit price',
+        'Amount',
+      ]);
+
+      y = drawTableRow(doc, PAGE_MARGIN, y, colWidths, [
+        description,
+        period,
+        String(seats),
+        formatIqd(unitPrice),
+        formatIqd(input.amountIqd),
+      ]);
+
+      y += 16;
+
+      // Totals (flat 400 IQD tax on every invoice)
+      const { subtotalIqd, taxIqd, totalIqd } = mailInvoiceTotals(input.amountIqd);
+      const totalsLabelX = PAGE_MARGIN + contentWidth - 220;
+      const totalsValueX = PAGE_MARGIN + contentWidth - 90;
+
+      doc.fontSize(9).fillColor(COLORS.muted).text('Subtotal', totalsLabelX, y, {
+        width: 100,
         align: 'right',
       });
-      y += 16;
-      textLtr(doc, productSub, xProduct, y, wProduct - 4, {
-        size: 9,
-        color: COLORS.muted,
-      });
+      doc
+        .fontSize(9)
+        .fillColor(COLORS.ink)
+        .text(formatIqd(subtotalIqd), totalsValueX, y, {
+          width: 90,
+          align: 'right',
+        });
       y += 18;
-      drawRule(doc, left, y, contentWidth);
-      y += 20;
 
-      // ── Totals ──
-      const totalsW = Math.floor(contentWidth * 0.48);
-      const totalsX = rightEdge - totalsW;
-      const labelW = Math.floor(totalsW * 0.55);
-      const valueW = totalsW - labelW;
-
-      textLtr(doc, 'Subtotal', totalsX, y, labelW, {
-        size: 10,
-        color: COLORS.muted,
-      });
-      textLtr(doc, formatIqd(subtotalIqd), totalsX + labelW, y, valueW, {
-        size: 10,
+      doc.fontSize(9).fillColor(COLORS.muted).text('Tax', totalsLabelX, y, {
+        width: 100,
         align: 'right',
       });
+      doc
+        .fontSize(9)
+        .fillColor(COLORS.ink)
+        .text(formatIqd(taxIqd), totalsValueX, y, {
+          width: 90,
+          align: 'right',
+        });
       y += 18;
 
-      textLtr(doc, 'Tax', totalsX, y, labelW, {
-        size: 10,
-        color: COLORS.muted,
-      });
-      textLtr(doc, formatIqd(taxIqd), totalsX + labelW, y, valueW, {
-        size: 10,
+      drawRule(doc, totalsLabelX, y, 190, COLORS.border);
+      y += 10;
+
+      doc.fontSize(11).fillColor(COLORS.ink).text('Total', totalsLabelX, y, {
+        width: 100,
         align: 'right',
       });
-      y += 16;
-      drawRule(doc, totalsX, y, totalsW);
-      y += 12;
-
-      textLtr(doc, 'Total', totalsX, y, labelW, {
-        bold: true,
-        size: 13,
-      });
-      textLtr(doc, formatIqd(totalIqd), totalsX + labelW, y, valueW, {
-        bold: true,
-        size: 13,
-        align: 'right',
-      });
-      y += 36;
-
-      // ── Payment ──
-      textLtr(doc, 'Payment', left, y, contentWidth, {
-        bold: true,
-        size: 13,
-      });
-      y += 18;
-      drawRule(doc, left, y, contentWidth);
-      y += 16;
-
-      const payColW = contentWidth / 2 - 12;
-      const payLeftX = left;
-      const payRightX = left + payColW + 24;
-
-      textLtr(doc, `Order #${invoiceShort}`, payLeftX, y, payColW, {
-        size: 10,
-      });
-      textLtr(doc, 'Payment method: Qi Card', payRightX, y, payColW, {
-        size: 10,
-      });
-      y += 16;
-
-      textLtr(doc, `Order date: ${issued}`, payLeftX, y, payColW, {
-        size: 10,
-      });
-      textLtr(
-        doc,
-        `Paid on: ${paid !== '—' ? paid : issued}`,
-        payRightX,
-        y,
-        payColW,
-        { size: 10 },
-      );
+      doc
+        .fontSize(12)
+        .fillColor(COLORS.ink)
+        .text(formatIqd(totalIqd), totalsValueX, y - 1, {
+          width: 90,
+          align: 'right',
+        });
       y += 22;
 
-      if (qrPng) {
-        textLtr(doc, 'Payment proof (QR)', payLeftX, y, payColW, {
-          size: 10,
-        });
+      doc
+        .fontSize(8)
+        .fillColor(COLORS.faint)
+        .text('All amounts in Iraqi dinar (IQD). Bank fees may apply separately.', PAGE_MARGIN, y);
+      y += 24;
+
+      // Payment details
+      if (input.paidAt || input.qasehPaymentId || input.paymentRowId) {
+        drawRule(doc, PAGE_MARGIN, y, contentWidth);
+        y += 12;
+        doc.fontSize(8).fillColor(COLORS.muted).text('PAYMENT DETAILS', PAGE_MARGIN, y);
         y += 14;
-        const qrSize = 88;
-        doc.image(qrPng, left, y, { width: qrSize, height: qrSize });
-        textLtr(
-          doc,
-          'Scan to view or download this invoice',
-          payLeftX,
-          y + qrSize + 8,
-          payColW,
-          { size: 8, color: COLORS.faint },
-        );
-        y += qrSize + 28;
-      } else if (input.qasehPaymentId) {
-        textLtr(doc, `Reference: ${input.qasehPaymentId}`, payLeftX, y, contentWidth, {
-          size: 9,
-          color: COLORS.muted,
-        });
-        y += 18;
+        doc.fontSize(9).fillColor(COLORS.ink);
+        if (input.paidAt) {
+          doc.text(`Paid on ${formatInvoiceDate(input.paidAt)}`, PAGE_MARGIN, y);
+          y += 14;
+        }
+        if (input.qasehPaymentId) {
+          doc.text(`Reference ${input.qasehPaymentId}`, PAGE_MARGIN, y);
+          y += 14;
+        }
+        if (input.paymentRowId) {
+          doc.text(`Payment id ${input.paymentRowId}`, PAGE_MARGIN, y);
+          y += 14;
+        }
       }
 
       if (input.note) {
-        textLtr(doc, input.note, left, y, contentWidth, {
-          size: 8,
-          color: COLORS.muted,
-        });
-        y += 16;
+        y += 6;
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.muted)
+          .text(input.note, PAGE_MARGIN, y, { width: contentWidth });
+        y += 20;
       }
 
-      const footerY = doc.page.height - PAGE_MARGIN - 20;
-      drawRule(doc, left, footerY - 10, contentWidth);
-      textLtr(
-        doc,
-        'This invoice was generated automatically by Rukny Mail. Questions: support@rukny.io',
-        left,
-        footerY,
-        contentWidth,
-        { size: 8, color: COLORS.faint },
-      );
+      // Footer
+      const footerY = doc.page.height - PAGE_MARGIN - 24;
+      drawRule(doc, PAGE_MARGIN, footerY - 10, contentWidth);
+      doc
+        .fontSize(7.5)
+        .fillColor(COLORS.faint)
+        .text(
+          'This invoice was generated automatically by Rukny Mail for the subscription listed above. For billing questions, contact support@rukny.io.',
+          PAGE_MARGIN,
+          footerY,
+          { width: contentWidth, align: 'left' },
+        );
 
       doc.end();
     } catch (error) {

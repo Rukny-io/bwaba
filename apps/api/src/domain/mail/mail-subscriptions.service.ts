@@ -1245,6 +1245,7 @@ export class MailSubscriptionsService {
           initiatedBy: userId,
           role: String(access.role),
           source: 'qaseh_card',
+          paymentMethod: 'Al-Qaseh',
           invoiceSubtotalIqd: amount,
           invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
           ...(checkoutPhone ? { checkoutPhone } : {}),
@@ -1293,6 +1294,7 @@ export class MailSubscriptionsService {
             initiatedBy: userId,
             role: String(access.role),
             source: 'qaseh_card',
+            paymentMethod: 'Al-Qaseh',
             qasehOrderId: orderId,
             invoiceSubtotalIqd: amount,
             invoiceTaxIqd: MAIL_INVOICE_TAX_IQD,
@@ -1438,6 +1440,7 @@ export class MailSubscriptionsService {
           initiatedBy: userId,
           role: String(access.role),
           source: 'qaseh_card',
+          paymentMethod: 'Al-Qaseh',
           outboundPackThousands: n,
           outboundPackEmails: emails,
           invoiceSubtotalIqd: amount,
@@ -1491,6 +1494,7 @@ export class MailSubscriptionsService {
             initiatedBy: userId,
             role: String(access.role),
             source: 'qaseh_card',
+            paymentMethod: 'Al-Qaseh',
             qasehOrderId: orderId,
             outboundPackThousands: n,
             outboundPackEmails: emails,
@@ -2182,7 +2186,10 @@ export class MailSubscriptionsService {
           metadata: {
             ...meta,
             invoiceNumber,
-            invoiceIssuedAt: new Date().toISOString(),
+            // Keep the invoice date tied to the payment record, never to a later download.
+            invoiceIssuedAt: (
+              payment.paidAt || payment.createdAt
+            ).toISOString(),
             invoiceIssuedBy: opts.issuedBy,
           },
         },
@@ -2204,12 +2211,31 @@ export class MailSubscriptionsService {
     const packEmails = Math.floor(Number(meta.outboundPackEmails) || 0);
     const proofUrl = this.buildInvoiceDownloadUrl(payment.id);
 
+    const storedInvoiceIssuedAt =
+      typeof meta.invoiceIssuedAt === 'string' &&
+      !Number.isNaN(new Date(meta.invoiceIssuedAt).getTime())
+        ? new Date(meta.invoiceIssuedAt)
+        : null;
+    // A completed payment date is authoritative; a later PDF download must not
+    // change the date printed on the invoice.
+    const invoiceIssuedAt = payment.paidAt || storedInvoiceIssuedAt || payment.createdAt;
+    const billingEmail =
+      typeof meta.checkoutEmail === 'string' && meta.checkoutEmail.trim()
+        ? meta.checkoutEmail.trim()
+        : app.contactEmail;
+    const paymentMethod =
+      typeof meta.paymentMethod === 'string' && meta.paymentMethod.trim()
+        ? meta.paymentMethod.trim()
+        : meta.source === 'qaseh_card'
+          ? 'Al-Qaseh'
+          : null;
+
     const buffer = await renderMailInvoicePdf({
       invoiceNumber,
-      issuedAt: new Date(),
+      issuedAt: invoiceIssuedAt,
       workspaceName: app.name,
       workspaceDomain: app.primaryDomain,
-      contactEmail: app.contactEmail,
+      contactEmail: billingEmail,
       customerName: app.name,
       planName: planDef.name,
       billingCycle: payment.billingCycle,
@@ -2221,6 +2247,7 @@ export class MailSubscriptionsService {
       paidAt: payment.paidAt,
       qasehPaymentId: payment.paymentId,
       paymentRowId: payment.id,
+      paymentMethod,
       status: payment.status,
       proofUrl,
       isPack,

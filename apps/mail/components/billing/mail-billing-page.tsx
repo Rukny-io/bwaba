@@ -36,6 +36,7 @@ import {
   downloadMailCurrentPeriodInvoice,
   sendMailPaymentInvoice,
   type MailSubscriptionPaymentView,
+  type MailBillingAccountSnapshot,
 } from "@/lib/mail-subscription-client";
 
 function looksLikeEmail(value: string) {
@@ -103,6 +104,7 @@ export function MailBillingPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [savedContact, setSavedContact] = useState("");
   const [payments, setPayments] = useState<MailSubscriptionPaymentView[]>([]);
+  const [billingAccount, setBillingAccount] = useState<MailBillingAccountSnapshot | null>(null);
   const [notice, setNotice] = useState<NoticeState>(null);
   const [prefs, setPrefs] = useState<MailBillingPreferences>(() =>
     readMailBillingPreferences(),
@@ -127,6 +129,7 @@ export function MailBillingPage() {
     setIsOwner(Boolean(snapshot.isOwner || app.isOwner));
     setHasActiveSubscription(snapshot.subscription?.status === "ACTIVE");
     setPayments(snapshot.subscription?.payments ?? []);
+    setBillingAccount(snapshot.billingAccount ?? null);
   }, []);
 
   useEffect(() => {
@@ -305,6 +308,40 @@ export function MailBillingPage() {
       ) : null}
 
       <MailPlanSettingsSection />
+
+      {billingAccount ? (
+        <BillingSection
+          title="Account overview"
+          description="Your subscription is shared across the Mail workspaces on this billing account."
+        >
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <BillingPanel className="min-w-0">
+              <p className="text-[12px] text-[var(--muted-foreground)]">Mail workspaces</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--foreground)]">
+                {billingAccount.apps.length}
+              </p>
+              <p className="mt-1 truncate text-[12px] text-[var(--muted-foreground)]">
+                {billingAccount.apps.map((entry) => entry.name).join(" · ") || "No workspace"}
+              </p>
+            </BillingPanel>
+            <BillingPanel className="min-w-0">
+              <p className="text-[12px] text-[var(--muted-foreground)]">Mailbox seats</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--foreground)]">
+                {billingAccount.mailboxUsed}
+                {billingAccount.mailboxSeats == null ? "" : ` / ${billingAccount.mailboxSeats}`}
+              </p>
+              <p className="mt-1 text-[12px] text-[var(--muted-foreground)]">Across all workspaces</p>
+            </BillingPanel>
+            <BillingPanel className="min-w-0">
+              <p className="text-[12px] text-[var(--muted-foreground)]">Domains</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--foreground)]">
+                {billingAccount.domainUsed}
+              </p>
+              <p className="mt-1 text-[12px] text-[var(--muted-foreground)]">Verified and connected</p>
+            </BillingPanel>
+          </div>
+        </BillingSection>
+      ) : null}
 
       <MailUsageSection />
 

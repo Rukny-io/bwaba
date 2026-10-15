@@ -14,6 +14,7 @@ import {
 } from '@/lib/oauth-callback';
 
 import { resolveAccountsUrl } from '@rukny/auth/client/env-urls';
+import { resetAuthClientState } from '@/lib/api-client';
 
 function CallbackContent() {
   const router = useRouter();
@@ -52,6 +53,10 @@ function CallbackContent() {
           setError(result.message || 'Could not complete sign-in');
           return;
         }
+
+        // A previous expired session may have opened the refresh circuit
+        // breaker. The newly exchanged session must start clean.
+        resetAuthClientState();
 
         if (result.needsProfileCompletion) {
           const accountsUrl = resolveAccountsUrl();

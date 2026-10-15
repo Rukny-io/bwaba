@@ -117,7 +117,7 @@ async function refreshOnce(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401 || response.status === 403 || response.status === 429) {
           handleAuthFailure();
         }
         return false;
@@ -163,7 +163,14 @@ export async function sessionFetch(
 
   const method = (init.method || "GET").toUpperCase();
   if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
-    const csrf = getCsrfToken();
+    // A session established on another Rukny app may have a valid auth cookie
+    // but no readable CSRF cookie on this app yet. Bootstrap it once via the
+    // single-flight refresh before sending a state-changing request.
+    let csrf = getCsrfToken();
+    if (!csrf && !isRefreshBlocked() && !getGlobalRefreshState().refreshFailed) {
+      await refreshOnce();
+      csrf = getCsrfToken();
+    }
     if (csrf && !headers.has("X-CSRF-Token")) {
       headers.set("X-CSRF-Token", csrf);
     }
@@ -175,7 +182,24 @@ export async function sessionFetch(
     headers,
   });
 
-  if (response.status !== 401) return response;
+  if (response.status !== 401 && response.status !== 403) return response;
+
+  // Retry a CSRF rejection once after bootstrapping the token. This is
+  // intentionally bounded so a bad session cannot create a refresh loop.
+  if (response.status === 403 && method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const body = await response.clone().json().catch(() => null);
+    const message = extractErrorMessage(body);
+    if (message.toLowerCase().includes("csrf") && !getCsrfToken()) {
+      const refreshed = await refreshOnce();
+      const retryCsrf = getCsrfToken();
+      if (refreshed && retryCsrf) {
+        const retryHeaders = new Headers(headers);
+        retryHeaders.set("X-CSRF-Token", retryCsrf);
+        return fetch(input, { ...init, credentials: "include", headers: retryHeaders });
+      }
+    }
+    return response;
+  }
 
   const errorBody = await response.clone().json().catch(() => null);
   const sessionMessage = extractErrorMessage(errorBody);

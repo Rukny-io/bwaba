@@ -16,6 +16,7 @@ import {
 export { clearCsrfToken, getCsrfToken, setCsrfToken };
 
 const REFRESH_STATE_KEY = '__forms_refresh_state__';
+const REFRESH_BLOCK_KEY = 'rukny_forms_auth_block';
 
 interface RefreshState {
   refreshFailed: boolean;
@@ -33,6 +34,15 @@ function getGlobalRefreshState(): RefreshState {
   return w[REFRESH_STATE_KEY];
 }
 
+function isRefreshBlocked(): boolean {
+  if (typeof window === 'undefined') return false;
+  try { return localStorage.getItem(REFRESH_BLOCK_KEY) === '1'; } catch { return false; }
+}
+function blockRefreshAttempts(): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(REFRESH_BLOCK_KEY, '1'); } catch { /* ignore */ }
+}
+
 export interface RefreshResult {
   success: boolean;
   csrfToken?: string;
@@ -43,6 +53,7 @@ function handleAuthFailure(): void {
   clearCsrfToken();
   state.refreshFailed = true;
   state.refreshPromise = null;
+  blockRefreshAttempts();
   notifySessionExpiredAndRedirect();
 }
 
@@ -90,14 +101,14 @@ async function postRefresh(maxAttempts = 3): Promise<Response> {
 
 export async function refreshOnce(): Promise<RefreshResult> {
   const state = getGlobalRefreshState();
-  if (state.refreshFailed) return { success: false };
+  if (state.refreshFailed || isRefreshBlocked()) return { success: false };
   if (state.refreshPromise) return state.refreshPromise;
 
   state.refreshPromise = (async (): Promise<RefreshResult> => {
     try {
       const response = await postRefresh();
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403 || response.status === 429) {
           handleAuthFailure();
         }
         return { success: false };

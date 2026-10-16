@@ -63,6 +63,23 @@ export async function POST(request: Request) {
     binding?.domain === normalized && binding.ownershipToken
       ? binding.ownershipToken
       : generateOwnershipToken();
+
+  // Persist the ownership token before asking Nest for DNS status. Otherwise
+  // the first check can return a record list without _rukny-verify, leaving
+  // the UI with only the SES records until a second check.
+  try {
+    await syncMailAppDomainToNest(session.appId, {
+      primaryDomain: normalized,
+      domainStatus: "PENDING_DNS",
+      domainOwnershipToken: ownershipToken,
+      domainOwnershipVerifiedAt: null,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not save domain ownership.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+
   const remote = await apiFetchJson<{
     domain?: string;
     tokens?: string[];

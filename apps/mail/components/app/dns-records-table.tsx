@@ -35,12 +35,18 @@ function groupedRecords(records: MailDnsRecord[]) {
   );
 
   return [
-    { title: "Ownership", records: ownership, required: true },
+    {
+      title: "Rukny ownership",
+      records: ownership,
+      required: true,
+      emptyHint:
+        "The _rukny-verify TXT record is generated when you start or refresh domain setup.",
+    },
     { title: "MX", records: mx },
     { title: "DKIM", records: dkim },
     { title: "CNAME", records: otherCname },
     { title: "TXT", records: txt },
-  ].filter((group) => group.records.length > 0);
+  ].filter((group) => group.records.length > 0 || group.title === "Rukny ownership");
 }
 
 function groupStatus(records: MailDnsRecord[]): MailDnsRecord["status"] {
@@ -242,6 +248,12 @@ export function DnsRecordsTable({
               <span className="pb-1.5 text-[11px] font-medium tracking-wide text-[var(--muted-foreground)]">
                 Value
               </span>
+
+              {group.records.length === 0 && "emptyHint" in group ? (
+                <p className="col-span-4 border-t border-[var(--border)]/50 pt-3 text-xs leading-5 text-[var(--muted-foreground)]">
+                  {group.emptyHint} Click Check after starting setup to generate it.
+                </p>
+              ) : null}
 
               {group.records.map((record) => (
                 <div key={record.id} className="contents">

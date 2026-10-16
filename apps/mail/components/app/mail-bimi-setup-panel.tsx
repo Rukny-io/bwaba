@@ -7,6 +7,7 @@ import {
   Check,
   Circle,
   Copy,
+  ChevronDown,
   Image as ImageIcon,
   RefreshCw,
   Trash2,
@@ -91,6 +92,7 @@ export function MailBimiSetupPanel({
   const [error, setError] = useState("");
   const [forbidden, setForbidden] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const appId = readMailAppIdFromDocument();
@@ -310,7 +312,13 @@ export function MailBimiSetupPanel({
     >
       <div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-controls="bimi-setup-content"
+            className="min-w-0 flex-1 text-left"
+          >
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id="bimi-setup-title"
@@ -332,7 +340,14 @@ export function MailBimiSetupPanel({
               Upload your logo and CMC/VMC certificate. Rukny hosts both and
               gives you the BIMI DNS values for {domain}.
             </p>
-          </div>
+          </button>
+          <ChevronDown
+            className={cn(
+              "mt-1 size-5 shrink-0 text-[var(--muted-foreground)] transition-transform",
+              expanded && "rotate-180",
+            )}
+            aria-hidden
+          />
           <button
             type="button"
             onClick={() => void recheck()}
@@ -366,7 +381,7 @@ export function MailBimiSetupPanel({
         ) : null}
       </div>
 
-      {loading ? (
+      {expanded && (loading ? (
         <div
           className="flex min-h-44 items-center justify-center gap-2 pt-6 text-sm text-[var(--muted-foreground)]"
           role="status"
@@ -629,7 +644,7 @@ export function MailBimiSetupPanel({
         <div className="pt-6 text-sm text-[var(--muted-foreground)]">
           BIMI setup is unavailable right now. Refresh the page and try again.
         </div>
-      )}
+      ))}
     </section>
   );
 }

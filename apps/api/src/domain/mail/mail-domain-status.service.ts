@@ -55,9 +55,12 @@ export class MailDomainStatusService {
         domainRow?.ownershipToken ?? app.domainOwnershipToken ?? undefined,
       sesConfig: SES_CONFIG,
       getSesStatus: async () => ses,
-      // DMARC and custom MAIL FROM improve deliverability but should not make
-      // a freshly configured domain appear broken while they propagate.
-      requiredPurposes: ['RUKNY_OWNERSHIP', 'MX', 'SPF', 'DKIM'],
+      // SES Easy DKIM is already a DNS-backed proof that the user controls the
+      // domain. Keep the Rukny TXT token as an optional extra claim, so users
+      // do not have to publish a second ownership record just to activate
+      // Mail. DMARC and custom MAIL FROM improve deliverability but are also
+      // intentionally non-blocking during setup.
+      requiredPurposes: ['MX', 'SPF', 'DKIM'],
     });
     if (!result.ok) return result;
 

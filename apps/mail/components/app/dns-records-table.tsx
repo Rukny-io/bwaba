@@ -38,9 +38,9 @@ function groupedRecords(records: MailDnsRecord[]) {
     {
       title: "Rukny ownership",
       records: ownership,
-      required: true,
+      required: false,
       emptyHint:
-        "The _rukny-verify TXT record is generated when you start or refresh domain setup.",
+        "Optional extra ownership proof. SES DKIM verification is sufficient to activate this domain.",
     },
     { title: "MX", records: mx },
     { title: "DKIM", records: dkim },
@@ -252,7 +252,7 @@ export function DnsRecordsTable({
 
               {group.records.length === 0 && "emptyHint" in group ? (
                 <p className="col-span-4 border-t border-[var(--border)]/50 pt-3 text-xs leading-5 text-[var(--muted-foreground)]">
-                  {group.emptyHint} Click Check after starting setup to generate it.
+                  {group.emptyHint}
                 </p>
               ) : null}
 

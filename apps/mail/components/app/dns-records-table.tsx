@@ -50,6 +50,7 @@ function groupedRecords(records: MailDnsRecord[]) {
 }
 
 function groupStatus(records: MailDnsRecord[]): MailDnsRecord["status"] {
+  if (records.length === 0) return "failed";
   if (records.every((record) => record.status === "verified"))
     return "verified";
   if (records.some((record) => record.status === "failed")) return "failed";

@@ -71,7 +71,15 @@ export class MailBillingAccountService {
         mailboxSeats: Math.max(0, legacy?.mailboxCount ?? 0),
         domainSlots: 1,
       },
-      update: { billingAccountId: account.id },
+      update: {
+        billingAccountId: account.id,
+        // Reconcile allocations created during the billing migration. An
+        // existing zero-seat row must not shadow the active legacy
+        // subscription's mailbox allowance.
+        ...(legacy
+          ? { mailboxSeats: Math.max(0, legacy.mailboxCount) }
+          : {}),
+      },
     });
 
     return this.prisma.mailBillingAccount.findUniqueOrThrow({

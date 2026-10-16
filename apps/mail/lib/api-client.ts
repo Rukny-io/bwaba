@@ -189,7 +189,7 @@ export async function sessionFetch(
   if (response.status === 403 && method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
     const body = await response.clone().json().catch(() => null);
     const message = extractErrorMessage(body);
-    if (message.toLowerCase().includes("csrf") && !getCsrfToken()) {
+    if (message.toLowerCase().includes("csrf")) {
       const refreshed = await refreshOnce();
       const retryCsrf = getCsrfToken();
       if (refreshed && retryCsrf) {

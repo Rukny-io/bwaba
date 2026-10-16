@@ -7,13 +7,28 @@ info:
 
     Authenticate every request with a **live** API key (`X-API-Key: rk_live_…`) created for an app that has the product installed.
 
+    Never expose API keys in browser code, mobile apps, logs, or support tickets. Use
+    one key per environment, grant only the required scopes, and rotate immediately
+    if a key may have been disclosed. All timestamps are ISO-8601 UTC and all phone
+    numbers use E.164 format.
+
     Interactive docs are served at `/api/reference` on the API host.
+  contact:
+    name: Rukny Developer Support
+    url: https://rukny.io
+  externalDocs:
+    description: Developer portal
+    url: https://dev.rukny.io
 servers:
   - url: https://api.rukny.io/api/v1
     description: Production
   - url: http://localhost:3001/api/v1
     description: Local development
 tags:
+  - name: Email API - Messages
+    description: Transactional email sending and delivery status.
+  - name: Email API - Domains
+    description: Domain ownership, DNS verification, and authorized senders.
   - name: Rukny OTP
     description: WhatsApp OTP delivery using the Rukny-managed sender.
 security:
@@ -26,6 +41,136 @@ components:
       name: X-API-Key
       description: Live API key (rk_live_…) linked to your developer app.
   schemas:
+    SendEmailRequest:
+      type: object
+      required: [from, to, subject]
+      properties:
+        from:
+          type: string
+          format: email
+          description: An authorized sender address on a verified domain.
+          example: no-reply@example.com
+        fromName:
+          type: string
+          maxLength: 120
+          description: Optional display name. Newlines are rejected.
+          example: Rukny
+        to:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            format: email
+          description: One recipient per request in the current API version.
+          example: ['customer@example.net']
+        subject:
+          type: string
+          maxLength: 255
+          description: Message subject. Newlines are rejected.
+          example: Your verification code
+        bodyText:
+          type: string
+          maxLength: 100000
+          example: Your code is 482913.
+        bodyHtml:
+          type: string
+          maxLength: 100000
+          example: '<p>Your code is <strong>482913</strong>.</p>'
+        replyTo:
+          type: array
+          maxItems: 1
+          items:
+            type: string
+            format: email
+    EmailMessage:
+      type: object
+      required: [externalId, status, createdAt]
+      properties:
+        externalId:
+          type: string
+          example: em_01JZ3G0YJ4QJ9Y7C1VQY0Y2S4M
+        status:
+          type: string
+          enum: [QUEUED, SENT, DELIVERED, BOUNCED, COMPLAINED, SUPPRESSED, FAILED]
+          example: SENT
+        createdAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+    CreateDomainRequest:
+      type: object
+      required: [domain]
+      properties:
+        domain:
+          type: string
+          format: hostname
+          maxLength: 253
+          example: example.com
+    DomainRecord:
+      type: object
+      properties:
+        domain:
+          type: string
+          example: example.com
+        status:
+          type: string
+          enum: [pending, verified]
+        dkimTokens:
+          type: array
+          items: { type: string }
+          description: Publish the returned DKIM CNAME values exactly as shown.
+        ownershipToken:
+          type: string
+          description: Publish as the Rukny ownership TXT value; treat it as sensitive setup data.
+        ownershipVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+    DomainVerificationResult:
+      type: object
+      properties:
+        id: { type: string, example: dkim-1 }
+        status:
+          type: string
+          enum: [pending, checking, verified, failed]
+    DomainStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/DomainRecord'
+        - type: object
+          properties:
+            verified: { type: boolean }
+            waiting: { type: boolean }
+            results:
+              type: array
+              items: { $ref: '#/components/schemas/DomainVerificationResult' }
+    CreateSenderRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: no-reply@example.com
+    Sender:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        status: { type: string, example: active }
+        domainStatus: { type: string, example: verified }
+        createdAt: { type: string, format: date-time }
     SendRuknyOtpRequest:
       type: object
       required: [to, code]
@@ -66,7 +211,151 @@ components:
                 type: string
         error:
           type: string
+        requestId:
+          type: string
+          description: Include this identifier when contacting support.
 paths:
+  /email/messages:
+    post:
+      tags: [Email API - Messages]
+      summary: Send one transactional email
+      description: |
+        Sends one email from an authorized sender. Use the same `Idempotency-Key`
+        when retrying a timed-out request; a replay returns the original message.
+        Test keys can send only to an approved test recipient.
+      operationId: sendEmail
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+            pattern: '^[A-Za-z0-9_-]+$'
+          description: Stable unique key for this logical send. Never reuse it for a different message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendEmailRequest' }
+      responses:
+        '200':
+          description: Email accepted by the provider.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailMessage' }
+        '400': { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '403': { description: Missing scope, unverified sender, suppression, or product not installed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '429': { description: Rate or quota limit exceeded, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '502': { description: Provider unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /email/messages/{id}:
+    get:
+      tags: [Email API - Messages]
+      summary: Get email delivery status
+      operationId: getEmailStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          example: em_01JZ3G0YJ4QJ9Y7C1VQY0Y2S4M
+      responses:
+        '200':
+          description: Current delivery status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailMessage' }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '404': { description: Message not found for this app, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /email/domains:
+    get:
+      tags: [Email API - Domains]
+      summary: List domains for the current app
+      operationId: listEmailDomains
+      responses:
+        '200':
+          description: Domains and their verification state.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DomainRecord' }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+    post:
+      tags: [Email API - Domains]
+      summary: Start domain verification
+      operationId: createEmailDomain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDomainRequest' }
+      responses:
+        '200':
+          description: Domain created with DNS setup values.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainRecord' }
+        '400': { description: Invalid domain or quota, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '409': { description: Domain already claimed, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /email/domains/{domain}:
+    get:
+      tags: [Email API - Domains]
+      summary: Get domain verification status
+      operationId: getEmailDomain
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string, format: hostname }
+      responses:
+        '200':
+          description: Domain status and DNS records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainStatusResponse' }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '404': { description: Domain not found for this app, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /email/domains/{domain}/verify:
+    post:
+      tags: [Email API - Domains]
+      summary: Recheck domain DNS and SES verification
+      operationId: verifyEmailDomain
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string, format: hostname }
+      responses:
+        '200':
+          description: Verification results for each required record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DomainStatusResponse' }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '404': { description: Domain not found for this app, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  /email/senders:
+    post:
+      tags: [Email API - Domains]
+      summary: Authorize a sender on a verified domain
+      operationId: createEmailSender
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSenderRequest' }
+      responses:
+        '200':
+          description: Sender authorized.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sender' }
+        '400': { description: Invalid or unverified sender domain, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '401': { description: Missing or invalid API key, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+        '403': { description: Missing scope or API key not linked to an app, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
   /otp/send:
     post:
       tags: [Rukny OTP]

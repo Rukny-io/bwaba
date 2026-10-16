@@ -253,8 +253,13 @@ async function apiClient<T>(
     ...(customHeaders as Record<string, string>),
   };
 
-  const csrf = getCsrfToken();
-  if (csrf && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+  const isMutation = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+  let csrf = getCsrfToken();
+  if (isMutation && !csrf && !isRefreshBlocked() && !getGlobalRefreshState().refreshFailed) {
+    const refreshed = await refreshOnce();
+    if (refreshed.success) csrf = refreshed.csrfToken ?? getCsrfToken();
+  }
+  if (csrf && isMutation) {
     headers['X-CSRF-Token'] = csrf;
   }
 
@@ -295,6 +300,25 @@ async function apiClient<T>(
       });
     } else {
       throw new ApiException(401, sessionMessage || 'Unauthorized');
+    }
+  }
+
+  if (response.status === 403 && isMutation) {
+    const bodyData = await response.clone().json().catch(() => null);
+    const message = String(bodyData?.message ?? bodyData?.error ?? '').toLowerCase();
+    if (message.includes('csrf')) {
+      const refreshed = await refreshOnce();
+      const retryCsrf = refreshed.csrfToken ?? getCsrfToken();
+      if (refreshed.success && retryCsrf) {
+        headers['X-CSRF-Token'] = retryCsrf;
+        response = await fetchWithTimeout(url, {
+          ...rest,
+          method,
+          credentials: 'include',
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+      }
     }
   }
 

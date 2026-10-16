@@ -39,7 +39,6 @@ const DOMAIN_GATED_PREFIXES = [
   "/auto-reply",
   "/security",
   "/quarantine",
-  "/domain",
   "/devices",
   "/logs",
   "/dkim",

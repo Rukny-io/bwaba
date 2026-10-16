@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { exchangeCodeOnce, fetchCurrentUser } from '@/lib/api';
+import { resetAuthClientState } from '@/lib/api-client';
 import { resolveClientNext } from '@/lib/auth-redirect';
 import {
   clearOAuthParamsFromUrl,
@@ -56,6 +57,10 @@ function CallbackContent() {
           setError(result.message || 'تعذّر إكمال تسجيل الدخول');
           return;
         }
+
+        // A previous expired session may have blocked refresh attempts in this
+        // browser. A successful OAuth exchange starts a fresh client session.
+        resetAuthClientState();
 
         localStorage.removeItem('auth_next');
 

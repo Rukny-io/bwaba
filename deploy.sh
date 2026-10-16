@@ -17,6 +17,24 @@ if [ ! -f .env.production ]; then
     exit 1
 fi
 
+# Guard against deploying the development stack or a production file with
+# host-only/insecure cookies. Keep values out of logs; only validate them.
+env_value() {
+    awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); gsub(/^"|"$/, ""); print; exit}' .env.production
+}
+if [ "$(env_value NODE_ENV)" != "production" ]; then
+    echo "❌ .env.production must contain NODE_ENV=production"
+    exit 1
+fi
+if [ -z "$(env_value COOKIE_DOMAIN)" ]; then
+    echo "❌ COOKIE_DOMAIN is required (for example .rukny.io)"
+    exit 1
+fi
+if [ "$(env_value COOKIE_SECURE)" != "true" ]; then
+    echo "❌ COOKIE_SECURE=true is required for HTTPS production"
+    exit 1
+fi
+
 # ─── Build and start containers ───
 # Note: do NOT `export $(... xargs)` — values like "Name <email@x>" break bash.
 # docker compose --env-file handles quoting correctly.

@@ -94,8 +94,11 @@ services:
       API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.rukny.io}
       DEVELOPERS_FRONTEND_URL: https://${DEVELOPERS_DOMAIN:-dev.rukny.io}
       BUSINESS_FRONTEND_URL: https://${BUSINESS_DOMAIN:-business.rukny.io}
-      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Production must share auth cookies across the Rukny subdomains. Fail
+      # during compose interpolation instead of silently starting an insecure
+      # API with host-only cookies when .env.production was not loaded.
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:?COOKIE_DOMAIN is required for production}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
       # Trust nginx/accounts/docker hops so OAuth IP binding uses real client IP
       TRUSTED_PROXY_MODE: ${TRUSTED_PROXY_MODE:-xff}
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.16.0.0/12,10.0.0.0/8}

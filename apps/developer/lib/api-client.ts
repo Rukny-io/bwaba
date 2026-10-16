@@ -14,6 +14,20 @@ export { clearCsrfToken, getCsrfToken, setCsrfToken };
 const REFRESH_STATE_KEY = '__dev_refresh_state__';
 const REFRESH_BLOCK_KEY = 'rukny_dev_auth_block';
 
+/** Clear stale client-side refresh state after a successful login. */
+export function resetAuthClientState(): void {
+  if (typeof window === 'undefined') return;
+  clearCsrfToken();
+  try {
+    localStorage.removeItem(REFRESH_BLOCK_KEY);
+  } catch {
+    /* ignore */
+  }
+  const state = getGlobalRefreshState();
+  state.refreshFailed = false;
+  state.refreshPromise = null;
+}
+
 interface RefreshState {
   refreshFailed: boolean;
   refreshPromise: Promise<RefreshResult> | null;

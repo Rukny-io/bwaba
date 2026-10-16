@@ -25,6 +25,7 @@ export class MailDomainStatusService {
     const app = await this.prisma.mailApp.findUniqueOrThrow({
       where: { appId },
       select: {
+        id: true,
         appId: true,
         primaryDomain: true,
         domainOwnershipToken: true,
@@ -63,17 +64,37 @@ export class MailDomainStatusService {
     const checkedAt = new Date();
 
     if (domainRow) {
-      await this.prisma.mailDomain.update({
-        where: { domain: domainRow.domain },
-        data: {
-          checkedAt,
-          status: result.verified ? 'ACTIVE' : 'PENDING_DNS',
-          verifiedAt: result.verified ? checkedAt : null,
-          ownershipVerifiedAt: result.verified
-            ? (domainRow.ownershipVerifiedAt ?? checkedAt)
-            : null,
-        },
-      });
+      const nextStatus = result.verified ? 'ACTIVE' : 'PENDING_DNS';
+      const nextOwnershipVerifiedAt = result.verified
+        ? (domainRow.ownershipVerifiedAt ?? checkedAt)
+        : null;
+
+      // Keep the legacy primary-domain fields in sync with the normalized
+      // mailDomain row. The Mail UI and the admin approval flow read these
+      // fields, while the verifier persists the per-domain row.
+      await this.prisma.$transaction([
+        this.prisma.mailDomain.update({
+          where: { domain: domainRow.domain },
+          data: {
+            checkedAt,
+            status: nextStatus,
+            verifiedAt: result.verified ? checkedAt : null,
+            ownershipVerifiedAt: nextOwnershipVerifiedAt,
+          },
+        }),
+        ...(app.primaryDomain === domainRow.domain
+          ? [
+              this.prisma.mailApp.update({
+                where: { id: app.id },
+                data: {
+                  domainStatus: nextStatus,
+                  domainCheckedAt: checkedAt,
+                  domainOwnershipVerifiedAt: nextOwnershipVerifiedAt,
+                },
+              }),
+            ]
+          : []),
+      ]);
     }
 
     return {

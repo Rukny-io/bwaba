@@ -54,6 +54,9 @@ export class MailDomainStatusService {
         domainRow?.ownershipToken ?? app.domainOwnershipToken ?? undefined,
       sesConfig: SES_CONFIG,
       getSesStatus: async () => ses,
+      // DMARC and custom MAIL FROM improve deliverability but should not make
+      // a freshly configured domain appear broken while they propagate.
+      requiredPurposes: ['RUKNY_OWNERSHIP', 'MX', 'SPF', 'DKIM'],
     });
     if (!result.ok) return result;
 
@@ -67,7 +70,7 @@ export class MailDomainStatusService {
           status: result.verified ? 'ACTIVE' : 'PENDING_DNS',
           verifiedAt: result.verified ? checkedAt : null,
           ownershipVerifiedAt: result.verified
-            ? domainRow.ownershipVerifiedAt ?? checkedAt
+            ? (domainRow.ownershipVerifiedAt ?? checkedAt)
             : null,
         },
       });
@@ -78,7 +81,9 @@ export class MailDomainStatusService {
       checkedAt: checkedAt.toISOString(),
       tokens: ses.tokens,
       ownershipVerifiedAt: result.verified
-        ? (domainRow?.ownershipVerifiedAt?.toISOString() ?? app.domainOwnershipVerifiedAt?.toISOString() ?? checkedAt.toISOString())
+        ? (domainRow?.ownershipVerifiedAt?.toISOString() ??
+          app.domainOwnershipVerifiedAt?.toISOString() ??
+          checkedAt.toISOString())
         : null,
     };
   }

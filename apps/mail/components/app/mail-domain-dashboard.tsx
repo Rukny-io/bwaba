@@ -83,6 +83,16 @@ export function MailDomainDashboard({
     writeMailDomainSetup(synced);
   }, [initial]);
 
+  // DNS providers may publish records after the user leaves this page. Keep
+  // pending setups fresh without requiring repeated manual clicks.
+  useEffect(() => {
+    if (setup.status === "ACTIVE") return;
+    const timer = window.setInterval(() => {
+      if (!checking) void recheck();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [setup.status, checking]);
+
   function persist(next: MailDomainSetup) {
     const synced = syncMailDomainRecords(next);
     setSetup(synced);
@@ -111,7 +121,10 @@ export function MailDomainDashboard({
     });
     try {
       const result = await verifyDomainRequest(setup.domain);
-      if (result.tokens?.length && !dkimTokensMatch(setup.dkimTokens, result.tokens)) {
+      if (
+        result.tokens?.length &&
+        !dkimTokensMatch(setup.dkimTokens, result.tokens)
+      ) {
         markTokensChanged(true);
       }
       const base = result.tokens?.length
@@ -173,6 +186,12 @@ export function MailDomainDashboard({
                 ? "DNS is live. Sending confirmation is still pending."
                 : "Some DNS records are missing or still updating."}
           </p>
+          {setup.lastCheckedAt ? (
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]/80">
+              Last checked {new Date(setup.lastCheckedAt).toLocaleString()}. We
+              recheck automatically while DNS is pending.
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -195,8 +214,8 @@ export function MailDomainDashboard({
           className="rounded-2xl border border-[color-mix(in_srgb,var(--warning)_35%,var(--border))] bg-[color-mix(in_srgb,var(--warning)_8%,var(--surface))] px-4 py-3 text-sm text-[var(--foreground)]"
           role="status"
         >
-          DKIM tokens were refreshed from AWS SES. Re-export DNS records and update any
-          outdated CNAME rows at your DNS host.
+          DKIM tokens were refreshed from AWS SES. Re-export DNS records and
+          update any outdated CNAME rows at your DNS host.
         </div>
       ) : null}
 

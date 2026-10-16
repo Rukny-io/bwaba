@@ -71,6 +71,7 @@ import { MailDomainProvisioningService } from './mail-domain-provisioning.servic
 import { MailDomainStatusService } from './mail-domain-status.service';
 import { AuthModule } from '../auth/auth.module';
 import { MailBillingAccountService } from './mail-billing-account.service';
+import { MailDomainVerificationCronService } from './mail-domain-verification-cron.service';
 
 @Module({
   imports: [
@@ -152,6 +153,7 @@ import { MailBillingAccountService } from './mail-billing-account.service';
     MailDomainProvisioningService,
     MailDomainStatusService,
     MailBillingAccountService,
+    MailDomainVerificationCronService,
   ],
   exports: [
     MailSesModule,

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ApiExcludeController, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../core/common/decorators/auth/public.decorator';
+import { isSnsEnvelope } from '../../core/common/utils/sns-signature.util';
 import { MailInboundService } from './mail-inbound.service';
 
 @ApiTags('Mail - Webhooks')
@@ -23,11 +24,15 @@ export class MailSesWebhookController {
     @Req() req: { body?: unknown; rawBody?: Buffer },
     @Headers('x-mail-webhook-token') tokenHeader?: string,
   ) {
-    // Keep the secret out of URLs, access logs, referrers, and proxy history.
-    this.inbound.assertWebhookToken(tokenHeader);
-
     // Parse from rawBody first so global SanitizePipe never mutates the signed SNS envelope.
     const payload = parseSnsPayload(req);
+
+    // Amazon SNS cannot send custom headers. Signed envelopes are authenticated
+    // by Signature + TopicArn in handleSnsPayload. Direct SES JSON still needs
+    // the shared secret header — never a query token (it leaks into access logs).
+    if (!isSnsEnvelope(payload)) {
+      this.inbound.assertWebhookToken(tokenHeader);
+    }
 
     return this.inbound.handleSnsPayload(payload);
   }

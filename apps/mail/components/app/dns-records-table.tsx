@@ -22,7 +22,9 @@ function downloadFile(filename: string, contents: string, type: string) {
 const COLUMNS = "grid-cols-[2.75rem_3.5rem_minmax(0,1fr)_minmax(0,1.45fr)]";
 
 function groupedRecords(records: MailDnsRecord[]) {
-  const ownership = records.filter((record) => record.purpose === "RUKNY_OWNERSHIP");
+  const ownership = records.filter(
+    (record) => record.purpose === "RUKNY_OWNERSHIP",
+  );
   const mx = records.filter((record) => record.type === "MX");
   const dkim = records.filter((record) => record.purpose === "DKIM");
   const txt = records.filter(
@@ -42,7 +44,8 @@ function groupedRecords(records: MailDnsRecord[]) {
 }
 
 function groupStatus(records: MailDnsRecord[]): MailDnsRecord["status"] {
-  if (records.every((record) => record.status === "verified")) return "verified";
+  if (records.every((record) => record.status === "verified"))
+    return "verified";
   if (records.some((record) => record.status === "failed")) return "failed";
   if (records.some((record) => record.status === "checking")) return "checking";
   return "pending";
@@ -53,6 +56,13 @@ function statusDot(status: MailDnsRecord["status"]) {
   if (status === "failed") return "bg-[var(--danger)]";
   if (status === "checking") return "bg-[var(--primary)]";
   return "bg-[var(--muted-foreground)]/35";
+}
+
+function statusLabel(status: MailDnsRecord["status"]) {
+  if (status === "verified") return "Verified";
+  if (status === "failed") return "Not found yet";
+  if (status === "checking") return "Checking";
+  return "Waiting for DNS";
 }
 
 function CopyCell({
@@ -78,7 +88,11 @@ function CopyCell({
         className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[rgba(15,23,42,0.06)] hover:text-[var(--foreground)]"
         aria-label="Copy"
       >
-        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        {copied ? (
+          <Check className="size-3.5" />
+        ) : (
+          <Copy className="size-3.5" />
+        )}
       </button>
     </div>
   );
@@ -115,7 +129,9 @@ export function DnsRecordsTable({
       return fresh.zoneFile;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Could not export DNS from SES.";
+        error instanceof Error
+          ? error.message
+          : "Could not export DNS from SES.";
       setExportError(message);
       throw error;
     } finally {
@@ -126,13 +142,18 @@ export function DnsRecordsTable({
   async function copy(id: string, value: string) {
     await navigator.clipboard.writeText(value);
     setCopied(id);
-    window.setTimeout(() => setCopied((current) => (current === id ? null : current)), 1200);
+    window.setTimeout(
+      () => setCopied((current) => (current === id ? null : current)),
+      1200,
+    );
   }
 
   return (
     <div className={cn("flex flex-col gap-4", large && "pb-2")}>
       <div className="flex h-8 shrink-0 items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]">DNS</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight text-[var(--foreground)]">
+          DNS
+        </h2>
         <div className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--muted-foreground)]">
           <button
             type="button"
@@ -175,7 +196,9 @@ export function DnsRecordsTable({
       </div>
 
       {exportError ? (
-        <p className="text-sm text-[var(--danger)]" role="alert">{exportError}</p>
+        <p className="text-sm text-[var(--danger)]" role="alert">
+          {exportError}
+        </p>
       ) : null}
 
       <ul className="grid gap-3">
@@ -186,7 +209,12 @@ export function DnsRecordsTable({
           >
             <div className="mb-2 flex h-5 shrink-0 items-center gap-2">
               {showStatus ? (
-                <span className={cn("size-1.5 rounded-full", statusDot(groupStatus(group.records)))} />
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    statusDot(groupStatus(group.records)),
+                  )}
+                />
               ) : null}
               <span className="text-[13px] font-semibold tracking-tight text-[var(--foreground)]">
                 {group.title}
@@ -234,8 +262,22 @@ export function DnsRecordsTable({
                     <CopyCell
                       value={record.value}
                       copied={copied === `${record.id}-value`}
-                      onCopy={() => void copy(`${record.id}-value`, record.value)}
+                      onCopy={() =>
+                        void copy(`${record.id}-value`, record.value)
+                      }
                     />
+                  </div>
+                  <div className="col-span-full -mt-1 border-t border-[var(--border)]/30 pt-1 text-[11px] text-[var(--muted-foreground)]">
+                    <span
+                      className={cn(
+                        "font-medium",
+                        record.status === "verified" && "text-[var(--success)]",
+                        record.status === "failed" && "text-[var(--danger)]",
+                      )}
+                    >
+                      {statusLabel(record.status)}
+                    </span>
+                    <span className="ml-2">{record.hint}</span>
                   </div>
                 </div>
               ))}

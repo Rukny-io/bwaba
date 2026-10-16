@@ -248,10 +248,16 @@ export class MailInboundService {
     if (isSnsEnvelope(body)) {
       const envelope = asSnsEnvelope(body);
       await verifySnsSignature(envelope);
-      assertExpectedSnsTopic(
-        envelope.TopicArn!,
-        this.config.get<string>('MAIL_SES_SNS_TOPIC_ARN'),
-      );
+      const expectedTopic = this.config
+        .get<string>('MAIL_SES_SNS_TOPIC_ARN')
+        ?.trim();
+      if (!expectedTopic) {
+        this.logger.error(
+          'MAIL_SES_SNS_TOPIC_ARN is not set — refusing SNS webhook (fail-closed).',
+        );
+        throw new UnauthorizedException('Mail webhook is not configured.');
+      }
+      assertExpectedSnsTopic(envelope.TopicArn!, expectedTopic);
 
       if (
         envelope.Type === 'SubscriptionConfirmation' &&

@@ -294,59 +294,61 @@ export function MailInboxReaderCard({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none px-4 pb-6 pt-3 sm:px-6 md:px-7 md:pb-8 md:pt-2">
-        <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
-          {isOutbound
-            ? `to ${message.to || replyToAddress}`
-            : message.fromEmail}
-        </p>
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <h1 className="text-[1.3rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.45rem]">
-            {message.subject}
-          </h1>
-          <time className="shrink-0 pt-0.5 text-xs tabular-nums text-[var(--muted-foreground)] sm:text-right">
-            {formatFull(message.receivedAt)}
-          </time>
-        </header>
+        <div className="mx-auto w-full max-w-4xl">
+          <p className="mb-2 truncate text-xs text-[var(--muted-foreground)] md:hidden">
+            {isOutbound
+              ? `to ${message.to || replyToAddress}`
+              : message.fromEmail}
+          </p>
+          <header className="flex flex-col gap-2 border-b border-[var(--separator)] pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <h1 className="text-[1.3rem] font-semibold leading-snug tracking-tight text-[var(--foreground)] sm:text-[1.45rem]">
+              {message.subject}
+            </h1>
+            <time className="shrink-0 pt-0.5 text-xs tabular-nums text-[var(--muted-foreground)] sm:text-right">
+              {formatFull(message.receivedAt)}
+            </time>
+          </header>
 
-        <div className="mt-6 md:mt-7">
-          <MailHtmlBody
-            key={message.id}
-            html={message.bodyHtml}
-            text={message.body || message.preview}
-          />
-        </div>
-        {message.attachments && message.attachments.length > 0 ? (
-          <div className="mt-6 border-t border-[var(--separator)] pt-4">
-            <p className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
-              Attachments
-            </p>
-            <ul className="flex flex-wrap gap-2">
-              {message.attachments.map((attachment: MailAttachmentView) => (
-                <li key={attachment.id}>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]"
-                    onClick={() => {
-                      if (!appId) return;
-                      void getMailAttachmentDownloadUrl(
-                        appId,
-                        message.id,
-                        attachment.id,
-                      ).then(({ url }) => {
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      });
-                    }}
-                  >
-                    <span>{attachment.filename}</span>
-                    <span className="text-[var(--muted-foreground)]">
-                      {formatBytes(attachment.sizeBytes)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--separator)] bg-[var(--surface-secondary)]/35 p-2 shadow-[0_10px_30px_-24px_color-mix(in_srgb,var(--foreground)_35%,transparent)] sm:p-3 md:mt-6 md:p-4">
+            <MailHtmlBody
+              key={message.id}
+              html={message.bodyHtml}
+              text={message.body || message.preview}
+            />
           </div>
-        ) : null}
+          {message.attachments && message.attachments.length > 0 ? (
+            <div className="mt-6 border-t border-[var(--separator)] pt-4">
+              <p className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
+                Attachments
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {message.attachments.map((attachment: MailAttachmentView) => (
+                  <li key={attachment.id}>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-secondary)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/30 hover:bg-[var(--brand-blue-soft)]"
+                      onClick={() => {
+                        if (!appId) return;
+                        void getMailAttachmentDownloadUrl(
+                          appId,
+                          message.id,
+                          attachment.id,
+                        ).then(({ url }) => {
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        });
+                      }}
+                    >
+                      <span className="max-w-[15rem] truncate">{attachment.filename}</span>
+                      <span className="text-[var(--muted-foreground)]">
+                        {formatBytes(attachment.sizeBytes)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div

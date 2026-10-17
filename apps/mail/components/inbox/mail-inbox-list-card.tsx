@@ -248,7 +248,7 @@ export function MailInboxListCard({
                     className={cn(
                       "group relative flex w-full gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-150",
                       active
-                        ? "bg-[var(--surface-secondary)]"
+                        ? "bg-[var(--brand-blue-soft)]/70 shadow-[inset_3px_0_0_var(--primary)]"
                         : "hover:bg-[var(--surface-secondary)]/80 active:bg-[var(--surface-secondary)]",
                     )}
                   >

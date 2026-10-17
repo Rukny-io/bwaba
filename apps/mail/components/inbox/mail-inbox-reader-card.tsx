@@ -309,7 +309,7 @@ export function MailInboxReaderCard({
             </time>
           </header>
 
-          <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--separator)] bg-[var(--surface-secondary)]/35 p-2 shadow-[0_10px_30px_-24px_color-mix(in_srgb,var(--foreground)_35%,transparent)] sm:p-3 md:mt-6 md:p-4">
+          <div className="mt-5 overflow-hidden rounded-lg border border-[var(--separator)] bg-[var(--surface)] p-2 sm:p-3 md:mt-6 md:p-4">
             <MailHtmlBody
               key={message.id}
               html={message.bodyHtml}
@@ -326,7 +326,7 @@ export function MailInboxReaderCard({
                   <li key={attachment.id}>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-secondary)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/30 hover:bg-[var(--brand-blue-soft)]"
+                      className="inline-flex items-center gap-2 rounded-md border border-[var(--separator)] bg-[var(--surface)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:border-[var(--primary)]/35 hover:bg-[var(--surface-secondary)]"
                       onClick={() => {
                         if (!appId) return;
                         void getMailAttachmentDownloadUrl(

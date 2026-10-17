@@ -95,18 +95,69 @@ function walkAndSanitize(root: ParentNode, allowRemoteImages: boolean) {
   }
 }
 
+/**
+ * Some providers send malformed templates where a style block is left open.
+ * In that case browsers may move the CSS into the body as a plain text node.
+ * Only remove a CSS-looking leading text node; normal message text is left
+ * untouched.
+ */
+function looksLikeCssLeak(value: string): boolean {
+  const text = value.trim();
+  if (text.length < 24 || !/[{}]/.test(text)) return false;
+
+  const signals = [
+    /!important\b/i,
+    /@(?:media|supports|font-face|import)\b/i,
+    /(?:^|[\s.#[,])(?:body|html|table|td|img|wrapper|container)\b/i,
+    /(?:color|display|padding|margin|font(?:-[\w-]+)?|background(?:-[\w-]+)?)\s*:/i,
+  ];
+  return signals.filter((pattern) => pattern.test(text)).length >= 2;
+}
+
+function stripLeadingCssTextNodes(root: Element): void {
+  for (const node of [...root.childNodes]) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (looksLikeCssLeak(node.textContent ?? "")) node.remove();
+      continue;
+    }
+    if (node.nodeType === Node.COMMENT_NODE) continue;
+    // Once real markup starts, do not inspect message content further.
+    break;
+  }
+}
+
+function extractRawStyleBlocks(raw: string): { html: string; styles: string } {
+  let styles = "";
+  let html = raw.replace(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi, (_, css: string) => {
+    styles += `\n${css}`;
+    return "";
+  });
+
+  // Handle an unclosed style tag without swallowing the actual body markup.
+  html = html.replace(
+    /<style\b[^>]*>([\s\S]*?)(?=<\/?(?:head|body|html)\b|$)/gi,
+    (_, css: string) => {
+      styles += `\n${css}`;
+      return "";
+    },
+  );
+
+  return { html, styles };
+}
+
 function extractParts(
   raw: string,
   allowRemoteImages: boolean,
 ): { styles: string; body: string } {
+  const extracted = extractRawStyleBlocks(raw);
   const parser = new DOMParser();
-  const looksFull = /<html[\s>]|<body[\s>]/i.test(raw);
+  const looksFull = /<html[\s>]|<body[\s>]/i.test(extracted.html);
   const doc = parser.parseFromString(
-    looksFull ? raw : `<div id="rukny-mail-root">${raw}</div>`,
+    looksFull ? extracted.html : `<div id="rukny-mail-root">${extracted.html}</div>`,
     "text/html",
   );
 
-  const styles = [...doc.querySelectorAll("style")]
+  const parsedStyles = [...doc.querySelectorAll("style")]
     .map((node) => node.textContent ?? "")
     .join("\n");
 
@@ -118,8 +169,9 @@ function extractParts(
   walkAndSanitize(bodySource, allowRemoteImages);
 
   const root = doc.getElementById("rukny-mail-root");
+  stripLeadingCssTextNodes(root ?? bodySource);
   const body = (root ?? bodySource).innerHTML;
-  return { styles: sanitizeCss(styles), body };
+  return { styles: sanitizeCss(`${extracted.styles}\n${parsedStyles}`), body };
 }
 
 const MAIL_CLIENT_BASE_CSS = `

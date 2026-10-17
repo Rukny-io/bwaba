@@ -51,7 +51,12 @@ export function MailSenderBrandAvatar({
   const verificationLabel = verified ? VERIFICATION_LABELS[verified] : null;
 
   return (
-    <span className="relative inline-flex shrink-0">
+    <span
+      className={cn(
+        "relative inline-flex shrink-0",
+        usableBrandLogo && "rounded-full ring-1 ring-[var(--primary)]/25 ring-offset-1 ring-offset-[var(--surface)]",
+      )}
+    >
       <MailPersonAvatar
         name={name}
         email={email}
@@ -62,13 +67,13 @@ export function MailSenderBrandAvatar({
       {verificationLabel ? (
         <span
           className={cn(
-            "absolute -bottom-0.5 -right-0.5 flex size-[15px] items-center justify-center rounded-full bg-white text-[var(--primary)] shadow-[0_0_0_1.5px_white] dark:bg-[var(--surface)] dark:shadow-[0_0_0_1.5px_var(--surface)]",
+            "absolute -bottom-0.5 -right-0.5 flex size-[15px] items-center justify-center rounded-full border border-[var(--surface)] bg-[var(--surface)] text-[var(--primary)] shadow-sm",
             className?.includes("size-7") && "size-3.5",
           )}
           aria-label={verificationLabel}
           title={verificationLabel}
         >
-          <BadgeCheck className="size-full fill-[var(--primary)] text-white dark:text-[var(--surface)]" />
+          <BadgeCheck className="size-full fill-[var(--primary)] text-[var(--surface)]" />
         </span>
       ) : null}
     </span>

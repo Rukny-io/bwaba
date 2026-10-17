@@ -108,6 +108,19 @@ function demoRows(folder: InboxFolderId): InboxMessageRow[] {
     unread: message.unread,
     starred: message.starred,
     folder: folderMap[message.folder as keyof typeof folderMap],
+    ...(message.id === "m1"
+      ? {
+          authentication: { spf: "PASS" as const, dkim: "PASS" as const, dmarc: "PASS" as const },
+          senderBrand: {
+            domain: "rukny.io",
+            status: "READY" as const,
+            logoUrl: "/rukny-logo.svg",
+            certificateType: "VMC" as const,
+            ruknyVerified: true,
+          },
+          verificationType: "BIMI_VMC" as const,
+        }
+      : {}),
   }));
 }
 

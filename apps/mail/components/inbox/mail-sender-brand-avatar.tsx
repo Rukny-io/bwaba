@@ -51,17 +51,15 @@ export function MailSenderBrandAvatar({
   const verificationLabel = verified ? VERIFICATION_LABELS[verified] : null;
 
   return (
-    <span
-      className={cn(
-        "relative inline-flex shrink-0",
-        usableBrandLogo && "rounded-full ring-1 ring-[var(--primary)]/25 ring-offset-1 ring-offset-[var(--surface)]",
-      )}
-    >
+    <span className="relative inline-flex shrink-0">
       <MailPersonAvatar
         name={name}
         email={email}
         avatarUrl={usableBrandLogo || avatarUrl}
-        className={className}
+        className={cn(
+          className,
+          usableBrandLogo && "rounded-lg bg-white object-contain p-1",
+        )}
         textClassName={textClassName}
       />
       {verificationLabel ? (
